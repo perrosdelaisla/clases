@@ -1,0 +1,10 @@
+{
+    "name": "Clases - Perros de la Isla",
+    "short_name": "Clases",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#111111",
+    "theme_color": "#c0392b",
+    "icons": []
+}
