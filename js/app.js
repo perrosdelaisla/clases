@@ -169,7 +169,7 @@ async function enviarMagicLink(e) {
         console.error('[app] magic link error:', err);
         errEl.textContent = err?.message
             ? `No se pudo enviar: ${err.message}`
-            : 'No se pudo enviar el mail. Probá de nuevo.';
+            : 'No se pudo enviar el email. Inténtalo de nuevo.';
         errEl.hidden = false;
     } finally {
         btn.disabled = false;
@@ -334,7 +334,7 @@ async function renderRutinaPerroSeleccionado() {
     } catch (err) {
         loading.setAttribute('hidden', '');
         empty.removeAttribute('hidden');
-        toast('No pudimos cargar la rutina. Probá de nuevo.', 'error');
+        toast('No pudimos cargar la rutina. Inténtalo de nuevo.', 'error');
     }
 }
 
