@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -6,7 +6,8 @@ const PRECACHE_URLS = [
     './index.html',
     './css/styles.css',
     './js/app.js',
-    './js/supabase.js'
+    './js/supabase.js',
+    './img/logo.png'
 ];
 
 self.addEventListener('install', (event) => {
