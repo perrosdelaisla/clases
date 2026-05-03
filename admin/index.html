@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111111">
+    <title>Admin — Perros de la Isla</title>
+    <link rel="stylesheet" href="./styles.css?v=1">
+</head>
+<body>
+
+    <section class="screen" id="screen-loading" aria-busy="true">
+        <main class="centered">
+            <div class="logo">PDLI</div>
+            <p class="muted">Cargando…</p>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-login" hidden>
+        <header class="header header--solo">
+            <div class="logo">PDLI</div>
+        </header>
+        <main class="centered">
+            <h1 class="title-display">Admin</h1>
+            <form id="login-form" class="form" novalidate>
+                <label class="field">
+                    <span>Email</span>
+                    <input type="email" id="login-email" autocomplete="email" required>
+                </label>
+                <label class="field">
+                    <span>Contraseña</span>
+                    <input type="password" id="login-password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" class="btn btn-primary" id="login-submit">Entrar</button>
+                <p class="error-message" id="login-error" hidden></p>
+            </form>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-home" hidden>
+        <header class="header">
+            <div class="logo">PDLI</div>
+            <button type="button" class="btn-link" data-action="logout">Cerrar sesión</button>
+        </header>
+        <main class="home-main">
+            <p class="greeting">Hola,</p>
+            <h1 class="title-display" id="home-admin-name">…</h1>
+            <nav class="home-nav" aria-label="Acciones principales">
+                <button type="button" class="btn-big" data-nav="clientes">Mis clientes</button>
+                <button type="button" class="btn-big btn-disabled" disabled aria-disabled="true">
+                    Catálogo de ejercicios
+                    <span class="btn-soon">próximamente</span>
+                </button>
+            </nav>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-clientes" hidden>
+        <header class="header header--with-back">
+            <button type="button" class="btn-back" data-nav="home" aria-label="Volver al inicio">← atrás</button>
+            <h2 class="header-title">Clientes</h2>
+            <button type="button" class="btn-link" data-action="logout">Cerrar sesión</button>
+        </header>
+        <main class="clientes-main">
+            <div class="search-wrapper">
+                <input type="search" id="cliente-search" placeholder="Buscar por nombre o teléfono" autocomplete="off">
+            </div>
+            <div class="chips" role="tablist" id="estado-filtros">
+                <button type="button" class="chip is-active" data-filter="todos" role="tab" aria-selected="true">Todos</button>
+                <button type="button" class="chip" data-filter="consulta" role="tab" aria-selected="false">Consultas</button>
+                <button type="button" class="chip" data-filter="activo" role="tab" aria-selected="false">Activos</button>
+                <button type="button" class="chip" data-filter="mantenimiento" role="tab" aria-selected="false">Mantenimiento</button>
+                <button type="button" class="chip" data-filter="inactivo" role="tab" aria-selected="false">Inactivos</button>
+            </div>
+            <div id="clientes-feedback" class="feedback" hidden></div>
+            <ul id="clientes-lista" class="clientes-lista" aria-live="polite"></ul>
+        </main>
+    </section>
+
+    <script type="module" src="./admin.js?v=1"></script>
+</body>
+</html>
