@@ -291,51 +291,116 @@ async function enviarInvitacion() {
 
     const email = input.value.trim().toLowerCase();
     if (!EMAIL_RE.test(email)) {
-        errorEl.textContent = 'Email inválido.';
-        errorEl.hidden = false;
+        mostrarErrorInvitar('Email inválido.');
         return;
     }
 
+    if (!state.clienteId) {
+        mostrarErrorInvitar('Falta el ID del cliente. Recargá la página.');
+        return;
+    }
+
+    // Conseguimos el auth.uid() del admin justo antes del UPSERT (más
+    // fresco que un cache potencialmente stale en state.adminAuthId).
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData?.user?.id) {
+        console.error('[invitar] no se pudo recuperar auth.user:', userErr);
+        mostrarErrorInvitar('No pudimos identificarte como admin. Volvé a entrar.');
+        return;
+    }
+    const invitadoPor = userData.user.id;
+
     errorEl.hidden = true;
+    errorEl.textContent = '';
     btn.disabled = true;
     btn.textContent = 'Enviando…';
 
-    try {
-        // 1) UPSERT en invitaciones_pendientes (clave única: email).
-        const { error: e1 } = await supabase
-            .from('invitaciones_pendientes')
-            .upsert({
-                email,
-                cliente_id: state.clienteId,
-                nombre: state.cliente?.nombre || null,
-                invitado_por: state.adminAuthId,
-            }, { onConflict: 'email' });
-        if (e1) throw e1;
+    const payload = {
+        email,
+        cliente_id: state.clienteId,
+        nombre: state.cliente?.nombre || null,
+        invitado_por: invitadoPor,
+    };
+    console.log('[invitar] paso 1/2 — UPSERT invitaciones_pendientes:', payload);
 
-        // 2) Magic link al email del cliente. emailRedirectTo apunta a la
-        // app cliente; Supabase manda el mail desde su lado.
-        const { error: e2 } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: APP_CLIENTE_URL },
-        });
-        if (e2) throw e2;
-
-        // Reflejamos el nuevo email en la pantalla y en el botón.
-        if (state.cliente) state.cliente.email = email;
-        setText('cliente-email', email);
-        actualizarBotonInvitar(state.cliente);
-
-        mostrarSuccessInvitacion(email);
-    } catch (err) {
-        console.error('[invitar] error:', err);
-        errorEl.textContent = err?.message
-            ? `No se pudo enviar: ${err.message}`
-            : 'No se pudo enviar la invitación.';
-        errorEl.hidden = false;
-    } finally {
+    // ¿Existía ya una invitación con este email? Si sí, el UPSERT hace
+    // UPDATE y NO debemos rollback en caso de fallo del mail.
+    const { data: existente, error: existeErr } = await supabase
+        .from('invitaciones_pendientes')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
+    if (existeErr) {
+        console.error('[invitar] error consultando existente:', existeErr);
+        mostrarErrorInvitar(`No se pudo verificar la invitación: ${existeErr.message}`);
         btn.disabled = false;
         btn.textContent = 'Enviar invitación';
+        return;
     }
+    const fueInsert = !existente;
+
+    // PASO 1 — UPSERT. SIEMPRE va antes que el mail.
+    const { data: invData, error: invError } = await supabase
+        .from('invitaciones_pendientes')
+        .upsert(payload, { onConflict: 'email' })
+        .select()
+        .maybeSingle();
+
+    console.log('[invitar] resultado UPSERT:', { invData, invError });
+
+    if (invError) {
+        console.error('[invitar] UPSERT falló:', invError);
+        mostrarErrorInvitar(`Error al preparar la invitación: ${invError.message}`);
+        toast('Error al preparar la invitación', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Enviar invitación';
+        return;
+    }
+
+    // PASO 2 — solo si el UPSERT salió ok, mandamos el mail.
+    console.log('[invitar] paso 2/2 — signInWithOtp');
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+            emailRedirectTo: APP_CLIENTE_URL,
+            shouldCreateUser: true,
+        },
+    });
+
+    if (otpError) {
+        console.error('[invitar] signInWithOtp falló:', otpError);
+        // Rollback solo si nosotros creamos la fila. Si era un re-envío
+        // sobre una invitación previa, la dejamos como estaba.
+        if (fueInsert) {
+            console.warn('[invitar] rollback: borrando invitación recién creada');
+            const { error: delErr } = await supabase
+                .from('invitaciones_pendientes')
+                .delete()
+                .eq('email', email);
+            if (delErr) console.error('[invitar] rollback DELETE falló:', delErr);
+        }
+        mostrarErrorInvitar(`Error al enviar el mail: ${otpError.message}`);
+        toast('Error al enviar el mail', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Enviar invitación';
+        return;
+    }
+
+    // Éxito — reflejamos el nuevo email en pantalla y mostramos paso success.
+    if (state.cliente) state.cliente.email = email;
+    setText('cliente-email', email);
+    actualizarBotonInvitar(state.cliente);
+    mostrarSuccessInvitacion(email);
+
+    btn.disabled = false;
+    btn.textContent = 'Enviar invitación';
+}
+
+function mostrarErrorInvitar(msg) {
+    const errorEl = document.getElementById('invitar-error');
+    if (!errorEl) return;
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
 }
 
 function mostrarSuccessInvitacion(email) {

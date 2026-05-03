@@ -3,18 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#111111">
     <title>Perros de la Isla</title>
-    <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/styles.css?v=4">
+
+    <link rel="manifest" href="/clases/manifest.json">
+    <meta name="theme-color" content="#C8231A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PDLI Clases">
+    <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
+
+    <link rel="stylesheet" href="./css/styles.css?v=5">
 </head>
 <body class="app-cliente">
 
     <section class="screen" id="screen-loading" aria-busy="true">
         <main class="centered">
-            <div class="logo logo--big">
-                <img src="./img/logo.png" alt="" class="logo-img">
-                <span class="logo-text">PDLI</span>
+            <div class="brand brand--splash">
+                <img src="./img/logo.png" alt="" class="brand__img">
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                    <span class="brand__tagline">Adiestramiento canino profesional</span>
+                </div>
             </div>
             <p class="muted">Cargando…</p>
         </main>
@@ -22,9 +31,12 @@
 
     <section class="screen" id="screen-login" hidden>
         <main class="login-cliente">
-            <div class="logo logo--big">
-                <img src="./img/logo.png" alt="" class="logo-img">
-                <span class="logo-text">PDLI</span>
+            <div class="brand brand--splash">
+                <img src="./img/logo.png" alt="" class="brand__img">
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                    <span class="brand__tagline">Adiestramiento canino profesional</span>
+                </div>
             </div>
             <h1 class="title-display">Bienvenido</h1>
             <p class="lead">Ingresá tu email para recibir un link de acceso.</p>
@@ -44,9 +56,12 @@
 
     <section class="screen" id="screen-login-sent" hidden>
         <main class="centered centered--narrow">
-            <div class="logo logo--big">
-                <img src="./img/logo.png" alt="" class="logo-img">
-                <span class="logo-text">PDLI</span>
+            <div class="brand brand--splash">
+                <img src="./img/logo.png" alt="" class="brand__img">
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                    <span class="brand__tagline">Adiestramiento canino profesional</span>
+                </div>
             </div>
             <h2 class="title-display">Mail enviado</h2>
             <p class="lead">Te mandamos un mail a <strong id="email-enviado"></strong>. Abrilo desde el celular para entrar a la app.</p>
@@ -56,9 +71,12 @@
 
     <section class="screen" id="screen-error-vinculo" hidden>
         <main class="centered centered--narrow">
-            <div class="logo logo--big">
-                <img src="./img/logo.png" alt="" class="logo-img">
-                <span class="logo-text">PDLI</span>
+            <div class="brand brand--splash">
+                <img src="./img/logo.png" alt="" class="brand__img">
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                    <span class="brand__tagline">Adiestramiento canino profesional</span>
+                </div>
             </div>
             <h2 class="title-display">Algo no anda bien</h2>
             <p class="lead">Hubo un problema con tu cuenta. Avisale a Charly por WhatsApp y te lo destrabamos.</p>
@@ -68,9 +86,12 @@
 
     <section class="screen" id="screen-rutina" hidden>
         <header class="header-cliente">
-            <div class="header-cliente__brand">
-                <img src="./img/logo.png" alt="" class="header-cliente__logo">
-                <p class="header-cliente__saludo">Hola, <strong id="usuario-nombre">…</strong></p>
+            <div class="brand brand--header">
+                <img src="./img/logo.png" alt="" class="brand__img">
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                    <span class="brand__tagline">Adiestramiento canino profesional</span>
+                </div>
             </div>
             <div class="header-cliente__menu">
                 <button type="button" class="avatar-btn" id="avatar-btn" aria-haspopup="menu" aria-expanded="false">
@@ -83,6 +104,8 @@
         </header>
 
         <main class="rutina-main">
+            <p class="saludo-main">Hola, <strong id="usuario-nombre">…</strong></p>
+
             <nav class="perro-selector" id="perro-selector" hidden aria-label="Elegir perro"></nav>
 
             <article class="perro-hero" id="perro-hero" hidden>
@@ -114,6 +137,6 @@
 
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script type="module" src="./js/app.js?v=4"></script>
+    <script type="module" src="./js/app.js?v=5"></script>
 </body>
 </html>

@@ -102,7 +102,7 @@ body {
     margin-top: 1.5rem;
 }
 
-/* ===================== Logo ===================== */
+/* ===================== Logo (compatibilidad legacy) ===================== */
 
 .logo {
     display: inline-flex;
@@ -127,6 +127,94 @@ body {
 }
 
 .logo--big .logo-img { height: 56px; }
+
+/* ===================== Brand (Perros de la Isla + tagline) ===================== */
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    line-height: 1;
+}
+
+.brand__img {
+    width: auto;
+    display: block;
+}
+
+.brand__text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.brand__name {
+    font-family: var(--font-display);
+    color: var(--color-red);
+    letter-spacing: 0.06em;
+    line-height: 1;
+}
+
+.brand__tagline {
+    font-family: var(--font-body);
+    color: var(--color-muted);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+/* Variante splash: pantallas de loading / login / login-sent / error. */
+.brand--splash {
+    gap: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.brand--splash .brand__img { height: 64px; }
+.brand--splash .brand__name { font-size: 1.85rem; }
+.brand--splash .brand__tagline { font-size: 0.78rem; }
+
+/* En pantallas muy angostas (~360px) bajamos un poquito el tamaño
+   para que "PERROS DE LA ISLA" no se vea apretado. */
+@media (max-width: 380px) {
+    .brand--splash .brand__name { font-size: 1.55rem; }
+}
+
+/* Variante header: dentro del header sticky de la rutina, layout
+   horizontal compacto, texto a la izquierda. */
+.brand--header {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 0.6rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.brand--header .brand__img { height: 36px; flex-shrink: 0; }
+.brand--header .brand__text { align-items: flex-start; gap: 0.15rem; min-width: 0; }
+.brand--header .brand__name {
+    font-size: 1.05rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.brand--header .brand__tagline {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+@media (max-width: 380px) {
+    .brand--header .brand__name { font-size: 0.95rem; }
+    .brand--header .brand__tagline { font-size: 0.65rem; }
+    .brand--header .brand__img { height: 32px; }
+}
 
 /* ===================== Botones ===================== */
 
@@ -246,7 +334,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 1rem 1.25rem;
+    padding: 0.85rem 1rem;
     border-bottom: 1px solid var(--color-border);
     position: sticky;
     top: 0;
@@ -254,38 +342,21 @@ body {
     z-index: 10;
 }
 
-.header-cliente__brand {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    min-width: 0;
-    flex: 1;
-}
-
-.header-cliente__logo {
-    height: 32px;
-    width: auto;
-    flex-shrink: 0;
-}
-
-.header-cliente__saludo {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    color: var(--color-muted);
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.header-cliente__saludo strong {
-    color: var(--color-text);
-    font-weight: 600;
-}
-
 .header-cliente__menu {
     position: relative;
     flex-shrink: 0;
+}
+
+.saludo-main {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-muted);
+    margin-top: -0.25rem;
+}
+
+.saludo-main strong {
+    color: var(--color-text);
+    font-weight: 600;
 }
 
 .avatar-btn {

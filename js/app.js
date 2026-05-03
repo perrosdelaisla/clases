@@ -393,11 +393,13 @@ function toast(msg, kind = 'info') {
 
 // ===================== Service Worker =====================
 
-async function registrarServiceWorker() {
+function registrarServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    try {
-        await navigator.serviceWorker.register('./service-worker.js');
-    } catch (err) {
-        console.warn('[app] no se pudo registrar el SW:', err);
-    }
+    // Esperamos al evento load para no competir con el resto del bootstrap.
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/clases/service-worker.js', { scope: '/clases/' })
+            .then((reg) => console.log('[app] SW Clases registrado, scope:', reg.scope))
+            .catch((err) => console.error('[app] SW Clases error:', err));
+    });
 }
