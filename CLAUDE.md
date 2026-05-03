@@ -31,6 +31,17 @@ Aplican a **todo** el texto visible en la app — UI, copy, mensajes, errores, e
 | peludito, peludo, amigo peludo, bolita de pelo, colita feliz | **perro** (o **perrito** ocasional) |
 | sesión (cuando el tono lo permita) | **clase** |
 
+## Idioma
+
+Comunicación con Charly siempre en **español rioplatense** (es argentino). Aplica a:
+
+- Explicaciones, comentarios y preguntas en chat.
+- Mensajes de commit.
+- Comentarios dentro del código.
+- Texto de usuario en la app (logs, errores, mensajes UI, copy).
+
+**Excepción técnica**: nombres de variables, funciones, clases, palabras clave del lenguaje y APIs de librerías van en inglés (estándar técnico).
+
 ## Reglas de trabajo
 
 1. **Nunca** hacer push automático a GitHub sin permiso explícito de Charly.
