@@ -279,14 +279,14 @@ function renderClienteCard(c) {
 
     return `
         <li>
-            <button type="button" class="cliente-card" data-cliente-id="${c.id}">
+            <a class="cliente-card" href="./cliente.html?id=${escapeHTML(c.id)}">
                 <div class="cliente-info">
                     <span class="cliente-nombre">${nombre}</span>
                     <span class="cliente-telefono">${telefono}</span>
                     ${perroLine}
                 </div>
                 <span class="cliente-badge ${badgeClass}">${escapeHTML(badgeLabel)}</span>
-            </button>
+            </a>
         </li>
     `;
 }

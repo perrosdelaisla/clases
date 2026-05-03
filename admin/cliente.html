@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111111">
+    <title>Cliente — Admin Perros de la Isla</title>
+    <link rel="stylesheet" href="./styles.css?v=3">
+</head>
+<body>
+
+    <section class="screen" id="screen-loading" aria-busy="true">
+        <main class="centered">
+            <div class="logo"><img src="../img/logo.png" alt="" class="logo-img"><span class="logo-text">PDLI</span></div>
+            <p class="muted">Cargando…</p>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-error" hidden>
+        <header class="header header--with-back">
+            <a class="btn-back" href="./index.html" aria-label="Volver a la lista">← Volver</a>
+            <h2 class="header-title">Cliente</h2>
+            <span class="header-spacer"></span>
+        </header>
+        <main class="centered">
+            <p class="error-state" id="error-message">No se pudo cargar el cliente.</p>
+            <a class="btn btn-primary" href="./index.html">Volver a la lista</a>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-cliente" hidden>
+        <header class="header header--with-back">
+            <a class="btn-back" href="./index.html" aria-label="Volver a la lista">← Volver</a>
+            <h2 class="header-title">Detalle del cliente</h2>
+            <span class="header-spacer"></span>
+        </header>
+        <main class="detalle-main">
+            <section class="detalle-cabecera">
+                <h1 class="detalle-nombre" id="cliente-nombre">…</h1>
+                <span class="cliente-badge badge-desconocido" id="cliente-estado">…</span>
+                <dl class="detalle-campos">
+                    <div class="campo">
+                        <dt>Teléfono</dt>
+                        <dd id="cliente-telefono">—</dd>
+                    </div>
+                    <div class="campo">
+                        <dt>Zona</dt>
+                        <dd id="cliente-zona">—</dd>
+                    </div>
+                    <div class="campo">
+                        <dt>Cliente desde</dt>
+                        <dd id="cliente-desde">—</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="detalle-seccion" aria-labelledby="perros-titulo">
+                <h2 id="perros-titulo" class="seccion-titulo">Perros</h2>
+                <ul id="perros-lista" class="perros-lista"></ul>
+                <p class="empty-state" id="perros-empty" hidden>Aún no hay perros registrados.</p>
+            </section>
+        </main>
+    </section>
+
+    <script type="module" src="./cliente.js?v=1"></script>
+</body>
+</html>
