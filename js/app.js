@@ -40,6 +40,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
     bindEventos();
     registrarServiceWorker();
+    bootstrapPwaBanner();
     bootstrap();
 
     // Reaccionamos a cambios de sesión en vivo (incluido el caso de
@@ -402,4 +403,162 @@ function registrarServiceWorker() {
             .then((reg) => console.log('[app] SW Clases registrado, scope:', reg.scope))
             .catch((err) => console.error('[app] SW Clases error:', err));
     });
+}
+
+// ===================== Banner instalación PWA =====================
+
+const PWA_DISMISSED_KEY = 'pdli_install_dismissed_until';
+const PWA_INSTALLED_KEY = 'pdli_installed';
+const PWA_DELAY_MS = 2000;
+const PWA_DISMISS_DAYS = 7;
+
+let deferredInstallPrompt = null;
+let pwaTimer = null;
+
+function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+}
+
+function isIOS() {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function dismissedActivo() {
+    const until = parseInt(localStorage.getItem(PWA_DISMISSED_KEY) || '0', 10);
+    return Number.isFinite(until) && Date.now() < until;
+}
+
+function bootstrapPwaBanner() {
+    // Capturamos el evento siempre que esté disponible (Android/Chrome).
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        // Si ya pasó el delay y el banner no está mostrado, lo mostramos
+        // ahora que tenemos el prompt para usar.
+        if (!pwaTimer && puedeMostrarseBanner()) intentarMostrarBanner();
+    });
+
+    window.addEventListener('appinstalled', () => {
+        localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+        ocultarBannerInstall();
+        deferredInstallPrompt = null;
+    });
+
+    bindBannerHandlers();
+
+    // Programamos el primer intento 2s después del load.
+    if (puedeMostrarseBanner()) {
+        pwaTimer = setTimeout(() => {
+            pwaTimer = null;
+            if (puedeMostrarseBanner()) intentarMostrarBanner();
+        }, PWA_DELAY_MS);
+    }
+}
+
+function puedeMostrarseBanner() {
+    if (isStandalone()) return false;
+    if (localStorage.getItem(PWA_INSTALLED_KEY) === 'true') return false;
+    if (dismissedActivo()) return false;
+    // En iOS Safari no hay beforeinstallprompt pero igual mostramos
+    // el banner con instrucciones.
+    if (isIOS()) return true;
+    // En Android/desktop necesitamos el prompt diferido para ofrecer
+    // instalación real. Si nunca llega, el browser no la soporta y no
+    // mostramos nada.
+    return !!deferredInstallPrompt;
+}
+
+function intentarMostrarBanner() {
+    const banner = document.getElementById('install-banner');
+    if (!banner) return;
+    const accept = document.getElementById('install-accept');
+    if (isIOS()) {
+        accept.textContent = 'Ver cómo';
+    } else {
+        accept.textContent = 'Instalar';
+    }
+    banner.removeAttribute('hidden');
+    requestAnimationFrame(() => banner.classList.add('is-open'));
+}
+
+function ocultarBannerInstall() {
+    const banner = document.getElementById('install-banner');
+    if (!banner || banner.hasAttribute('hidden')) return;
+    banner.classList.remove('is-open');
+    setTimeout(() => banner.setAttribute('hidden', ''), 350);
+}
+
+function dismissBannerPor7Dias() {
+    const until = Date.now() + PWA_DISMISS_DAYS * 24 * 60 * 60 * 1000;
+    localStorage.setItem(PWA_DISMISSED_KEY, String(until));
+    ocultarBannerInstall();
+}
+
+function bindBannerHandlers() {
+    const accept = document.getElementById('install-accept');
+    const dismiss = document.getElementById('install-dismiss');
+    if (accept) accept.addEventListener('click', onAceptarInstall);
+    if (dismiss) dismiss.addEventListener('click', dismissBannerPor7Dias);
+
+    const modal = document.getElementById('ios-install-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close]')) cerrarModalIOS();
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const m = document.getElementById('ios-install-modal');
+        if (m && !m.hasAttribute('hidden')) cerrarModalIOS();
+    });
+}
+
+async function onAceptarInstall() {
+    if (isIOS()) {
+        abrirModalIOS();
+        return;
+    }
+    if (!deferredInstallPrompt) {
+        // Edge case: el prompt expiró o nunca llegó. Tratamos como dismiss.
+        dismissBannerPor7Dias();
+        return;
+    }
+    try {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+            localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+            ocultarBannerInstall();
+        } else {
+            // El usuario canceló el prompt nativo: tratamos como "Ahora no".
+            dismissBannerPor7Dias();
+        }
+    } catch (err) {
+        console.error('[pwa] error en prompt:', err);
+        dismissBannerPor7Dias();
+    } finally {
+        deferredInstallPrompt = null;
+    }
+}
+
+function abrirModalIOS() {
+    const modal = document.getElementById('ios-install-modal');
+    if (!modal) return;
+    modal.removeAttribute('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalIOS() {
+    const modal = document.getElementById('ios-install-modal');
+    if (!modal || modal.hasAttribute('hidden')) return;
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+        modal.setAttribute('hidden', '');
+        modal.setAttribute('aria-hidden', 'true');
+    }, 250);
 }

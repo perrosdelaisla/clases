@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=5">
+    <link rel="stylesheet" href="./css/styles.css?v=6">
 </head>
 <body class="app-cliente">
 
@@ -135,8 +135,68 @@
         </footer>
     </section>
 
+    <aside class="install-banner" id="install-banner" hidden aria-label="Instalar la app">
+        <img src="./img/logo.png" alt="" class="install-banner__icon">
+        <p class="install-banner__text">
+            Instalá <strong>Perros de la Isla</strong> en tu celular para acceder más rápido.
+        </p>
+        <div class="install-banner__actions">
+            <button type="button" class="btn-install-secondary" id="install-dismiss">Ahora no</button>
+            <button type="button" class="btn-install-primary" id="install-accept">Instalar</button>
+        </div>
+    </aside>
+
+    <div class="ios-install-modal" id="ios-install-modal" hidden aria-hidden="true">
+        <div class="ios-install-modal__overlay" data-close></div>
+        <div class="ios-install-modal__panel" role="dialog" aria-modal="true" aria-labelledby="ios-modal-titulo">
+            <button type="button" class="ios-install-modal__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="ios-modal-titulo">Instalar en tu iPhone</h2>
+            <p class="ios-install-modal__lead">En 3 pasos rápidos vas a tener la app en tu pantalla de inicio:</p>
+            <ol class="ios-steps">
+                <li class="ios-step">
+                    <span class="ios-step__num">1</span>
+                    <div class="ios-step__body">
+                        <p>Tocá el ícono <strong>Compartir</strong> en la barra inferior de Safari.</p>
+                        <span class="ios-step__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 6L12 2L8 6"/>
+                                <line x1="12" y1="2" x2="12" y2="14"/>
+                                <path d="M5 12V19A2 2 0 0 0 7 21H17A2 2 0 0 0 19 19V12"/>
+                            </svg>
+                        </span>
+                    </div>
+                </li>
+                <li class="ios-step">
+                    <span class="ios-step__num">2</span>
+                    <div class="ios-step__body">
+                        <p>Bajá un poco y tocá <strong>"Añadir a pantalla de inicio"</strong>.</p>
+                        <span class="ios-step__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                                <rect x="3" y="3" width="18" height="18" rx="4"/>
+                                <line x1="12" y1="8" x2="12" y2="16"/>
+                                <line x1="8" y1="12" x2="16" y2="12"/>
+                            </svg>
+                        </span>
+                    </div>
+                </li>
+                <li class="ios-step">
+                    <span class="ios-step__num">3</span>
+                    <div class="ios-step__body">
+                        <p>Confirmá tocando <strong>"Añadir"</strong> arriba a la derecha.</p>
+                    </div>
+                </li>
+            </ol>
+            <button type="button" class="btn btn-primary" data-close>Entendido</button>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script type="module" src="./js/app.js?v=5"></script>
+    <script type="module" src="./js/app.js?v=6"></script>
 </body>
 </html>
