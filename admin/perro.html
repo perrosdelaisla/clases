@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=4">
+    <link rel="stylesheet" href="./styles.css?v=5">
 </head>
 <body>
 
@@ -73,10 +73,27 @@
                         <p>Próximamente</p>
                     </div>
                 </section>
-                <section class="tab-panel" data-panel="ejercicios" role="tabpanel">
-                    <div class="placeholder placeholder--soft">
-                        <p>Aquí van los ejercicios del perro</p>
+                <section class="tab-panel tab-panel--ejercicios" data-panel="ejercicios" role="tabpanel">
+                    <div id="ejercicios-loading" class="placeholder placeholder--soft">
+                        <p>Cargando ejercicios…</p>
                     </div>
+
+                    <div id="ejercicios-empty" class="empty-ejercicios" hidden>
+                        <p class="empty-msg">Aún no hay ejercicios activos para <span id="empty-perro-nombre"></span></p>
+                        <div class="empty-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 100 80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M 12 14 Q 60 14 80 58"/>
+                                <path d="M 80 58 L 70 48 M 80 58 L 70 64"/>
+                            </svg>
+                            <span class="empty-hint">Empezá por aquí</span>
+                        </div>
+                    </div>
+
+                    <ul id="ejercicios-lista" class="ejercicios-lista" hidden></ul>
+
+                    <button type="button" class="btn-add-fixed" id="abrir-modal-ejercicios">
+                        + Agregar ejercicios
+                    </button>
                 </section>
                 <section class="tab-panel" data-panel="herramientas" role="tabpanel" hidden>
                     <div class="placeholder">
@@ -109,6 +126,35 @@
         </main>
     </section>
 
-    <script type="module" src="./perro.js?v=1"></script>
+    <div class="bottom-sheet" id="modal-ejercicios" hidden aria-hidden="true">
+        <div class="bottom-sheet__overlay" data-close></div>
+        <div class="bottom-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+            <div class="bottom-sheet__handle" id="modal-handle" aria-hidden="true"></div>
+            <header class="bottom-sheet__header">
+                <h2 id="modal-titulo">Agregar ejercicios</h2>
+                <button type="button" class="bottom-sheet__close" data-close aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                    </svg>
+                </button>
+            </header>
+            <div class="bottom-sheet__search">
+                <input type="search" id="modal-search" placeholder="Buscar ejercicio" autocomplete="off">
+            </div>
+            <div class="chips bottom-sheet__filtros" id="modal-filtros" role="tablist" aria-label="Filtrar por categoría">
+                <button type="button" class="chip is-active" data-cat="todos" role="tab" aria-selected="true">Todos</button>
+                <button type="button" class="chip" data-cat="ejercicio" role="tab" aria-selected="false">Ejercicios</button>
+                <button type="button" class="chip" data-cat="cambio_rutina" role="tab" aria-selected="false">Cambios de rutina</button>
+                <button type="button" class="chip" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
+                <button type="button" class="chip" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
+            </div>
+            <div class="bottom-sheet__lista" id="modal-lista" role="list"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+    <script type="module" src="./perro.js?v=2"></script>
 </body>
 </html>
