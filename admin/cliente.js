@@ -128,46 +128,27 @@ function renderPerros(perros) {
 function renderPerroCard(p) {
     const nombre = escapeHTML(p.nombre || 'Sin nombre');
     const raza = p.raza ? escapeHTML(p.raza) : null;
-    const edad = formatearEdad(p);
+    const edad = formatearEdadMeses(p.edad_meses);
     const meta = [raza, edad].filter(Boolean).join(' · ') || 'Sin datos';
 
     return `
         <li>
-            <article class="perro-card">
+            <a class="perro-card" href="./perro.html?id=${escapeHTML(p.id)}">
                 <span class="perro-nombre">${nombre}</span>
                 <span class="perro-meta">${meta}</span>
-            </article>
+            </a>
         </li>
     `;
 }
 
-function formatearEdad(p) {
-    // Cubro tres formas posibles según cómo estén las columnas en Victoria:
-    // edad_anios (int), edad (int|text) o fecha_nacimiento (date).
-    if (typeof p.edad_anios === 'number') return formatoAnios(p.edad_anios);
-    if (typeof p.edad === 'number') return formatoAnios(p.edad);
-    if (typeof p.edad === 'string' && p.edad.trim()) return p.edad.trim();
-    if (p.fecha_nacimiento) {
-        const anios = aniosDesde(p.fecha_nacimiento);
-        if (anios !== null) return formatoAnios(anios);
-    }
-    return null;
-}
-
-function formatoAnios(n) {
-    if (n === 0) return 'menos de 1 año';
-    if (n === 1) return '1 año';
-    return `${n} años`;
-}
-
-function aniosDesde(fechaIso) {
-    const d = new Date(fechaIso);
-    if (isNaN(d.getTime())) return null;
-    const ahora = new Date();
-    let anios = ahora.getFullYear() - d.getFullYear();
-    const m = ahora.getMonth() - d.getMonth();
-    if (m < 0 || (m === 0 && ahora.getDate() < d.getDate())) anios--;
-    return Math.max(0, anios);
+function formatearEdadMeses(meses) {
+    if (meses == null) return null;
+    const n = Number(meses);
+    if (!Number.isFinite(n) || n < 0) return null;
+    if (n < 24) return `${n} ${n === 1 ? 'mes' : 'meses'}`;
+    const anios = n / 12;
+    if (Number.isInteger(anios)) return `${anios} ${anios === 1 ? 'año' : 'años'}`;
+    return `${anios.toFixed(1).replace('.', ',')} años`;
 }
 
 function formatearClienteDesde(valor) {

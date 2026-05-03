@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111111">
+    <title>Perro — Admin Perros de la Isla</title>
+    <link rel="stylesheet" href="./styles.css?v=4">
+</head>
+<body>
+
+    <section class="screen" id="screen-loading" aria-busy="true">
+        <main class="centered">
+            <div class="logo"><img src="../img/logo.png" alt="" class="logo-img"><span class="logo-text">PDLI</span></div>
+            <p class="muted">Cargando…</p>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-error" hidden>
+        <header class="header header--with-back">
+            <a class="btn-back" href="./index.html" aria-label="Volver a la lista">← Volver</a>
+            <h2 class="header-title">Perro</h2>
+            <span class="header-spacer"></span>
+        </header>
+        <main class="centered">
+            <p class="error-state" id="error-message">No se pudo cargar el perro.</p>
+            <a class="btn btn-primary" href="./index.html">Volver a la lista</a>
+        </main>
+    </section>
+
+    <section class="screen" id="screen-perro" hidden>
+        <header class="header header--with-back">
+            <a class="btn-back" id="back-link" href="./index.html" aria-label="Volver al cliente">← Volver</a>
+            <h2 class="header-title" id="perro-nombre-header">…</h2>
+            <span class="header-spacer"></span>
+        </header>
+
+        <main class="perro-main">
+            <section class="perro-cabecera">
+                <h1 class="detalle-nombre" id="perro-nombre">…</h1>
+                <span class="cliente-badge badge-ppp" id="perro-ppp" hidden>PPP</span>
+                <dl class="detalle-campos">
+                    <div class="campo">
+                        <dt>Raza</dt>
+                        <dd id="perro-raza">—</dd>
+                    </div>
+                    <div class="campo">
+                        <dt>Edad</dt>
+                        <dd id="perro-edad">—</dd>
+                    </div>
+                    <div class="campo">
+                        <dt>Peso</dt>
+                        <dd id="perro-peso">—</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <nav class="tabs" id="tabs" role="tablist" aria-label="Secciones del perro">
+                <button type="button" class="tab" data-tab="plan" role="tab" aria-selected="false">Plan de caso</button>
+                <button type="button" class="tab is-active" data-tab="ejercicios" role="tab" aria-selected="true">Ejercicios</button>
+                <button type="button" class="tab" data-tab="herramientas" role="tab" aria-selected="false">Herramientas</button>
+                <button type="button" class="tab" data-tab="historico" role="tab" aria-selected="false">Histórico</button>
+                <button type="button" class="tab" data-tab="notas" role="tab" aria-selected="false">Notas</button>
+            </nav>
+
+            <div class="tab-content">
+                <section class="tab-panel" data-panel="plan" role="tabpanel" hidden>
+                    <div class="placeholder">
+                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7 V12 L15 14"/>
+                        </svg>
+                        <p>Próximamente</p>
+                    </div>
+                </section>
+                <section class="tab-panel" data-panel="ejercicios" role="tabpanel">
+                    <div class="placeholder placeholder--soft">
+                        <p>Aquí van los ejercicios del perro</p>
+                    </div>
+                </section>
+                <section class="tab-panel" data-panel="herramientas" role="tabpanel" hidden>
+                    <div class="placeholder">
+                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7 V12 L15 14"/>
+                        </svg>
+                        <p>Próximamente</p>
+                    </div>
+                </section>
+                <section class="tab-panel" data-panel="historico" role="tabpanel" hidden>
+                    <div class="placeholder">
+                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7 V12 L15 14"/>
+                        </svg>
+                        <p>Próximamente</p>
+                    </div>
+                </section>
+                <section class="tab-panel" data-panel="notas" role="tabpanel" hidden>
+                    <div class="placeholder">
+                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7 V12 L15 14"/>
+                        </svg>
+                        <p>Próximamente</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </section>
+
+    <script type="module" src="./perro.js?v=1"></script>
+</body>
+</html>
