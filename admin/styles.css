@@ -1188,3 +1188,138 @@ body {
     85% { opacity: 1; transform: translate(-50%, 0); }
     100% { opacity: 0; transform: translate(-50%, -4px); }
 }
+
+/* ===================== Botón Invitar + Modal centrado ===================== */
+
+.btn-invitar {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0 1rem;
+    background: transparent;
+    color: var(--color-cat-ejercicio);
+    border: 1px solid var(--color-cat-ejercicio);
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-invitar:hover {
+    background: var(--color-cat-ejercicio);
+    color: #fff;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal[hidden] { display: none; }
+
+.modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.modal.is-open .modal__overlay { opacity: 1; }
+
+.modal__panel {
+    position: relative;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.75rem 1.5rem 1.5rem;
+    width: 100%;
+    max-width: 420px;
+    transform: translateY(16px) scale(0.97);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.modal.is-open .modal__panel {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.modal__close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    color: var(--color-muted);
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal__close:hover {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.modal__close svg { width: 18px; height: 18px; }
+
+.modal__panel h2 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: var(--color-text);
+    margin-bottom: 0.75rem;
+    padding-right: 2rem;
+}
+
+.modal__lead {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+
+.modal__lead strong {
+    color: var(--color-text);
+    word-break: break-all;
+}
+
+.modal__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.modal__actions--column {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+
+.btn-whatsapp {
+    background: #25d366;
+    color: #062b13;
+}
+
+.btn-whatsapp:hover {
+    background: #1faa55;
+    color: #062b13;
+}

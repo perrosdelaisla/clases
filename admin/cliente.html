@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Cliente — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=5">
+    <link rel="stylesheet" href="./styles.css?v=6">
 </head>
 <body>
 
@@ -38,10 +38,15 @@
             <section class="detalle-cabecera">
                 <h1 class="detalle-nombre" id="cliente-nombre">…</h1>
                 <span class="cliente-badge badge-desconocido" id="cliente-estado">…</span>
+                <button type="button" class="btn-invitar" id="btn-invitar">Invitar a la app</button>
                 <dl class="detalle-campos">
                     <div class="campo">
                         <dt>Teléfono</dt>
                         <dd id="cliente-telefono">—</dd>
+                    </div>
+                    <div class="campo">
+                        <dt>Email</dt>
+                        <dd id="cliente-email">—</dd>
                     </div>
                     <div class="campo">
                         <dt>Zona</dt>
@@ -62,6 +67,43 @@
         </main>
     </section>
 
-    <script type="module" src="./cliente.js?v=2"></script>
+    <div class="modal" id="modal-invitar" hidden aria-hidden="true">
+        <div class="modal__overlay" data-close></div>
+        <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modal-invitar-titulo">
+            <button type="button" class="modal__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+
+            <div class="modal__step" data-step="form">
+                <h2 id="modal-invitar-titulo">Invitar a la app</h2>
+                <p class="modal__lead">Le mandamos un mail con un link mágico para que entre a la app.</p>
+                <label class="field">
+                    <span>Email del cliente</span>
+                    <input type="email" id="invitar-email" autocomplete="email" required>
+                </label>
+                <p class="error-message" id="invitar-error" hidden></p>
+                <div class="modal__actions">
+                    <button type="button" class="btn-link" data-close>Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="invitar-enviar">Enviar invitación</button>
+                </div>
+            </div>
+
+            <div class="modal__step" data-step="success" hidden>
+                <h2>Invitación enviada</h2>
+                <p class="modal__lead">Le mandamos un mail a <strong id="invitar-email-enviado"></strong> con el link de acceso.</p>
+                <div class="modal__actions modal__actions--column">
+                    <a class="btn btn-primary btn-whatsapp" id="invitar-whatsapp" target="_blank" rel="noopener">Compartir por WhatsApp</a>
+                    <button type="button" class="btn-link" data-close>Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+    <script type="module" src="./cliente.js?v=3"></script>
 </body>
 </html>
