@@ -440,7 +440,16 @@ function showTab(name) {
 
 function renderHeader() {
     const u = state.usuarioCliente;
-    const nombrePila = (u?.nombre || u?.nombre_visible || '').split(/\s+/)[0] || 'amigo';
+    const nombreCompleto = (u?.nombre || u?.nombre_visible || '').trim();
+
+    // Saltear palabras genéricas / de prueba al elegir el "nombre de pila"
+    // visible. Evita saludos tipo "Hola, Cliente" cuando el alta vino
+    // con un nombre tipo "Cliente Prueba Charly".
+    const PALABRAS_GENERICAS = ['cliente', 'prueba', 'test', 'usuario', 'demo'];
+    const palabras = nombreCompleto.split(/\s+/).filter(Boolean);
+    const primeraReal = palabras.find((p) => !PALABRAS_GENERICAS.includes(p.toLowerCase()));
+    const nombrePila = primeraReal || palabras[0] || 'amigo';
+
     setText('usuario-nombre', nombrePila);
     document.getElementById('avatar-letter').textContent = (nombrePila[0] || 'U').toUpperCase();
 }
@@ -537,7 +546,6 @@ async function renderRutinaPerroSeleccionado() {
     // Ejercicios
     try {
         const filas = await cargarRutinaDelPerro(perro.id);
-        loading.setAttribute('hidden', '');
 
         if (filas.length === 0) {
             empty.removeAttribute('hidden');
@@ -547,9 +555,13 @@ async function renderRutinaPerroSeleccionado() {
         lista.innerHTML = filas.map(renderRutinaCard).join('');
         lista.removeAttribute('hidden');
     } catch (err) {
-        loading.setAttribute('hidden', '');
         empty.removeAttribute('hidden');
         toast('No pudimos cargar la rutina. Inténtalo de nuevo.', 'error');
+    } finally {
+        // Garantizar que el spinner siempre se oculta — evita "Cargando…"
+        // colgado si la función se invoca varias veces seguidas o si hay
+        // un return temprano en una rama futura.
+        loading.setAttribute('hidden', '');
     }
 }
 
