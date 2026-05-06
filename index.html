@@ -6,13 +6,13 @@
     <title>Perros de la Isla</title>
 
     <link rel="manifest" href="/clases/manifest.json">
-    <meta name="theme-color" content="#C8231A">
+    <meta name="theme-color" content="#0b141a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=6">
+    <link rel="stylesheet" href="./css/styles.css?v=7">
 </head>
 <body class="app-cliente">
 
@@ -46,7 +46,7 @@
                     <span>Email</span>
                     <input type="email" id="login-email" autocomplete="email" inputmode="email" required>
                 </label>
-                <button type="submit" class="btn btn-primary" id="login-submit">Enviar link</button>
+                <button type="submit" class="btn btn-primary" id="login-submit">Enviar enlace</button>
                 <p class="error-message" id="login-error" hidden></p>
             </form>
 
@@ -79,12 +79,12 @@
                 </div>
             </div>
             <h2 class="title-display">Algo no anda bien</h2>
-            <p class="lead">Hubo un problema con tu cuenta. Avísale a Charly por WhatsApp y te lo desbloqueamos.</p>
+            <p class="lead">Hubo un problema con tu cuenta. Avisa al adiestrador por WhatsApp al 622 922 173 y te lo desbloqueamos.</p>
             <button type="button" class="btn btn-primary" id="error-logout">Cerrar sesión y reintentar</button>
         </main>
     </section>
 
-    <section class="screen" id="screen-rutina" hidden>
+    <section class="screen" id="screen-app" hidden>
         <header class="header-cliente">
             <div class="brand brand--header">
                 <img src="./img/logo.png" alt="" class="brand__img">
@@ -103,37 +103,174 @@
             </div>
         </header>
 
-        <main class="rutina-main">
-            <p class="saludo-main">Hola, <strong id="usuario-nombre">…</strong></p>
+        <main class="app-main">
 
-            <nav class="perro-selector" id="perro-selector" hidden aria-label="Elegir perro"></nav>
+            <!-- ── TAB RUTINA ── -->
+            <section class="tab-panel is-active" id="tab-rutina" data-tab="rutina">
+                <p class="saludo-main">Hola, <strong id="usuario-nombre">…</strong></p>
 
-            <article class="perro-hero" id="perro-hero" hidden>
-                <h1 class="perro-hero__nombre" id="perro-hero-nombre">…</h1>
-                <p class="perro-hero__raza" id="perro-hero-raza"></p>
-            </article>
+                <nav class="perro-selector" id="perro-selector" hidden aria-label="Elegir perro"></nav>
 
-            <h2 class="rutina-titulo">Rutina de hoy</h2>
+                <article class="perro-hero" id="perro-hero" hidden>
+                    <button type="button" class="perro-foto" id="perro-foto-btn" aria-label="Cambiar foto del perro">
+                        <img class="perro-foto__img" id="perro-foto-img" alt="" hidden>
+                        <span class="perro-foto__fallback" id="perro-foto-fallback" aria-hidden="true">P</span>
+                        <span class="perro-foto__edit" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </span>
+                    </button>
+                    <h1 class="perro-hero__nombre" id="perro-hero-nombre">…</h1>
+                    <p class="perro-hero__meta" id="perro-hero-meta"></p>
+                    <span class="perro-hero__protocolo" id="perro-hero-protocolo" hidden></span>
+                </article>
 
-            <div id="rutina-loading" class="placeholder placeholder--soft">
-                <p>Cargando rutina…</p>
-            </div>
+                <button type="button" class="btn-cta" id="btn-ir-reservar">Reservar próxima clase</button>
 
-            <ul id="rutina-lista" class="rutina-lista" hidden></ul>
+                <h2 class="rutina-titulo">Tus ejercicios</h2>
 
-            <div id="rutina-empty" class="rutina-empty" hidden>
-                <p>Tu adiestrador todavía no ha activado ejercicios. Te avisamos cuando estén disponibles.</p>
-            </div>
+                <div id="rutina-loading" class="placeholder placeholder--soft">
+                    <p>Cargando…</p>
+                </div>
 
-            <div id="rutina-sin-perro" class="rutina-empty" hidden>
-                <p>Todavía no tienes perros registrados. Avísale a Charly y te los carga.</p>
-            </div>
+                <ul id="rutina-lista" class="rutina-lista" hidden></ul>
+
+                <div id="rutina-empty" class="rutina-empty" hidden>
+                    <p>Tu adiestrador todavía no ha activado ejercicios. Te avisamos cuando estén disponibles.</p>
+                </div>
+
+                <div id="rutina-sin-perro" class="rutina-empty" hidden>
+                    <p>Todavía no tienes perros registrados. Avisa al adiestrador y te los carga.</p>
+                </div>
+            </section>
+
+            <!-- ── TAB RESERVAR ── -->
+            <section class="tab-panel" id="tab-reservar" data-tab="reservar" hidden>
+                <h2 class="rutina-titulo">Reservar</h2>
+                <p class="reservar-subtitulo" id="reservar-subtitulo">Elige cuándo quieres tu próxima clase</p>
+                <div id="reservar-content">
+                    <div class="placeholder placeholder--soft"><p>Cargando…</p></div>
+                </div>
+            </section>
+
+            <!-- ── TAB MIS CITAS ── -->
+            <section class="tab-panel" id="tab-mis-citas" data-tab="mis-citas" hidden>
+                <h2 class="rutina-titulo">Mis citas</h2>
+                <div id="mis-citas-content">
+                    <div class="placeholder placeholder--soft"><p>Cargando…</p></div>
+                </div>
+            </section>
+
         </main>
 
-        <footer class="footer-cliente">
-            <p class="slogan-discreto">Tu perro merece ser feliz hoy</p>
-        </footer>
+        <nav class="bottom-nav" aria-label="Navegación principal">
+            <button type="button" class="bottom-nav__btn is-active" data-tab-target="rutina">
+                <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="4" r="2"/>
+                    <circle cx="18" cy="8" r="2"/>
+                    <circle cx="20" cy="14" r="2"/>
+                    <circle cx="16" cy="19" r="2"/>
+                    <path d="M9 10c-1.5 0-3 1-3 3 0 1.5 1 2 1 3 0 1-1 2-1 3 0 1 1 2 2 2 1 0 2-1 3-1 1 0 2 1 3 1 1 0 2-1 2-2 0-1-1-2-1-3 0-1 1-1.5 1-3 0-2-1.5-3-3-3-2 0-3 0-4 0z"/>
+                </svg>
+                <span class="bottom-nav__label">Rutina</span>
+            </button>
+            <button type="button" class="bottom-nav__btn" data-tab-target="reservar">
+                <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <line x1="12" y1="14" x2="12" y2="18"/>
+                    <line x1="10" y1="16" x2="14" y2="16"/>
+                </svg>
+                <span class="bottom-nav__label">Reservar</span>
+            </button>
+            <button type="button" class="bottom-nav__btn" data-tab-target="mis-citas">
+                <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9 11l3 3L22 4"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                <span class="bottom-nav__label">Mis citas</span>
+            </button>
+        </nav>
     </section>
+
+    <!-- ── MODAL: subir foto del perro ── -->
+    <div class="modal-pdli" id="modal-foto" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-foto-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-foto-titulo">Foto del perro</h2>
+            <p class="modal-pdli__lead">Sube una foto de <strong id="modal-foto-nombre">tu perro</strong>. Aparecerá en la pantalla de rutina.</p>
+
+            <label class="foto-uploader">
+                <input type="file" id="foto-input" accept="image/jpeg,image/png,image/webp" hidden>
+                <span class="foto-uploader__cta" id="foto-uploader-cta">Elegir foto</span>
+                <p class="foto-uploader__hint">JPG, PNG o WebP — máximo 5MB</p>
+            </label>
+
+            <div class="foto-preview" id="foto-preview" hidden>
+                <img id="foto-preview-img" alt="">
+            </div>
+
+            <p class="error-message" id="foto-error" hidden></p>
+
+            <div class="modal-pdli__actions">
+                <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="foto-guardar" disabled>Guardar foto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: confirmar reserva ── -->
+    <div class="modal-pdli" id="modal-reservar" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-reservar-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-reservar-titulo">Confirmar reserva</h2>
+            <p class="modal-reservar__slot" id="modal-reservar-slot">…</p>
+            <p class="modal-pdli__lead">Clase con el adiestrador para <strong id="modal-reservar-perro">tu perro</strong>.</p>
+            <p class="modal-pdli__nota">Hasta 24h antes podrás cancelar desde esta misma app.</p>
+            <p class="error-message" id="modal-reservar-error" hidden></p>
+            <div class="modal-pdli__actions">
+                <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modal-reservar-confirmar">Sí, reservar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: confirmar cancelación de cita ── -->
+    <div class="modal-pdli" id="modal-cancelar" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-cancelar-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-cancelar-titulo">Cancelar cita</h2>
+            <p class="modal-reservar__slot" id="modal-cancelar-slot">…</p>
+            <p class="modal-pdli__lead">¿Seguro que quieres cancelar esta clase?</p>
+            <p class="error-message" id="modal-cancelar-error" hidden></p>
+            <div class="modal-pdli__actions">
+                <button type="button" class="btn btn-secondary" data-close>No, dejar</button>
+                <button type="button" class="btn btn-primary btn-danger" id="modal-cancelar-confirmar">Sí, cancelar</button>
+            </div>
+        </div>
+    </div>
 
     <aside class="install-banner" id="install-banner" hidden aria-label="Instalar la app">
         <img src="./img/logo.png" alt="" class="install-banner__icon">
@@ -197,6 +334,6 @@
 
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script type="module" src="./js/app.js?v=7"></script>
+    <script type="module" src="./js/app.js?v=8"></script>
 </body>
 </html>
