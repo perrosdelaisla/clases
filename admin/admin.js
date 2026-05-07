@@ -347,7 +347,10 @@ function bindAgendaModals() {
 
     const btnCitaManual = document.getElementById('btn-abrir-cita-manual');
     if (btnCitaManual) {
-        btnCitaManual.addEventListener('click', () => openModal('modal-cita-manual'));
+        btnCitaManual.addEventListener('click', async () => {
+            await poblarDropdownHorasCita();
+            openModal('modal-cita-manual');
+        });
     }
 
     document.querySelectorAll('[data-modal-close]').forEach((el) => {
@@ -387,9 +390,56 @@ function bindAgendaModals() {
 
     const cmSave = document.getElementById('cm-save');
     if (cmSave) {
-        cmSave.addEventListener('click', () => {
-            console.log('TODO 3.B: crearCitaManual con datos del form');
-            closeModal('modal-cita-manual');
+        cmSave.addEventListener('click', async () => {
+            const errBox = document.getElementById('cm-error');
+            if (errBox) errBox.textContent = '';
+
+            const cliente = {
+                nombre: (document.getElementById('cm-nombre')?.value || '').trim(),
+                telefono: (document.getElementById('cm-telefono')?.value || '').trim(),
+            };
+
+            const perro = {
+                nombre: (document.getElementById('cm-perro')?.value || '').trim(),
+                raza: (document.getElementById('cm-raza')?.value || '').trim(),
+                edad_meses: parseIntOrNull(document.getElementById('cm-edad')?.value),
+                peso_kg: parseFloatOrNull(document.getElementById('cm-peso')?.value),
+                es_ppp: !!document.getElementById('cm-ppp')?.checked,
+            };
+
+            const horaInput = document.getElementById('cm-hora')?.value || '';
+            const cita = {
+                fecha: document.getElementById('cm-fecha')?.value || '',
+                hora: horaInput.length === 5 ? `${horaInput}:00` : horaInput,
+                modalidad: (document.getElementById('cm-modalidad')?.value || '').trim(),
+                zona: (document.getElementById('cm-zona')?.value || '').trim(),
+                notas: (document.getElementById('cm-notas')?.value || '').trim(),
+            };
+
+            if (!cliente.nombre)  { showCmError('Falta el nombre del cliente.'); return; }
+            if (!cliente.telefono) { showCmError('Falta el teléfono del cliente.'); return; }
+            if (!perro.nombre)    { showCmError('Falta el nombre del perro.'); return; }
+            if (!cita.fecha)      { showCmError('Falta la fecha de la cita.'); return; }
+            if (!cita.hora)       { showCmError('Falta la hora de la cita.'); return; }
+
+            cmSave.disabled = true;
+            cmSave.textContent = 'Creando…';
+            try {
+                const res = await agenda.crearCitaManual({ cliente, perro, cita });
+                if (res && res.ok === false) {
+                    showCmError(res.error || 'No se pudo crear la cita.');
+                    return;
+                }
+                closeModal('modal-cita-manual');
+                resetCmForm();
+                await cargarCitas();
+            } catch (err) {
+                console.error('Error crearCitaManual:', err);
+                showCmError(err?.message || 'No se pudo crear la cita.');
+            } finally {
+                cmSave.disabled = false;
+                cmSave.textContent = 'Crear cita';
+            }
         });
     }
 }
@@ -402,6 +452,22 @@ function openModal(id) {
 function closeModal(id) {
     const m = document.getElementById(id);
     if (m) m.hidden = true;
+    if (id === 'modal-cita-manual') {
+        resetCmForm();
+    }
+}
+
+async function poblarDropdownHorasCita() {
+    const select = document.getElementById('cm-hora');
+    if (!select) return;
+    try {
+        const slots = await agenda.obtenerPlantilla();
+        const horasUnicas = [...new Set(slots.map((s) => s.hora))].sort();
+        select.innerHTML = '<option value="">Elegí una hora…</option>' +
+            horasUnicas.map((h) => `<option value="${escapeHTML(h.substring(0, 5))}">${escapeHTML(h.substring(0, 5))}</option>`).join('');
+    } catch (err) {
+        console.error('Error cargando horas para dropdown cita:', err);
+    }
 }
 
 function bindFormBloqueo() {
@@ -482,6 +548,48 @@ function esCitaHoy(fechaISO) {
 
 function esCitaFutura(fechaISO) {
     return fechaISO > hoyStr();
+}
+
+// Helpers de parsing y feedback del modal cita manual
+function parseIntOrNull(v) {
+    if (v == null || v === '') return null;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : null;
+}
+
+function parseFloatOrNull(v) {
+    if (v == null || v === '') return null;
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+}
+
+function showCmError(msg) {
+    const errBox = document.getElementById('cm-error');
+    if (errBox) {
+        errBox.textContent = msg;
+        errBox.hidden = false;
+    } else {
+        alert(msg);
+    }
+}
+
+function resetCmForm() {
+    const ids = [
+        'cm-nombre', 'cm-telefono',
+        'cm-perro', 'cm-raza', 'cm-edad', 'cm-peso',
+        'cm-fecha', 'cm-hora', 'cm-modalidad', 'cm-zona', 'cm-notas',
+    ];
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const ppp = document.getElementById('cm-ppp');
+    if (ppp) ppp.checked = false;
+    const errBox = document.getElementById('cm-error');
+    if (errBox) {
+        errBox.textContent = '';
+        errBox.hidden = true;
+    }
 }
 
 async function cargarPlantilla() {
