@@ -2074,9 +2074,13 @@ body {
 /* KPIs */
 .stats-kpis {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
     margin-bottom: 24px;
+}
+
+@media (max-width: 1100px) {
+    .stats-kpis { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -2168,6 +2172,9 @@ body {
     font-size: 12px;
     font-weight: 500;
 }
+
+.funnel-row-warn .funnel-label { color: var(--color-red); }
+.funnel-row-warn .funnel-label::before { content: "⚠️ "; }
 
 @media (max-width: 600px) {
     .funnel-row { grid-template-columns: 1fr; gap: 4px; }

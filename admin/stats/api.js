@@ -50,21 +50,23 @@ async function traerSesionesReales(rango, columnas) {
 
 /**
  * KPIs:
- *   sesiones_reales    → total de sesiones (idéntico al admin viejo)
- *   citas_confirmadas  → sesiones.filter(cita_confirmada).length
- *                        (admin viejo: renderizarKPIs línea 705)
- *   conversion_pct     → citas_confirmadas / sesiones_reales * 100
+ *   sesiones_reales    → total de sesiones (admin viejo: renderizarKPIs L703)
+ *   vieron_precios     → sesiones.filter(vio_precio).length    (L704)
+ *   citas_confirmadas  → sesiones.filter(cita_confirmada).length (L705)
+ *   conversion_pct     → ((citas/total)*100).toFixed(1) + '%' o '—'
+ *                        (string con % o em-dash, idéntico al viejo L706)
  *   clientes_activos   → COUNT FROM clientes WHERE estado='activo'
  *                        (NUEVO: no existe en admin viejo, métrica
  *                        independiente de Victoria)
  */
 export async function obtenerKPIs(rango) {
-    const sesiones = await traerSesionesReales(rango, 'cita_confirmada');
+    const sesiones = await traerSesionesReales(rango, 'vio_precio, cita_confirmada');
     const sesiones_reales = sesiones.length;
+    const vieron_precios = sesiones.filter((s) => s.vio_precio).length;
     const citas_confirmadas = sesiones.filter((s) => s.cita_confirmada).length;
     const conversion_pct = sesiones_reales > 0
-        ? Math.round((citas_confirmadas / sesiones_reales) * 100)
-        : 0;
+        ? ((citas_confirmadas / sesiones_reales) * 100).toFixed(1) + '%'
+        : '—';
 
     const { count: activos, error: errC } = await supabase
         .from('clientes')
@@ -74,6 +76,7 @@ export async function obtenerKPIs(rango) {
 
     return {
         sesiones_reales,
+        vieron_precios,
         citas_confirmadas,
         conversion_pct,
         clientes_activos: activos || 0,
@@ -96,7 +99,7 @@ export async function obtenerFunnelVictoria(rango) {
 
     const PASOS_S4 = ['s4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 's12'];
 
-    return [
+    const etapas = [
         { etapa: 'Iniciaron conversación', n: sesiones.length },
         { etapa: 'Dieron datos del perro', n: sesiones.filter((s) => PASOS_S4.includes(s.paso_maximo_alcanzado)).length },
         { etapa: 'Vieron mensaje clave',   n: sesiones.filter((s) => s.vio_mensaje_principal).length },
@@ -105,6 +108,23 @@ export async function obtenerFunnelVictoria(rango) {
         { etapa: 'Eligieron horario',      n: sesiones.filter((s) => s.eligio_slot).length },
         { etapa: 'Confirmaron cita',       n: sesiones.filter((s) => s.cita_confirmada).length },
     ];
+
+    // Detectar mayor caída relativa — admin viejo renderizarEmbudo L749-755.
+    // Recorre desde i=1 calculando retención respecto al paso anterior;
+    // marca el índice con la menor retención (excluido el paso 0).
+    let minRet = 101;
+    let idxCaida = -1;
+    for (let i = 1; i < etapas.length; i++) {
+        const prev = etapas[i - 1].n;
+        const ret = prev > 0 ? Math.round((etapas[i].n / prev) * 100) : 0;
+        if (ret < minRet) { minRet = ret; idxCaida = i; }
+    }
+    const tieneDatos = etapas[0].n > 0;
+
+    return etapas.map((e, i) => ({
+        ...e,
+        mayor_caida: tieneDatos && i === idxCaida,
+    }));
 }
 
 /**

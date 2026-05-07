@@ -969,8 +969,10 @@ async function cargarKPIsStats(rango) {
     try {
         const k = await stats.obtenerKPIs(rango);
         document.getElementById('kpi-sesiones').textContent = String(k.sesiones_reales);
+        document.getElementById('kpi-precios').textContent = String(k.vieron_precios);
         document.getElementById('kpi-citas').textContent = String(k.citas_confirmadas);
-        document.getElementById('kpi-conv').textContent = k.conversion_pct + '%';
+        // conversion_pct ya viene formateado: '5.4%' o '—'
+        document.getElementById('kpi-tasa').textContent = k.conversion_pct;
         document.getElementById('kpi-clientes').textContent = String(k.clientes_activos);
     } catch (err) { console.error('KPIs:', err); }
 }
@@ -987,8 +989,9 @@ async function cargarFunnelStats(rango) {
         const max = Math.max(...data.map((d) => d.n), 1);
         container.innerHTML = data.map((d) => {
             const pct = Math.round((d.n / max) * 100);
+            const warnClass = d.mayor_caida ? ' funnel-row-warn' : '';
             return `
-                <div class="funnel-row">
+                <div class="funnel-row${warnClass}">
                     <div class="funnel-label">${escapeHTML(d.etapa)}</div>
                     <div class="funnel-bar-wrap">
                         <div class="funnel-bar" style="width: ${pct}%;"></div>
