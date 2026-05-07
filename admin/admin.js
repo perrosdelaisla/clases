@@ -909,20 +909,27 @@ const statsState = {
 
 function calcularRango(periodo) {
     const hoy = new Date();
-    const hoyStrIso = hoy.toISOString().slice(0, 10);
+    const hoyStr = formatearFechaLocal(hoy);
     if (periodo === '7d') {
         const desde = new Date(hoy); desde.setDate(desde.getDate() - 6);
-        return { desde: desde.toISOString().slice(0, 10), hasta: hoyStrIso };
+        return { desde: formatearFechaLocal(desde), hasta: hoyStr };
     }
     if (periodo === '30d') {
         const desde = new Date(hoy); desde.setDate(desde.getDate() - 29);
-        return { desde: desde.toISOString().slice(0, 10), hasta: hoyStrIso };
+        return { desde: formatearFechaLocal(desde), hasta: hoyStr };
     }
     if (periodo === 'mes') {
         const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        return { desde: desde.toISOString().slice(0, 10), hasta: hoyStrIso };
+        return { desde: formatearFechaLocal(desde), hasta: hoyStr };
     }
     return null;
+}
+
+function formatearFechaLocal(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 function initStats() {
