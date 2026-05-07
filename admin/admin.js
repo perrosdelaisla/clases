@@ -173,6 +173,9 @@ function activarTab(tab) {
         p.hidden = p.dataset.panel !== tab;
     });
     try { localStorage.setItem('pdli_admin_tab', tab); } catch (e) {}
+    if (tab === 'agenda' && !window.__agendaBound) {
+        initAgenda();
+    }
     if (tab === 'clientes' && !window.__clientesLoaded) {
         cargarClientes();
         window.__clientesLoaded = true;
@@ -310,4 +313,99 @@ function escapeHTML(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+/* ═══════════════════════════════════════════
+   AGENDA — Bloque 3.A (skeleton)
+   Handlers vacíos. Conexión a agenda/api.js en Bloque 3.B.
+   ═══════════════════════════════════════════ */
+
+function bindAgendaSubtabs() {
+    document.querySelectorAll('.agenda-subtab').forEach((btn) => {
+        btn.addEventListener('click', () => activarAgendaSubtab(btn.dataset.subtab));
+    });
+}
+
+function activarAgendaSubtab(sub) {
+    document.querySelectorAll('.agenda-subtab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.subtab === sub);
+    });
+    document.querySelectorAll('[data-subpanel]').forEach((p) => {
+        p.hidden = p.dataset.subpanel !== sub;
+    });
+    console.log('TODO 3.B: cargar datos de sub-pestaña', sub);
+}
+
+function bindAgendaModals() {
+    const btnAddHora = document.getElementById('btn-add-hora');
+    if (btnAddHora) {
+        btnAddHora.addEventListener('click', () => openModal('modal-add-hora'));
+    }
+
+    const btnCitaManual = document.getElementById('btn-abrir-cita-manual');
+    if (btnCitaManual) {
+        btnCitaManual.addEventListener('click', () => openModal('modal-cita-manual'));
+    }
+
+    document.querySelectorAll('[data-modal-close]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+            const modal = e.target.closest('.modal');
+            if (modal) closeModal(modal.id);
+        });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal:not([hidden])').forEach((m) => closeModal(m.id));
+        }
+    });
+
+    const modalSave = document.getElementById('modal-save');
+    if (modalSave) {
+        modalSave.addEventListener('click', () => {
+            const dia = document.getElementById('modal-dia').value;
+            const hora = document.getElementById('modal-hora').value;
+            console.log('TODO 3.B: añadirSlotPlantilla(', dia, ',', hora, ')');
+            closeModal('modal-add-hora');
+        });
+    }
+
+    const cmSave = document.getElementById('cm-save');
+    if (cmSave) {
+        cmSave.addEventListener('click', () => {
+            console.log('TODO 3.B: crearCitaManual con datos del form');
+            closeModal('modal-cita-manual');
+        });
+    }
+}
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.hidden = false;
+}
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.hidden = true;
+}
+
+function bindFormBloqueo() {
+    const form = document.getElementById('form-bloqueo');
+    if (!form) return;
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fecha = document.getElementById('bloq-fecha').value;
+        const hora = document.getElementById('bloq-hora').value;
+        const motivo = document.getElementById('bloq-motivo').value;
+        console.log('TODO 3.B: bloquearDia(', fecha, ',', motivo, ',', hora || null, ')');
+    });
+}
+
+function initAgenda() {
+    if (window.__agendaBound) return;
+    bindAgendaSubtabs();
+    bindAgendaModals();
+    bindFormBloqueo();
+    console.log('TODO 3.B: cargar datos iniciales de agenda');
+    window.__agendaBound = true;
 }

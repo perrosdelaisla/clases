@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#1A1A1A">
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=10">
+    <link rel="stylesheet" href="./styles.css?v=11">
 </head>
 <body>
 
@@ -80,8 +80,68 @@
             </section>
 
             <section class="admin-panel" data-panel="agenda" hidden>
-                <h1 class="admin-panel-title">Agenda</h1>
-                <p class="admin-panel-subtitle">Plantilla, bloqueos y citas — Bloque 3</p>
+                <header class="agenda-header">
+                    <h1 class="admin-panel-title">Agenda</h1>
+                    <nav class="agenda-subtabs" aria-label="Sub-secciones de agenda">
+                        <button class="agenda-subtab active" data-subtab="plantilla" type="button">Plantilla</button>
+                        <button class="agenda-subtab" data-subtab="bloqueos" type="button">Bloqueos</button>
+                        <button class="agenda-subtab" data-subtab="citas" type="button">Citas</button>
+                    </nav>
+                </header>
+
+                <section class="agenda-subpanel" data-subpanel="plantilla">
+                    <div class="agenda-subpanel-header">
+                        <p class="agenda-subpanel-desc">
+                            Grilla semanal de horarios disponibles. Estos slots se ofrecen a los clientes en el chatbot Victoria.
+                        </p>
+                        <button id="btn-add-hora" class="btn-primary" type="button">+ Añadir hora</button>
+                    </div>
+                    <div id="plantilla-grid" class="plantilla-grid">
+                        <p class="agenda-empty">Cargando plantilla…</p>
+                    </div>
+                </section>
+
+                <section class="agenda-subpanel" data-subpanel="bloqueos" hidden>
+                    <div class="agenda-subpanel-header">
+                        <p class="agenda-subpanel-desc">
+                            Días u horas concretas en los que no se aceptan reservas (vacaciones, citas privadas, etc.).
+                        </p>
+                    </div>
+                    <form id="form-bloqueo" class="form-bloqueo" autocomplete="off">
+                        <div class="form-row">
+                            <label class="form-field">
+                                <span>Fecha</span>
+                                <input type="date" id="bloq-fecha" required>
+                            </label>
+                            <label class="form-field">
+                                <span>Hora (opcional)</span>
+                                <select id="bloq-hora">
+                                    <option value="">Día completo</option>
+                                </select>
+                            </label>
+                            <label class="form-field form-field-grow">
+                                <span>Motivo</span>
+                                <input type="text" id="bloq-motivo" placeholder="Vacaciones, cita privada, …" maxlength="200">
+                            </label>
+                            <button id="btn-bloquear" class="btn-primary" type="submit">Bloquear</button>
+                        </div>
+                    </form>
+                    <div id="bloqueos-list" class="bloqueos-list">
+                        <p class="agenda-empty">Cargando bloqueos…</p>
+                    </div>
+                </section>
+
+                <section class="agenda-subpanel" data-subpanel="citas" hidden>
+                    <div class="agenda-subpanel-header">
+                        <p class="agenda-subpanel-desc">
+                            Citas futuras agendadas. Confirma, cancela, marca como realizada o crea una cita manual.
+                        </p>
+                        <button id="btn-abrir-cita-manual" class="btn-primary" type="button">+ Cita manual</button>
+                    </div>
+                    <div id="citas-list" class="citas-list">
+                        <p class="agenda-empty">Cargando citas…</p>
+                    </div>
+                </section>
             </section>
 
             <section class="admin-panel" data-panel="clientes" hidden>
@@ -113,6 +173,127 @@
 
     </section>
 
-    <script type="module" src="./admin.js?v=10"></script>
+    <div class="modal" id="modal-add-hora" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content modal-small">
+            <header class="modal-header">
+                <h2>Añadir hora a plantilla</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <label class="form-field">
+                    <span>Día de la semana</span>
+                    <select id="modal-dia">
+                        <option value="1">Lunes</option>
+                        <option value="2">Martes</option>
+                        <option value="3">Miércoles</option>
+                        <option value="4">Jueves</option>
+                        <option value="5">Viernes</option>
+                        <option value="6">Sábado</option>
+                        <option value="0">Domingo</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Hora</span>
+                    <input type="time" id="modal-hora" step="900">
+                </label>
+            </div>
+            <footer class="modal-footer">
+                <button id="modal-cancel" class="btn-secondary" type="button" data-modal-close>Cancelar</button>
+                <button id="modal-save" class="btn-primary" type="button">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-cita-manual" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Crear cita manual</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <fieldset class="form-fieldset">
+                    <legend>Cliente</legend>
+                    <label class="form-field">
+                        <span>Nombre <span class="req">*</span></span>
+                        <input type="text" id="cm-nombre" required maxlength="120">
+                    </label>
+                    <label class="form-field">
+                        <span>Teléfono <span class="req">*</span></span>
+                        <input type="tel" id="cm-telefono" required maxlength="40" placeholder="+34 …">
+                    </label>
+                </fieldset>
+
+                <fieldset class="form-fieldset">
+                    <legend>Perro</legend>
+                    <label class="form-field">
+                        <span>Nombre <span class="req">*</span></span>
+                        <input type="text" id="cm-perro" required maxlength="80">
+                    </label>
+                    <div class="form-row">
+                        <label class="form-field">
+                            <span>Raza</span>
+                            <input type="text" id="cm-raza" maxlength="80">
+                        </label>
+                        <label class="form-field">
+                            <span>Edad (meses)</span>
+                            <input type="number" id="cm-edad" min="0" max="360" step="1">
+                        </label>
+                        <label class="form-field">
+                            <span>Peso (kg)</span>
+                            <input type="number" id="cm-peso" min="0" max="120" step="0.1">
+                        </label>
+                    </div>
+                    <label class="form-field form-field-checkbox">
+                        <input type="checkbox" id="cm-ppp">
+                        <span>Es PPP (potencialmente peligroso)</span>
+                    </label>
+                </fieldset>
+
+                <fieldset class="form-fieldset">
+                    <legend>Cita</legend>
+                    <div class="form-row">
+                        <label class="form-field">
+                            <span>Fecha <span class="req">*</span></span>
+                            <input type="date" id="cm-fecha" required>
+                        </label>
+                        <label class="form-field">
+                            <span>Hora <span class="req">*</span></span>
+                            <select id="cm-hora" required>
+                                <option value="">—</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-field">
+                            <span>Modalidad</span>
+                            <select id="cm-modalidad">
+                                <option value="">—</option>
+                                <option value="presencial">Presencial</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </label>
+                        <label class="form-field form-field-grow">
+                            <span>Zona</span>
+                            <input type="text" id="cm-zona" maxlength="80">
+                        </label>
+                    </div>
+                    <label class="form-field">
+                        <span>Notas</span>
+                        <textarea id="cm-notas" rows="3" maxlength="500"></textarea>
+                    </label>
+                </fieldset>
+
+                <p id="cm-error" class="form-error" hidden></p>
+            </div>
+            <footer class="modal-footer">
+                <button id="cm-cancel" class="btn-secondary" type="button" data-modal-close>Cancelar</button>
+                <button id="cm-save" class="btn-primary" type="button">Crear cita</button>
+            </footer>
+        </div>
+    </div>
+
+    <script type="module" src="./admin.js?v=11"></script>
 </body>
 </html>
