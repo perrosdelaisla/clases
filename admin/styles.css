@@ -2030,3 +2030,203 @@ body {
     color: var(--color-text);
     font-weight: 500;
 }
+
+/* ==============================================
+   STATS — Bloque 4
+   ============================================== */
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stats-periodo {
+    display: flex;
+    gap: 4px;
+    background: rgba(245, 239, 224, 0.05);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.stats-periodo-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--color-muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.stats-periodo-btn:hover { color: var(--color-text); }
+
+.stats-periodo-btn.active {
+    background: var(--color-red);
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+/* KPIs */
+.stats-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+    .stats-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
+.kpi {
+    background: rgba(245, 239, 224, 0.04);
+    border: 1px solid rgba(245, 239, 224, 0.08);
+    border-radius: 12px;
+    padding: 24px 20px;
+}
+
+.kpi-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    line-height: 1;
+    color: var(--color-red);
+    letter-spacing: 1px;
+}
+
+.kpi-label {
+    margin-top: 8px;
+    color: var(--color-muted);
+    font-size: 13px;
+}
+
+/* Stats row (funnel + derivaciones) */
+.stats-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+    .stats-row { grid-template-columns: 1fr; }
+}
+
+.stats-card {
+    background: rgba(245, 239, 224, 0.04);
+    border: 1px solid rgba(245, 239, 224, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.stats-card h3 {
+    margin: 0 0 16px 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: var(--color-text);
+}
+
+/* Funnel CSS-only */
+.stats-funnel { display: flex; flex-direction: column; gap: 8px; }
+
+.funnel-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.funnel-label { font-size: 13px; color: var(--color-muted); }
+
+.funnel-bar-wrap {
+    position: relative;
+    background: rgba(245, 239, 224, 0.05);
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.funnel-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-red), #6B7A3A);
+    border-radius: 6px;
+    transition: width 0.4s ease;
+}
+
+.funnel-value {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+@media (max-width: 600px) {
+    .funnel-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* Derivaciones */
+.stats-deriv {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: center;
+}
+
+.deriv-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background: rgba(245, 239, 224, 0.03);
+    border-radius: 8px;
+}
+
+.deriv-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--color-red);
+}
+
+.deriv-label {
+    color: var(--color-muted);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* Doughnuts grid 2x2 */
+.stats-doughnuts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+    .stats-doughnuts { grid-template-columns: 1fr; }
+}
+
+.canvas-wrap {
+    position: relative;
+    height: 240px;
+}
+
+.canvas-wrap-bar { height: 200px; }
+
+.canvas-wrap canvas { max-height: 100%; }
+
+.stats-empty {
+    color: var(--color-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 24px;
+    margin: 0;
+}

@@ -9,6 +9,8 @@
 
 import { supabase } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=2';
+import * as stats from './stats/api.js';
+import Chart from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/+esm';
 
 // Estado en memoria del admin actual y la lista cargada de clientes.
 const state = {
@@ -180,6 +182,9 @@ function activarTab(tab) {
     if (tab === 'clientes' && !window.__clientesLoaded) {
         cargarClientes();
         window.__clientesLoaded = true;
+    }
+    if (tab === 'stats') {
+        initStats();
     }
 }
 
@@ -889,4 +894,178 @@ function renderCitas(citas) {
             </div>
         `;
     }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   STATS — Bloque 4
+   ═══════════════════════════════════════════ */
+
+const statsState = {
+    periodo: '30d',
+    charts: {},
+    bound: false,
+};
+
+function calcularRango(periodo) {
+    const hoy = new Date();
+    const hoyStrIso = hoy.toISOString().slice(0, 10);
+    if (periodo === '7d') {
+        const desde = new Date(hoy); desde.setDate(desde.getDate() - 6);
+        return { desde: desde.toISOString().slice(0, 10), hasta: hoyStrIso };
+    }
+    if (periodo === '30d') {
+        const desde = new Date(hoy); desde.setDate(desde.getDate() - 29);
+        return { desde: desde.toISOString().slice(0, 10), hasta: hoyStrIso };
+    }
+    if (periodo === 'mes') {
+        const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        return { desde: desde.toISOString().slice(0, 10), hasta: hoyStrIso };
+    }
+    return null;
+}
+
+function initStats() {
+    if (!statsState.bound) {
+        bindStatsPeriodos();
+        statsState.bound = true;
+    }
+    cargarTodoStats();
+}
+
+function bindStatsPeriodos() {
+    document.querySelectorAll('.stats-periodo-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.stats-periodo-btn').forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+            statsState.periodo = btn.dataset.periodo;
+            cargarTodoStats();
+        });
+    });
+}
+
+async function cargarTodoStats() {
+    const rango = calcularRango(statsState.periodo);
+    await Promise.all([
+        cargarKPIsStats(rango),
+        cargarFunnelStats(rango),
+        cargarDerivacionesStats(rango),
+        cargarDoughnut('tema',      () => stats.obtenerDistribucionTema(rango),      'chart-tema'),
+        cargarDoughnut('modalidad', () => stats.obtenerDistribucionModalidad(rango), 'chart-modalidad'),
+        cargarDoughnut('origen',    () => stats.obtenerDistribucionOrigen(rango),    'chart-origen'),
+        cargarDoughnut('clientes',  () => stats.obtenerDistribucionClientes(),       'chart-clientes'),
+        cargarBarrasCitasMes(),
+    ]);
+}
+
+async function cargarKPIsStats(rango) {
+    try {
+        const k = await stats.obtenerKPIs(rango);
+        document.getElementById('kpi-sesiones').textContent = String(k.sesiones_reales);
+        document.getElementById('kpi-citas').textContent = String(k.citas_confirmadas);
+        document.getElementById('kpi-conv').textContent = k.conversion_pct + '%';
+        document.getElementById('kpi-clientes').textContent = String(k.clientes_activos);
+    } catch (err) { console.error('KPIs:', err); }
+}
+
+async function cargarFunnelStats(rango) {
+    try {
+        const data = await stats.obtenerFunnelVictoria(rango);
+        const container = document.getElementById('stats-funnel');
+        if (!container) return;
+        if (!data.length || data[0].n === 0) {
+            container.innerHTML = '<p class="stats-empty">Sin datos en este período.</p>';
+            return;
+        }
+        const max = Math.max(...data.map((d) => d.n), 1);
+        container.innerHTML = data.map((d) => {
+            const pct = Math.round((d.n / max) * 100);
+            return `
+                <div class="funnel-row">
+                    <div class="funnel-label">${escapeHTML(d.etapa)}</div>
+                    <div class="funnel-bar-wrap">
+                        <div class="funnel-bar" style="width: ${pct}%;"></div>
+                        <span class="funnel-value">${d.n}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) { console.error('Funnel:', err); }
+}
+
+async function cargarDerivacionesStats(rango) {
+    try {
+        const d = await stats.obtenerDerivaciones(rango);
+        document.getElementById('deriv-etologo').textContent = String(d.a_etologo);
+        document.getElementById('deriv-zona').textContent = String(d.por_zona);
+    } catch (err) { console.error('Derivaciones:', err); }
+}
+
+async function cargarDoughnut(key, fetcher, canvasId) {
+    try {
+        const data = await fetcher();
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        if (statsState.charts[key]) statsState.charts[key].destroy();
+
+        const wrap = ctx.closest('.canvas-wrap');
+        if (!data.length) {
+            ctx.style.display = 'none';
+            if (wrap && !wrap.querySelector('.stats-empty')) {
+                wrap.insertAdjacentHTML('beforeend', '<p class="stats-empty">Sin datos.</p>');
+            }
+            return;
+        }
+        ctx.style.display = '';
+        const empty = wrap?.querySelector('.stats-empty');
+        if (empty) empty.remove();
+
+        statsState.charts[key] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map((d) => d.label),
+                datasets: [{
+                    data: data.map((d) => d.n),
+                    backgroundColor: ['#C8102E', '#6B7A3A', '#1A1A1A', '#F5EFE0', '#8B7355', '#A04040', '#4A5530', '#D4A05C'],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#F5EFE0', font: { family: 'Inter', size: 11 } } },
+                },
+            },
+        });
+    } catch (err) { console.error(`Doughnut ${key}:`, err); }
+}
+
+async function cargarBarrasCitasMes() {
+    try {
+        const data = await stats.obtenerCitasPorMes();
+        const ctx = document.getElementById('chart-citas-mes');
+        if (!ctx) return;
+        if (statsState.charts.citasMes) statsState.charts.citasMes.destroy();
+        if (!data.length) {
+            ctx.style.display = 'none';
+            return;
+        }
+        ctx.style.display = '';
+        statsState.charts.citasMes = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map((d) => d.mes),
+                datasets: [{ data: data.map((d) => d.n), backgroundColor: '#C8102E', borderWidth: 0 }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#F5EFE0' }, grid: { color: 'rgba(245,239,224,0.1)' } },
+                    y: { ticks: { color: '#F5EFE0', precision: 0 }, grid: { color: 'rgba(245,239,224,0.1)' }, beginAtZero: true },
+                },
+            },
+        });
+    } catch (err) { console.error('CitasMes:', err); }
 }

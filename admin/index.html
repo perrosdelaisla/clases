@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#1A1A1A">
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=13">
+    <link rel="stylesheet" href="./styles.css?v=14">
 </head>
 <body>
 
@@ -160,8 +160,60 @@
             </section>
 
             <section class="admin-panel" data-panel="stats" hidden>
-                <h1 class="admin-panel-title">Estadísticas</h1>
-                <p class="admin-panel-subtitle">KPIs y gráficos — Bloque 4</p>
+                <header class="stats-header">
+                    <h2>Estadísticas</h2>
+                    <div class="stats-periodo" role="tablist">
+                        <button class="stats-periodo-btn" data-periodo="7d" type="button">7 días</button>
+                        <button class="stats-periodo-btn active" data-periodo="30d" type="button">30 días</button>
+                        <button class="stats-periodo-btn" data-periodo="mes" type="button">Este mes</button>
+                        <button class="stats-periodo-btn" data-periodo="todo" type="button">Todo</button>
+                    </div>
+                </header>
+
+                <section class="stats-kpis">
+                    <div class="kpi"><div class="kpi-num" id="kpi-sesiones">—</div><div class="kpi-label">Sesiones Victoria</div></div>
+                    <div class="kpi"><div class="kpi-num" id="kpi-citas">—</div><div class="kpi-label">Citas confirmadas</div></div>
+                    <div class="kpi"><div class="kpi-num" id="kpi-conv">—</div><div class="kpi-label">Conversión V→cita</div></div>
+                    <div class="kpi"><div class="kpi-num" id="kpi-clientes">—</div><div class="kpi-label">Clientes activos</div></div>
+                </section>
+
+                <div class="stats-row">
+                    <section class="stats-card stats-funnel-card">
+                        <h3>Embudo Victoria</h3>
+                        <div id="stats-funnel" class="stats-funnel"><p class="stats-empty">Cargando…</p></div>
+                    </section>
+                    <section class="stats-card stats-deriv-card">
+                        <h3>Derivaciones</h3>
+                        <div id="stats-derivaciones" class="stats-deriv">
+                            <div class="deriv-item"><span class="deriv-num" id="deriv-etologo">—</span><span class="deriv-label">Al etólogo</span></div>
+                            <div class="deriv-item"><span class="deriv-num" id="deriv-zona">—</span><span class="deriv-label">Por zona</span></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="stats-doughnuts">
+                    <section class="stats-card">
+                        <h3>Tema preseleccionado</h3>
+                        <div class="canvas-wrap"><canvas id="chart-tema"></canvas></div>
+                    </section>
+                    <section class="stats-card">
+                        <h3>Modalidad</h3>
+                        <div class="canvas-wrap"><canvas id="chart-modalidad"></canvas></div>
+                    </section>
+                    <section class="stats-card">
+                        <h3>Origen</h3>
+                        <div class="canvas-wrap"><canvas id="chart-origen"></canvas></div>
+                    </section>
+                    <section class="stats-card">
+                        <h3>Estado de clientes</h3>
+                        <div class="canvas-wrap"><canvas id="chart-clientes"></canvas></div>
+                    </section>
+                </div>
+
+                <section class="stats-card">
+                    <h3>Citas por mes (últimos 12 meses)</h3>
+                    <div class="canvas-wrap canvas-wrap-bar"><canvas id="chart-citas-mes"></canvas></div>
+                </section>
             </section>
 
             <section class="admin-panel" data-panel="catalogo" hidden>
@@ -294,6 +346,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin.js?v=15"></script>
+    <script type="module" src="./admin.js?v=16"></script>
 </body>
 </html>
