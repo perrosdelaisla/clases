@@ -365,11 +365,23 @@ function bindAgendaModals() {
 
     const modalSave = document.getElementById('modal-save');
     if (modalSave) {
-        modalSave.addEventListener('click', () => {
-            const dia = document.getElementById('modal-dia').value;
-            const hora = document.getElementById('modal-hora').value;
-            console.log('TODO 3.B: añadirSlotPlantilla(', dia, ',', hora, ')');
-            closeModal('modal-add-hora');
+        modalSave.addEventListener('click', async () => {
+            const dia = parseInt(document.getElementById('modal-dia').value, 10);
+            const horaInput = document.getElementById('modal-hora').value;
+            if (!horaInput) {
+                alert('Indicá una hora.');
+                return;
+            }
+            const hora = horaInput.length === 5 ? `${horaInput}:00` : horaInput;
+            try {
+                await agenda.añadirSlotPlantilla(dia, hora);
+                closeModal('modal-add-hora');
+                document.getElementById('modal-hora').value = '';
+                await cargarPlantilla();
+            } catch (err) {
+                console.error('Error añadir slot:', err);
+                alert('No se pudo añadir el slot.');
+            }
         });
     }
 
@@ -395,13 +407,42 @@ function closeModal(id) {
 function bindFormBloqueo() {
     const form = document.getElementById('form-bloqueo');
     if (!form) return;
-    form.addEventListener('submit', (e) => {
+
+    poblarDropdownHorasBloqueo();
+
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fecha = document.getElementById('bloq-fecha').value;
         const hora = document.getElementById('bloq-hora').value;
-        const motivo = document.getElementById('bloq-motivo').value;
-        console.log('TODO 3.B: bloquearDia(', fecha, ',', motivo, ',', hora || null, ')');
+        const motivo = document.getElementById('bloq-motivo').value.trim();
+        if (!fecha) {
+            alert('Indicá una fecha.');
+            return;
+        }
+        try {
+            await agenda.bloquearDia(fecha, motivo, hora || null);
+            document.getElementById('bloq-fecha').value = '';
+            document.getElementById('bloq-hora').value = '';
+            document.getElementById('bloq-motivo').value = '';
+            await cargarBloqueos();
+        } catch (err) {
+            console.error('Error crear bloqueo:', err);
+            alert('No se pudo crear el bloqueo.');
+        }
     });
+}
+
+async function poblarDropdownHorasBloqueo() {
+    const select = document.getElementById('bloq-hora');
+    if (!select) return;
+    try {
+        const slots = await agenda.obtenerPlantilla();
+        const horasUnicas = [...new Set(slots.map((s) => s.hora))].sort();
+        select.innerHTML = '<option value="">Día completo</option>' +
+            horasUnicas.map((h) => `<option value="${escapeHTML(h.substring(0, 5))}">${escapeHTML(h.substring(0, 5))}</option>`).join('');
+    } catch (err) {
+        console.error('Error cargando horas para dropdown:', err);
+    }
 }
 
 function initAgenda() {
@@ -426,6 +467,23 @@ const DIAS_SEMANA = [
     { id: 0, nombre: 'Domingo' },
 ];
 
+// Helpers de fecha (formato local zona Madrid, mismo que admin viejo)
+function hoyStr() {
+    return new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+}
+
+function esCitaPasada(fechaISO) {
+    return fechaISO < hoyStr();
+}
+
+function esCitaHoy(fechaISO) {
+    return fechaISO === hoyStr();
+}
+
+function esCitaFutura(fechaISO) {
+    return fechaISO > hoyStr();
+}
+
 async function cargarPlantilla() {
     const grid = document.getElementById('plantilla-grid');
     if (!grid) return;
@@ -433,10 +491,45 @@ async function cargarPlantilla() {
     try {
         const slots = await agenda.obtenerPlantilla();
         renderPlantilla(slots);
+        bindPlantillaActions();
     } catch (err) {
         console.error('Error cargando plantilla:', err);
         grid.innerHTML = '<p class="agenda-empty">Error al cargar plantilla.</p>';
     }
+}
+
+function bindPlantillaActions() {
+    const grid = document.getElementById('plantilla-grid');
+    if (!grid || grid.__bound) return;
+    grid.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const slotEl = btn.closest('[data-slot-id]');
+        if (!slotEl) return;
+        const slotId = slotEl.dataset.slotId;
+        const action = btn.dataset.action;
+
+        if (action === 'toggle') {
+            const activoActual = btn.dataset.active === 'true';
+            try {
+                await agenda.toggleSlotActivo(slotId, !activoActual);
+                await cargarPlantilla();
+            } catch (err) {
+                console.error('Error toggle slot:', err);
+                alert('No se pudo cambiar el slot.');
+            }
+        } else if (action === 'delete') {
+            if (!confirm('¿Eliminar este slot de la plantilla?')) return;
+            try {
+                await agenda.eliminarSlotPlantilla(slotId);
+                await cargarPlantilla();
+            } catch (err) {
+                console.error('Error eliminar slot:', err);
+                alert('No se pudo eliminar el slot.');
+            }
+        }
+    });
+    grid.__bound = true;
 }
 
 function renderPlantilla(slots) {
@@ -485,10 +578,32 @@ async function cargarBloqueos() {
     try {
         const bloqueos = await agenda.obtenerBloqueos();
         renderBloqueos(bloqueos);
+        bindBloqueosActions();
     } catch (err) {
         console.error('Error cargando bloqueos:', err);
         list.innerHTML = '<p class="agenda-empty">Error al cargar bloqueos.</p>';
     }
+}
+
+function bindBloqueosActions() {
+    const list = document.getElementById('bloqueos-list');
+    if (!list || list.__bound) return;
+    list.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-action="eliminar-bloqueo"]');
+        if (!btn) return;
+        const card = btn.closest('[data-bloqueo-id]');
+        if (!card) return;
+        const bloqueoId = card.dataset.bloqueoId;
+        if (!confirm('¿Eliminar este bloqueo?')) return;
+        try {
+            await agenda.eliminarBloqueo(bloqueoId);
+            await cargarBloqueos();
+        } catch (err) {
+            console.error('Error eliminar bloqueo:', err);
+            alert('No se pudo eliminar el bloqueo.');
+        }
+    });
+    list.__bound = true;
 }
 
 function renderBloqueos(bloqueos) {
@@ -523,10 +638,45 @@ async function cargarCitas() {
     try {
         const citas = await agenda.obtenerCitasAdminConReportado();
         renderCitas(citas);
+        bindCitasActions();
     } catch (err) {
         console.error('Error cargando citas:', err);
         list.innerHTML = '<p class="agenda-empty">Error al cargar citas.</p>';
     }
+}
+
+function bindCitasActions() {
+    const list = document.getElementById('citas-list');
+    if (!list || list.__bound) return;
+    list.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const card = btn.closest('[data-cita-id]');
+        if (!card) return;
+        const citaId = card.dataset.citaId;
+        const action = btn.dataset.action;
+
+        try {
+            if (action === 'confirmar') {
+                await agenda.confirmarCita(citaId);
+            } else if (action === 'cancelar') {
+                if (!confirm('¿Cancelar esta cita? Se mantendrá en la lista hasta que la elimines.')) return;
+                await agenda.cancelarCita(citaId);
+            } else if (action === 'realizada') {
+                await agenda.marcarCitaRealizada(citaId);
+            } else if (action === 'eliminar-cita') {
+                if (!confirm('¿Eliminar esta cita definitivamente? Esta acción no se puede deshacer.')) return;
+                await agenda.eliminarCita(citaId);
+            } else {
+                return;
+            }
+            await cargarCitas();
+        } catch (err) {
+            console.error(`Error en acción ${action}:`, err);
+            alert(`No se pudo completar la acción "${action}".`);
+        }
+    });
+    list.__bound = true;
 }
 
 function renderCitas(citas) {
@@ -536,7 +686,19 @@ function renderCitas(citas) {
         list.innerHTML = '<p class="agenda-empty">No hay citas futuras agendadas.</p>';
         return;
     }
-    list.innerHTML = citas.map((c) => {
+
+    // Filtrar canceladas pasadas (regla del admin viejo)
+    const visibles = citas.filter((c) => {
+        if (c.estado === 'cancelada' && esCitaPasada(c.fecha)) return false;
+        return true;
+    });
+
+    if (visibles.length === 0) {
+        list.innerHTML = '<p class="agenda-empty">No hay citas futuras agendadas.</p>';
+        return;
+    }
+
+    list.innerHTML = visibles.map((c) => {
         const cliente = c.clientes?.nombre || '(sin nombre)';
         const telefono = c.clientes?.telefono || '';
         const zona = c.clientes?.zona || '';
@@ -550,8 +712,55 @@ function renderCitas(citas) {
                 if (p.problematica) partes.push(`— ${p.problematica}`);
                 return partes.join(' · ');
             }).join(' / ');
+
         const reportado = c.reportado;
         const estado = c.estado || 'pendiente';
+        const protocolo = c.protocolo;
+        const cuadros = Array.isArray(c.cuadros_detectados) ? c.cuadros_detectados : [];
+
+        // BOTONES CONDICIONALES — reglas del admin viejo (hola/admin/admin.js:444-493)
+        const botones = [];
+
+        // Confirmar: solo si pendiente
+        if (estado === 'pendiente') {
+            botones.push('<button data-action="confirmar" type="button">Confirmar</button>');
+        }
+
+        // Cancelar: pendiente o confirmada, hoy o futura, NO realizada/cancelada
+        if ((estado === 'pendiente' || estado === 'confirmada') && !esCitaPasada(c.fecha)) {
+            botones.push('<button data-action="cancelar" type="button">Cancelar</button>');
+        }
+
+        // Marcar realizada: solo confirmadas de hoy o anteriores
+        if (estado === 'confirmada' && (esCitaHoy(c.fecha) || esCitaPasada(c.fecha))) {
+            botones.push('<button data-action="realizada" type="button">Marcar realizada</button>');
+        }
+
+        // Eliminar: realizadas, canceladas (futuras) y confirmadas
+        if (estado === 'realizada' || estado === 'cancelada' || estado === 'confirmada') {
+            botones.push('<button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>');
+        }
+
+        // Si quedó pendiente sin botón Eliminar (caso raro), permitir eliminar igual
+        if (estado === 'pendiente' && botones.length === 1) {
+            botones.push('<button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>');
+        }
+
+        // Reportado / Notas con labels diferenciados
+        let bloqueReportado = '';
+        if (reportado) {
+            bloqueReportado = `<div class="cita-reportado"><strong>Reportado por el cliente:</strong> ${escapeHTML(reportado)}</div>`;
+        } else if (c.notas) {
+            bloqueReportado = `<div class="cita-reportado"><strong>Notas:</strong> ${escapeHTML(c.notas)}</div>`;
+        }
+
+        // Protocolo + cuadros detectados (si existen)
+        let bloqueProtocolo = '';
+        if (protocolo) {
+            bloqueProtocolo = `<div class="cita-protocolo"><strong>Protocolo:</strong> ${escapeHTML(protocolo)}</div>`;
+        } else if (cuadros.length > 0) {
+            bloqueProtocolo = `<div class="cita-protocolo"><strong>Cuadros:</strong> ${escapeHTML(cuadros.join(', '))}</div>`;
+        }
 
         return `
             <div class="cita-card" data-cita-id="${escapeHTML(c.id)}">
@@ -563,14 +772,9 @@ function renderCitas(citas) {
                     <strong>${escapeHTML(cliente)}</strong>${telefono ? ' · ' + escapeHTML(telefono) : ''}${zona ? ' · ' + escapeHTML(zona) : ''}${c.modalidad ? ' · ' + escapeHTML(c.modalidad) : ''}
                 </div>
                 <div class="cita-perro">${escapeHTML(perrosTexto)}</div>
-                ${reportado ? `<div class="cita-reportado">${escapeHTML(reportado)}</div>` : ''}
-                ${c.notas ? `<div class="cita-perro"><em>Notas: ${escapeHTML(c.notas)}</em></div>` : ''}
-                <div class="cita-acciones">
-                    <button data-action="confirmar" type="button">Confirmar</button>
-                    <button data-action="cancelar" type="button">Cancelar</button>
-                    <button data-action="realizada" type="button">Marcar realizada</button>
-                    <button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>
-                </div>
+                ${bloqueProtocolo}
+                ${bloqueReportado}
+                <div class="cita-acciones">${botones.join('')}</div>
             </div>
         `;
     }).join('');

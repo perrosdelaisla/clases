@@ -2016,3 +2016,17 @@ body {
     margin: 4px 0;
     opacity: 0.5;
 }
+
+.cita-protocolo {
+    color: var(--color-muted);
+    font-size: 13px;
+    border-left: 2px solid var(--color-red);
+    padding-left: 12px;
+    margin: 4px 0;
+}
+
+.cita-protocolo strong,
+.cita-reportado strong {
+    color: var(--color-text);
+    font-weight: 500;
+}
