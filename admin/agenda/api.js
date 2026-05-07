@@ -270,7 +270,48 @@ export async function eliminarBloqueo(id) {
  * Equivalencia hola/supabase.js: línea 179
  */
 export async function obtenerCitasAdminConReportado() {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: SELECT citas + join clientes(perros) + 2da query conversaciones; agregar reportado en cliente');
+    const hoy = new Date().toISOString().split('T')[0];
+
+    // 1) Citas futuras con clientes y sus perros
+    const { data: citas, error: errCitas } = await supabase
+        .from('citas')
+        .select('*, clientes(nombre, telefono, zona, perros(nombre, raza, edad_meses, problematica))')
+        .gte('fecha', hoy)
+        .order('fecha', { ascending: true })
+        .order('hora', { ascending: true });
+    if (errCitas) throw errCitas;
+    if (!citas || citas.length === 0) return [];
+
+    // 2) Conversaciones de esas citas (para extraer "reportado")
+    const ids = citas.map(c => c.id);
+    const { data: conversaciones, error: errConv } = await supabase
+        .from('conversaciones')
+        .select('cita_id, turnos')
+        .in('cita_id', ids);
+    if (errConv) throw errConv;
+
+    // 3) Construir mapa cita_id -> reportado (mismo algoritmo que hola/supabase.js:188)
+    const reportadoPorCita = {};
+    (conversaciones || []).forEach(conv => {
+        const turnos = Array.isArray(conv.turnos) ? conv.turnos : [];
+        const mensajesCliente = turnos
+            .filter(t => t.rol === 'cliente')
+            .slice(0, 4)
+            .map(t => t.texto);
+        const ordenadosPorLongitud = mensajesCliente
+            .slice()
+            .sort((a, b) => (b?.length || 0) - (a?.length || 0));
+        reportadoPorCita[conv.cita_id] = ordenadosPorLongitud
+            .slice(0, 2)
+            .join(' · ')
+            .slice(0, 400) || null;
+    });
+
+    // 4) Mergear: cada cita lleva su reportado (o null)
+    return citas.map(cita => ({
+        ...cita,
+        reportado: reportadoPorCita[cita.id] || null,
+    }));
 }
 
 /**
