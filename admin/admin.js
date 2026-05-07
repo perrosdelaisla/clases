@@ -10,7 +10,8 @@
 import { supabase } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=2';
 import * as stats from './stats/api.js';
-import Chart from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/+esm';
+// Chart.js cargado vía <script> UMD en index.html (window.Chart)
+const Chart = window.Chart;
 
 // Estado en memoria del admin actual y la lista cargada de clientes.
 const state = {
