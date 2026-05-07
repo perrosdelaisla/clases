@@ -161,7 +161,14 @@ export async function toggleSlotActivo(id, activo) {
  * Equivalencia hola/supabase.js: línea 163
  */
 export async function obtenerBloqueos() {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: SELECT * FROM bloqueos WHERE fecha >= hoy ORDER BY fecha');
+    const hoy = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+        .from('bloqueos')
+        .select('*')
+        .gte('fecha', hoy)
+        .order('fecha', { ascending: true });
+    if (error) throw error;
+    return data || [];
 }
 
 /**
