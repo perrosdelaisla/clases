@@ -940,6 +940,12 @@ body {
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
+/* Garantizar que el atributo hidden gana contra la regla con ID arriba.
+   Sin esto, login y app se ven a la vez en la misma página scrolleable. */
+#screen-app[hidden] {
+    display: none;
+}
+
 .app-main {
     flex: 1;
     width: 100%;
