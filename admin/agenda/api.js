@@ -11,15 +11,12 @@
 // Fecha de creación: 2026-05-07
 // Branch: feat/admin-unificado
 //
-// ⚠️ AVISO IMPORTANTE
-// ─────────────────────
-// Este es el ESQUELETO del Bloque 1.A. TODAS las funciones lanzan
-// NOT_IMPLEMENTED hasta que el Bloque 1.B llene el cuerpo con queries
-// SDK reales. NO consumir desde la UI todavía — cualquier `await` a
-// estas funciones tirará una excepción explícita en runtime.
+// Estado: Bloque 1.B completado. Las 15 funciones están implementadas
+// con el SDK supabase-js + sesión Auth real. La validación end-to-end
+// se documenta en TESTING_BLOQUE_1B.md.
 //
 // Las firmas son IDÉNTICAS a las de hola/supabase.js para que el port
-// del cuerpo sea mecánico (no requiere cambios en quien llame). La
+// haya sido mecánico (no requiere cambios en quien llame). La
 // equivalencia de cada función con su línea original en hola/supabase.js
 // está anotada en su JSDoc.
 // =====================================================================
@@ -86,7 +83,21 @@ export async function obtenerPlantilla() {
  * Equivalencia hola/supabase.js: línea 120
  */
 export async function añadirSlotPlantilla(dia_semana, hora) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: SELECT eq dia_semana,hora; si vacío INSERT con activo=true');
+    const { data: existentes, error: errSel } = await supabase
+        .from('slots')
+        .select('*')
+        .eq('dia_semana', dia_semana)
+        .eq('hora', hora);
+    if (errSel) throw errSel;
+    if (existentes && existentes.length > 0) return existentes[0];
+
+    const { data: creado, error: errIns } = await supabase
+        .from('slots')
+        .insert({ dia_semana, hora, activo: true })
+        .select()
+        .single();
+    if (errIns) throw errIns;
+    return creado;
 }
 
 /**
@@ -110,7 +121,11 @@ export async function añadirSlotPlantilla(dia_semana, hora) {
  * Equivalencia hola/supabase.js: línea 135
  */
 export async function eliminarSlotPlantilla(id) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: DELETE FROM slots WHERE id = $1');
+    const { error } = await supabase
+        .from('slots')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
 }
 
 /**
@@ -133,7 +148,11 @@ export async function eliminarSlotPlantilla(id) {
  * Equivalencia hola/supabase.js: línea 139
  */
 export async function toggleSlotActivo(id, activo) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: UPDATE slots SET activo = $2 WHERE id = $1');
+    const { error } = await supabase
+        .from('slots')
+        .update({ activo })
+        .eq('id', id);
+    if (error) throw error;
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -197,7 +216,14 @@ export async function obtenerBloqueos() {
  * Equivalencia hola/supabase.js: línea 147
  */
 export async function bloquearDia(fecha, motivo = '', hora = null) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: INSERT INTO bloqueos (fecha, motivo, hora?) — normalizar hora HH:MM → HH:MM:00');
+    const body = { fecha, motivo };
+    if (hora) {
+        body.hora = hora.length === 5 ? `${hora}:00` : hora;
+    }
+    const { error } = await supabase
+        .from('bloqueos')
+        .insert(body);
+    if (error) throw error;
 }
 
 /**
@@ -218,7 +244,11 @@ export async function bloquearDia(fecha, motivo = '', hora = null) {
  * Equivalencia hola/supabase.js: línea 155
  */
 export async function eliminarBloqueo(id) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: DELETE FROM bloqueos WHERE id = $1');
+    const { error } = await supabase
+        .from('bloqueos')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -332,7 +362,11 @@ export async function obtenerCitasAdminConReportado() {
  * Equivalencia hola/supabase.js: línea 212
  */
 export async function confirmarCita(citaId) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: UPDATE citas SET estado = \'confirmada\' WHERE id = $1');
+    const { error } = await supabase
+        .from('citas')
+        .update({ estado: 'confirmada' })
+        .eq('id', citaId);
+    if (error) throw error;
 }
 
 /**
@@ -353,7 +387,11 @@ export async function confirmarCita(citaId) {
  * Equivalencia hola/supabase.js: línea 216
  */
 export async function cancelarCita(citaId) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: UPDATE citas SET estado = \'cancelada\' WHERE id = $1');
+    const { error } = await supabase
+        .from('citas')
+        .update({ estado: 'cancelada' })
+        .eq('id', citaId);
+    if (error) throw error;
 }
 
 /**
@@ -374,7 +412,11 @@ export async function cancelarCita(citaId) {
  * Equivalencia hola/supabase.js: línea 226
  */
 export async function marcarCitaRealizada(citaId) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: UPDATE citas SET estado = \'realizada\' WHERE id = $1');
+    const { error } = await supabase
+        .from('citas')
+        .update({ estado: 'realizada' })
+        .eq('id', citaId);
+    if (error) throw error;
 }
 
 /**
@@ -396,7 +438,11 @@ export async function marcarCitaRealizada(citaId) {
  * Equivalencia hola/supabase.js: línea 235
  */
 export async function eliminarCita(citaId) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: DELETE FROM citas WHERE id = $1');
+    const { error } = await supabase
+        .from('citas')
+        .delete()
+        .eq('id', citaId);
+    if (error) throw error;
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -451,7 +497,74 @@ export async function eliminarCita(citaId) {
  * Equivalencia hola/supabase.js: línea 258
  */
 export async function crearCitaManual(datos) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: cadena INSERT clientes→perros→citas→bloqueos con rollback DELETE inverso');
+    const { cliente, perro, cita } = datos || {};
+    if (!cliente?.nombre || !cliente?.telefono) return { ok: false, error: 'Faltan datos de cliente' };
+    if (!perro?.nombre)                          return { ok: false, error: 'Falta nombre del perro' };
+    if (!cita?.fecha || !cita?.hora)             return { ok: false, error: 'Falta fecha u hora' };
+
+    const horaCompleta = cita.hora.length === 5 ? `${cita.hora}:00` : cita.hora;
+    let clienteId = null, perroId = null, citaId = null;
+
+    try {
+        // 1) Cliente
+        const clienteBody = { nombre: cliente.nombre, telefono: cliente.telefono, estado: 'consulta' };
+        if (cita.zona) clienteBody.zona = cita.zona;
+        const { data: clienteData, error: errC } = await supabase
+            .from('clientes')
+            .insert(clienteBody)
+            .select()
+            .single();
+        if (errC) throw errC;
+        clienteId = clienteData?.id;
+        if (!clienteId) throw new Error('No se pudo crear el cliente');
+
+        // 2) Perro
+        const perroBody = { cliente_id: clienteId, nombre: perro.nombre };
+        if (perro.raza)               perroBody.raza = perro.raza;
+        if (perro.edad_meses != null) perroBody.edad_meses = perro.edad_meses;
+        if (perro.peso_kg != null)    perroBody.peso_kg = perro.peso_kg;
+        if (perro.es_ppp)             perroBody.es_ppp = true;
+        if (perro.problematica)       perroBody.problematica = perro.problematica;
+        const { data: perroData, error: errP } = await supabase
+            .from('perros')
+            .insert(perroBody)
+            .select()
+            .single();
+        if (errP) throw errP;
+        perroId = perroData?.id;
+        if (!perroId) throw new Error('No se pudo crear el perro');
+
+        // 3) Cita
+        const citaBody = { cliente_id: clienteId, fecha: cita.fecha, hora: horaCompleta, estado: 'confirmada', confirmada: true };
+        if (cita.modalidad) citaBody.modalidad = cita.modalidad;
+        if (cita.zona)      citaBody.zona = cita.zona;
+        if (cita.notas)     citaBody.notas = cita.notas;
+        const { data: citaData, error: errCi } = await supabase
+            .from('citas')
+            .insert(citaBody)
+            .select()
+            .single();
+        if (errCi) throw errCi;
+        citaId = citaData?.id;
+        if (!citaId) throw new Error('No se pudo crear la cita');
+
+        // 4) Bloqueo (best-effort, no rollback si falla)
+        try {
+            await supabase
+                .from('bloqueos')
+                .insert({ fecha: cita.fecha, hora: horaCompleta, motivo: `Auto: cita ${citaId}` });
+        } catch (bloqErr) {
+            console.warn('Cita creada pero falló crear bloqueo:', bloqErr);
+        }
+
+        return { ok: true, clienteId, perroId, citaId };
+    } catch (err) {
+        // Rollback inverso (mismo comportamiento que original)
+        try { if (citaId)    await supabase.from('citas').delete().eq('id', citaId); } catch (e) {}
+        try { if (perroId)   await supabase.from('perros').delete().eq('id', perroId); } catch (e) {}
+        try { if (clienteId) await supabase.from('clientes').delete().eq('id', clienteId); } catch (e) {}
+        return { ok: false, error: err.message };
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -481,7 +594,17 @@ export async function crearCitaManual(datos) {
  * Equivalencia hola/supabase.js: línea 345
  */
 export async function obtenerNombresCitasPorIds(citaIds) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: SELECT id, clientes(nombre) FROM citas WHERE id IN (...)');
+    if (!citaIds || citaIds.length === 0) return {};
+    const { data: citas, error } = await supabase
+        .from('citas')
+        .select('id, clientes(nombre)')
+        .in('id', citaIds);
+    if (error) throw error;
+    const mapa = {};
+    (citas || []).forEach(c => {
+        if (c.clientes?.nombre) mapa[c.id] = c.clientes.nombre;
+    });
+    return mapa;
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -517,5 +640,18 @@ export async function obtenerNombresCitasPorIds(citaIds) {
  * Equivalencia hola/supabase.js: línea 364
  */
 export async function obtenerSesionesParaStats(desde, hasta) {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: SELECT * FROM sesiones WHERE inicio BETWEEN $1 AND $2 AND es_prueba=false ORDER BY inicio DESC; try/catch → []');
+    try {
+        const { data, error } = await supabase
+            .from('sesiones')
+            .select('*')
+            .gte('inicio', desde)
+            .lte('inicio', hasta)
+            .eq('es_prueba', false)
+            .order('inicio', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('Error al obtener sesiones para stats:', err);
+        return [];
+    }
 }
