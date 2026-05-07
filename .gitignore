@@ -13,3 +13,7 @@ Desktop.ini
 
 # Node (por si en algún momento añadimos build)
 node_modules/
+
+# Working files de auditoría (locales, no se commitean)
+INVENTARIO_UNIFICACION.md
+DEUDA_TECNICA.md
