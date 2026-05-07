@@ -454,14 +454,17 @@ export async function eliminarCita(citaId) {
  * coordinada. Pensado para el caso "Charly cierra una clase por fuera
  * del flujo del chatbot" (manual desde el admin).
  *
- * Hace 4 INSERT secuenciales con rollback DELETE manual ante fallo.
- * Si falla el bloqueo (paso 4), la cita queda igual — el bloqueo se
- * puede recrear a mano. Ver ítem 1 de DEUDA_TECNICA.md sobre la
+ * Hace 3 INSERT secuenciales (clientes → perros → citas) con rollback
+ * DELETE manual ante fallo. Ver ítem 1 de DEUDA_TECNICA.md sobre la
  * naturaleza no-transaccional del rollback.
+ *
+ * El bloqueo asociado lo crea automáticamente el trigger DB
+ * trg_sync_bloqueo_desde_cita al insertar la cita. NO insertarlo
+ * manualmente desde aquí — duplica y dispara 409 Conflict.
  *
  * Internamente equivale a encadenar (no llama a las funciones de
  * arriba — replica la lógica para mantener el rollback):
- *   POST clientes → POST perros → POST citas → POST bloqueos.
+ *   POST clientes → POST perros → POST citas.
  *
  * @param {{
  *   cliente: { nombre:string, telefono:string },
@@ -491,9 +494,9 @@ export async function eliminarCita(citaId) {
  *
  * Tabla(s) Supabase: clientes (INSERT, DELETE rollback),
  *                    perros   (INSERT, DELETE rollback),
- *                    citas    (INSERT, DELETE rollback),
- *                    bloqueos (INSERT best-effort, sin rollback)
- * RLS requerido: es_admin() = true en las 4 tablas
+ *                    citas    (INSERT, DELETE rollback)
+ *                    [bloqueos lo escribe el trigger DB, no este código]
+ * RLS requerido: es_admin() = true en las 3 tablas
  * Equivalencia hola/supabase.js: línea 258
  */
 export async function crearCitaManual(datos) {
@@ -535,6 +538,9 @@ export async function crearCitaManual(datos) {
         if (!perroId) throw new Error('No se pudo crear el perro');
 
         // 3) Cita
+        // NOTA: el trigger DB trg_sync_bloqueo_desde_cita crea automáticamente
+        // un bloqueo asociado a esta cita. No insertar bloqueo manualmente —
+        // hacerlo aquí dispara 409 Conflict por (fecha, hora) ya ocupado.
         const citaBody = { cliente_id: clienteId, fecha: cita.fecha, hora: horaCompleta, estado: 'confirmada', confirmada: true };
         if (cita.modalidad) citaBody.modalidad = cita.modalidad;
         if (cita.zona)      citaBody.zona = cita.zona;
@@ -547,15 +553,6 @@ export async function crearCitaManual(datos) {
         if (errCi) throw errCi;
         citaId = citaData?.id;
         if (!citaId) throw new Error('No se pudo crear la cita');
-
-        // 4) Bloqueo (best-effort, no rollback si falla)
-        try {
-            await supabase
-                .from('bloqueos')
-                .insert({ fecha: cita.fecha, hora: horaCompleta, motivo: `Auto: cita ${citaId}` });
-        } catch (bloqErr) {
-            console.warn('Cita creada pero falló crear bloqueo:', bloqErr);
-        }
 
         return { ok: true, clienteId, perroId, citaId };
     } catch (err) {

@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
-import * as agenda from './agenda/api.js';
+import * as agenda from './agenda/api.js?v=2';
 
 // Estado en memoria del admin actual y la lista cargada de clientes.
 const state = {
@@ -392,7 +392,10 @@ function bindAgendaModals() {
     if (cmSave) {
         cmSave.addEventListener('click', async () => {
             const errBox = document.getElementById('cm-error');
-            if (errBox) errBox.textContent = '';
+            if (errBox) {
+                errBox.textContent = '';
+                errBox.hidden = true;
+            }
 
             const cliente = {
                 nombre: (document.getElementById('cm-nombre')?.value || '').trim(),
