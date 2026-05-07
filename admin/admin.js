@@ -9,13 +9,6 @@
 
 import { supabase } from '../js/supabase.js';
 
-const SCREENS = {
-    loading: document.getElementById('screen-loading'),
-    login: document.getElementById('screen-login'),
-    home: document.getElementById('screen-home'),
-    clientes: document.getElementById('screen-clientes'),
-};
-
 // Estado en memoria del admin actual y la lista cargada de clientes.
 const state = {
     admin: null,            // { auth_user_id, email, nombre }
@@ -27,10 +20,9 @@ const state = {
 // ---------- Navegación entre pantallas ----------
 
 function showScreen(name) {
-    Object.entries(SCREENS).forEach(([key, el]) => {
-        if (!el) return;
-        if (key === name) el.removeAttribute('hidden');
-        else el.setAttribute('hidden', '');
+    ['loading', 'login', 'app'].forEach((s) => {
+        const el = document.getElementById('screen-' + s);
+        if (el) el.hidden = (s !== name);
     });
 }
 
@@ -62,17 +54,8 @@ function bindEvents() {
     document.getElementById('login-form')
         .addEventListener('submit', handleLoginSubmit);
 
-    document.querySelectorAll('[data-action="logout"]').forEach((btn) => {
-        btn.addEventListener('click', handleLogout);
-    });
-
-    document.querySelectorAll('[data-nav]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const target = btn.getAttribute('data-nav');
-            if (target === 'clientes') irAClientes();
-            else if (target === 'home') showScreen('home');
-        });
-    });
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
     document.getElementById('estado-filtros').addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');
@@ -165,13 +148,35 @@ async function afterLogin(session) {
     }
 
     state.admin = data;
-    renderHome();
-    showScreen('home');
+    const nombre = (data.nombre || 'Admin').trim() || 'Admin';
+    const nameEl = document.getElementById('home-admin-name');
+    if (nameEl) nameEl.textContent = nombre;
+    showScreen('app');
+    bindTabs();
+    const tabGuardada = localStorage.getItem('pdli_admin_tab') || 'clientes';
+    activarTab(tabGuardada);
 }
 
-function renderHome() {
-    const nombre = state.admin?.nombre?.trim() || 'admin';
-    document.getElementById('home-admin-name').textContent = nombre;
+// ---------- Pestañas (SPA) ----------
+
+function bindTabs() {
+    document.querySelectorAll('[data-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => activarTab(btn.dataset.tab));
+    });
+}
+
+function activarTab(tab) {
+    document.querySelectorAll('[data-tab]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    document.querySelectorAll('[data-panel]').forEach((p) => {
+        p.hidden = p.dataset.panel !== tab;
+    });
+    try { localStorage.setItem('pdli_admin_tab', tab); } catch (e) {}
+    if (tab === 'clientes' && !window.__clientesLoaded) {
+        cargarClientes();
+        window.__clientesLoaded = true;
+    }
 }
 
 // ---------- Logout ----------
@@ -188,15 +193,12 @@ async function handleLogout() {
     state.busqueda = '';
     document.getElementById('login-form').reset();
     document.getElementById('cliente-search').value = '';
+    window.__clientesLoaded = false;
+    try { localStorage.removeItem('pdli_admin_tab'); } catch (e) {}
     showScreen('login');
 }
 
 // ---------- Lista de clientes ----------
-
-async function irAClientes() {
-    showScreen('clientes');
-    await cargarClientes();
-}
 
 async function cargarClientes() {
     const lista = document.getElementById('clientes-lista');

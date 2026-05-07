@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#111111">
+    <meta name="theme-color" content="#1A1A1A">
+    <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=5">
+    <link rel="stylesheet" href="./styles.css?v=10">
 </head>
 <body>
 
@@ -37,46 +38,81 @@
         </main>
     </section>
 
-    <section class="screen" id="screen-home" hidden>
-        <header class="header">
-            <div class="logo"><img src="../img/logo.png" alt="" class="logo-img"><span class="logo-text">PDLI</span></div>
-            <button type="button" class="btn-link" data-action="logout">Cerrar sesión</button>
-        </header>
-        <main class="home-main">
-            <p class="greeting">Hola,</p>
-            <h1 class="title-display" id="home-admin-name">…</h1>
-            <nav class="home-nav" aria-label="Acciones principales">
-                <button type="button" class="btn-big" data-nav="clientes">Mis clientes</button>
-                <button type="button" class="btn-big btn-disabled" disabled aria-disabled="true">
-                    Catálogo de ejercicios
-                    <span class="btn-soon">próximamente</span>
+    <section class="screen admin-spa" id="screen-app" hidden>
+
+        <nav class="admin-nav" aria-label="Navegación principal">
+            <div class="admin-nav-brand">
+                <img src="../img/logo.png" alt="PDLI" class="admin-nav-logo">
+                <span class="admin-nav-name" id="home-admin-name"></span>
+            </div>
+
+            <div class="admin-nav-tabs">
+                <button class="admin-tab" data-tab="inicio" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">🏠</span>
+                    <span class="admin-tab-label">Inicio</span>
                 </button>
-            </nav>
+                <button class="admin-tab" data-tab="agenda" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">📅</span>
+                    <span class="admin-tab-label">Agenda</span>
+                </button>
+                <button class="admin-tab" data-tab="clientes" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">👥</span>
+                    <span class="admin-tab-label">Clientes</span>
+                </button>
+                <button class="admin-tab" data-tab="stats" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">📊</span>
+                    <span class="admin-tab-label">Stats</span>
+                </button>
+                <button class="admin-tab" data-tab="catalogo" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">📚</span>
+                    <span class="admin-tab-label">Catálogo</span>
+                </button>
+            </div>
+
+            <button class="admin-nav-logout" id="logout-btn" type="button">Cerrar sesión</button>
+        </nav>
+
+        <main class="admin-main">
+
+            <section class="admin-panel" data-panel="inicio" hidden>
+                <h1 class="admin-panel-title">Inicio</h1>
+                <p class="admin-panel-subtitle">KPIs y próximas citas — Bloque 5</p>
+            </section>
+
+            <section class="admin-panel" data-panel="agenda" hidden>
+                <h1 class="admin-panel-title">Agenda</h1>
+                <p class="admin-panel-subtitle">Plantilla, bloqueos y citas — Bloque 3</p>
+            </section>
+
+            <section class="admin-panel" data-panel="clientes" hidden>
+                <div class="search-wrapper">
+                    <input type="search" id="cliente-search" placeholder="Buscar por nombre o teléfono" autocomplete="off">
+                </div>
+                <div class="chips" role="tablist" id="estado-filtros">
+                    <button type="button" class="chip is-active" data-filter="todos" role="tab" aria-selected="true">Todos</button>
+                    <button type="button" class="chip" data-filter="consulta" role="tab" aria-selected="false">Consultas</button>
+                    <button type="button" class="chip" data-filter="activo" role="tab" aria-selected="false">Activos</button>
+                    <button type="button" class="chip" data-filter="mantenimiento" role="tab" aria-selected="false">Mantenimiento</button>
+                    <button type="button" class="chip" data-filter="inactivo" role="tab" aria-selected="false">Inactivos</button>
+                </div>
+                <div id="clientes-feedback" class="feedback" hidden></div>
+                <ul id="clientes-lista" class="clientes-lista" aria-live="polite"></ul>
+            </section>
+
+            <section class="admin-panel" data-panel="stats" hidden>
+                <h1 class="admin-panel-title">Estadísticas</h1>
+                <p class="admin-panel-subtitle">KPIs y gráficos — Bloque 4</p>
+            </section>
+
+            <section class="admin-panel" data-panel="catalogo" hidden>
+                <h1 class="admin-panel-title">Catálogo</h1>
+                <p class="admin-panel-subtitle">Editor de ejercicios — Bloque 5</p>
+            </section>
+
         </main>
+
     </section>
 
-    <section class="screen" id="screen-clientes" hidden>
-        <header class="header header--with-back">
-            <button type="button" class="btn-back" data-nav="home" aria-label="Volver al inicio">← atrás</button>
-            <h2 class="header-title">Clientes</h2>
-            <button type="button" class="btn-link" data-action="logout">Cerrar sesión</button>
-        </header>
-        <main class="clientes-main">
-            <div class="search-wrapper">
-                <input type="search" id="cliente-search" placeholder="Buscar por nombre o teléfono" autocomplete="off">
-            </div>
-            <div class="chips" role="tablist" id="estado-filtros">
-                <button type="button" class="chip is-active" data-filter="todos" role="tab" aria-selected="true">Todos</button>
-                <button type="button" class="chip" data-filter="consulta" role="tab" aria-selected="false">Consultas</button>
-                <button type="button" class="chip" data-filter="activo" role="tab" aria-selected="false">Activos</button>
-                <button type="button" class="chip" data-filter="mantenimiento" role="tab" aria-selected="false">Mantenimiento</button>
-                <button type="button" class="chip" data-filter="inactivo" role="tab" aria-selected="false">Inactivos</button>
-            </div>
-            <div id="clientes-feedback" class="feedback" hidden></div>
-            <ul id="clientes-lista" class="clientes-lista" aria-live="polite"></ul>
-        </main>
-    </section>
-
-    <script type="module" src="./admin.js?v=3"></script>
+    <script type="module" src="./admin.js?v=10"></script>
 </body>
 </html>
