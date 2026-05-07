@@ -52,7 +52,13 @@ import { supabase } from '../../js/supabase.js';
  * Equivalencia hola/supabase.js: línea 116
  */
 export async function obtenerPlantilla() {
-    throw new Error('NOT_IMPLEMENTED — Bloque 1.B pendiente: SELECT id, dia_semana, hora, activo FROM slots ORDER BY dia_semana, hora');
+    const { data, error } = await supabase
+        .from('slots')
+        .select('*')
+        .order('dia_semana', { ascending: true })
+        .order('hora', { ascending: true });
+    if (error) throw error;
+    return data || [];
 }
 
 /**
