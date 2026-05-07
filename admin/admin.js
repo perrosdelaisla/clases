@@ -8,6 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
+import * as agenda from './agenda/api.js';
 
 // Estado en memoria del admin actual y la lista cargada de clientes.
 const state = {
@@ -333,7 +334,9 @@ function activarAgendaSubtab(sub) {
     document.querySelectorAll('[data-subpanel]').forEach((p) => {
         p.hidden = p.dataset.subpanel !== sub;
     });
-    console.log('TODO 3.B: cargar datos de sub-pestaña', sub);
+    if (sub === 'plantilla')      cargarPlantilla();
+    else if (sub === 'bloqueos')  cargarBloqueos();
+    else if (sub === 'citas')     cargarCitas();
 }
 
 function bindAgendaModals() {
@@ -406,6 +409,169 @@ function initAgenda() {
     bindAgendaSubtabs();
     bindAgendaModals();
     bindFormBloqueo();
-    console.log('TODO 3.B: cargar datos iniciales de agenda');
     window.__agendaBound = true;
+    // Cargar plantilla por default (es la sub-pestaña activa al entrar)
+    cargarPlantilla();
+}
+
+// ---------- Agenda — Lecturas (Lote 3.B.1) ----------
+
+const DIAS_SEMANA = [
+    { id: 1, nombre: 'Lunes' },
+    { id: 2, nombre: 'Martes' },
+    { id: 3, nombre: 'Miércoles' },
+    { id: 4, nombre: 'Jueves' },
+    { id: 5, nombre: 'Viernes' },
+    { id: 6, nombre: 'Sábado' },
+    { id: 0, nombre: 'Domingo' },
+];
+
+async function cargarPlantilla() {
+    const grid = document.getElementById('plantilla-grid');
+    if (!grid) return;
+    grid.innerHTML = '<p class="agenda-empty">Cargando plantilla…</p>';
+    try {
+        const slots = await agenda.obtenerPlantilla();
+        renderPlantilla(slots);
+    } catch (err) {
+        console.error('Error cargando plantilla:', err);
+        grid.innerHTML = '<p class="agenda-empty">Error al cargar plantilla.</p>';
+    }
+}
+
+function renderPlantilla(slots) {
+    const grid = document.getElementById('plantilla-grid');
+    if (!grid) return;
+    if (!slots || slots.length === 0) {
+        grid.innerHTML = '<p class="agenda-empty">No hay slots configurados. Pulsá "+ Añadir hora" para crear el primero.</p>';
+        return;
+    }
+    const porDia = {};
+    DIAS_SEMANA.forEach((d) => { porDia[d.id] = []; });
+    slots.forEach((s) => {
+        if (porDia[s.dia_semana]) porDia[s.dia_semana].push(s);
+    });
+    grid.innerHTML = DIAS_SEMANA.map((d) => {
+        const slotsDia = porDia[d.id];
+        const slotsHTML = slotsDia.length === 0
+            ? '<p class="plantilla-empty">—</p>'
+            : slotsDia.map((s) => `
+                <div class="plantilla-slot ${s.activo ? '' : 'inactivo'}" data-slot-id="${escapeHTML(s.id)}">
+                    <span>${formatearHora(s.hora)}</span>
+                    <div class="plantilla-slot-actions">
+                        <button class="plantilla-slot-btn" data-action="toggle" data-active="${s.activo}" title="${s.activo ? 'Desactivar' : 'Activar'}">${s.activo ? '◉' : '○'}</button>
+                        <button class="plantilla-slot-btn" data-action="delete" title="Eliminar">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        return `
+            <div class="plantilla-day">
+                <h3 class="plantilla-day-title">${d.nombre}</h3>
+                ${slotsHTML}
+            </div>
+        `;
+    }).join('');
+}
+
+function formatearHora(hora) {
+    if (!hora) return '—';
+    return hora.substring(0, 5);
+}
+
+async function cargarBloqueos() {
+    const list = document.getElementById('bloqueos-list');
+    if (!list) return;
+    list.innerHTML = '<p class="agenda-empty">Cargando bloqueos…</p>';
+    try {
+        const bloqueos = await agenda.obtenerBloqueos();
+        renderBloqueos(bloqueos);
+    } catch (err) {
+        console.error('Error cargando bloqueos:', err);
+        list.innerHTML = '<p class="agenda-empty">Error al cargar bloqueos.</p>';
+    }
+}
+
+function renderBloqueos(bloqueos) {
+    const list = document.getElementById('bloqueos-list');
+    if (!list) return;
+    if (!bloqueos || bloqueos.length === 0) {
+        list.innerHTML = '<p class="agenda-empty">No hay bloqueos futuros configurados.</p>';
+        return;
+    }
+    list.innerHTML = bloqueos.map((b) => `
+        <div class="bloqueo-card" data-bloqueo-id="${escapeHTML(b.id)}">
+            <div class="bloqueo-info">
+                <span class="bloqueo-fecha">${formatearFechaCorta(b.fecha)}${b.hora ? ' · ' + formatearHora(b.hora) : ' · día completo'}</span>
+                <span class="bloqueo-motivo">${escapeHTML(b.motivo || '(sin motivo)')}</span>
+            </div>
+            <button class="bloqueo-eliminar" data-action="eliminar-bloqueo" type="button">Eliminar</button>
+        </div>
+    `).join('');
+}
+
+function formatearFechaCorta(fechaISO) {
+    if (!fechaISO) return '—';
+    const [y, m, d] = fechaISO.split('-');
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]} ${y}`;
+}
+
+async function cargarCitas() {
+    const list = document.getElementById('citas-list');
+    if (!list) return;
+    list.innerHTML = '<p class="agenda-empty">Cargando citas…</p>';
+    try {
+        const citas = await agenda.obtenerCitasAdminConReportado();
+        renderCitas(citas);
+    } catch (err) {
+        console.error('Error cargando citas:', err);
+        list.innerHTML = '<p class="agenda-empty">Error al cargar citas.</p>';
+    }
+}
+
+function renderCitas(citas) {
+    const list = document.getElementById('citas-list');
+    if (!list) return;
+    if (!citas || citas.length === 0) {
+        list.innerHTML = '<p class="agenda-empty">No hay citas futuras agendadas.</p>';
+        return;
+    }
+    list.innerHTML = citas.map((c) => {
+        const cliente = c.clientes?.nombre || '(sin nombre)';
+        const telefono = c.clientes?.telefono || '';
+        const zona = c.clientes?.zona || '';
+        const perros = c.clientes?.perros || [];
+        const perrosTexto = perros.length === 0
+            ? '(sin perro asociado)'
+            : perros.map((p) => {
+                const partes = [p.nombre];
+                if (p.raza) partes.push(p.raza);
+                if (p.edad_meses != null) partes.push(`${p.edad_meses} m`);
+                if (p.problematica) partes.push(`— ${p.problematica}`);
+                return partes.join(' · ');
+            }).join(' / ');
+        const reportado = c.reportado;
+        const estado = c.estado || 'pendiente';
+
+        return `
+            <div class="cita-card" data-cita-id="${escapeHTML(c.id)}">
+                <div class="cita-header">
+                    <span class="cita-fecha">${formatearFechaCorta(c.fecha)} · ${formatearHora(c.hora)}</span>
+                    <span class="cita-estado ${escapeHTML(estado)}">${escapeHTML(estado)}</span>
+                </div>
+                <div class="cita-cliente">
+                    <strong>${escapeHTML(cliente)}</strong>${telefono ? ' · ' + escapeHTML(telefono) : ''}${zona ? ' · ' + escapeHTML(zona) : ''}${c.modalidad ? ' · ' + escapeHTML(c.modalidad) : ''}
+                </div>
+                <div class="cita-perro">${escapeHTML(perrosTexto)}</div>
+                ${reportado ? `<div class="cita-reportado">${escapeHTML(reportado)}</div>` : ''}
+                ${c.notas ? `<div class="cita-perro"><em>Notas: ${escapeHTML(c.notas)}</em></div>` : ''}
+                <div class="cita-acciones">
+                    <button data-action="confirmar" type="button">Confirmar</button>
+                    <button data-action="cancelar" type="button">Cancelar</button>
+                    <button data-action="realizada" type="button">Marcar realizada</button>
+                    <button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
