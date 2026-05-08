@@ -127,6 +127,18 @@ export async function obtenerFunnelVictoria(rango) {
     }));
 }
 
+// Helper: enriquece cada bucket con `citas` (== n para compatibilidad
+// con el render del doughnut) y `pct` (% sobre total con 1 decimal,
+// 0.0 si total === 0). Idéntico al desglose del admin viejo
+// (_renderTablaDesglose).
+function enriquecerBuckets(buckets, total) {
+    return buckets.map((b) => ({
+        ...b,
+        citas: b.n,
+        pct: total > 0 ? Math.round((b.n / total) * 1000) / 10 : 0,
+    }));
+}
+
 /**
  * Doughnut 1 — Tema preseleccionado.
  * Mapping fijo de keys → labels, orden fijo (admin viejo:
@@ -143,12 +155,13 @@ export async function obtenerDistribucionTema(rango) {
         { key: null,          label: 'Sin tema' },
     ];
 
-    return TEMAS.map((t) => ({
+    const buckets = TEMAS.map((t) => ({
         label: t.label,
         n: sesiones.filter((s) =>
             t.key === null ? !s.tema_preseleccionado : s.tema_preseleccionado === t.key,
         ).length,
     }));
+    return enriquecerBuckets(buckets, sesiones.length);
 }
 
 /**
@@ -166,12 +179,13 @@ export async function obtenerDistribucionModalidad(rango) {
         { key: 'otro',       label: 'Derivar/sin definir' },
     ];
 
-    return MODALIDADES.map((m) => ({
+    const buckets = MODALIDADES.map((m) => ({
         label: m.label,
         n: m.key === 'otro'
             ? sesiones.filter((s) => !s.modalidad || s.modalidad === 'derivar' || s.modalidad === 'desconocida').length
             : sesiones.filter((s) => s.modalidad === m.key).length,
     }));
+    return enriquecerBuckets(buckets, sesiones.length);
 }
 
 /**
@@ -189,12 +203,13 @@ export async function obtenerDistribucionOrigen(rango) {
         { key: null,        label: 'Directo' },
     ];
 
-    return CANALES.map((c) => ({
+    const buckets = CANALES.map((c) => ({
         label: c.label,
         n: sesiones.filter((s) =>
             c.key === null ? !s.origen : s.origen === c.key,
         ).length,
     }));
+    return enriquecerBuckets(buckets, sesiones.length);
 }
 
 /**
@@ -248,11 +263,6 @@ export async function obtenerCitasPorMes() {
 /**
  * Derivaciones — etólogo + zona.
  * Idéntico al admin viejo (renderizarMetricasFinales línea 945-946).
- *
- * NOTA: el admin viejo también muestra split mobile/desktop como
- * 2 mini-cards adicionales (línea 947-949). El HTML del admin nuevo
- * no tiene slots para esa métrica — si Charly quiere agregarla,
- * requiere tocar admin/index.html (fuera del alcance del fix actual).
  */
 export async function obtenerDerivaciones(rango) {
     const sesiones = await traerSesionesReales(rango, 'derivado_etologo, derivado_zona');
@@ -260,5 +270,26 @@ export async function obtenerDerivaciones(rango) {
     return {
         a_etologo: sesiones.filter((s) => s.derivado_etologo).length,
         por_zona:  sesiones.filter((s) => s.derivado_zona).length,
+    };
+}
+
+/**
+ * Distribución móvil/desktop — admin viejo renderizarMetricasFinales L947-949.
+ * Total = todas las sesiones reales del rango. Móvil = dispositivo === 'movil'.
+ * Desktop = total - movil (igual que el viejo: pctDesk = 100 - pctMov).
+ *
+ * Devuelve { movil: {n, pct}, desktop: {n, pct} } con pct entero (0-100).
+ */
+export async function obtenerDistribucionDispositivo(rango) {
+    const sesiones = await traerSesionesReales(rango, 'dispositivo');
+    const total = sesiones.length;
+    const movilN = sesiones.filter((s) => s.dispositivo === 'movil').length;
+    const desktopN = total - movilN;
+    const pctMovil = total > 0 ? Math.round((movilN / total) * 100) : 0;
+    const pctDesktop = total > 0 ? 100 - pctMovil : 0;
+
+    return {
+        movil:   { n: movilN,   pct: pctMovil },
+        desktop: { n: desktopN, pct: pctDesktop },
     };
 }

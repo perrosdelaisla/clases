@@ -929,6 +929,10 @@ function calcularRango(periodo) {
         const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
         return { desde: formatearFechaLocal(desde), hasta: hoyStr };
     }
+    if (periodo === 'ano') {
+        const desde = new Date(hoy.getFullYear(), 0, 1);
+        return { desde: formatearFechaLocal(desde), hasta: hoyStr };
+    }
     return null;
 }
 
@@ -964,9 +968,10 @@ async function cargarTodoStats() {
         cargarKPIsStats(rango),
         cargarFunnelStats(rango),
         cargarDerivacionesStats(rango),
-        cargarDoughnut('tema',      () => stats.obtenerDistribucionTema(rango),      'chart-tema'),
-        cargarDoughnut('modalidad', () => stats.obtenerDistribucionModalidad(rango), 'chart-modalidad'),
-        cargarDoughnut('origen',    () => stats.obtenerDistribucionOrigen(rango),    'chart-origen'),
+        cargarDispositivoStats(rango),
+        cargarDoughnut('tema',      () => stats.obtenerDistribucionTema(rango),      'chart-tema',      'tabla-tema'),
+        cargarDoughnut('modalidad', () => stats.obtenerDistribucionModalidad(rango), 'chart-modalidad', 'tabla-modalidad'),
+        cargarDoughnut('origen',    () => stats.obtenerDistribucionOrigen(rango),    'chart-origen',    'tabla-origen'),
         cargarDoughnut('clientes',  () => stats.obtenerDistribucionClientes(),       'chart-clientes'),
         cargarBarrasCitasMes(),
     ]);
@@ -1018,7 +1023,9 @@ async function cargarDerivacionesStats(rango) {
     } catch (err) { console.error('Derivaciones:', err); }
 }
 
-async function cargarDoughnut(key, fetcher, canvasId) {
+const DOUGHNUT_COLORS = ['#C8102E', '#6B7A3A', '#1A1A1A', '#F5EFE0', '#8B7355', '#A04040', '#4A5530', '#D4A05C'];
+
+async function cargarDoughnut(key, fetcher, canvasId, tablaId) {
     try {
         const data = await fetcher();
         const ctx = document.getElementById(canvasId);
@@ -1031,6 +1038,7 @@ async function cargarDoughnut(key, fetcher, canvasId) {
             if (wrap && !wrap.querySelector('.stats-empty')) {
                 wrap.insertAdjacentHTML('beforeend', '<p class="stats-empty">Sin datos.</p>');
             }
+            if (tablaId) renderTablaDesglose(tablaId, [], DOUGHNUT_COLORS);
             return;
         }
         ctx.style.display = '';
@@ -1043,7 +1051,7 @@ async function cargarDoughnut(key, fetcher, canvasId) {
                 labels: data.map((d) => d.label),
                 datasets: [{
                     data: data.map((d) => d.n),
-                    backgroundColor: ['#C8102E', '#6B7A3A', '#1A1A1A', '#F5EFE0', '#8B7355', '#A04040', '#4A5530', '#D4A05C'],
+                    backgroundColor: DOUGHNUT_COLORS,
                     borderWidth: 0,
                 }],
             },
@@ -1055,7 +1063,43 @@ async function cargarDoughnut(key, fetcher, canvasId) {
                 },
             },
         });
+
+        if (tablaId) renderTablaDesglose(tablaId, data, DOUGHNUT_COLORS);
     } catch (err) { console.error(`Doughnut ${key}:`, err); }
+}
+
+function renderTablaDesglose(contenedorId, datos, colores) {
+    const cont = document.getElementById(contenedorId);
+    if (!cont) return;
+
+    const visibles = datos.filter((d) => d.n > 0);
+    if (visibles.length === 0) {
+        cont.innerHTML = '<p class="stats-empty stats-tabla-empty">Sin datos aún.</p>';
+        return;
+    }
+
+    cont.innerHTML = datos.map((d, i) => {
+        if (d.n === 0) return '';
+        const pct = (d.pct ?? 0).toFixed(1);
+        return `
+            <div class="stats-tabla-fila">
+                <span class="stats-tabla-dot" style="background:${colores[i % colores.length]}"></span>
+                <span class="stats-tabla-label">${escapeHTML(d.label)}</span>
+                <span class="stats-tabla-num">${d.n}</span>
+                <span class="stats-tabla-pct">${pct}%</span>
+            </div>
+        `;
+    }).join('');
+}
+
+async function cargarDispositivoStats(rango) {
+    try {
+        const d = await stats.obtenerDistribucionDispositivo(rango);
+        const movilEl = document.getElementById('stats-movil-pct');
+        const deskEl = document.getElementById('stats-desktop-pct');
+        if (movilEl) movilEl.textContent = `${d.movil.pct}%`;
+        if (deskEl) deskEl.textContent = `${d.desktop.pct}%`;
+    } catch (err) { console.error('Dispositivo:', err); }
 }
 
 async function cargarBarrasCitasMes() {
