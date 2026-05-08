@@ -10,6 +10,8 @@
 import { supabase } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=2';
 import * as stats from './stats/api.js';
+import * as catalogo from './catalogo/api.js';
+import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
 
@@ -187,6 +189,10 @@ function activarTab(tab) {
     if (tab === 'stats') {
         initStats();
     }
+    if (tab === 'catalogo' && !window.__catalogoLoaded) {
+        cargarCatalogoAdmin();
+        window.__catalogoLoaded = true;
+    }
 }
 
 // ---------- Logout ----------
@@ -204,6 +210,7 @@ async function handleLogout() {
     document.getElementById('login-form').reset();
     document.getElementById('cliente-search').value = '';
     window.__clientesLoaded = false;
+    window.__catalogoLoaded = false;
     try { localStorage.removeItem('pdli_admin_tab'); } catch (e) {}
     showScreen('login');
 }
@@ -1079,4 +1086,85 @@ async function cargarBarrasCitasMes() {
             },
         });
     } catch (err) { console.error('CitasMes:', err); }
+}
+
+/* ═══════════════════════════════════════════
+   CATÁLOGO — Bloque 5 (solo lectura)
+   ═══════════════════════════════════════════ */
+
+async function cargarCatalogoAdmin() {
+    const grupos = document.getElementById('catalogo-grupos');
+    const subtitle = document.getElementById('catalogo-subtitle');
+    if (!grupos) return;
+    grupos.innerHTML = '<p class="agenda-empty">Cargando catálogo…</p>';
+    if (subtitle) subtitle.textContent = '';
+    try {
+        const ejercicios = await catalogo.obtenerCatalogo();
+        renderCatalogoAdmin(ejercicios);
+    } catch (err) {
+        console.error('[admin/catalogo] error:', err);
+        grupos.innerHTML = '<p class="agenda-empty">Error al cargar el catálogo.</p>';
+        if (subtitle) subtitle.textContent = '—';
+    }
+}
+
+function renderCatalogoAdmin(ejercicios) {
+    const grupos = document.getElementById('catalogo-grupos');
+    const subtitle = document.getElementById('catalogo-subtitle');
+    if (!grupos) return;
+
+    if (subtitle) {
+        subtitle.textContent = `${ejercicios.length} ejercicios disponibles para asignar a perros.`;
+    }
+
+    if (ejercicios.length === 0) {
+        grupos.innerHTML = '<p class="agenda-empty">No hay ejercicios activos en el catálogo.</p>';
+        return;
+    }
+
+    // Agrupar por categoría según el orden definido en catalogo-labels.js
+    const porCategoria = new Map();
+    ORDEN_CATEGORIAS.forEach((cat) => porCategoria.set(cat, []));
+    ejercicios.forEach((ej) => {
+        if (porCategoria.has(ej.categoria)) porCategoria.get(ej.categoria).push(ej);
+    });
+
+    grupos.innerHTML = ORDEN_CATEGORIAS
+        .filter((cat) => porCategoria.get(cat).length > 0)
+        .map((cat) => {
+            const items = porCategoria.get(cat);
+            const label = CATEGORIA_LABEL[cat] || cat;
+            const cards = items.map(renderCatalogoCard).join('');
+            return `
+                <section class="catalogo-grupo">
+                    <h2 class="catalogo-grupo-header">
+                        ${escapeHTML(label)}<span class="catalogo-grupo-count">(${items.length})</span>
+                    </h2>
+                    <ul class="catalogo-list">${cards}</ul>
+                </section>
+            `;
+        })
+        .join('');
+}
+
+function renderCatalogoCard(ej) {
+    const nombre = escapeHTML(ej.nombre || 'Sin nombre');
+    const codigo = ej.codigo ? `(${escapeHTML(ej.codigo)})` : '';
+    const desc = ej.descripcion
+        ? `<p class="catalogo-card-desc">${escapeHTML(ej.descripcion)}</p>`
+        : '';
+    const plantilla = ej.plantilla != null
+        ? `<span class="catalogo-plantilla-tag">Plantilla ${escapeHTML(String(ej.plantilla))}</span>`
+        : '';
+
+    return `
+        <li class="catalogo-card">
+            <div class="catalogo-card-row">
+                <span class="catalogo-card-nombre">${nombre}</span>
+                ${plantilla}
+                <span class="catalogo-card-codigo">${codigo}</span>
+            </div>
+            ${desc}
+        </li>
+    `;
 }

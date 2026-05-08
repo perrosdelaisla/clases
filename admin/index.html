@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#1A1A1A">
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=15">
+    <link rel="stylesheet" href="./styles.css?v=16">
 </head>
 <body>
 
@@ -218,8 +218,11 @@
             </section>
 
             <section class="admin-panel" data-panel="catalogo" hidden>
-                <h1 class="admin-panel-title">Catálogo</h1>
-                <p class="admin-panel-subtitle">Editor de ejercicios — Bloque 5</p>
+                <h1 class="admin-panel-title">Catálogo de ejercicios</h1>
+                <p class="admin-panel-subtitle" id="catalogo-subtitle">Cargando…</p>
+                <div id="catalogo-grupos" class="catalogo-grupos">
+                    <p class="agenda-empty">Cargando catálogo…</p>
+                </div>
             </section>
 
         </main>
@@ -348,6 +351,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script type="module" src="./admin.js?v=19"></script>
+    <script type="module" src="./admin.js?v=20"></script>
 </body>
 </html>

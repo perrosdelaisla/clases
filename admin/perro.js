@@ -8,6 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
+import { CATEGORIA_LABEL } from './catalogo-labels.js';
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -18,13 +19,6 @@ const SCREENS = {
 const TABS = ['plan', 'ejercicios', 'herramientas', 'historico', 'notas'];
 const DEFAULT_TAB = 'ejercicios';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const CATEGORIA_LABEL = {
-    ejercicio: 'Ejercicios',
-    cambio_rutina: 'Cambios de rutina',
-    tarea: 'Tareas',
-    herramienta: 'Herramientas',
-};
 
 const state = {
     perroId: null,

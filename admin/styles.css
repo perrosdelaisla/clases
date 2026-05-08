@@ -2237,3 +2237,108 @@ body {
     padding: 24px;
     margin: 0;
 }
+
+/* ==============================================
+   CATÁLOGO — Bloque 5 (solo lectura)
+   ============================================== */
+
+.catalogo-grupos {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.catalogo-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.catalogo-grupo-header {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 8px;
+    margin: 0;
+}
+
+.catalogo-grupo-count {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    font-weight: normal;
+    letter-spacing: 0.02em;
+    margin-left: 10px;
+}
+
+.catalogo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.catalogo-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.catalogo-card-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.catalogo-card-nombre {
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.95rem;
+}
+
+.catalogo-card-codigo {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    margin-left: auto;
+    opacity: 0.7;
+}
+
+.catalogo-card-desc {
+    color: var(--color-muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    margin: 0;
+}
+
+.catalogo-plantilla-tag {
+    display: inline-block;
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .catalogo-card-codigo {
+        margin-left: 0;
+        flex-basis: 100%;
+    }
+    .catalogo-grupo-header {
+        font-size: 1.2rem;
+    }
+}
