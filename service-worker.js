@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -93,7 +93,9 @@ async function networkFirstHTML(req) {
 }
 
 async function cacheFirst(req) {
-    const cached = await caches.match(req, { ignoreSearch: true });
+    // Match estricto (incluye query string): así un cache-bust `?v=N` nuevo
+    // nunca matchea la entrada `?v=N-1` cacheada y obliga a ir a network.
+    const cached = await caches.match(req);
     if (cached) {
         // Stale-while-revalidate: refrescamos en background sin bloquear.
         fetch(req)
