@@ -159,7 +159,9 @@ async function afterLogin(session) {
     if (nameEl) nameEl.textContent = nombre;
     showScreen('app');
     bindTabs();
-    const tabGuardada = localStorage.getItem('pdli_admin_tab') || 'clientes';
+    // Default 'agenda'. Guard: si tab guardada es 'inicio' (oculto), fallback al default.
+    let tabGuardada = localStorage.getItem('pdli_admin_tab') || 'agenda';
+    if (tabGuardada === 'inicio') tabGuardada = 'agenda';
     activarTab(tabGuardada);
 }
 
