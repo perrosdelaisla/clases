@@ -129,7 +129,13 @@
 
                 <button type="button" class="btn-cta" id="btn-ir-reservar">Reservar próxima clase</button>
 
-                <h2 class="rutina-titulo">Tus ejercicios</h2>
+                <!-- Sub-pestañas dentro de Rutina -->
+                <nav class="rutina-subtabs" role="tablist" aria-label="Categoría de ejercicios">
+                    <button type="button" class="rutina-subtab is-active" data-cat="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
+                    <button type="button" class="rutina-subtab" data-cat="cambio_rutina" role="tab" aria-selected="false">Cambios de rutina</button>
+                    <button type="button" class="rutina-subtab" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
+                    <button type="button" class="rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
+                </nav>
 
                 <div id="rutina-loading" class="placeholder placeholder--soft">
                     <p>Cargando…</p>

@@ -29,13 +29,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STORAGE_PERRO_KEY = 'pdli.perroSeleccionadoId';
 const TELEFONO_PUBLICO = '622 922 173';
 
-const CATEGORIA_LABEL = {
-    ejercicio: 'Ejercicios',
-    cambio_rutina: 'Cambios de rutina',
-    tarea: 'Tareas',
-    herramienta: 'Herramientas',
-};
-
 // Paleta determinística para fallback de foto (cuando el perro no tiene foto)
 const PERRO_COLOR_PALETTE = [
     '#C8102E', '#6B7A3A', '#1f6f8b', '#a05a2c', '#8e3b8e',
@@ -61,6 +54,7 @@ const state = {
     protocolosByPerro: {},   // { [perro_id]: protocolo_principal }
     citas: [],               // todas las citas del cliente (cualquier estado)
     currentTab: 'rutina',
+    rutinaCategoriaActiva: 'ejercicio',  // sub-pestaña activa dentro de Rutina
     reservandoSlot: null,    // { fecha, hora, label } cuando se abre modal
     citaACancelar: null,     // cita object cuando se abre modal
     fotoSeleccionada: null,  // { file, dataUrl } cuando hay preview en modal foto
@@ -213,6 +207,25 @@ function bindEventos() {
     // Cancelar cita (botón confirmar dentro del modal)
     const btnCancelarConfirmar = document.getElementById('modal-cancelar-confirmar');
     if (btnCancelarConfirmar) btnCancelarConfirmar.addEventListener('click', confirmarCancelacion);
+
+    // Sub-pestañas dentro de Rutina
+    document.querySelectorAll('.rutina-subtab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const cat = btn.dataset.cat;
+            if (!cat || cat === state.rutinaCategoriaActiva) return;
+
+            // Actualizar estado visual
+            document.querySelectorAll('.rutina-subtab').forEach((b) => {
+                const isActive = b.dataset.cat === cat;
+                b.classList.toggle('is-active', isActive);
+                b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            // Re-render con nueva categoría
+            state.rutinaCategoriaActiva = cat;
+            renderRutinaPerroSeleccionado();
+        });
+    });
 }
 
 // ===================== Login =====================
@@ -530,8 +543,19 @@ async function renderRutinaPerroSeleccionado() {
             return;
         }
 
-        lista.innerHTML = filas.map(renderRutinaCard).join('');
-        lista.removeAttribute('hidden');
+        const filasFiltradas = filas.filter((row) => {
+            const cat = row.ejercicios?.categoria || 'ejercicio';
+            return cat === state.rutinaCategoriaActiva;
+        });
+
+        if (filasFiltradas.length === 0) {
+            lista.setAttribute('hidden', '');
+            empty.removeAttribute('hidden');
+        } else {
+            lista.innerHTML = filasFiltradas.map(renderRutinaCard).join('');
+            lista.removeAttribute('hidden');
+            empty.setAttribute('hidden', '');
+        }
     } catch (err) {
         empty.removeAttribute('hidden');
         toast('No pudimos cargar la rutina. Inténtalo de nuevo.', 'error');
@@ -547,12 +571,10 @@ function renderRutinaCard(row) {
     const ej = row.ejercicios;
     if (!ej) return '';
     const nombre = escapeHTML(ej.nombre || 'Ejercicio');
-    const categoria = ej.categoria || 'ejercicio';
     return `
         <li class="rutina-card">
             <div class="rutina-card__head">
                 <h3 class="rutina-card__nombre">${nombre}</h3>
-                <span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
             </div>
         </li>
     `;

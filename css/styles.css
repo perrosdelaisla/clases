@@ -1571,3 +1571,40 @@ body {
 /* Slogan, footer del cliente — quitamos el footer viejo del rutina screen */
 .footer-cliente { display: none; }
 
+/* ── Sub-pestañas dentro de Rutina ────────────────────────────── */
+.rutina-subtabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 0;
+    margin: 0 0 16px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.rutina-subtabs::-webkit-scrollbar { display: none; }
+
+.rutina-subtab {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(245, 239, 224, 0.2);
+    background: transparent;
+    color: var(--color-crema, #F5EFE0);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.rutina-subtab:hover {
+    border-color: rgba(245, 239, 224, 0.4);
+}
+
+.rutina-subtab.is-active {
+    background: var(--color-rojo, #C8102E);
+    border-color: var(--color-rojo, #C8102E);
+    color: #FFFFFF;
+}
+
