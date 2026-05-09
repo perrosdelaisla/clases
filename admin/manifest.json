@@ -1,6 +1,7 @@
 {
     "name": "Perros de la Isla · Admin",
     "short_name": "PDLI Admin",
+    "id": "/clases/admin/",
     "start_url": "/clases/admin/",
     "scope": "/clases/admin/",
     "display": "standalone",
