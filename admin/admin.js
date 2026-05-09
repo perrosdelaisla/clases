@@ -434,6 +434,15 @@ function bindAgendaModals() {
                 notas: (document.getElementById('cm-notas')?.value || '').trim(),
             };
 
+            // "presencial-palma" se persiste como modalidad="presencial" para
+            // que las stats coincidan con Victoria; el marcador en notas
+            // permite distinguirlo de un presencial en zona del cliente.
+            if (cita.modalidad === 'presencial-palma') {
+                cita.modalidad = 'presencial';
+                const marcador = '[Parque céntrico de Palma]';
+                cita.notas = cita.notas ? `${marcador} ${cita.notas}` : marcador;
+            }
+
             if (!cliente.nombre)  { showCmError('Falta el nombre del cliente.'); return; }
             if (!cliente.telefono) { showCmError('Falta el teléfono del cliente.'); return; }
             if (!perro.nombre)    { showCmError('Falta el nombre del perro.'); return; }
