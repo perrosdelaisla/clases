@@ -360,42 +360,20 @@ async function cargarRutinaDelPerro(perroId) {
     return data || [];
 }
 
-async function cargarSlotsActivos() {
-    const { data, error } = await supabase
-        .from('slots')
-        .select('id, dia_semana, hora, activo')
-        .eq('activo', true)
-        .order('dia_semana', { ascending: true })
-        .order('hora', { ascending: true });
+async function cargarSlotsDisponibles(desdeIso, hastaIso) {
+    // Llamada a la RPC compartida con Victoria.
+    // p_min_dias_antelacion = 0 porque la regla de antelación entre clases
+    // la maneja puede_cliente_reservar() vía puede_reservar_desde.
+    const { data, error } = await supabase.rpc('get_available_slots', {
+        p_desde: desdeIso,
+        p_hasta: hastaIso,
+        p_min_dias_antelacion: 0,
+    });
     if (error) {
-        console.error('[app] error cargando slots:', error);
+        console.error('[app] error cargando slots disponibles:', error);
         return [];
     }
     return data || [];
-}
-
-async function cargarOcupacion(desdeIso, hastaIso) {
-    // Citas confirmadas en el rango (cualquier cliente, no solo el actual —
-    // necesitamos saber qué slots están libres globalmente). Si las RLS
-    // no permiten ver citas ajenas, este SELECT devolverá solo las propias,
-    // lo cual también cubre los slots que el propio cliente ya reservó.
-    const [citasResp, bloqueosResp] = await Promise.all([
-        supabase
-            .from('citas')
-            .select('fecha, hora, estado')
-            .gte('fecha', desdeIso)
-            .lte('fecha', hastaIso)
-            .neq('estado', 'cancelada'),
-        supabase
-            .from('bloqueos')
-            .select('fecha, hora')
-            .gte('fecha', desdeIso)
-            .lte('fecha', hastaIso),
-    ]);
-    return {
-        citas: citasResp.data || [],
-        bloqueos: bloqueosResp.data || [],
-    };
 }
 
 async function llamarPuedeReservar() {
@@ -634,17 +612,17 @@ async function renderTabReservar() {
     const actuales = estado.reservas_actuales ?? 0;
     const disponiblesQuedan = Math.max(0, max - actuales);
 
-    const slots = await cargarSlotsActivos();
     const desdeIso = new Date().toISOString().slice(0, 10);
     const hastaIso = sumarDiasIso(desdeIso, 8 * 7); // 8 semanas
-    const ocup = await cargarOcupacion(desdeIso, hastaIso);
 
-    // Si la RPC nos dio puede_reservar_desde, respetarlo como mínimo
+    // Si puede_cliente_reservar nos dio puede_reservar_desde, respetarlo como mínimo.
+    // Esa fecha ya incluye la regla "5 días entre clases" del lado servidor.
     const minIso = estado.puede_reservar_desde && estado.puede_reservar_desde > desdeIso
         ? estado.puede_reservar_desde
         : desdeIso;
 
-    const grid = construirGridDeSlots(slots, ocup, minIso, hastaIso);
+    const slotsDisponibles = await cargarSlotsDisponibles(minIso, hastaIso);
+    const grid = construirGridDeSlots(slotsDisponibles);
 
     cont.innerHTML = `
         <div class="reservar-aviso">
@@ -666,73 +644,44 @@ async function renderTabReservar() {
     });
 }
 
-function construirGridDeSlots(slotsActivos, { citas, bloqueos }, desdeIso, hastaIso) {
-    if (!slotsActivos.length) {
-        return '<div class="reservar-msg"><p>Todavía no hay horarios disponibles. Vuelve a probar más tarde.</p></div>';
+function construirGridDeSlots(slotsDisponibles) {
+    if (!slotsDisponibles.length) {
+        return '<div class="reservar-msg"><p>No hay horarios disponibles en este momento. Vuelve a probar más tarde.</p></div>';
     }
 
-    // Lookup de ocupación
-    const ocupados = new Set(citas.map((c) => `${c.fecha}_${normalizarHora(c.hora)}`));
-    const diasBloqueados = new Set(
-        bloqueos.filter((b) => !b.hora).map((b) => b.fecha)
-    );
-    const slotsBloqueados = new Set(
-        bloqueos.filter((b) => b.hora).map((b) => `${b.fecha}_${normalizarHora(b.hora)}`)
-    );
-
-    // Slots agrupados por dia_semana (0..6) → array de horas "HH:MM"
-    const slotsPorDia = {};
-    slotsActivos.forEach((s) => {
-        const dia = s.dia_semana;
-        if (!slotsPorDia[dia]) slotsPorDia[dia] = [];
-        slotsPorDia[dia].push(normalizarHora(s.hora));
+    // Agrupar por fecha respetando el orden que devuelve la RPC.
+    const porFecha = {};
+    const ordenFechas = [];
+    slotsDisponibles.forEach((s) => {
+        const fechaIso = s.fecha;
+        const hora = typeof s.hora === 'string' ? s.hora.substring(0, 5) : s.hora;
+        if (!porFecha[fechaIso]) {
+            porFecha[fechaIso] = [];
+            ordenFechas.push(fechaIso);
+        }
+        porFecha[fechaIso].push(hora);
     });
 
-    // Iterar día por día desde desdeIso hasta hastaIso
     const html = [];
-    let cursor = new Date(desdeIso + 'T00:00:00');
-    const fin = new Date(hastaIso + 'T00:00:00');
-    while (cursor <= fin) {
-        const isoDia = cursor.toISOString().slice(0, 10);
-        const dow = cursor.getDay();
-        const horasDelDia = slotsPorDia[dow] || [];
-
-        if (horasDelDia.length && !diasBloqueados.has(isoDia)) {
-            const cards = horasDelDia.map((hora) => {
-                const key = `${isoDia}_${hora}`;
-                const ocupado = ocupados.has(key) || slotsBloqueados.has(key);
-                if (ocupado) {
-                    return `
-                        <div class="slot-card is-ocupada" aria-disabled="true">
-                            <span class="slot-card__hora">${hora}</span>
-                            <span class="slot-card__label">Ocupado</span>
-                        </div>
-                    `;
-                }
-                const label = formatearFechaLarga(isoDia);
-                return `
-                    <button type="button" class="slot-card is-libre"
-                            data-fecha="${isoDia}" data-hora="${hora}"
-                            data-label="${escapeHTML(`${label} · ${hora}`)}">
-                        <span class="slot-card__hora">${hora}</span>
-                    </button>
-                `;
-            }).join('');
-
-            const headerDia = formatearDiaCompleto(cursor);
+    ordenFechas.forEach((isoDia) => {
+        const horasDelDia = porFecha[isoDia];
+        const labelDia = formatearFechaLarga(isoDia);
+        html.push(`<div class="reservar-dia">`);
+        html.push(`<h4 class="reservar-dia__label">${labelDia}</h4>`);
+        html.push(`<div class="reservar-dia__slots">`);
+        horasDelDia.forEach((hora) => {
+            const label = `${labelDia} · ${hora}`;
             html.push(`
-                <section class="dia-block">
-                    <h3 class="dia-block__titulo">${headerDia}</h3>
-                    <div class="slot-grid">${cards}</div>
-                </section>
+                <button type="button" class="slot-card is-libre"
+                        data-fecha="${isoDia}" data-hora="${hora}"
+                        data-label="${escapeHTML(label)}">
+                    <span class="slot-card__hora">${hora}</span>
+                </button>
             `);
-        }
-        cursor.setDate(cursor.getDate() + 1);
-    }
+        });
+        html.push(`</div></div>`);
+    });
 
-    if (!html.length) {
-        return '<div class="reservar-msg"><p>No hay horarios disponibles en las próximas semanas. Vuelve a probar más tarde.</p></div>';
-    }
     return html.join('');
 }
 
@@ -1175,20 +1124,11 @@ function formatearFechaLarga(iso) {
     return `${DIAS_NOMBRE[dt.getDay()].toLowerCase()} ${dt.getDate()} ${MESES_CORTO[dt.getMonth()]}`;
 }
 
-function formatearDiaCompleto(date) {
-    return `${DIAS_NOMBRE[date.getDay()].toUpperCase()} ${date.getDate()} ${MESES_CORTO[date.getMonth()].toUpperCase()}`;
-}
-
 function sumarDiasIso(iso, n) {
     const [y, m, d] = iso.split('-').map(Number);
     const dt = new Date(y, m - 1, d);
     dt.setDate(dt.getDate() + n);
     return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-}
-
-function normalizarHora(hora) {
-    if (!hora) return '';
-    return hora.substring(0, 5); // 'HH:MM:SS' → 'HH:MM'
 }
 
 function cuantoFalta(dt, ahora) {
