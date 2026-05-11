@@ -470,7 +470,7 @@ export async function actualizarCita(citaId, parches) {
 export async function obtenerClientesParaAutocomplete() {
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, estado')
+        .select('id, nombre, telefono, email, direccion, zona, estado')
         .order('nombre', { ascending: true });
     if (error) throw error;
     return data || [];
@@ -478,25 +478,31 @@ export async function obtenerClientesParaAutocomplete() {
 
 /**
  * Trae los perros asociados a un cliente. Pensada para que el form
- * crear cita pueda autollenar el peso del perro si el cliente
- * elegido tiene exactamente uno registrado (caso ≠ 1 se decide en
- * el llamador). NO crea ni modifica nada — sólo lectura.
+ * crear cita pueda autollenar los datos del perro (nombre, raza, edad,
+ * peso, ppp) al elegir un cliente. NO crea ni modifica nada — sólo
+ * lectura.
+ *
+ * Orden: created_at ASC (más antiguo primero). El llamador asume que
+ * el primero es el "perro principal" / por defecto cuando hay varios.
  *
  * @param {string} clienteId - UUID del cliente.
- * @returns {Promise<Array<{id:string, nombre:string, peso_kg:number|null}>>}
+ * @returns {Promise<Array<{id:string, nombre:string, raza:string|null,
+ *   edad_meses:number|null, peso_kg:number|null, es_ppp:boolean|null,
+ *   created_at:string|null}>>}
  *   Vacío si el cliente no tiene perros registrados.
  *
  * @throws {Error} Si la query falla.
  *
- * Tabla(s) Supabase: perros (SELECT id, nombre, peso_kg WHERE cliente_id=$1)
+ * Tabla(s) Supabase: perros (SELECT … WHERE cliente_id=$1 ORDER BY created_at ASC)
  * RLS requerido: es_admin() = true
  */
 export async function obtenerPerrosDeCliente(clienteId) {
     if (!clienteId) return [];
     const { data, error } = await supabase
         .from('perros')
-        .select('id, nombre, peso_kg')
-        .eq('cliente_id', clienteId);
+        .select('id, nombre, raza, edad_meses, peso_kg, es_ppp, created_at')
+        .eq('cliente_id', clienteId)
+        .order('created_at', { ascending: true, nullsFirst: true });
     if (error) throw error;
     return data || [];
 }

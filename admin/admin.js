@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=6';
+import * as agenda from './agenda/api.js?v=7';
 import * as stats from './stats/api.js';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -23,6 +23,7 @@ const state = {
     busqueda: '',
     citas: [],              // citas vigentes cacheadas para el modal editar
     clientesCache: [],      // lista plana de clientes para el autocomplete (crear+editar)
+    perrosClienteCache: [], // perros del cliente actualmente elegido en modal crear
 };
 
 // ---------- Navegación entre pantallas ----------
@@ -639,6 +640,56 @@ function resetCmForm() {
     }
     const drop = document.getElementById('cm-cliente-dropdown');
     if (drop) drop.hidden = true;
+    // Selector de perros: ocultar y vaciar opciones
+    configurarSelectorPerro([]);
+    state.perrosClienteCache = [];
+}
+
+// Aplica los datos de un perro (o null para limpiar) a los inputs del
+// fieldset "Perro" del modal crear. Compartido entre el autollenado al
+// elegir cliente y el cambio de opción del selector cuando hay 2+ perros.
+function aplicarDatosPerroAlForm(perro) {
+    const elNombre = document.getElementById('cm-perro');
+    const elRaza   = document.getElementById('cm-raza');
+    const elEdad   = document.getElementById('cm-edad');
+    const elPeso   = document.getElementById('cm-peso');
+    const elPpp    = document.getElementById('cm-ppp');
+    if (elNombre) elNombre.value = perro?.nombre || '';
+    if (elRaza)   elRaza.value   = perro?.raza   || '';
+    if (elEdad)   elEdad.value   = perro?.edad_meses != null ? String(perro.edad_meses) : '';
+    if (elPeso)   elPeso.value   = perro?.peso_kg    != null ? String(perro.peso_kg)    : '';
+    if (elPpp)    elPpp.checked  = !!perro?.es_ppp;
+}
+
+// Configura el <select id="cm-perro-selector">: visible sólo si hay 2+
+// perros; las opciones se ordenan por created_at ASC (más antiguo primero,
+// que queda preseleccionado). Bindea el change handler una sola vez para
+// que cambiar de opción autollene los campos del perro elegido.
+function configurarSelectorPerro(perros) {
+    const wrap = document.getElementById('cm-perro-selector-wrap');
+    const sel  = document.getElementById('cm-perro-selector');
+    if (!wrap || !sel) return;
+
+    if (!perros || perros.length < 2) {
+        wrap.hidden = true;
+        sel.innerHTML = '';
+        return;
+    }
+
+    sel.innerHTML = perros.map((p, i) =>
+        `<option value="${escapeHTML(p.id)}"${i === 0 ? ' selected' : ''}>${escapeHTML(p.nombre || '(sin nombre)')}</option>`
+    ).join('');
+    wrap.hidden = false;
+
+    if (!sel.__perroSelBound) {
+        sel.addEventListener('change', () => {
+            const id = sel.value;
+            const cache = state.perrosClienteCache || [];
+            const p = cache.find((x) => x.id === id);
+            if (p) aplicarDatosPerroAlForm(p);
+        });
+        sel.__perroSelBound = true;
+    }
 }
 
 // Conecta el autocomplete del modal "Crear cita". Reusa la cache global
@@ -655,38 +706,58 @@ function setupAutocompleteCmCliente() {
     setupAutocompleteCliente({
         inputEl, dropdownEl, hiddenEl,
         onSelect: async (c) => {
-            const tel = document.getElementById('cm-telefono');
-            const dir = document.getElementById('cm-direccion');
+            // Datos del cliente
+            const tel  = document.getElementById('cm-telefono');
+            const dir  = document.getElementById('cm-direccion');
             const mail = document.getElementById('cm-email');
-            const peso = document.getElementById('cm-peso');
+            const zona = document.getElementById('cm-zona');
             if (tel)  tel.value  = c.telefono  || '';
             if (dir)  dir.value  = c.direccion || '';
             if (mail) mail.value = c.email     || '';
-            if (hintEl) {
-                hintEl.textContent = 'Vinculado a cliente existente: los datos del cliente no se modificarán al guardar.';
-                hintEl.hidden = false;
-            }
-            // Autollenar peso del perro si y sólo si el cliente tiene
-            // exactamente 1 perro registrado. 0 o 2+ → dejar vacío
-            // (Charly decide a mano).
-            if (peso) {
-                peso.value = '';
-                try {
-                    const perros = await agenda.obtenerPerrosDeCliente(c.id);
-                    if (perros.length === 1 && perros[0].peso_kg != null) {
-                        peso.value = String(perros[0].peso_kg);
-                    }
-                } catch (err) {
-                    console.error('Error obteniendo perros del cliente:', err);
-                    // dejamos peso vacío — degradación grácil
+            if (zona) zona.value = c.zona      || '';
+
+            // Limpiar perro antes de cargar — evita arrastrar datos de un cliente previo
+            aplicarDatosPerroAlForm(null);
+            state.perrosClienteCache = [];
+
+            let perros = [];
+            try {
+                perros = await agenda.obtenerPerrosDeCliente(c.id);
+                state.perrosClienteCache = perros;
+                if (perros.length >= 1) {
+                    // El primero (más antiguo) queda seleccionado por defecto
+                    aplicarDatosPerroAlForm(perros[0]);
                 }
+                configurarSelectorPerro(perros);
+            } catch (err) {
+                console.error('Error obteniendo perros del cliente:', err);
+                configurarSelectorPerro([]);
+            }
+
+            // Hint contextual según cantidad de perros del cliente
+            if (hintEl) {
+                let msg = 'Vinculado a cliente existente: los datos del cliente no se modificarán al guardar.';
+                if (perros.length === 1) {
+                    msg += ' Perro pre-rellenado con los datos del perro registrado: si es para un perro distinto, modificá los campos antes de guardar — si no, se creará un duplicado en la tabla perros.';
+                } else if (perros.length >= 2) {
+                    msg += ` El cliente tiene ${perros.length} perros — elegí uno arriba del fieldset Perro. Si es para un perro nuevo, modificá los campos antes de guardar — si no, se creará un duplicado.`;
+                } else {
+                    msg += ' (Sin perros registrados — se creará uno nuevo al guardar.)';
+                }
+                hintEl.textContent = msg;
+                hintEl.hidden = false;
             }
         },
         onClear: () => {
+            // Charly tipeó tras elegir: rompemos vínculo + ocultamos selector,
+            // pero NO limpiamos los campos del perro (Charly puede estar sólo
+            // corrigiendo un typo del nombre del cliente).
             if (hintEl) {
                 hintEl.textContent = '';
                 hintEl.hidden = true;
             }
+            configurarSelectorPerro([]);
+            state.perrosClienteCache = [];
         },
     });
 }
