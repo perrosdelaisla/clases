@@ -162,6 +162,7 @@ async function afterLogin(session) {
     if (nameEl) nameEl.textContent = nombre;
     showScreen('app');
     bindTabs();
+    bindBackNavigation();
     // Default 'agenda'. Guard: si tab guardada es 'inicio' (oculto), fallback al default.
     let tabGuardada = localStorage.getItem('pdli_admin_tab') || 'agenda';
     if (tabGuardada === 'inicio') tabGuardada = 'agenda';
@@ -485,16 +486,129 @@ function bindAgendaModals() {
     }
 }
 
+/* ═══════════════════════════════════════════
+   BACK NAVIGATION — botón atrás Android estilo Instagram
+   Patrón: history.pushState + popstate. Mantenemos un "anchor" siempre
+   en la historia; cualquier cambio de UI (modal) suma otra entrada. El
+   handler de popstate decide qué hacer según la UI visible.
+   Prioridades:
+     1) Modal abierto → cerrar
+     2) Subtab Agenda ≠ citas → volver a citas
+     3) Tab ≠ agenda → volver a agenda
+     4) Agenda > Citas sin nada → toast + 2s para confirmar salida
+   Flag navegandoPorPopstate evita doble pushState cuando el handler llama
+   a closeModal/activarTab/activarAgendaSubtab durante el procesamiento.
+   Flag cierreUiPendiente captura el caso "cerré modal con X" donde el
+   history.back() programático dispara popstate sin querer toast.
+   ═══════════════════════════════════════════ */
+
+let navegandoPorPopstate = false;
+let cierreUiPendiente = false;
+let readyToExit = false;
+let exitTimer = null;
+let bloquearSalida = true;
+
+let toastTimer = null;
+function toast(msg) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove('toast--error');
+    el.classList.add('toast--info');
+    el.removeAttribute('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.setAttribute('hidden', ''), 2200);
+}
+
+function bindBackNavigation() {
+    if (window.__backNavBound) return;
+    window.__backNavBound = true;
+
+    // Anchor inicial: garantiza que el primer back físico dispare popstate
+    // en lugar de cerrar la PWA directamente.
+    history.pushState({ pdli: 'anchor' }, '');
+
+    window.addEventListener('popstate', () => {
+        if (!bloquearSalida) return; // ya estamos saliendo, dejar pasar
+
+        // Caso especial: el back lo originó closeModal() desde UI (X / backdrop
+        // / Esc / botón Guardar). Solo consumimos la entrada y re-armamos guard.
+        if (cierreUiPendiente) {
+            cierreUiPendiente = false;
+            history.pushState({ pdli: 'anchor' }, '');
+            return;
+        }
+
+        // Prioridad 1: modal abierto → cerrar
+        const modal = document.querySelector('.modal:not([hidden])');
+        if (modal) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { closeModal(modal.id); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 2: subtab Agenda ≠ citas
+        const tabActual = document.querySelector('.admin-tab.active')?.dataset.tab;
+        const subActual = document.querySelector('.agenda-subtab.active')?.dataset.subtab;
+        if (tabActual === 'agenda' && subActual && subActual !== 'citas') {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { activarAgendaSubtab('citas'); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 3: tab ≠ agenda → volver a agenda (siempre arranca en citas)
+        if (tabActual && tabActual !== 'agenda') {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { activarTab('agenda'); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 4: Agenda > Citas sin nada → doble-tap para salir
+        if (readyToExit) {
+            // Segundo back dentro de los 2s: dejar salir. No re-pushear.
+            clearTimeout(exitTimer);
+            readyToExit = false;
+            bloquearSalida = false;
+            history.back(); // si era la última entrada del PWA, browser cierra
+            return;
+        }
+        history.pushState({ pdli: 'anchor' }, '');
+        toast('Pulsá atrás otra vez para salir');
+        readyToExit = true;
+        exitTimer = setTimeout(() => { readyToExit = false; }, 2000);
+    });
+}
+
 function openModal(id) {
     const m = document.getElementById(id);
-    if (m) m.hidden = false;
+    if (!m) return;
+    const yaAbierto = !m.hidden;
+    m.hidden = false;
+    // Back navigation: empujar una entrada en la historia si el modal
+    // recién se abre, así el botón atrás físico la consume y el handler
+    // de popstate cierra el modal. Si ya estaba abierto, no doble-pushear.
+    if (!yaAbierto && !navegandoPorPopstate) {
+        history.pushState({ pdli: 'modal', id }, '');
+    }
 }
 
 function closeModal(id) {
     const m = document.getElementById(id);
-    if (m) m.hidden = true;
+    if (!m) return;
+    const estabaAbierto = !m.hidden;
+    m.hidden = true;
     if (id === 'modal-cita-manual') {
         resetCmForm();
+    }
+    // Si el cierre vino de la UI (X, backdrop, Esc, botón Guardar/Eliminar),
+    // consumimos la entrada que pusheamos al abrir. El handler de popstate
+    // detecta cierreUiPendiente y no dispara la lógica de toast.
+    if (estabaAbierto && !navegandoPorPopstate) {
+        cierreUiPendiente = true;
+        history.back();
     }
 }
 
