@@ -420,6 +420,59 @@ export async function marcarCitaRealizada(citaId) {
 }
 
 /**
+ * Actualiza una cita con un parche parcial de campos editables.
+ * Mismo patrón que confirmarCita/cancelarCita/marcarCitaRealizada
+ * (UPDATE directo con RLS es_admin()=true), pero permite múltiples
+ * columnas en un solo round-trip. Usado por el modal "editar cita"
+ * del admin.
+ *
+ * Solo deben pasarse columnas presentes en el modal — el resto de la
+ * fila no se toca. El trigger DB trg_sync_bloqueo_desde_cita se ocupa
+ * de sincronizar el bloqueo asociado si cambian fecha/hora.
+ *
+ * @param {string} citaId - UUID de la cita.
+ * @param {Object} parches - Subset de columnas de citas a actualizar.
+ *   Campos esperados (todos opcionales): fecha, hora, cliente_id,
+ *   modalidad, zona, notas, estado, numero_clase.
+ *
+ * @returns {Promise<void>} Sin valor de retorno.
+ *
+ * @throws {Error} Si el UPDATE falla por RLS o constraint.
+ *
+ * Tabla(s) Supabase: citas (UPDATE)
+ * RLS requerido: es_admin() = true
+ */
+export async function actualizarCita(citaId, parches) {
+    const { error } = await supabase
+        .from('citas')
+        .update(parches)
+        .eq('id', citaId);
+    if (error) throw error;
+}
+
+/**
+ * Trae la lista completa de clientes (todos los estados) ordenada por
+ * nombre, pensada para alimentar un <select> en el modal editar cita.
+ * En el Paso C se reemplazará por un autocomplete con la misma forma
+ * de datos, así que el llamador no debería romperse.
+ *
+ * @returns {Promise<Array<{id:string, nombre:string, telefono:string, estado:string}>>}
+ *
+ * @throws {Error} Si la query falla.
+ *
+ * Tabla(s) Supabase: clientes (SELECT id, nombre, telefono, estado)
+ * RLS requerido: es_admin() = true
+ */
+export async function obtenerClientesParaSelect() {
+    const { data, error } = await supabase
+        .from('clientes')
+        .select('id, nombre, telefono, estado')
+        .order('nombre', { ascending: true });
+    if (error) throw error;
+    return data || [];
+}
+
+/**
  * Borra una cita por completo. Operación destructiva — el admin la
  * usa cuando quiere quitar del calendario una cita ya realizada o
  * cancelada que no necesita seguir viendo.
@@ -545,6 +598,7 @@ export async function crearCitaManual(datos) {
         if (cita.modalidad) citaBody.modalidad = cita.modalidad;
         if (cita.zona)      citaBody.zona = cita.zona;
         if (cita.notas)     citaBody.notas = cita.notas;
+        if (cita.numero_clase != null) citaBody.numero_clase = cita.numero_clase;
         const { data: citaData, error: errCi } = await supabase
             .from('citas')
             .insert(citaBody)

@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=17">
+    <link rel="stylesheet" href="./styles.css?v=19">
 </head>
 <body>
 
@@ -352,6 +352,10 @@
                             <span>Zona</span>
                             <input type="text" id="cm-zona" maxlength="80">
                         </label>
+                        <label class="form-field">
+                            <span>Nº de clase</span>
+                            <input type="number" id="cm-numero-clase" min="1" step="1" placeholder="—">
+                        </label>
                     </div>
                     <label class="form-field">
                         <span>Notas</span>
@@ -368,7 +372,78 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-cita-edit" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Editar cita</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <p id="ce-cliente-actual" class="form-hint"></p>
+
+                <fieldset class="form-fieldset">
+                    <legend>Cita</legend>
+                    <label class="form-field">
+                        <span>Cliente <span class="req">*</span></span>
+                        <select id="ce-cliente" required></select>
+                    </label>
+                    <div class="form-row">
+                        <label class="form-field">
+                            <span>Fecha <span class="req">*</span></span>
+                            <input type="date" id="ce-fecha" required>
+                        </label>
+                        <label class="form-field">
+                            <span>Hora <span class="req">*</span></span>
+                            <input type="time" id="ce-hora" step="900" required>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-field">
+                            <span>Modalidad</span>
+                            <select id="ce-modalidad">
+                                <option value="presencial">Presencial (zona del cliente)</option>
+                                <option value="presencial-palma">Presencial en parque de Palma</option>
+                                <option value="online">Online (Google Meet)</option>
+                            </select>
+                        </label>
+                        <label class="form-field form-field-grow">
+                            <span>Lugar / Zona</span>
+                            <input type="text" id="ce-zona" maxlength="80">
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-field">
+                            <span>Estado</span>
+                            <select id="ce-estado">
+                                <option value="pendiente">Pendiente</option>
+                                <option value="confirmada">Confirmada</option>
+                                <option value="cancelada">Cancelada</option>
+                                <option value="realizada">Realizada</option>
+                            </select>
+                        </label>
+                        <label class="form-field">
+                            <span>Nº de clase</span>
+                            <input type="number" id="ce-numero-clase" min="1" step="1" placeholder="—">
+                        </label>
+                    </div>
+                    <label class="form-field">
+                        <span>Notas</span>
+                        <textarea id="ce-notas" rows="3" maxlength="500"></textarea>
+                    </label>
+                </fieldset>
+
+                <p id="ce-error" class="form-error" hidden></p>
+            </div>
+            <footer class="modal-footer">
+                <button id="ce-eliminar" class="btn-secondary btn-eliminar-modal" type="button">Eliminar</button>
+                <button id="ce-cancel" class="btn-secondary" type="button" data-modal-close>Cancelar</button>
+                <button id="ce-save" class="btn-primary" type="button">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script type="module" src="./admin.js?v=24"></script>
+    <script type="module" src="./admin.js?v=26"></script>
 </body>
 </html>

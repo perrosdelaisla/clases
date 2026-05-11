@@ -1859,6 +1859,19 @@ body {
 .cita-estado.cancelada   { background: rgba(122, 58, 50, 0.2);   color: var(--color-inactive); }
 .cita-estado.realizada   { background: rgba(255, 255, 255, 0.06); color: var(--color-muted); }
 
+.cita-numero {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: var(--font-display);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    margin-left: auto;
+}
+
 .cita-cliente {
     color: var(--color-text);
     font-size: 15px;
@@ -1904,6 +1917,17 @@ body {
 .cita-acciones .btn-eliminar:hover {
     color: var(--color-red);
     border-color: var(--color-red);
+}
+
+.cita-acciones .btn-editar {
+    padding: 6px 10px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.cita-acciones .btn-editar:hover {
+    color: var(--color-green);
+    border-color: var(--color-green);
 }
 
 /* MODALES */
@@ -1985,6 +2009,24 @@ body {
     gap: 8px;
     padding: 16px 20px;
     border-top: 1px solid var(--color-border);
+}
+
+/* Botón Eliminar dentro del footer de un modal: separado a la izquierda. */
+.modal-footer .btn-eliminar-modal {
+    margin-right: auto;
+    color: var(--color-red);
+    border-color: var(--color-red);
+}
+
+.modal-footer .btn-eliminar-modal:hover {
+    background: rgba(200, 16, 46, 0.08);
+}
+
+/* Línea de ayuda dentro del cuerpo de un modal (no es error, solo contexto). */
+.form-hint {
+    margin: 0 0 12px;
+    color: var(--color-muted);
+    font-size: 13px;
 }
 
 /* MOBILE */

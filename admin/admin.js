@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=2';
+import * as agenda from './agenda/api.js?v=4';
 import * as stats from './stats/api.js';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -21,6 +21,8 @@ const state = {
     clientes: [],           // resultado crudo del SELECT con perros anidados
     filtroEstado: 'todos',  // 'todos' | 'consulta' | 'activo' | 'mantenimiento' | 'inactivo'
     busqueda: '',
+    citas: [],              // citas vigentes cacheadas para el modal editar
+    clientesSelect: [],     // lista plana de clientes para el <select> del modal editar
 };
 
 // ---------- Navegación entre pantallas ----------
@@ -432,6 +434,7 @@ function bindAgendaModals() {
                 modalidad: (document.getElementById('cm-modalidad')?.value || '').trim(),
                 zona: (document.getElementById('cm-zona')?.value || '').trim(),
                 notas: (document.getElementById('cm-notas')?.value || '').trim(),
+                numero_clase: parseIntOrNull(document.getElementById('cm-numero-clase')?.value),
             };
 
             // "presencial-palma" se persiste como modalidad="presencial" para
@@ -543,6 +546,7 @@ function initAgenda() {
     bindAgendaSubtabs();
     bindAgendaModals();
     bindFormBloqueo();
+    bindModalCitaEdit();
     window.__agendaBound = true;
     // Cargar citas por default (es la sub-pestaña activa al entrar)
     cargarCitas();
@@ -772,6 +776,7 @@ async function cargarCitas() {
     list.innerHTML = '<p class="agenda-empty">Cargando citas…</p>';
     try {
         const citas = await agenda.obtenerCitasAdminConReportado();
+        state.citas = citas;
         renderCitas(citas);
         bindCitasActions();
     } catch (err) {
@@ -802,6 +807,9 @@ function bindCitasActions() {
             } else if (action === 'eliminar-cita') {
                 if (!confirm('¿Eliminar esta cita definitivamente? Esta acción no se puede deshacer.')) return;
                 await agenda.eliminarCita(citaId);
+            } else if (action === 'editar') {
+                await abrirModalEditarCita(citaId);
+                return; // no refrescar — el modal se ocupa al guardar/eliminar
             } else {
                 return;
             }
@@ -856,6 +864,9 @@ function renderCitas(citas) {
         // BOTONES CONDICIONALES — reglas del admin viejo (hola/admin/admin.js:444-493)
         const botones = [];
 
+        // Editar: siempre disponible (abre modal con todos los campos)
+        botones.push('<button class="btn-editar" data-action="editar" type="button" aria-label="Editar" title="Editar">✎</button>');
+
         // Confirmar: solo si pendiente
         if (estado === 'pendiente') {
             botones.push('<button data-action="confirmar" type="button">Confirmar</button>');
@@ -877,7 +888,8 @@ function renderCitas(citas) {
         }
 
         // Si quedó pendiente sin botón Eliminar (caso raro), permitir eliminar igual
-        if (estado === 'pendiente' && botones.length === 1) {
+        // (length === 2 = Editar + Confirmar; el botón Editar agregado arriba siempre suma 1)
+        if (estado === 'pendiente' && botones.length === 2) {
             botones.push('<button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>');
         }
 
@@ -897,10 +909,15 @@ function renderCitas(citas) {
             bloqueProtocolo = `<div class="cita-protocolo"><strong>Cuadros:</strong> ${escapeHTML(cuadros.join(', '))}</div>`;
         }
 
+        const numeroClaseBadge = (c.numero_clase != null)
+            ? `<span class="cita-numero">Clase ${escapeHTML(String(c.numero_clase))}</span>`
+            : '';
+
         return `
             <div class="cita-card" data-cita-id="${escapeHTML(c.id)}">
                 <div class="cita-header">
                     <span class="cita-fecha">${formatearFechaCorta(c.fecha)} · ${formatearHora(c.hora)}</span>
+                    ${numeroClaseBadge}
                     <span class="cita-estado ${escapeHTML(estado)}">${escapeHTML(estado)}</span>
                 </div>
                 <div class="cita-cliente">
@@ -913,6 +930,194 @@ function renderCitas(citas) {
             </div>
         `;
     }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   AGENDA — Modal "Editar cita"
+   Patrón copiado del modal-cita-manual: HTML estático en index.html,
+   listeners bindeados una sola vez en initAgenda → bindModalCitaEdit.
+   El campo "Cliente" es un <select> simple; en el Paso C se reemplaza
+   por autocomplete (la lógica de guardar solo lee ce-cliente.value).
+   ═══════════════════════════════════════════ */
+
+const PALMA_MARKER = '[Parque céntrico de Palma]';
+
+// Estado en memoria del modal editar (id de la cita actualmente editada).
+const editState = { citaId: null };
+
+function showCeError(msg) {
+    const box = document.getElementById('ce-error');
+    if (!box) return;
+    box.textContent = msg || '';
+    box.hidden = !msg;
+}
+
+// Decide qué valor mostrar en el select de modalidad. El form de crear
+// usa el marcador PALMA_MARKER en notas para distinguir presencial-palma
+// de presencial-zona-cliente (ambos persisten modalidad='presencial');
+// acá invertimos esa convención al cargar.
+function detectarModalidadEditor(cita) {
+    const notas = cita.notas || '';
+    if (cita.modalidad === 'presencial' && notas.includes(PALMA_MARKER)) {
+        return {
+            modalidad: 'presencial-palma',
+            notasLimpias: notas.replace(PALMA_MARKER, '').trim(),
+        };
+    }
+    return {
+        modalidad: cita.modalidad || 'presencial',
+        notasLimpias: notas,
+    };
+}
+
+// Inverso de detectarModalidadEditor: al guardar, si el admin eligió
+// presencial-palma, persistimos modalidad='presencial' y re-incrustamos
+// el marcador en notas. Mismo patrón que admin.js:440-444 (modal crear).
+function aplicarModalidadGuardar(modSelect, notasInput) {
+    if (modSelect === 'presencial-palma') {
+        return {
+            modalidad: 'presencial',
+            notas: notasInput ? `${PALMA_MARKER} ${notasInput}` : PALMA_MARKER,
+        };
+    }
+    return { modalidad: modSelect, notas: notasInput };
+}
+
+async function poblarSelectClientesEdit(clienteIdActual) {
+    const select = document.getElementById('ce-cliente');
+    if (!select) return;
+    try {
+        if (state.clientesSelect.length === 0) {
+            state.clientesSelect = await agenda.obtenerClientesParaSelect();
+        }
+        const opts = state.clientesSelect.map((c) => {
+            const tag = c.estado === 'consulta' ? ' · consulta' : '';
+            const tel = c.telefono ? ` · ${c.telefono}` : '';
+            return `<option value="${escapeHTML(c.id)}">${escapeHTML(c.nombre || '(sin nombre)')}${tel}${tag}</option>`;
+        });
+        select.innerHTML = opts.join('');
+        if (clienteIdActual) select.value = clienteIdActual;
+    } catch (err) {
+        console.error('Error cargando clientes para select:', err);
+        showCeError('No se pudo cargar la lista de clientes.');
+    }
+}
+
+async function abrirModalEditarCita(citaId) {
+    const cita = (state.citas || []).find((c) => c.id === citaId);
+    if (!cita) {
+        alert('No se encontró la cita en la lista cargada. Refrescá la pestaña.');
+        return;
+    }
+    editState.citaId = citaId;
+    showCeError('');
+
+    // Header informativo con el cliente actual (referencia visual antes de editar)
+    const hint = document.getElementById('ce-cliente-actual');
+    if (hint) {
+        const nombre = cita.clientes?.nombre || '(sin cliente)';
+        const tel = cita.clientes?.telefono ? ` · ${cita.clientes.telefono}` : '';
+        hint.textContent = `Cliente actual: ${nombre}${tel}`;
+    }
+
+    await poblarSelectClientesEdit(cita.cliente_id);
+
+    const { modalidad, notasLimpias } = detectarModalidadEditor(cita);
+
+    document.getElementById('ce-fecha').value = cita.fecha || '';
+    document.getElementById('ce-hora').value = (cita.hora || '').substring(0, 5);
+    document.getElementById('ce-modalidad').value = modalidad;
+    document.getElementById('ce-zona').value = cita.zona || '';
+    document.getElementById('ce-estado').value = cita.estado || 'pendiente';
+    document.getElementById('ce-numero-clase').value = cita.numero_clase != null ? String(cita.numero_clase) : '';
+    document.getElementById('ce-notas').value = notasLimpias;
+
+    openModal('modal-cita-edit');
+}
+
+function bindModalCitaEdit() {
+    if (window.__modalEditCitaBound) return;
+
+    const ceSave = document.getElementById('ce-save');
+    if (ceSave) {
+        ceSave.addEventListener('click', async () => {
+            const citaId = editState.citaId;
+            if (!citaId) { showCeError('No hay cita seleccionada.'); return; }
+
+            const clienteId = document.getElementById('ce-cliente')?.value || '';
+            const fecha = document.getElementById('ce-fecha')?.value || '';
+            const horaInput = document.getElementById('ce-hora')?.value || '';
+            const modalidadSel = document.getElementById('ce-modalidad')?.value || '';
+            const zona = (document.getElementById('ce-zona')?.value || '').trim();
+            const estado = document.getElementById('ce-estado')?.value || '';
+            const notasInput = (document.getElementById('ce-notas')?.value || '').trim();
+            const numeroClase = parseIntOrNull(document.getElementById('ce-numero-clase')?.value);
+
+            if (!clienteId) { showCeError('Falta el cliente.'); return; }
+            if (!fecha)     { showCeError('Falta la fecha.'); return; }
+            if (!horaInput) { showCeError('Falta la hora.'); return; }
+
+            const hora = horaInput.length === 5 ? `${horaInput}:00` : horaInput;
+            const { modalidad, notas } = aplicarModalidadGuardar(modalidadSel, notasInput);
+
+            const parches = {
+                cliente_id: clienteId,
+                fecha,
+                hora,
+                modalidad: modalidad || null,
+                zona: zona || null,
+                notas: notas || null,
+                estado,
+                numero_clase: numeroClase,
+            };
+
+            ceSave.disabled = true;
+            ceSave.textContent = 'Guardando…';
+            try {
+                await agenda.actualizarCita(citaId, parches);
+                closeModal('modal-cita-edit');
+                editState.citaId = null;
+                await cargarCitas();
+            } catch (err) {
+                console.error('Error actualizarCita:', err);
+                showCeError(err?.message || 'No se pudo guardar la cita.');
+            } finally {
+                ceSave.disabled = false;
+                ceSave.textContent = 'Guardar';
+            }
+        });
+    }
+
+    const ceEliminar = document.getElementById('ce-eliminar');
+    if (ceEliminar) {
+        ceEliminar.addEventListener('click', async () => {
+            const citaId = editState.citaId;
+            if (!citaId) { showCeError('No hay cita seleccionada.'); return; }
+            const cita = (state.citas || []).find((c) => c.id === citaId);
+            const nombre = cita?.clientes?.nombre || 'cliente';
+            const fechaTxt = cita ? formatearFechaCorta(cita.fecha) : '';
+            const horaTxt = cita ? formatearHora(cita.hora) : '';
+            const msg = `¿Eliminar la cita de ${nombre} del ${fechaTxt} a las ${horaTxt}? Esta acción no se puede deshacer.`;
+            if (!confirm(msg)) return;
+
+            ceEliminar.disabled = true;
+            ceEliminar.textContent = 'Eliminando…';
+            try {
+                await agenda.eliminarCita(citaId);
+                closeModal('modal-cita-edit');
+                editState.citaId = null;
+                await cargarCitas();
+            } catch (err) {
+                console.error('Error eliminarCita:', err);
+                showCeError(err?.message || 'No se pudo eliminar la cita.');
+            } finally {
+                ceEliminar.disabled = false;
+                ceEliminar.textContent = 'Eliminar';
+            }
+        });
+    }
+
+    window.__modalEditCitaBound = true;
 }
 
 /* ═══════════════════════════════════════════
