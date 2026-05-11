@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=4';
+import * as agenda from './agenda/api.js?v=6';
 import * as stats from './stats/api.js';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -22,7 +22,7 @@ const state = {
     filtroEstado: 'todos',  // 'todos' | 'consulta' | 'activo' | 'mantenimiento' | 'inactivo'
     busqueda: '',
     citas: [],              // citas vigentes cacheadas para el modal editar
-    clientesSelect: [],     // lista plana de clientes para el <select> del modal editar
+    clientesCache: [],      // lista plana de clientes para el autocomplete (crear+editar)
 };
 
 // ---------- Navegación entre pantallas ----------
@@ -365,7 +365,8 @@ function bindAgendaModals() {
     const btnCitaManual = document.getElementById('btn-abrir-cita-manual');
     if (btnCitaManual) {
         btnCitaManual.addEventListener('click', async () => {
-            await poblarDropdownHorasCita();
+            await Promise.all([poblarDropdownHorasCita(), cargarClientesCache()]);
+            setupAutocompleteCmCliente();
             openModal('modal-cita-manual');
         });
     }
@@ -414,9 +415,12 @@ function bindAgendaModals() {
                 errBox.hidden = true;
             }
 
+            const clienteIdSel = (document.getElementById('cm-cliente-id')?.value || '').trim();
             const cliente = {
                 nombre: (document.getElementById('cm-nombre')?.value || '').trim(),
                 telefono: (document.getElementById('cm-telefono')?.value || '').trim(),
+                direccion: (document.getElementById('cm-direccion')?.value || '').trim(),
+                email: (document.getElementById('cm-email')?.value || '').trim(),
             };
 
             const perro = {
@@ -446,8 +450,12 @@ function bindAgendaModals() {
                 cita.notas = cita.notas ? `${marcador} ${cita.notas}` : marcador;
             }
 
-            if (!cliente.nombre)  { showCmError('Falta el nombre del cliente.'); return; }
-            if (!cliente.telefono) { showCmError('Falta el teléfono del cliente.'); return; }
+            // Validaciones: nombre/teléfono SOLO si NO hay cliente_id seleccionado
+            // (cuando elegís cliente existente, no requerimos retipear sus datos).
+            if (!clienteIdSel) {
+                if (!cliente.nombre)   { showCmError('Falta el nombre del cliente.'); return; }
+                if (!cliente.telefono) { showCmError('Falta el teléfono del cliente.'); return; }
+            }
             if (!perro.nombre)    { showCmError('Falta el nombre del perro.'); return; }
             if (!cita.fecha)      { showCmError('Falta la fecha de la cita.'); return; }
             if (!cita.hora)       { showCmError('Falta la hora de la cita.'); return; }
@@ -455,7 +463,9 @@ function bindAgendaModals() {
             cmSave.disabled = true;
             cmSave.textContent = 'Creando…';
             try {
-                const res = await agenda.crearCitaManual({ cliente, perro, cita });
+                const payload = { cliente, perro, cita };
+                if (clienteIdSel) payload.cliente_id = clienteIdSel;
+                const res = await agenda.crearCitaManual(payload);
                 if (res && res.ok === false) {
                     showCmError(res.error || 'No se pudo crear la cita.');
                     return;
@@ -606,9 +616,10 @@ function showCmError(msg) {
 
 function resetCmForm() {
     const ids = [
-        'cm-nombre', 'cm-telefono',
+        'cm-nombre', 'cm-telefono', 'cm-direccion', 'cm-email', 'cm-cliente-id',
         'cm-perro', 'cm-raza', 'cm-edad', 'cm-peso',
         'cm-fecha', 'cm-hora', 'cm-modalidad', 'cm-zona', 'cm-notas',
+        'cm-numero-clase',
     ];
     ids.forEach((id) => {
         const el = document.getElementById(id);
@@ -621,6 +632,63 @@ function resetCmForm() {
         errBox.textContent = '';
         errBox.hidden = true;
     }
+    const hint = document.getElementById('cm-cliente-hint');
+    if (hint) {
+        hint.textContent = '';
+        hint.hidden = true;
+    }
+    const drop = document.getElementById('cm-cliente-dropdown');
+    if (drop) drop.hidden = true;
+}
+
+// Conecta el autocomplete del modal "Crear cita". Reusa la cache global
+// state.clientesCache. Al elegir un cliente existente, autollena los
+// campos visibles y muestra un hint informativo; si Charly tipea de
+// nuevo, el wiring del componente limpia cm-cliente-id automáticamente.
+function setupAutocompleteCmCliente() {
+    const inputEl = document.getElementById('cm-nombre');
+    const dropdownEl = document.getElementById('cm-cliente-dropdown');
+    const hiddenEl = document.getElementById('cm-cliente-id');
+    const hintEl = document.getElementById('cm-cliente-hint');
+    if (!inputEl || !dropdownEl || !hiddenEl) return;
+
+    setupAutocompleteCliente({
+        inputEl, dropdownEl, hiddenEl,
+        onSelect: async (c) => {
+            const tel = document.getElementById('cm-telefono');
+            const dir = document.getElementById('cm-direccion');
+            const mail = document.getElementById('cm-email');
+            const peso = document.getElementById('cm-peso');
+            if (tel)  tel.value  = c.telefono  || '';
+            if (dir)  dir.value  = c.direccion || '';
+            if (mail) mail.value = c.email     || '';
+            if (hintEl) {
+                hintEl.textContent = 'Vinculado a cliente existente: los datos del cliente no se modificarán al guardar.';
+                hintEl.hidden = false;
+            }
+            // Autollenar peso del perro si y sólo si el cliente tiene
+            // exactamente 1 perro registrado. 0 o 2+ → dejar vacío
+            // (Charly decide a mano).
+            if (peso) {
+                peso.value = '';
+                try {
+                    const perros = await agenda.obtenerPerrosDeCliente(c.id);
+                    if (perros.length === 1 && perros[0].peso_kg != null) {
+                        peso.value = String(perros[0].peso_kg);
+                    }
+                } catch (err) {
+                    console.error('Error obteniendo perros del cliente:', err);
+                    // dejamos peso vacío — degradación grácil
+                }
+            }
+        },
+        onClear: () => {
+            if (hintEl) {
+                hintEl.textContent = '';
+                hintEl.hidden = true;
+            }
+        },
+    });
 }
 
 async function cargarPlantilla() {
@@ -983,24 +1051,146 @@ function aplicarModalidadGuardar(modSelect, notasInput) {
     return { modalidad: modSelect, notas: notasInput };
 }
 
-async function poblarSelectClientesEdit(clienteIdActual) {
-    const select = document.getElementById('ce-cliente');
-    if (!select) return;
+// Carga única de la lista de clientes para el autocomplete (compartida
+// entre modal crear y modal editar). Si falla, el form sigue funcionando
+// como hoy: Charly tipea libremente y se crea cliente nuevo al guardar.
+async function cargarClientesCache() {
+    if (state.clientesCache && state.clientesCache.length > 0) return;
     try {
-        if (state.clientesSelect.length === 0) {
-            state.clientesSelect = await agenda.obtenerClientesParaSelect();
-        }
-        const opts = state.clientesSelect.map((c) => {
-            const tag = c.estado === 'consulta' ? ' · consulta' : '';
-            const tel = c.telefono ? ` · ${c.telefono}` : '';
-            return `<option value="${escapeHTML(c.id)}">${escapeHTML(c.nombre || '(sin nombre)')}${tel}${tag}</option>`;
-        });
-        select.innerHTML = opts.join('');
-        if (clienteIdActual) select.value = clienteIdActual;
+        state.clientesCache = await agenda.obtenerClientesParaAutocomplete();
     } catch (err) {
-        console.error('Error cargando clientes para select:', err);
-        showCeError('No se pudo cargar la lista de clientes.');
+        console.error('Error cargando clientes para autocomplete:', err);
+        state.clientesCache = [];
     }
+}
+
+// Normalización para búsqueda fuzzy: lowercase + sin acentos.
+// Permite que "maria" matchee "María", "garcía", etc.
+function normalizarTexto(s) {
+    // ̀-ͯ es el rango Unicode de marcas diacríticas combinables
+    // (acentos, diéresis, tildes, etc.) que aparece tras .normalize('NFD').
+    return (s || '')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+/**
+ * Componente autocomplete de clientes reusable. Conecta un <input>, un
+ * <div.ac-dropdown> y un <input type="hidden"> que guarda el id del
+ * cliente elegido.
+ *
+ * Comportamiento:
+ *  - < 2 chars → dropdown cerrado, hidden vacío.
+ *  - ≥ 2 chars → filtra cache por substring en nombre OR teléfono
+ *    (normalizado sin acentos), top 8.
+ *  - Sin matches → mensaje "se creará nuevo cliente al guardar".
+ *  - Click / Enter / ↑↓ navegan; Esc / blur cierran.
+ *  - Si Charly modifica el input tras elegir, hidden se limpia
+ *    (rompe el vínculo automáticamente, evita inconsistencias).
+ *
+ * @param {{
+ *   inputEl: HTMLInputElement,
+ *   dropdownEl: HTMLElement,
+ *   hiddenEl: HTMLInputElement,
+ *   onSelect?: (cliente:Object) => void,
+ *   onClear?: () => void,
+ * }} cfg
+ */
+function setupAutocompleteCliente(cfg) {
+    const { inputEl, dropdownEl, hiddenEl, onSelect, onClear } = cfg;
+    if (!inputEl || !dropdownEl || !hiddenEl) return;
+    if (inputEl.__acBound) return;
+
+    let activeIdx = -1;
+    let currentMatches = [];
+
+    function cerrar() {
+        dropdownEl.hidden = true;
+        activeIdx = -1;
+    }
+
+    function render() {
+        if (currentMatches.length === 0) {
+            dropdownEl.innerHTML = '<div class="ac-empty">No hay coincidencias — se creará nuevo cliente al guardar</div>';
+            return;
+        }
+        dropdownEl.innerHTML = currentMatches.map((c, i) => `
+            <div class="ac-item ${i === activeIdx ? 'active' : ''}" data-idx="${i}" role="option">
+                <span class="ac-item-nombre">${escapeHTML(c.nombre || '(sin nombre)')}</span>
+                <span class="ac-item-tel">${escapeHTML(c.telefono || '')}</span>
+            </div>
+        `).join('');
+    }
+
+    function filtrar(qRaw) {
+        const q = normalizarTexto(qRaw);
+        if (q.length < 2) return null;
+        const cache = state.clientesCache || [];
+        return cache.filter((c) => {
+            const n = normalizarTexto(c.nombre);
+            const t = normalizarTexto(c.telefono);
+            return n.includes(q) || t.includes(q);
+        }).slice(0, 8);
+    }
+
+    function seleccionar(cliente) {
+        inputEl.value = cliente.nombre || '';
+        hiddenEl.value = cliente.id;
+        cerrar();
+        if (typeof onSelect === 'function') onSelect(cliente);
+    }
+
+    inputEl.addEventListener('input', () => {
+        // Tipear desselecciona automáticamente
+        if (hiddenEl.value) {
+            hiddenEl.value = '';
+            if (typeof onClear === 'function') onClear();
+        }
+        const matches = filtrar(inputEl.value);
+        if (matches === null) { cerrar(); return; }
+        currentMatches = matches;
+        activeIdx = matches.length > 0 ? 0 : -1;
+        render();
+        dropdownEl.hidden = false;
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+        if (dropdownEl.hidden || currentMatches.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIdx = (activeIdx + 1) % currentMatches.length;
+            render();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIdx = (activeIdx - 1 + currentMatches.length) % currentMatches.length;
+            render();
+        } else if (e.key === 'Enter') {
+            if (activeIdx >= 0 && activeIdx < currentMatches.length) {
+                e.preventDefault();
+                seleccionar(currentMatches[activeIdx]);
+            }
+        } else if (e.key === 'Escape') {
+            cerrar();
+        }
+    });
+
+    // mousedown (no click) para no perder focus antes del select
+    dropdownEl.addEventListener('mousedown', (e) => {
+        const item = e.target.closest('[data-idx]');
+        if (!item) return;
+        e.preventDefault();
+        const idx = parseInt(item.dataset.idx, 10);
+        if (!isNaN(idx) && currentMatches[idx]) seleccionar(currentMatches[idx]);
+    });
+
+    inputEl.addEventListener('blur', () => {
+        // delay para que mousedown del dropdown alcance a ejecutarse
+        setTimeout(cerrar, 150);
+    });
+
+    inputEl.__acBound = true;
 }
 
 async function abrirModalEditarCita(citaId) {
@@ -1020,7 +1210,18 @@ async function abrirModalEditarCita(citaId) {
         hint.textContent = `Cliente actual: ${nombre}${tel}`;
     }
 
-    await poblarSelectClientesEdit(cita.cliente_id);
+    // Cache de clientes + setup del autocomplete (se bindea una sola vez
+    // gracias al guard __acBound, pero igual lo invocamos para idempotencia).
+    await cargarClientesCache();
+    setupAutocompleteCeCliente();
+
+    // Precarga input visible + hidden con el cliente actual de la cita
+    const inputCli = document.getElementById('ce-cliente-input');
+    const hiddenCli = document.getElementById('ce-cliente');
+    const dropCli = document.getElementById('ce-cliente-dropdown');
+    if (inputCli)  inputCli.value  = cita.clientes?.nombre || '';
+    if (hiddenCli) hiddenCli.value = cita.cliente_id || '';
+    if (dropCli)   dropCli.hidden  = true;
 
     const { modalidad, notasLimpias } = detectarModalidadEditor(cita);
 
@@ -1033,6 +1234,18 @@ async function abrirModalEditarCita(citaId) {
     document.getElementById('ce-notas').value = notasLimpias;
 
     openModal('modal-cita-edit');
+}
+
+// Conecta el autocomplete del modal editar. A diferencia del modal crear,
+// acá NO autollenamos campos del cliente (el modal solo edita datos de la
+// cita); el autocomplete sólo actualiza el cliente_id seleccionado.
+function setupAutocompleteCeCliente() {
+    const inputEl = document.getElementById('ce-cliente-input');
+    const dropdownEl = document.getElementById('ce-cliente-dropdown');
+    const hiddenEl = document.getElementById('ce-cliente');
+    if (!inputEl || !dropdownEl || !hiddenEl) return;
+
+    setupAutocompleteCliente({ inputEl, dropdownEl, hiddenEl });
 }
 
 function bindModalCitaEdit() {
@@ -1053,7 +1266,14 @@ function bindModalCitaEdit() {
             const notasInput = (document.getElementById('ce-notas')?.value || '').trim();
             const numeroClase = parseIntOrNull(document.getElementById('ce-numero-clase')?.value);
 
-            if (!clienteId) { showCeError('Falta el cliente.'); return; }
+            if (!clienteId) {
+                const inputCli = document.getElementById('ce-cliente-input');
+                const tipeado = (inputCli?.value || '').trim();
+                showCeError(tipeado
+                    ? `Elegí un cliente del dropdown — "${tipeado}" no está vinculado a ningún registro.`
+                    : 'Falta el cliente.');
+                return;
+            }
             if (!fecha)     { showCeError('Falta la fecha.'); return; }
             if (!horaInput) { showCeError('Falta la hora.'); return; }
 

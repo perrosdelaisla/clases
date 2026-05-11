@@ -2029,6 +2029,67 @@ body {
     font-size: 13px;
 }
 
+/* AUTOCOMPLETE de clientes (form crear cita + modal editar) */
+.ac-wrap {
+    position: relative;
+}
+
+.ac-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-top: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.ac-dropdown[hidden] {
+    display: none;
+}
+
+.ac-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ac-item:last-child {
+    border-bottom: none;
+}
+
+.ac-item:hover,
+.ac-item.active {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ac-item-nombre {
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+.ac-item-tel {
+    color: var(--color-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.ac-empty {
+    padding: 12px 14px;
+    color: var(--color-muted);
+    font-size: 13px;
+    font-style: italic;
+}
+
 /* MOBILE */
 @media (max-width: 767px) {
     .plantilla-grid {

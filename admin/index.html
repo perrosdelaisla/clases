@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=19">
+    <link rel="stylesheet" href="./styles.css?v=20">
 </head>
 <body>
 
@@ -291,12 +291,27 @@
                     <legend>Cliente</legend>
                     <label class="form-field">
                         <span>Nombre <span class="req">*</span></span>
-                        <input type="text" id="cm-nombre" required maxlength="120">
+                        <div class="ac-wrap">
+                            <input type="text" id="cm-nombre" required maxlength="120" autocomplete="off" placeholder="Tipeá ≥ 2 letras para buscar…">
+                            <input type="hidden" id="cm-cliente-id">
+                            <div class="ac-dropdown" id="cm-cliente-dropdown" hidden></div>
+                        </div>
                     </label>
+                    <p id="cm-cliente-hint" class="form-hint" hidden></p>
                     <label class="form-field">
                         <span>Móvil <span class="req">*</span></span>
-                        <input type="tel" id="cm-telefono" required maxlength="40" placeholder="+34 612 345 678" autocomplete="tel" inputmode="tel">
+                        <input type="tel" id="cm-telefono" required maxlength="40" placeholder="+34 612 345 678" autocomplete="off" inputmode="tel">
                     </label>
+                    <div class="form-row">
+                        <label class="form-field form-field-grow">
+                            <span>Dirección</span>
+                            <input type="text" id="cm-direccion" maxlength="200" autocomplete="off">
+                        </label>
+                        <label class="form-field">
+                            <span>Email</span>
+                            <input type="email" id="cm-email" maxlength="120" autocomplete="off">
+                        </label>
+                    </div>
                 </fieldset>
 
                 <fieldset class="form-fieldset">
@@ -386,7 +401,11 @@
                     <legend>Cita</legend>
                     <label class="form-field">
                         <span>Cliente <span class="req">*</span></span>
-                        <select id="ce-cliente" required></select>
+                        <div class="ac-wrap">
+                            <input type="text" id="ce-cliente-input" required maxlength="120" autocomplete="off" placeholder="Tipeá ≥ 2 letras para buscar…">
+                            <input type="hidden" id="ce-cliente">
+                            <div class="ac-dropdown" id="ce-cliente-dropdown" hidden></div>
+                        </div>
                     </label>
                     <div class="form-row">
                         <label class="form-field">
@@ -444,6 +463,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script type="module" src="./admin.js?v=26"></script>
+    <script type="module" src="./admin.js?v=28"></script>
 </body>
 </html>

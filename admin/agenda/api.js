@@ -452,22 +452,51 @@ export async function actualizarCita(citaId, parches) {
 
 /**
  * Trae la lista completa de clientes (todos los estados) ordenada por
- * nombre, pensada para alimentar un <select> en el modal editar cita.
- * En el Paso C se reemplazará por un autocomplete con la misma forma
- * de datos, así que el llamador no debería romperse.
+ * nombre, pensada para alimentar el autocomplete del form crear cita
+ * y del modal editar. Devuelve los campos necesarios para autollenar
+ * el form al elegir un cliente existente (móvil, dirección, email)
+ * más el estado (para distinguir consultas Victoria de clientes
+ * registrados si quisiéramos badge en el dropdown — Paso C deja
+ * el render plano).
  *
- * @returns {Promise<Array<{id:string, nombre:string, telefono:string, estado:string}>>}
+ * @returns {Promise<Array<{id:string, nombre:string, telefono:string,
+ *   email:string|null, direccion:string|null, estado:string}>>}
  *
  * @throws {Error} Si la query falla.
  *
- * Tabla(s) Supabase: clientes (SELECT id, nombre, telefono, estado)
+ * Tabla(s) Supabase: clientes (SELECT id, nombre, telefono, email, direccion, estado)
  * RLS requerido: es_admin() = true
  */
-export async function obtenerClientesParaSelect() {
+export async function obtenerClientesParaAutocomplete() {
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, estado')
+        .select('id, nombre, telefono, email, direccion, estado')
         .order('nombre', { ascending: true });
+    if (error) throw error;
+    return data || [];
+}
+
+/**
+ * Trae los perros asociados a un cliente. Pensada para que el form
+ * crear cita pueda autollenar el peso del perro si el cliente
+ * elegido tiene exactamente uno registrado (caso ≠ 1 se decide en
+ * el llamador). NO crea ni modifica nada — sólo lectura.
+ *
+ * @param {string} clienteId - UUID del cliente.
+ * @returns {Promise<Array<{id:string, nombre:string, peso_kg:number|null}>>}
+ *   Vacío si el cliente no tiene perros registrados.
+ *
+ * @throws {Error} Si la query falla.
+ *
+ * Tabla(s) Supabase: perros (SELECT id, nombre, peso_kg WHERE cliente_id=$1)
+ * RLS requerido: es_admin() = true
+ */
+export async function obtenerPerrosDeCliente(clienteId) {
+    if (!clienteId) return [];
+    const { data, error } = await supabase
+        .from('perros')
+        .select('id, nombre, peso_kg')
+        .eq('cliente_id', clienteId);
     if (error) throw error;
     return data || [];
 }
@@ -520,13 +549,18 @@ export async function eliminarCita(citaId) {
  *   POST clientes → POST perros → POST citas.
  *
  * @param {{
- *   cliente: { nombre:string, telefono:string },
+ *   cliente_id?: string,
+ *   cliente: { nombre:string, telefono:string, direccion?:string, email?:string },
  *   perro:   { nombre:string, raza?:string, edad_meses?:number,
  *              peso_kg?:number, es_ppp?:boolean, problematica?:string },
  *   cita:    { fecha:string, hora:string, modalidad?:string,
- *              zona?:string, notas?:string }
- * }} datos - Payload completo. Campos obligatorios:
- *   cliente.nombre, cliente.telefono, perro.nombre, cita.fecha, cita.hora.
+ *              zona?:string, notas?:string, numero_clase?:number }
+ * }} datos - Payload completo.
+ *   Si `cliente_id` viene, se asume cliente preexistente: NO se crea ni
+ *   se tocan sus datos, sólo se vincula la cita. Si NO viene, se valida
+ *   y crea cliente nuevo (flujo original).
+ *   Campos obligatorios (en flujo cliente nuevo): cliente.nombre,
+ *   cliente.telefono, perro.nombre, cita.fecha, cita.hora.
  *
  * @returns {Promise<
  *   { ok: true,  clienteId:string, perroId:string, citaId:string } |
@@ -553,26 +587,36 @@ export async function eliminarCita(citaId) {
  * Equivalencia hola/supabase.js: línea 258
  */
 export async function crearCitaManual(datos) {
-    const { cliente, perro, cita } = datos || {};
-    if (!cliente?.nombre || !cliente?.telefono) return { ok: false, error: 'Faltan datos de cliente' };
+    const { cliente_id: clienteIdPredefinido, cliente, perro, cita } = datos || {};
+    // Si viene cliente_id (autocomplete eligió cliente existente), skipeamos
+    // la creación de cliente: usamos el id tal cual y NO tocamos sus datos.
+    // Si no viene, validamos como antes y creamos cliente nuevo.
+    if (!clienteIdPredefinido) {
+        if (!cliente?.nombre || !cliente?.telefono) return { ok: false, error: 'Faltan datos de cliente' };
+    }
     if (!perro?.nombre)                          return { ok: false, error: 'Falta nombre del perro' };
     if (!cita?.fecha || !cita?.hora)             return { ok: false, error: 'Falta fecha u hora' };
 
     const horaCompleta = cita.hora.length === 5 ? `${cita.hora}:00` : cita.hora;
-    let clienteId = null, perroId = null, citaId = null;
+    let clienteId = clienteIdPredefinido || null;
+    let perroId = null, citaId = null;
 
     try {
-        // 1) Cliente
-        const clienteBody = { nombre: cliente.nombre, telefono: cliente.telefono, estado: 'consulta' };
-        if (cita.zona) clienteBody.zona = cita.zona;
-        const { data: clienteData, error: errC } = await supabase
-            .from('clientes')
-            .insert(clienteBody)
-            .select()
-            .single();
-        if (errC) throw errC;
-        clienteId = clienteData?.id;
-        if (!clienteId) throw new Error('No se pudo crear el cliente');
+        // 1) Cliente — sólo si NO viene un cliente_id predefinido
+        if (!clienteIdPredefinido) {
+            const clienteBody = { nombre: cliente.nombre, telefono: cliente.telefono, estado: 'consulta' };
+            if (cliente.direccion) clienteBody.direccion = cliente.direccion;
+            if (cliente.email)     clienteBody.email = cliente.email;
+            if (cita.zona)         clienteBody.zona = cita.zona;
+            const { data: clienteData, error: errC } = await supabase
+                .from('clientes')
+                .insert(clienteBody)
+                .select()
+                .single();
+            if (errC) throw errC;
+            clienteId = clienteData?.id;
+            if (!clienteId) throw new Error('No se pudo crear el cliente');
+        }
 
         // 2) Perro
         const perroBody = { cliente_id: clienteId, nombre: perro.nombre };
@@ -610,10 +654,12 @@ export async function crearCitaManual(datos) {
 
         return { ok: true, clienteId, perroId, citaId };
     } catch (err) {
-        // Rollback inverso (mismo comportamiento que original)
+        // Rollback inverso (mismo comportamiento que original).
+        // OJO: si veníamos con cliente_id predefinido (autocomplete),
+        // NO borramos ese cliente — no lo creamos nosotros, era preexistente.
         try { if (citaId)    await supabase.from('citas').delete().eq('id', citaId); } catch (e) {}
         try { if (perroId)   await supabase.from('perros').delete().eq('id', perroId); } catch (e) {}
-        try { if (clienteId) await supabase.from('clientes').delete().eq('id', clienteId); } catch (e) {}
+        try { if (clienteId && !clienteIdPredefinido) await supabase.from('clientes').delete().eq('id', clienteId); } catch (e) {}
         return { ok: false, error: err.message };
     }
 }
