@@ -86,21 +86,21 @@
                 <header class="agenda-header">
                     <h1 class="admin-panel-title">Agenda</h1>
                     <nav class="agenda-subtabs" aria-label="Sub-secciones de agenda">
-                        <button class="agenda-subtab active" data-subtab="plantilla" type="button">Plantilla</button>
+                        <button class="agenda-subtab active" data-subtab="citas" type="button">Citas</button>
                         <button class="agenda-subtab" data-subtab="bloqueos" type="button">Bloqueos</button>
-                        <button class="agenda-subtab" data-subtab="citas" type="button">Citas</button>
+                        <button class="agenda-subtab" data-subtab="plantilla" type="button">Plantilla</button>
                     </nav>
                 </header>
 
-                <section class="agenda-subpanel" data-subpanel="plantilla">
+                <section class="agenda-subpanel" data-subpanel="citas">
                     <div class="agenda-subpanel-header">
                         <p class="agenda-subpanel-desc">
-                            Grilla semanal de horarios disponibles. Estos slots se ofrecen a los clientes en el chatbot Victoria.
+                            Citas futuras agendadas. Confirma, cancela, marca como realizada o crea una cita manual.
                         </p>
-                        <button id="btn-add-hora" class="btn-primary" type="button">+ Añadir hora</button>
+                        <button id="btn-abrir-cita-manual" class="btn-primary" type="button">+ Cita manual</button>
                     </div>
-                    <div id="plantilla-grid" class="plantilla-grid">
-                        <p class="agenda-empty">Cargando plantilla…</p>
+                    <div id="citas-list" class="citas-list">
+                        <p class="agenda-empty">Cargando citas…</p>
                     </div>
                 </section>
 
@@ -134,15 +134,15 @@
                     </div>
                 </section>
 
-                <section class="agenda-subpanel" data-subpanel="citas" hidden>
+                <section class="agenda-subpanel" data-subpanel="plantilla" hidden>
                     <div class="agenda-subpanel-header">
                         <p class="agenda-subpanel-desc">
-                            Citas futuras agendadas. Confirma, cancela, marca como realizada o crea una cita manual.
+                            Grilla semanal de horarios disponibles. Estos slots se ofrecen a los clientes en el chatbot Victoria.
                         </p>
-                        <button id="btn-abrir-cita-manual" class="btn-primary" type="button">+ Cita manual</button>
+                        <button id="btn-add-hora" class="btn-primary" type="button">+ Añadir hora</button>
                     </div>
-                    <div id="citas-list" class="citas-list">
-                        <p class="agenda-empty">Cargando citas…</p>
+                    <div id="plantilla-grid" class="plantilla-grid">
+                        <p class="agenda-empty">Cargando plantilla…</p>
                     </div>
                 </section>
             </section>
@@ -369,6 +369,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script type="module" src="./admin.js?v=23"></script>
+    <script type="module" src="./admin.js?v=24"></script>
 </body>
 </html>

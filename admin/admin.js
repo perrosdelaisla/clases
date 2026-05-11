@@ -544,8 +544,8 @@ function initAgenda() {
     bindAgendaModals();
     bindFormBloqueo();
     window.__agendaBound = true;
-    // Cargar plantilla por default (es la sub-pestaña activa al entrar)
-    cargarPlantilla();
+    // Cargar citas por default (es la sub-pestaña activa al entrar)
+    cargarCitas();
 }
 
 // ---------- Agenda — Lecturas (Lote 3.B.1) ----------
