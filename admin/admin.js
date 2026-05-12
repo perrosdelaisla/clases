@@ -1361,7 +1361,7 @@ function renderUnificado(items) {
  *
  * Botones condicionales:
  *   - Siempre: "Ver detalle"
- *   - Solo si estado='pendiente': "Marcar realizada", "Marcar no-show", "Cancelar"
+ *   - Solo si estado='pendiente': "Marcar realizada", "Marcar ausente", "Cancelar"
  *   - Estados 'realizada' / 'no_show' → solo "Ver detalle" (consulta)
  */
 function renderItemLlamada(ll) {
@@ -1385,7 +1385,7 @@ function renderItemLlamada(ll) {
     botones.push('<button data-action="ver-detalle-llamada" type="button">Ver detalle</button>');
     if (estado === 'pendiente') {
         botones.push('<button data-action="marcar-realizada-llamada" type="button">Marcar realizada</button>');
-        botones.push('<button data-action="marcar-no-show-llamada" type="button">Marcar no-show</button>');
+        botones.push('<button data-action="marcar-no-show-llamada" type="button">Marcar ausente</button>');
         botones.push('<button class="btn-eliminar" data-action="cancelar-llamada" type="button">Cancelar</button>');
     }
 
