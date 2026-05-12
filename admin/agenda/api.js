@@ -579,14 +579,26 @@ export async function eliminarCita(citaId) {
  *
  * @example
  *   const res = await crearCitaManual({
- *     cliente: { nombre:'Vicky', telefono:'622922173' },
- *     perro:   { nombre:'Coco', raza:'Mestizo', edad_meses:18 },
- *     cita:    { fecha:'2026-05-12', hora:'18:30', modalidad:'presencial', zona:'Palma' }
+ *     cliente_id: 'uuid-cliente-existente',           // opcional: autocomplete
+ *     cliente:    { nombre:'Vicky', telefono:'622922173' },
+ *     perro:      { id:'uuid-perro-existente',         // opcional: selector/autollenado
+ *                   nombre:'Coco', raza:'Mestizo', edad_meses:18 },
+ *     cita:       { fecha:'2026-05-12', hora:'18:30', modalidad:'presencial', zona:'Palma' }
  *   });
  *   if (!res.ok) toast(res.error);
  *
+ * Comportamiento perro:
+ *   - Si viene `perro.id` → UPDATE de los campos provistos (raza, edad,
+ *     peso, ppp, problemática) sobre la fila existente. Campos vacíos
+ *     no se sobreescriben — preserva foto_url, problemática previa, etc.
+ *     UPDATE adicionalmente acotado por `cliente_id` para evitar
+ *     accidentes cross-cliente.
+ *   - Si NO viene `perro.id` → INSERT como antes (perro nuevo).
+ *   Un fallo en el UPDATE no aborta el flujo: se loguea warning y
+ *   continúa con la creación de la cita.
+ *
  * Tabla(s) Supabase: clientes (INSERT, DELETE rollback),
- *                    perros   (INSERT, DELETE rollback),
+ *                    perros   (INSERT/UPDATE; rollback solo si fue INSERT),
  *                    citas    (INSERT, DELETE rollback)
  *                    [bloqueos lo escribe el trigger DB, no este código]
  * RLS requerido: es_admin() = true en las 3 tablas
@@ -606,6 +618,7 @@ export async function crearCitaManual(datos) {
     const horaCompleta = cita.hora.length === 5 ? `${cita.hora}:00` : cita.hora;
     let clienteId = clienteIdPredefinido || null;
     let perroId = null, citaId = null;
+    let perroFueCreado = false;     // true → INSERT; false → UPDATE o no-op. Solo INSERT se rollbackea.
 
     try {
         // 1) Cliente — sólo si NO viene un cliente_id predefinido
@@ -624,21 +637,45 @@ export async function crearCitaManual(datos) {
             if (!clienteId) throw new Error('No se pudo crear el cliente');
         }
 
-        // 2) Perro
-        const perroBody = { cliente_id: clienteId, nombre: perro.nombre };
-        if (perro.raza)               perroBody.raza = perro.raza;
-        if (perro.edad_meses != null) perroBody.edad_meses = perro.edad_meses;
-        if (perro.peso_kg != null)    perroBody.peso_kg = perro.peso_kg;
-        if (perro.es_ppp)             perroBody.es_ppp = true;
-        if (perro.problematica)       perroBody.problematica = perro.problematica;
-        const { data: perroData, error: errP } = await supabase
-            .from('perros')
-            .insert(perroBody)
-            .select()
-            .single();
-        if (errP) throw errP;
-        perroId = perroData?.id;
-        if (!perroId) throw new Error('No se pudo crear el perro');
+        // 2) Perro — UPDATE si viene perro.id (perro existente del cliente),
+        // INSERT si no. La rama UPDATE preserva campos no provistos por el
+        // form (foto_url, problemática previa, etc.) usando guardas `if`.
+        if (perro.id) {
+            const perroUpd = {};
+            if (perro.nombre)             perroUpd.nombre = perro.nombre;
+            if (perro.raza)               perroUpd.raza = perro.raza;
+            if (perro.edad_meses != null) perroUpd.edad_meses = perro.edad_meses;
+            if (perro.peso_kg != null)    perroUpd.peso_kg = perro.peso_kg;
+            if (perro.es_ppp)             perroUpd.es_ppp = true;
+            if (perro.problematica)       perroUpd.problematica = perro.problematica;
+            if (Object.keys(perroUpd).length > 0) {
+                const { error: errPU } = await supabase
+                    .from('perros')
+                    .update(perroUpd)
+                    .eq('id', perro.id)
+                    .eq('cliente_id', clienteId);
+                if (errPU) {
+                    console.warn('crearCitaManual: UPDATE perro falló, sigo con la cita:', errPU);
+                }
+            }
+            perroId = perro.id;
+        } else {
+            const perroBody = { cliente_id: clienteId, nombre: perro.nombre };
+            if (perro.raza)               perroBody.raza = perro.raza;
+            if (perro.edad_meses != null) perroBody.edad_meses = perro.edad_meses;
+            if (perro.peso_kg != null)    perroBody.peso_kg = perro.peso_kg;
+            if (perro.es_ppp)             perroBody.es_ppp = true;
+            if (perro.problematica)       perroBody.problematica = perro.problematica;
+            const { data: perroData, error: errP } = await supabase
+                .from('perros')
+                .insert(perroBody)
+                .select()
+                .single();
+            if (errP) throw errP;
+            perroId = perroData?.id;
+            if (!perroId) throw new Error('No se pudo crear el perro');
+            perroFueCreado = true;
+        }
 
         // 3) Cita
         // NOTA: el trigger DB trg_sync_bloqueo_desde_cita crea automáticamente
@@ -663,8 +700,9 @@ export async function crearCitaManual(datos) {
         // Rollback inverso (mismo comportamiento que original).
         // OJO: si veníamos con cliente_id predefinido (autocomplete),
         // NO borramos ese cliente — no lo creamos nosotros, era preexistente.
-        try { if (citaId)    await supabase.from('citas').delete().eq('id', citaId); } catch (e) {}
-        try { if (perroId)   await supabase.from('perros').delete().eq('id', perroId); } catch (e) {}
+        // Idem perro: si fue UPDATE (no INSERT), NO lo borramos.
+        try { if (citaId)                       await supabase.from('citas').delete().eq('id', citaId); } catch (e) {}
+        try { if (perroId && perroFueCreado)    await supabase.from('perros').delete().eq('id', perroId); } catch (e) {}
         try { if (clienteId && !clienteIdPredefinido) await supabase.from('clientes').delete().eq('id', clienteId); } catch (e) {}
         return { ok: false, error: err.message };
     }

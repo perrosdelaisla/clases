@@ -425,6 +425,7 @@ function bindAgendaModals() {
                 email: (document.getElementById('cm-email')?.value || '').trim(),
             };
 
+            const perroIdSel = (document.getElementById('cm-perro-id')?.value || '').trim();
             const perro = {
                 nombre: (document.getElementById('cm-perro')?.value || '').trim(),
                 raza: (document.getElementById('cm-raza')?.value || '').trim(),
@@ -432,6 +433,7 @@ function bindAgendaModals() {
                 peso_kg: parseFloatOrNull(document.getElementById('cm-peso')?.value),
                 es_ppp: !!document.getElementById('cm-ppp')?.checked,
             };
+            if (perroIdSel) perro.id = perroIdSel;
 
             const horaInput = document.getElementById('cm-hora')?.value || '';
             const cita = {
@@ -483,6 +485,23 @@ function bindAgendaModals() {
                 cmSave.textContent = 'Crear cita';
             }
         });
+    }
+
+    // Si Charly edita el nombre del perro y diverge del perro cargado,
+    // limpiamos cm-perro-id para que crearCitaManual haga INSERT en lugar
+    // de UPDATE — señal explícita: "es un perro distinto al cargado".
+    const cmPerroInput = document.getElementById('cm-perro');
+    if (cmPerroInput && !cmPerroInput.__perroNombreBound) {
+        cmPerroInput.addEventListener('input', () => {
+            const elId = document.getElementById('cm-perro-id');
+            if (!elId || !elId.value) return;
+            const cache = state.perrosClienteCache || [];
+            const p = cache.find((x) => x.id === elId.value);
+            const tecleado = (cmPerroInput.value || '').trim().toLowerCase();
+            const cargado  = (p?.nombre || '').trim().toLowerCase();
+            if (!p || tecleado !== cargado) elId.value = '';
+        });
+        cmPerroInput.__perroNombreBound = true;
     }
 }
 
@@ -732,7 +751,7 @@ function showCmError(msg) {
 function resetCmForm() {
     const ids = [
         'cm-nombre', 'cm-telefono', 'cm-direccion', 'cm-email', 'cm-cliente-id',
-        'cm-perro', 'cm-raza', 'cm-edad', 'cm-peso',
+        'cm-perro', 'cm-perro-id', 'cm-raza', 'cm-edad', 'cm-peso',
         'cm-fecha', 'cm-hora', 'cm-modalidad', 'cm-zona', 'cm-notas',
         'cm-numero-clase',
     ];
@@ -762,17 +781,21 @@ function resetCmForm() {
 // Aplica los datos de un perro (o null para limpiar) a los inputs del
 // fieldset "Perro" del modal crear. Compartido entre el autollenado al
 // elegir cliente y el cambio de opción del selector cuando hay 2+ perros.
+// Sincroniza cm-perro-id (hidden) para que el guardado sepa si está
+// trabajando sobre un perro existente (UPDATE) o uno nuevo (INSERT).
 function aplicarDatosPerroAlForm(perro) {
     const elNombre = document.getElementById('cm-perro');
     const elRaza   = document.getElementById('cm-raza');
     const elEdad   = document.getElementById('cm-edad');
     const elPeso   = document.getElementById('cm-peso');
     const elPpp    = document.getElementById('cm-ppp');
+    const elId     = document.getElementById('cm-perro-id');
     if (elNombre) elNombre.value = perro?.nombre || '';
     if (elRaza)   elRaza.value   = perro?.raza   || '';
     if (elEdad)   elEdad.value   = perro?.edad_meses != null ? String(perro.edad_meses) : '';
     if (elPeso)   elPeso.value   = perro?.peso_kg    != null ? String(perro.peso_kg)    : '';
     if (elPpp)    elPpp.checked  = !!perro?.es_ppp;
+    if (elId)     elId.value     = perro?.id || '';
 }
 
 // Configura el <select id="cm-perro-selector">: visible sólo si hay 2+
@@ -865,13 +888,18 @@ function setupAutocompleteCmCliente() {
         onClear: () => {
             // Charly tipeó tras elegir: rompemos vínculo + ocultamos selector,
             // pero NO limpiamos los campos del perro (Charly puede estar sólo
-            // corrigiendo un typo del nombre del cliente).
+            // corrigiendo un typo del nombre del cliente). Sí limpiamos
+            // cm-perro-id: si el cliente cambió, el perro cargado deja de
+            // ser válido — un re-pick del cliente lo repondrá; si en
+            // cambio Charly crea cliente nuevo, evitamos UPDATE cross-cliente.
             if (hintEl) {
                 hintEl.textContent = '';
                 hintEl.hidden = true;
             }
             configurarSelectorPerro([]);
             state.perrosClienteCache = [];
+            const elPerroId = document.getElementById('cm-perro-id');
+            if (elPerroId) elPerroId.value = '';
         },
     });
 }
