@@ -796,3 +796,80 @@ export async function obtenerSesionesParaStats(desde, hasta) {
         return [];
     }
 }
+
+// ────────────────────────────────────────────────────────────────────
+// LLAMADAS — Reservas de llamada con el adiestrador
+// (Fase 4: feed unificado en Agenda > Citas con diferenciación visual)
+// ────────────────────────────────────────────────────────────────────
+
+/**
+ * Obtiene las llamadas que aún tienen valor operativo para el admin:
+ * pendientes (por hacer), realizadas (recientes) y no_show. Excluye
+ * 'cancelada' del feed activo — mismo criterio que citas filtra
+ * cancelaciones pasadas.
+ *
+ * Solo llamadas con fecha >= hoy: las pasadas se gestionarán en una
+ * vista histórica futura.
+ *
+ * @returns {Promise<Array<Object>>} Filas de llamadas_solicitadas
+ *   con todos los campos snapshot (zona, perro_*, mensajes_diagnostico,
+ *   mensaje_adicional), ordenadas por fecha + hora ASC.
+ *
+ * @throws {Error} Si la query falla.
+ *
+ * Tabla(s) Supabase: llamadas_solicitadas
+ * RLS requerido: es_admin() = true (política llamadas_solicitadas_admin_all)
+ */
+export async function obtenerLlamadasAdmin() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+        .from('llamadas_solicitadas')
+        .select('*')
+        .gte('fecha', hoy)
+        .in('estado', ['pendiente', 'realizada', 'no_show'])
+        .order('fecha', { ascending: true })
+        .order('hora', { ascending: true });
+    if (error) throw error;
+    return data || [];
+}
+
+/**
+ * Cambia el estado de una llamada a 'realizada'. Atajo del flujo
+ * donde el admin marca que ya habló con el lead.
+ *
+ * @param {string} llamadaId - UUID de la llamada.
+ *
+ * Tabla(s) Supabase: llamadas_solicitadas (UPDATE)
+ */
+export async function marcarLlamadaRealizada(llamadaId) {
+    const { error } = await supabase
+        .from('llamadas_solicitadas')
+        .update({ estado: 'realizada', updated_at: new Date().toISOString() })
+        .eq('id', llamadaId);
+    if (error) throw error;
+}
+
+/**
+ * Cambia el estado de una llamada a 'no_show'. Usado cuando el lead
+ * no contestó o no estaba disponible en el horario agendado.
+ */
+export async function marcarLlamadaNoShow(llamadaId) {
+    const { error } = await supabase
+        .from('llamadas_solicitadas')
+        .update({ estado: 'no_show', updated_at: new Date().toISOString() })
+        .eq('id', llamadaId);
+    if (error) throw error;
+}
+
+/**
+ * Cambia el estado de una llamada a 'cancelada'. NO borra la fila,
+ * solo cambia el estado: la llamada desaparece del feed activo
+ * (obtenerLlamadasAdmin no la trae) pero queda para auditoría.
+ */
+export async function cancelarLlamada(llamadaId) {
+    const { error } = await supabase
+        .from('llamadas_solicitadas')
+        .update({ estado: 'cancelada', updated_at: new Date().toISOString() })
+        .eq('id', llamadaId);
+    if (error) throw error;
+}

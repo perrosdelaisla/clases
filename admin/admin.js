@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=7';
+import * as agenda from './agenda/api.js?v=8';
 import * as stats from './stats/api.js';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -1054,15 +1054,31 @@ function formatearFechaCorta(fechaISO) {
 async function cargarCitas() {
     const list = document.getElementById('citas-list');
     if (!list) return;
-    list.innerHTML = '<p class="agenda-empty">Cargando citas…</p>';
+    list.innerHTML = '<p class="agenda-empty">Cargando…</p>';
     try {
-        const citas = await agenda.obtenerCitasAdminConReportado();
+        // Fase 4: traemos citas + llamadas en paralelo y las mezclamos
+        // ordenadas por (fecha, hora). Cada item lleva un discriminador
+        // `kind` para que renderUnificado sepa qué renderer usar.
+        const [citas, llamadas] = await Promise.all([
+            agenda.obtenerCitasAdminConReportado(),
+            agenda.obtenerLlamadasAdmin(),
+        ]);
         state.citas = citas;
-        renderCitas(citas);
+        state.llamadas = llamadas;
+
+        const items = [
+            ...citas.map(c    => ({ kind: 'cita',    fecha: c.fecha, hora: c.hora, cita:    c })),
+            ...llamadas.map(l => ({ kind: 'llamada', fecha: l.fecha, hora: l.hora, llamada: l })),
+        ].sort((a, b) => {
+            if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
+            return a.hora < b.hora ? -1 : 1;
+        });
+
+        renderUnificado(items);
         bindCitasActions();
     } catch (err) {
-        console.error('Error cargando citas:', err);
-        list.innerHTML = '<p class="agenda-empty">Error al cargar citas.</p>';
+        console.error('Error cargando citas/llamadas:', err);
+        list.innerHTML = '<p class="agenda-empty">Error al cargar.</p>';
     }
 }
 
@@ -1072,29 +1088,49 @@ function bindCitasActions() {
     list.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
-        const card = btn.closest('[data-cita-id]');
-        if (!card) return;
-        const citaId = card.dataset.citaId;
         const action = btn.dataset.action;
 
+        // Detectamos tipo de card por el atributo data-*-id presente
+        const cardCita    = btn.closest('[data-cita-id]');
+        const cardLlamada = btn.closest('[data-llamada-id]');
+
         try {
-            if (action === 'confirmar') {
-                await agenda.confirmarCita(citaId);
-            } else if (action === 'cancelar') {
-                if (!confirm('¿Cancelar esta cita? Se mantendrá en la lista hasta que la elimines.')) return;
-                await agenda.cancelarCita(citaId);
-            } else if (action === 'realizada') {
-                await agenda.marcarCitaRealizada(citaId);
-            } else if (action === 'eliminar-cita') {
-                if (!confirm('¿Eliminar esta cita definitivamente? Esta acción no se puede deshacer.')) return;
-                await agenda.eliminarCita(citaId);
-            } else if (action === 'editar') {
-                await abrirModalEditarCita(citaId);
-                return; // no refrescar — el modal se ocupa al guardar/eliminar
-            } else {
-                return;
+            if (cardCita) {
+                const citaId = cardCita.dataset.citaId;
+                if (action === 'confirmar') {
+                    await agenda.confirmarCita(citaId);
+                } else if (action === 'cancelar') {
+                    if (!confirm('¿Cancelar esta cita? Se mantendrá en la lista hasta que la elimines.')) return;
+                    await agenda.cancelarCita(citaId);
+                } else if (action === 'realizada') {
+                    await agenda.marcarCitaRealizada(citaId);
+                } else if (action === 'eliminar-cita') {
+                    if (!confirm('¿Eliminar esta cita definitivamente? Esta acción no se puede deshacer.')) return;
+                    await agenda.eliminarCita(citaId);
+                } else if (action === 'editar') {
+                    await abrirModalEditarCita(citaId);
+                    return; // no refrescar — el modal se ocupa al guardar/eliminar
+                } else {
+                    return;
+                }
+                await cargarCitas();
+            } else if (cardLlamada) {
+                const llamadaId = cardLlamada.dataset.llamadaId;
+                if (action === 'ver-detalle-llamada') {
+                    abrirModalLlamada(llamadaId);
+                    return; // modal de solo lectura, no refrescar
+                } else if (action === 'marcar-realizada-llamada') {
+                    await agenda.marcarLlamadaRealizada(llamadaId);
+                } else if (action === 'marcar-no-show-llamada') {
+                    await agenda.marcarLlamadaNoShow(llamadaId);
+                } else if (action === 'cancelar-llamada') {
+                    if (!confirm('¿Cancelar esta llamada? La fila se mantiene en DB pero deja de aparecer en el feed activo.')) return;
+                    await agenda.cancelarLlamada(llamadaId);
+                } else {
+                    return;
+                }
+                await cargarCitas();
             }
-            await cargarCitas();
         } catch (err) {
             console.error(`Error en acción ${action}:`, err);
             alert(`No se pudo completar la acción "${action}".`);
@@ -1211,6 +1247,220 @@ function renderCitas(citas) {
             </div>
         `;
     }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   AGENDA — Feed unificado citas + llamadas (Fase 4)
+   renderCitas queda intacta arriba (regla "no refactorizar"); la
+   nueva renderUnificado calca la lógica de citas inline para los
+   items kind='cita' y delega a renderItemLlamada para kind='llamada'.
+   ═══════════════════════════════════════════ */
+
+function renderUnificado(items) {
+    const list = document.getElementById('citas-list');
+    if (!list) return;
+    if (!items || items.length === 0) {
+        list.innerHTML = '<p class="agenda-empty">No hay citas ni llamadas futuras.</p>';
+        return;
+    }
+
+    // Filtrar canceladas pasadas (regla heredada de renderCitas)
+    const visibles = items.filter((it) => {
+        if (it.kind === 'cita' && it.cita.estado === 'cancelada' && esCitaPasada(it.cita.fecha)) return false;
+        return true;
+    });
+
+    if (visibles.length === 0) {
+        list.innerHTML = '<p class="agenda-empty">No hay citas ni llamadas futuras.</p>';
+        return;
+    }
+
+    list.innerHTML = visibles.map((it) => {
+        if (it.kind === 'llamada') return renderItemLlamada(it.llamada);
+
+        // ── Cita: lógica calcada de renderCitas (no refactor) ──
+        const c = it.cita;
+        const cliente = c.clientes?.nombre || '(sin nombre)';
+        const telefono = c.clientes?.telefono || '';
+        const zona = c.clientes?.zona || '';
+        const perros = c.clientes?.perros || [];
+        const perrosTexto = perros.length === 0
+            ? '(sin perro asociado)'
+            : perros.map((p) => {
+                const partes = [p.nombre];
+                if (p.raza) partes.push(p.raza);
+                if (p.edad_meses != null) partes.push(`${p.edad_meses} m`);
+                if (p.problematica) partes.push(`— ${p.problematica}`);
+                return partes.join(' · ');
+            }).join(' / ');
+
+        const reportado = c.reportado;
+        const estado = c.estado || 'pendiente';
+        const protocolo = c.protocolo;
+        const cuadros = Array.isArray(c.cuadros_detectados) ? c.cuadros_detectados : [];
+
+        const botones = [];
+        botones.push('<button class="btn-editar" data-action="editar" type="button" aria-label="Editar" title="Editar">✎</button>');
+        if (estado === 'pendiente') {
+            botones.push('<button data-action="confirmar" type="button">Confirmar</button>');
+        }
+        if ((estado === 'pendiente' || estado === 'confirmada') && !esCitaPasada(c.fecha)) {
+            botones.push('<button data-action="cancelar" type="button">Cancelar</button>');
+        }
+        if (estado === 'confirmada' && (esCitaHoy(c.fecha) || esCitaPasada(c.fecha))) {
+            botones.push('<button data-action="realizada" type="button">Marcar realizada</button>');
+        }
+        if (estado === 'realizada' || estado === 'cancelada' || estado === 'confirmada') {
+            botones.push('<button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>');
+        }
+        if (estado === 'pendiente' && botones.length === 2) {
+            botones.push('<button class="btn-eliminar" data-action="eliminar-cita" type="button">Eliminar</button>');
+        }
+
+        let bloqueReportado = '';
+        if (reportado) {
+            bloqueReportado = `<div class="cita-reportado"><strong>Reportado por el cliente:</strong> ${escapeHTML(reportado)}</div>`;
+        } else if (c.notas) {
+            bloqueReportado = `<div class="cita-reportado"><strong>Notas:</strong> ${escapeHTML(c.notas)}</div>`;
+        }
+
+        let bloqueProtocolo = '';
+        if (protocolo) {
+            bloqueProtocolo = `<div class="cita-protocolo"><strong>Protocolo:</strong> ${escapeHTML(protocolo)}</div>`;
+        } else if (cuadros.length > 0) {
+            bloqueProtocolo = `<div class="cita-protocolo"><strong>Cuadros:</strong> ${escapeHTML(cuadros.join(', '))}</div>`;
+        }
+
+        const numeroClaseBadge = (c.numero_clase != null)
+            ? `<span class="cita-numero">Clase ${escapeHTML(String(c.numero_clase))}</span>`
+            : '';
+
+        return `
+            <div class="cita-card" data-cita-id="${escapeHTML(c.id)}">
+                <div class="cita-header">
+                    <span class="cita-fecha">${formatearFechaCorta(c.fecha)} · ${formatearHora(c.hora)}</span>
+                    ${numeroClaseBadge}
+                    <span class="cita-estado ${escapeHTML(estado)}">${escapeHTML(estado)}</span>
+                </div>
+                <div class="cita-cliente">
+                    <strong>${escapeHTML(cliente)}</strong>${telefono ? ' · ' + escapeHTML(telefono) : ''}${zona ? ' · ' + escapeHTML(zona) : ''}${c.modalidad ? ' · ' + escapeHTML(c.modalidad) : ''}
+                </div>
+                <div class="cita-perro">${escapeHTML(perrosTexto)}</div>
+                ${bloqueProtocolo}
+                ${bloqueReportado}
+                <div class="cita-acciones">${botones.join('')}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Renderiza una card de llamada (variante visual: borde izquierdo
+ * azul cobalto + badge "📞 LLAMADA" en el header). Datos directos
+ * desde campos snapshot de llamadas_solicitadas — NO join a clientes.
+ *
+ * Botones condicionales:
+ *   - Siempre: "Ver detalle"
+ *   - Solo si estado='pendiente': "Marcar realizada", "Marcar no-show", "Cancelar"
+ *   - Estados 'realizada' / 'no_show' → solo "Ver detalle" (consulta)
+ */
+function renderItemLlamada(ll) {
+    const nombre = ll.nombre_cliente || '(sin nombre)';
+    const telefono = ll.telefono_cliente || '';
+    const zona = ll.zona || '';
+
+    const perroPartes = [];
+    if (ll.perro_nombre)             perroPartes.push(ll.perro_nombre);
+    if (ll.perro_raza)               perroPartes.push(ll.perro_raza);
+    if (ll.perro_edad_meses != null) perroPartes.push(`${ll.perro_edad_meses} m`);
+    if (ll.perro_peso_kg != null)    perroPartes.push(`${ll.perro_peso_kg} kg`);
+    const perroTexto = perroPartes.length ? perroPartes.join(' · ') : '(sin datos de perro)';
+
+    const estado = ll.estado || 'pendiente';
+    const mensajeBloque = ll.mensaje_adicional
+        ? `<div class="cita-reportado"><strong>Mensaje:</strong> ${escapeHTML(ll.mensaje_adicional)}</div>`
+        : '';
+
+    const botones = [];
+    botones.push('<button data-action="ver-detalle-llamada" type="button">Ver detalle</button>');
+    if (estado === 'pendiente') {
+        botones.push('<button data-action="marcar-realizada-llamada" type="button">Marcar realizada</button>');
+        botones.push('<button data-action="marcar-no-show-llamada" type="button">Marcar no-show</button>');
+        botones.push('<button class="btn-eliminar" data-action="cancelar-llamada" type="button">Cancelar</button>');
+    }
+
+    return `
+        <div class="cita-card cita-card--llamada" data-llamada-id="${escapeHTML(ll.id)}">
+            <div class="cita-header">
+                <span class="cita-fecha">${formatearFechaCorta(ll.fecha)} · ${formatearHora(ll.hora)}</span>
+                <span class="llamada-badge">📞 LLAMADA</span>
+                <span class="cita-estado llamada-estado ${escapeHTML(estado)}">${escapeHTML(estado)}</span>
+            </div>
+            <div class="cita-cliente">
+                <strong>${escapeHTML(nombre)}</strong>${telefono ? ' · ' + escapeHTML(telefono) : ''}${zona ? ' · ' + escapeHTML(zona) : ''}
+            </div>
+            <div class="cita-perro">${escapeHTML(perroTexto)}</div>
+            ${mensajeBloque}
+            <div class="cita-acciones">${botones.join('')}</div>
+        </div>
+    `;
+}
+
+/**
+ * Abre el modal "Detalle de llamada" rellenando todos los campos
+ * de solo lectura desde state.llamadas (sin re-fetch).
+ */
+function abrirModalLlamada(llamadaId) {
+    const ll = (state.llamadas || []).find(l => l.id === llamadaId);
+    if (!ll) {
+        alert('No se encontró la llamada. Refrescá el feed.');
+        return;
+    }
+
+    document.getElementById('ml-fecha-hora').textContent =
+        `${formatearFechaCorta(ll.fecha)} · ${formatearHora(ll.hora)}`;
+    document.getElementById('ml-nombre').textContent = ll.nombre_cliente || '(sin nombre)';
+    document.getElementById('ml-zona').textContent = ll.zona || '—';
+
+    const movilEl = document.getElementById('ml-movil');
+    movilEl.textContent = ll.telefono_cliente || '—';
+
+    const btnLlamar = document.getElementById('ml-btn-llamar');
+    if (ll.telefono_cliente) {
+        btnLlamar.href = `tel:${ll.telefono_cliente.replace(/\s+/g, '')}`;
+        btnLlamar.hidden = false;
+    } else {
+        btnLlamar.hidden = true;
+    }
+
+    const perroPartes = [];
+    if (ll.perro_nombre)             perroPartes.push(ll.perro_nombre);
+    if (ll.perro_raza)               perroPartes.push(ll.perro_raza);
+    if (ll.perro_edad_meses != null) perroPartes.push(`${ll.perro_edad_meses} meses`);
+    if (ll.perro_peso_kg != null)    perroPartes.push(`${ll.perro_peso_kg} kg`);
+    document.getElementById('ml-perro').textContent = perroPartes.length ? perroPartes.join(' · ') : '—';
+
+    document.getElementById('ml-mensaje').textContent = ll.mensaje_adicional || '—';
+
+    // Mensajes de diagnóstico: defensivo ante 2 formatos posibles.
+    // Hoy llega como string[] (texto plano del cliente en s4/s5).
+    // Si en el futuro pasara a {rol, texto}, renderizamos "rol: texto".
+    const diagEl = document.getElementById('ml-diagnostico');
+    const mensajes = Array.isArray(ll.mensajes_diagnostico) ? ll.mensajes_diagnostico : [];
+    if (mensajes.length === 0) {
+        diagEl.innerHTML = '<li>(sin texto del cliente)</li>';
+    } else {
+        diagEl.innerHTML = mensajes.map(m => {
+            if (m && typeof m === 'object' && (m.rol || m.texto)) {
+                const rol = m.rol || '—';
+                const texto = m.texto || '';
+                return `<li><strong>${escapeHTML(rol)}:</strong> ${escapeHTML(texto)}</li>`;
+            }
+            return `<li>${escapeHTML(typeof m === 'string' ? m : JSON.stringify(m))}</li>`;
+        }).join('');
+    }
+
+    openModal('modal-detalle-llamada');
 }
 
 /* ═══════════════════════════════════════════

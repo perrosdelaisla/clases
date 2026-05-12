@@ -467,9 +467,52 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-detalle-llamada" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Detalle de llamada</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <p id="ml-fecha-hora" class="llamada-modal-fecha"></p>
+                <h3 id="ml-nombre" class="llamada-modal-nombre"></h3>
+
+                <div class="llamada-modal-campo">
+                    <span class="llamada-modal-label">Móvil</span>
+                    <p id="ml-movil" class="llamada-modal-valor"></p>
+                    <a id="ml-btn-llamar" class="btn-primary llamada-modal-btn-llamar" href="#" hidden>📞 Llamar ahora</a>
+                </div>
+
+                <div class="llamada-modal-campo">
+                    <span class="llamada-modal-label">Zona</span>
+                    <p id="ml-zona" class="llamada-modal-valor"></p>
+                </div>
+
+                <div class="llamada-modal-campo">
+                    <span class="llamada-modal-label">Perro</span>
+                    <p id="ml-perro" class="llamada-modal-valor"></p>
+                </div>
+
+                <div class="llamada-modal-campo">
+                    <span class="llamada-modal-label">Mensaje del cliente</span>
+                    <p id="ml-mensaje" class="llamada-modal-valor"></p>
+                </div>
+
+                <div class="llamada-modal-campo">
+                    <span class="llamada-modal-label">Reportado en chat</span>
+                    <ul id="ml-diagnostico" class="llamada-modal-diagnostico"></ul>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button class="btn-secondary" type="button" data-modal-close>Cerrar</button>
+            </footer>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script type="module" src="./admin.js?v=31"></script>
+    <script type="module" src="./admin.js?v=32"></script>
 </body>
 </html>

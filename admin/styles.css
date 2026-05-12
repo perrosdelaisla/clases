@@ -2536,3 +2536,88 @@ body {
         font-size: 1.2rem;
     }
 }
+
+/* ═══════════════════════════════════════════
+   LLAMADAS — Feed unificado en Agenda > Citas (Fase 4)
+   Card variante con borde izquierdo azul cobalto + badge.
+   Estados con misma estructura que .cita-estado pero paleta azul.
+   Canal B sobrio: opacidades 0.08–0.20, sin fondos macizos saturados.
+   ═══════════════════════════════════════════ */
+
+.cita-card--llamada {
+    border-left: 4px solid #1F4FA8;
+}
+
+.llamada-badge {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(31, 79, 168, 0.15);
+    color: #1F4FA8;
+    text-transform: uppercase;
+}
+
+/* Estados del badge llamada — paleta azul cobalto.
+   La clase .cita-estado da estructura tipográfica; .llamada-estado.X
+   sobrescribe colores. Espejado de .cita-estado.pendiente etc. */
+.cita-estado.llamada-estado.pendiente { background: rgba(31, 79, 168, 0.18); color: #1F4FA8; }
+.cita-estado.llamada-estado.realizada { background: rgba(31, 79, 168, 0.08); color: var(--color-muted); }
+.cita-estado.llamada-estado.no_show   { background: rgba(122, 58, 50, 0.20); color: var(--color-inactive); }
+.cita-estado.llamada-estado.cancelada { background: rgba(122, 58, 50, 0.20); color: var(--color-inactive); }
+
+/* MODAL — Detalle de llamada (solo lectura) */
+.llamada-modal-fecha {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--color-muted);
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+}
+
+.llamada-modal-nombre {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    margin: 0 0 18px 0;
+    color: var(--color-text);
+}
+
+.llamada-modal-campo {
+    margin-bottom: 14px;
+}
+
+.llamada-modal-label {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--color-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.llamada-modal-valor {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+.llamada-modal-btn-llamar {
+    display: inline-block;
+    margin-top: 8px;
+    text-decoration: none;
+}
+
+.llamada-modal-diagnostico {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--color-text);
+    font-size: 13px;
+}
+
+.llamada-modal-diagnostico li {
+    margin-bottom: 4px;
+}
