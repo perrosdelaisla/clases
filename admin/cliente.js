@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', bootstrap);
 async function bootstrap() {
     showScreen('loading');
     bindInvitarUI();
+    bindWidgetPack();
 
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) {
@@ -125,6 +126,10 @@ function renderCliente(c) {
         : 'Sin estado';
 
     actualizarBotonInvitar(c);
+
+    // Widget pack_actual
+    const packInput = document.getElementById('cliente-pack-actual');
+    if (packInput) packInput.value = c.pack_actual != null ? c.pack_actual : '';
 
     document.title = `${c.nombre || 'Cliente'} — Admin PDLI`;
 }
@@ -221,6 +226,47 @@ function escapeHTML(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+// ===================== Widget pack_actual =====================
+
+function bindWidgetPack() {
+    const btn = document.getElementById('cliente-pack-guardar');
+    if (btn) btn.addEventListener('click', guardarPackActual);
+}
+
+async function guardarPackActual() {
+    if (!state.clienteId) return;
+    const input = document.getElementById('cliente-pack-actual');
+    const btn = document.getElementById('cliente-pack-guardar');
+    if (!input || !btn) return;
+
+    const raw = input.value.trim();
+    const valor = raw === '' ? null : parseInt(raw, 10);
+    if (raw !== '' && (!Number.isFinite(valor) || valor < 0)) {
+        toast('Valor inválido', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    const labelPrevio = btn.textContent;
+    btn.textContent = 'Guardando…';
+
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update({ pack_actual: valor })
+            .eq('id', state.clienteId);
+        if (error) throw error;
+        if (state.cliente) state.cliente.pack_actual = valor;
+        toast('Pack actualizado');
+    } catch (err) {
+        console.error('[cliente] error guardando pack_actual:', err);
+        toast('No se pudo guardar', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = labelPrevio;
+    }
 }
 
 // ===================== Invitar a la app =====================
