@@ -229,7 +229,16 @@ function activarTab(tabRaw, { updateUrl } = {}) {
 
 // ===================== Tab Ejercicios — vista principal =====================
 
+// Token incremental para detectar render concurrente. Cada vez que arranca
+// renderEjerciciosActivos se queda con un "myToken". Si entre el await y la
+// pintada llegó otra llamada (que actualizó el token), la primera abandona
+// sin tocar el DOM — así evitamos el flicker "Cargando + empty visibles
+// a la vez" que pasaba cuando dos renders se pisaban.
+let _renderEjerciciosToken = 0;
+
 async function renderEjerciciosActivos() {
+    const myToken = ++_renderEjerciciosToken;
+
     const loadingEl = document.getElementById('ejercicios-loading');
     const emptyEl = document.getElementById('ejercicios-empty');
     const listaEl = document.getElementById('ejercicios-lista');
@@ -245,6 +254,9 @@ async function renderEjerciciosActivos() {
         .eq('perro_id', state.perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
+
+    // Si otra llamada ya tomó el control, dejamos que esa pinte.
+    if (myToken !== _renderEjerciciosToken) return;
 
     loadingEl.setAttribute('hidden', '');
 
