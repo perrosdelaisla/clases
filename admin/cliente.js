@@ -192,8 +192,8 @@ function badgeClassFor(estado) {
     switch (estado) {
         case 'consulta': return 'badge-consulta';
         case 'activo': return 'badge-activo';
-        case 'mantenimiento': return 'badge-mantenimiento';
-        case 'inactivo': return 'badge-inactivo';
+        case 'veterano': return 'badge-veterano';
+        case 'ex_cliente': return 'badge-ex-cliente';
         default: return 'badge-desconocido';
     }
 }

@@ -226,7 +226,7 @@ export async function obtenerDistribucionClientes() {
         const key = r.estado || '(sin dato)';
         map.set(key, (map.get(key) || 0) + 1);
     });
-    const orden = ['consulta', 'activo', 'mantenimiento', 'inactivo'];
+    const orden = ['consulta', 'activo', 'veterano', 'ex_cliente'];
     return [...map.entries()]
         .map(([label, n]) => ({ label, n }))
         .sort((a, b) => orden.indexOf(a.label) - orden.indexOf(b.label));
