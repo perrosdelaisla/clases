@@ -175,6 +175,9 @@ async function confirmarWelcomeVisto() {
 
     showScreen('app');
     showTab(state.currentTab);
+
+    // Una vez cerrado el welcome, el banner PWA puede volver a evaluarse.
+    if (puedeMostrarseBanner()) intentarMostrarBanner();
 }
 
 // ===================== Bindings =====================
@@ -1429,6 +1432,10 @@ function puedeMostrarseBanner() {
     if (isStandalone()) return false;
     if (localStorage.getItem(PWA_INSTALLED_KEY) === 'true') return false;
     if (dismissedActivo()) return false;
+    // Mientras el welcome editorial esté visible no asomamos el banner —
+    // primero el cliente lee el mensaje y aprieta "Empezar", luego decidimos.
+    const welcome = document.getElementById('screen-welcome');
+    if (welcome && !welcome.hasAttribute('hidden')) return false;
     if (isIOS()) return true;
     return !!deferredInstallPrompt;
 }
