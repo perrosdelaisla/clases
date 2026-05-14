@@ -6,6 +6,7 @@
     --color-surface-2: #2c2c2c;
     --color-border: rgba(255, 255, 255, 0.08);
     --color-red: #C8102E;
+    --color-red-dk: #A30D24;
     --color-green: #6B7A3A;
     --color-text: #F5EFE0;
     --color-muted: #8a8a8a;
@@ -127,7 +128,7 @@ body {
     width: 100%;
 }
 
-.btn-primary:hover { background: #a83122; }
+.btn-primary:hover { background: var(--color-red-dk); }
 .btn-primary:active { transform: scale(0.99); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -924,7 +925,7 @@ body {
     transition: background 0.15s ease, transform 0.1s ease;
 }
 
-.btn-add-fixed:hover { background: #a83122; }
+.btn-add-fixed:hover { background: var(--color-red-dk); }
 .btn-add-fixed:active { transform: translateX(-50%) scale(0.99); }
 
 /* ===================== Toggle iOS-style ===================== */
