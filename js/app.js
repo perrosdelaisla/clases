@@ -785,16 +785,35 @@ async function renderTabReservar() {
         return;
     }
 
-    // razon === 'ok' → mostrar calendario
-    const max = estado.max_reservas ?? 3;
-    const actuales = estado.reservas_actuales ?? 0;
-    const disponiblesQuedan = Math.max(0, max - actuales);
+    // razon === 'ok' → decidir copy y calendario según estado del pack
+    const pack = calcularEstadoPack(state.cliente, state.citas);
 
+    // 1) Sin pack registrado → no se renderiza calendario
+    if (pack.pack_actual == null) {
+        cont.innerHTML = `
+            <div class="reservar-aviso reservar-aviso--cuidado">
+                <h3>Tu adiestrador está coordinando tu pack</h3>
+                <p>Te avisaremos cuando puedas reservar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 2) Pack completo, todas las clases ya reservadas/realizadas
+    if (pack.por_reservar === 0) {
+        cont.innerHTML = `
+            <div class="reservar-aviso reservar-aviso--cuidado">
+                <h3>Tu pack actual está completo</h3>
+                <p>Cuando quieras continuar, hablalo con el adiestrador en la próxima clase.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 3) Hay clases por reservar → mostramos copy editorial + calendario
     const desdeIso = new Date().toISOString().slice(0, 10);
     const hastaIso = sumarDiasIso(desdeIso, 8 * 7); // 8 semanas
 
-    // Si puede_cliente_reservar nos dio puede_reservar_desde, respetarlo como mínimo.
-    // Esa fecha ya incluye la regla "5 días entre clases" del lado servidor.
     const minIso = estado.puede_reservar_desde && estado.puede_reservar_desde > desdeIso
         ? estado.puede_reservar_desde
         : desdeIso;
@@ -802,9 +821,15 @@ async function renderTabReservar() {
     const slotsDisponibles = await cargarSlotsDisponibles(minIso, hastaIso);
     const grid = construirGridDeSlots(slotsDisponibles);
 
+    const x = pack.por_reservar;
+    const sPlural = x === 1 ? '' : 's';
+    const verbo = x === 1 ? 'Te queda' : 'Te quedan';
+
     cont.innerHTML = `
         <div class="reservar-aviso">
-            Puedes reservar hasta ${disponiblesQuedan} clase${disponiblesQuedan === 1 ? '' : 's'} más
+            <h3>${verbo} ${x} clase${sPlural} por reservar del pack</h3>
+            <p class="reservar-aviso__sub">Cuando agendes, será la clase ${pack.proximo_numero} de ${escapeHTML(nombrePerro)}.</p>
+            <p class="reservar-aviso__nota">Cada clase tiene un para qué dentro del proceso. No son sesiones sueltas.</p>
         </div>
         <div class="reservar-calendario">
             ${grid}

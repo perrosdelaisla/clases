@@ -1137,13 +1137,43 @@ body {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-left: 3px solid var(--pdli-rojo);
-    color: var(--color-text);
-    padding: 10px 14px;
     border-radius: var(--radius-sm);
-    font-size: 13px;
-    margin-bottom: 16px;
-    text-align: center;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.25rem;
     box-shadow: 0 1px 3px rgba(26, 26, 26, 0.05);
+}
+
+.reservar-aviso h3 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
+    font-weight: 400;
+}
+
+.reservar-aviso p {
+    color: var(--color-text);
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.reservar-aviso__sub {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.reservar-aviso__nota {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--color-muted);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--color-border);
+}
+
+.reservar-aviso--cuidado {
+    border-left-color: var(--color-muted);
 }
 
 .reservar-msg {
