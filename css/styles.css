@@ -1303,6 +1303,29 @@ body {
     margin-top: 12px;
 }
 
+/* Número de clase visible (Clase 1, Clase 2, ...) */
+.cita-numero {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    color: var(--pdli-rojo);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.cita-numero--inline {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+    margin-right: 0.25rem;
+}
+
+.cita-numero--hist {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-right: 0.4rem;
+}
+
 .badge {
     display: inline-block;
     padding: 3px 10px;

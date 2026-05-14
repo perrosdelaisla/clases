@@ -1018,6 +1018,7 @@ function renderCitaDestacada(cita, ahora) {
     const cancelable = horasFaltan > 24;
     return `
         <article class="cita-destacada">
+            ${cita.numero_clase != null ? `<span class="cita-numero">Clase ${cita.numero_clase}</span>` : ''}
             <p class="cita-destacada__fecha">${escapeHTML(fecha)}</p>
             <p class="cita-destacada__hora">${escapeHTML(hora)}</p>
             <p class="cita-destacada__cuanto">${escapeHTML(cuanto)}</p>
@@ -1039,7 +1040,7 @@ function renderCitaItem(cita, ahora) {
     return `
         <article class="cita-item">
             <div class="cita-item__main">
-                <p class="cita-item__fecha">${escapeHTML(fecha)} · ${escapeHTML(hora)}</p>
+                <p class="cita-item__fecha">${cita.numero_clase != null ? `<span class="cita-numero cita-numero--inline">Clase ${cita.numero_clase}</span> · ` : ''}${escapeHTML(fecha)} · ${escapeHTML(hora)}</p>
                 <p class="cita-item__cuanto">${escapeHTML(cuanto)}</p>
             </div>
             ${cancelable
@@ -1056,7 +1057,7 @@ function renderCitaHistorial(cita) {
     return `
         <article class="cita-item cita-item--hist">
             <span class="cita-item__icono">${icono}</span>
-            <p class="cita-item__fecha">${escapeHTML(fecha)} · ${escapeHTML(hora)}</p>
+            <p class="cita-item__fecha">${cita.numero_clase != null ? `<span class="cita-numero cita-numero--hist">Clase ${cita.numero_clase}</span> ` : ''}${escapeHTML(fecha)} · ${escapeHTML(hora)}</p>
         </article>
     `;
 }
