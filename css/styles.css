@@ -235,6 +235,29 @@ body {
     .brand--header .brand__name { font-size: 0.95rem; }
     .brand--header .brand__tagline { font-size: 0.65rem; }
     .brand--header .brand__img { height: 32px; }
+    .brand--header .logo-circle { width: 38px; height: 38px; }
+}
+
+/* Logo PDLI con aro rojo (patrón Paseos) — sobre fondos oscuros y claros.
+   Se usa tanto en el header de la app como en el welcome (variante --lg). */
+.logo-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--pdli-rojo);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    padding: 2px;
+}
+.logo-circle__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* ===================== Botones ===================== */
