@@ -35,6 +35,7 @@ async function bootstrap() {
     showScreen('loading');
     bindTabs();
     bindModal();
+    bindCasoComplejo();
 
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -125,6 +126,9 @@ function renderPerro(p) {
     if (p.es_ppp === true) ppp.removeAttribute('hidden');
     else ppp.setAttribute('hidden', '');
 
+    const casoChk = document.getElementById('perro-caso-complejo');
+    if (casoChk) casoChk.checked = p.caso_complejo === true;
+
     const back = document.getElementById('back-link');
     const clienteEmbed = p.clientes;
     if (clienteEmbed?.id) {
@@ -154,6 +158,36 @@ function formatearPesoKg(kg) {
     if (Number.isInteger(n)) return `${n} kg`;
     const txt = n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
     return `${txt.replace('.', ',')} kg`;
+}
+
+// ===================== Toggle caso_complejo =====================
+
+function bindCasoComplejo() {
+    const chk = document.getElementById('perro-caso-complejo');
+    if (chk) chk.addEventListener('change', guardarCasoComplejo);
+}
+
+async function guardarCasoComplejo(e) {
+    const chk = e.target;
+    if (!state.perroId) return;
+    const target = chk.checked;
+    chk.disabled = true;
+
+    try {
+        const { error } = await supabase
+            .from('perros')
+            .update({ caso_complejo: target })
+            .eq('id', state.perroId);
+        if (error) throw error;
+        if (state.perro) state.perro.caso_complejo = target;
+        toast('Caso complejo actualizado');
+    } catch (err) {
+        console.error('[perro] error guardando caso_complejo:', err);
+        chk.checked = !target;
+        toast('No se pudo guardar', 'error');
+    } finally {
+        chk.disabled = false;
+    }
 }
 
 // ===================== Tabs =====================
