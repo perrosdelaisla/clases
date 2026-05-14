@@ -36,29 +36,29 @@ const PERRO_COLOR_PALETTE = [
     '#3a7d3e', '#b8732a', '#3f5fa3',
 ];
 
-// Etiquetas de protocolo en frase humana (planes_caso.protocolo_principal)
-const PROTOCOLO_LABEL = {
-    basica: 'Educación básica',
-    cachorros: 'Educación de cachorros',
-    reactividad: 'Reactividad',
-    miedos: 'Miedos / fobias',
-    separacion: 'Ansiedad por separación',
-    generalizada: 'Ansiedad generalizada',
-    posesion: 'Posesión de recursos',
-};
-
 const state = {
     session: null,
     usuarioCliente: null,    // { id, auth_user_id, cliente_id, nombre, ... }
+    cliente: null,           // { id, pack_actual, ... } — datos del cliente dueño
     perros: [],              // ordenados por created_at asc
     perroSeleccionadoId: null,
-    protocolosByPerro: {},   // { [perro_id]: protocolo_principal }
     citas: [],               // todas las citas del cliente (cualquier estado)
     currentTab: 'rutina',
     rutinaCategoriaActiva: 'ejercicio',  // sub-pestaña activa dentro de Rutina
     reservandoSlot: null,    // { fecha, hora, label } cuando se abre modal
     citaACancelar: null,     // cita object cuando se abre modal
     fotoSeleccionada: null,  // { file, dataUrl } cuando hay preview en modal foto
+};
+
+// Mapeo de citas.protocolo (técnico) a label cliente
+const PROTOCOLO_LABEL_CLIENTE = {
+    cachorros:    'Educación del cachorro',
+    basica:       'Educación básica',
+    separacion:   'Modificación de conducta',
+    generalizada: 'Modificación de conducta',
+    miedos:       'Modificación de conducta',
+    reactividad:  'Modificación de conducta',
+    posesion:     'Modificación de conducta',
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -73,9 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (event === 'SIGNED_OUT') {
             state.session = null;
             state.usuarioCliente = null;
+            state.cliente = null;
             state.perros = [];
             state.perroSeleccionadoId = null;
-            state.protocolosByPerro = {};
             state.citas = [];
             showScreen('login');
         }
@@ -109,16 +109,15 @@ async function onSesionLista(session) {
         }
         state.usuarioCliente = usuarioCliente;
 
-        // Datos en paralelo: perros + planes + citas
-        const [perros, citas] = await Promise.all([
+        // Datos en paralelo: cliente + perros + citas
+        const [cliente, perros, citas] = await Promise.all([
+            cargarCliente(usuarioCliente.cliente_id),
             cargarPerros(),
             cargarCitasCliente(),
         ]);
+        state.cliente = cliente;
         state.perros = perros;
         state.citas = citas;
-        state.protocolosByPerro = perros.length
-            ? await cargarProtocolosByPerro(perros.map((p) => p.id))
-            : {};
 
         // Recuperar perro seleccionado de sesión previa si sigue siendo válido
         const guardado = sessionStorage.getItem(STORAGE_PERRO_KEY);
@@ -371,21 +370,18 @@ async function cargarPerros() {
     return data || [];
 }
 
-async function cargarProtocolosByPerro(perroIds) {
-    if (!perroIds || perroIds.length === 0) return {};
+async function cargarCliente(clienteId) {
+    if (!clienteId) return null;
     const { data, error } = await supabase
-        .from('planes_caso')
-        .select('perro_id, protocolo_principal')
-        .in('perro_id', perroIds);
+        .from('clientes')
+        .select('id, pack_actual')
+        .eq('id', clienteId)
+        .maybeSingle();
     if (error) {
-        console.error('[app] error cargando planes_caso:', error);
-        return {};
+        console.error('[app] error cargando cliente:', error);
+        return null;
     }
-    const map = {};
-    (data || []).forEach((row) => {
-        if (row.protocolo_principal) map[row.perro_id] = row.protocolo_principal;
-    });
-    return map;
+    return data || null;
 }
 
 async function cargarCitasCliente() {
@@ -525,7 +521,12 @@ async function renderRutinaPerroSeleccionado() {
     const hero = document.getElementById('perro-hero');
     const heroNombre = document.getElementById('perro-hero-nombre');
     const heroMeta = document.getElementById('perro-hero-meta');
-    const heroProto = document.getElementById('perro-hero-protocolo');
+    const protoBox = document.getElementById('perro-protocolo');
+    const protoNombre = document.getElementById('perro-protocolo-nombre');
+    const protoDuracion = document.getElementById('perro-protocolo-duracion');
+    const saldoBox = document.getElementById('perro-saldo');
+    const saldoPack = document.getElementById('perro-saldo-pack');
+    const saldoDetalle = document.getElementById('perro-saldo-detalle');
     const fotoImg = document.getElementById('perro-foto-img');
     const fotoFallback = document.getElementById('perro-foto-fallback');
     const fotoBtn = document.getElementById('perro-foto-btn');
@@ -540,6 +541,8 @@ async function renderRutinaPerroSeleccionado() {
     empty.setAttribute('hidden', '');
     sinPerro.setAttribute('hidden', '');
     loading.removeAttribute('hidden');
+    protoBox.setAttribute('hidden', '');
+    saldoBox.setAttribute('hidden', '');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
 
@@ -569,13 +572,20 @@ async function renderRutinaPerroSeleccionado() {
         fotoBtn.style.setProperty('--perro-color', colorParaPerro(perro.id));
     }
 
-    // Protocolo
-    const proto = state.protocolosByPerro[perro.id];
-    if (proto) {
-        heroProto.textContent = `Protocolo: ${PROTOCOLO_LABEL[proto] || proto}`;
-        heroProto.removeAttribute('hidden');
-    } else {
-        heroProto.setAttribute('hidden', '');
+    // Protocolo (label cliente + duración estimada)
+    const proto = formatearProtocolo(perro, state.citas);
+    if (proto && proto.nombre) {
+        protoNombre.textContent = proto.nombre;
+        protoDuracion.textContent = proto.duracion;
+        protoBox.removeAttribute('hidden');
+    }
+
+    // Saldo del pack
+    const pack = calcularEstadoPack(state.cliente, state.citas);
+    if (pack.pack_actual != null) {
+        saldoPack.textContent = pack.pack_actual;
+        saldoDetalle.textContent = formatearDetallePack(pack);
+        saldoBox.removeAttribute('hidden');
     }
 
     // Ejercicios
@@ -622,6 +632,108 @@ function renderRutinaCard(row) {
             </div>
         </li>
     `;
+}
+
+// ===================== Pack y protocolo (hero) =====================
+
+// Devuelve el estado del pack del cliente:
+//   { pack_actual, realizadas_del_pack, confirmadas_futuras_del_pack,
+//     por_reservar, proximo_numero }
+// Si el cliente no tiene pack_actual cargado, devuelve {pack_actual: null}.
+function calcularEstadoPack(cliente, citasCliente) {
+    const pack = cliente?.pack_actual;
+    if (pack == null) return { pack_actual: null };
+
+    const hoyIso = new Date().toISOString().slice(0, 10);
+
+    // Citas con numero_clase NOT NULL, orden desc por numero_clase
+    const numeradas = (citasCliente || [])
+        .filter((c) => c.numero_clase != null)
+        .slice()
+        .sort((a, b) => b.numero_clase - a.numero_clase);
+
+    // Las N más recientes son "el pack actual"
+    const enPack = numeradas.slice(0, pack);
+    const nums = enPack.map((c) => c.numero_clase);
+    const rangoMin = nums.length ? Math.min(...nums) : null;
+    const rangoMax = nums.length ? Math.max(...nums) : null;
+
+    let realizadas = 0;
+    let confirmadasFuturas = 0;
+    enPack.forEach((c) => {
+        if (c.estado === 'realizada') realizadas++;
+        else if (c.estado === 'confirmada' && c.fecha >= hoyIso) confirmadasFuturas++;
+    });
+
+    const porReservar = Math.max(0, pack - realizadas - confirmadasFuturas);
+
+    // proximo_numero: max(numero_clase) sobre todas las citas confirmadas o
+    // realizadas (cualquier pack), + 1. Si no hay ninguna, 1.
+    let maxGlobal = 0;
+    (citasCliente || []).forEach((c) => {
+        if (c.numero_clase == null) return;
+        if (c.estado !== 'confirmada' && c.estado !== 'realizada') return;
+        if (c.numero_clase > maxGlobal) maxGlobal = c.numero_clase;
+    });
+    const proximoNumero = maxGlobal + 1;
+
+    return {
+        pack_actual: pack,
+        realizadas_del_pack: realizadas,
+        confirmadas_futuras_del_pack: confirmadasFuturas,
+        por_reservar: porReservar,
+        proximo_numero: proximoNumero,
+        rango_min: rangoMin,
+        rango_max: rangoMax,
+    };
+}
+
+// Devuelve { nombre, duracion } o null si no hay protocolo conocido.
+// Toma el protocolo de la última cita con numero_clase del cliente.
+function formatearProtocolo(perro, citasCliente) {
+    if (!perro) return null;
+    const numeradas = (citasCliente || [])
+        .filter((c) => c.numero_clase != null)
+        .slice()
+        .sort((a, b) => b.numero_clase - a.numero_clase);
+    const ultima = numeradas[0];
+    if (!ultima || !ultima.protocolo) return null;
+
+    const nombre = PROTOCOLO_LABEL_CLIENTE[ultima.protocolo];
+    if (!nombre) return null;
+
+    let duracion;
+    if (nombre === 'Educación del cachorro' || nombre === 'Educación básica') {
+        duracion = 'Suele llevar 4 clases.';
+    } else if (nombre === 'Modificación de conducta') {
+        duracion = perro.caso_complejo
+            ? 'Suele llevar entre 4 y 12 clases, hasta 14 en casos como el suyo.'
+            : 'Suele llevar entre 4 y 12 clases.';
+    } else {
+        duracion = '';
+    }
+
+    return { nombre, duracion };
+}
+
+// Formatea "{realizadas} realizada(s) · {futuras} reservada(s) · {por_reservar} por reservar"
+// Elimina los segmentos en cero. Cierra con frase distinta si pack ya está
+// reservado entero o si aún no hay clases agendadas.
+function formatearDetallePack(pack) {
+    const partes = [];
+    const r = pack.realizadas_del_pack;
+    const f = pack.confirmadas_futuras_del_pack;
+    const x = pack.por_reservar;
+
+    if (r > 0) partes.push(`${r} realizada${r === 1 ? '' : 's'}`);
+    if (f > 0) partes.push(`${f} reservada${f === 1 ? '' : 's'}`);
+    if (x > 0) partes.push(`${x} por reservar`);
+
+    if (!partes.length) return 'Aún no hay clases agendadas.';
+
+    let out = partes.join(' · ');
+    if (x === 0 && f > 0) out += ' · Pack completo, todas reservadas.';
+    return out;
 }
 
 // ===================== Tab Reservar =====================

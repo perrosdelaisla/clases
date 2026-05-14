@@ -1044,18 +1044,65 @@ body {
     margin: 0;
 }
 
-.perro-hero__protocolo {
-    background: rgba(107, 122, 58, 0.14);
-    color: var(--color-green);
-    border: 1px solid rgba(107, 122, 58, 0.35);
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 500;
-    margin-top: 6px;
+/* Hero — bloque protocolo (label cliente + duración) */
+.perro-protocolo {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--color-border);
+    text-align: center;
 }
 
-.perro-hero__protocolo[hidden] { display: none; }
+.perro-protocolo[hidden] { display: none; }
+
+.perro-protocolo__nombre {
+    font-family: var(--font-display);
+    color: var(--pdli-rojo);
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.perro-protocolo__duracion {
+    font-size: 0.875rem;
+    color: var(--color-muted);
+    margin-top: 0.25rem;
+}
+
+/* Hero — bloque saldo del pack */
+.perro-saldo {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    text-align: center;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 1px 3px rgba(26, 26, 26, 0.05);
+}
+
+.perro-saldo[hidden] { display: none; }
+
+.perro-saldo__kpi {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-muted);
+}
+
+.perro-saldo__kpi strong {
+    font-family: var(--font-display);
+    color: var(--color-text);
+    font-size: 1.6rem;
+    margin-right: 0.4rem;
+    letter-spacing: 0.04em;
+}
+
+.perro-saldo__detalle {
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    line-height: 1.5;
+}
 
 /* ===== CTA grande "Reservar próxima clase" ===== */
 
