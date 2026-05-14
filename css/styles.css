@@ -1701,10 +1701,11 @@ body {
     gap: 0.85rem;
     margin-bottom: 1.5rem;
 }
-.welcome-brand__logo {
+.logo-circle--lg {
     width: 96px;
     height: 96px;
-    object-fit: contain;
+    border-width: 3px;
+    padding: 6px;
 }
 .welcome-brand__name {
     font-family: var(--font-display);
