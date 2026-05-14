@@ -1554,3 +1554,57 @@ body {
     border-color: var(--pdli-rojo);
     color: var(--pdli-crema);
 }
+
+/* ===================== Welcome editorial (primer login) ===================== */
+
+.screen-welcome { background: var(--color-bg); }
+
+.welcome-wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 3rem 1.75rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.welcome-eyebrow {
+    font-family: var(--font-display);
+    color: var(--pdli-rojo);
+    letter-spacing: 0.18em;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+}
+
+.welcome-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 8vw, 3.4rem);
+    line-height: 0.95;
+    color: var(--color-text);
+    letter-spacing: 0.01em;
+    margin-bottom: 2rem;
+    font-weight: 400;
+}
+
+.welcome-body {
+    color: var(--color-text);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.welcome-body strong { color: var(--pdli-rojo); font-weight: 600; }
+
+.welcome-firma {
+    font-family: var(--font-body);
+    font-style: italic;
+    color: var(--color-muted);
+    margin-bottom: 2.5rem;
+}
+
+.btn-cta--welcome { width: 100%; }

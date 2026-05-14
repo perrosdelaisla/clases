@@ -22,6 +22,7 @@ const SCREENS = {
     login: document.getElementById('screen-login'),
     'login-sent': document.getElementById('screen-login-sent'),
     'error-vinculo': document.getElementById('screen-error-vinculo'),
+    welcome: document.getElementById('screen-welcome'),
     app: document.getElementById('screen-app'),
 };
 
@@ -130,12 +131,51 @@ async function onSesionLista(session) {
         renderHeader();
         renderSelectorPerros();
         await renderRutinaPerroSeleccionado();
+
+        // Primer login: si el cliente nunca vio el welcome, mostrarlo
+        // antes de la app principal. UPDATE de welcome_visto_en al
+        // confirmar con el botón "Empezar".
+        if (!state.usuarioCliente.welcome_visto_en) {
+            mostrarWelcomeEditorial();
+            return;
+        }
+
         showScreen('app');
         showTab(state.currentTab);
     } catch (err) {
         console.error('[app] error cargando datos:', err);
         showScreen('error-vinculo');
     }
+}
+
+function mostrarWelcomeEditorial() {
+    const nombrePerro = state.perros[0]?.nombre || 'tu perro';
+    setText('welcome-perro-nombre', nombrePerro);
+    showScreen('welcome');
+}
+
+async function confirmarWelcomeVisto() {
+    const btn = document.getElementById('welcome-empezar');
+    if (btn) btn.disabled = true;
+
+    try {
+        const ahora = new Date().toISOString();
+        const { error } = await supabase
+            .from('usuarios_cliente')
+            .update({ welcome_visto_en: ahora })
+            .eq('id', state.usuarioCliente.id);
+        if (error) throw error;
+        state.usuarioCliente.welcome_visto_en = ahora;
+    } catch (err) {
+        console.error('[app] no se pudo marcar welcome_visto_en:', err);
+        // Aunque falle el UPDATE, dejamos pasar al usuario — la próxima
+        // vez le volverá a aparecer, pero al menos no se queda trabado.
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+
+    showScreen('app');
+    showTab(state.currentTab);
 }
 
 // ===================== Bindings =====================
@@ -153,6 +193,10 @@ function bindEventos() {
 
     const errorLogout = document.getElementById('error-logout');
     if (errorLogout) errorLogout.addEventListener('click', cerrarSesion);
+
+    // Welcome editorial (primer login)
+    const welcomeBtn = document.getElementById('welcome-empezar');
+    if (welcomeBtn) welcomeBtn.addEventListener('click', confirmarWelcomeVisto);
 
     // Avatar / logout
     const avatarBtn = document.getElementById('avatar-btn');
