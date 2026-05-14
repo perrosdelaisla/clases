@@ -2738,3 +2738,72 @@ body {
     color: var(--color-muted);
     line-height: 1.4;
 }
+
+/* ===================== Selector de estado del cliente (pills) ===================== */
+
+.estado-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1.5rem;
+}
+
+.estado-pill {
+    flex: 1;
+    min-width: max-content;
+    padding: 0.55rem 0.9rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.55);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.estado-pill__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.4;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.estado-pill:hover {
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+.estado-pill:hover .estado-pill__dot { opacity: 0.7; }
+
+.estado-pill.is-active {
+    color: #fff;
+    border-color: currentColor;
+    background: rgba(255, 255, 255, 0.04);
+}
+.estado-pill.is-active .estado-pill__dot {
+    opacity: 1;
+    transform: scale(1.3);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+/* Color por estado al estar activo */
+.estado-pill[data-estado="consulta"].is-active { color: #E8B62D; }
+.estado-pill[data-estado="activo"].is-active { color: #9CB64B; }
+.estado-pill[data-estado="veterano"].is-active { color: #4A7DD4; }
+.estado-pill[data-estado="ex_cliente"].is-active { color: #8E8A82; }
+
+/* Punto coloreado siempre (incluso inactivo, sutil) */
+.estado-pill[data-estado="consulta"] .estado-pill__dot { background: #E8B62D; }
+.estado-pill[data-estado="activo"] .estado-pill__dot { background: #9CB64B; }
+.estado-pill[data-estado="veterano"] .estado-pill__dot { background: #4A7DD4; }
+.estado-pill[data-estado="ex_cliente"] .estado-pill__dot { background: #8E8A82; }
+
+.estado-pill:disabled { opacity: 0.5; cursor: wait; }

@@ -37,7 +37,24 @@
         <main class="detalle-main">
             <section class="detalle-cabecera">
                 <h1 class="detalle-nombre" id="cliente-nombre">…</h1>
-                <span class="cliente-badge badge-desconocido" id="cliente-estado">…</span>
+                <div class="estado-selector" id="estado-selector" role="radiogroup" aria-label="Estado del cliente">
+                    <button type="button" class="estado-pill" data-estado="consulta" role="radio" aria-checked="false">
+                        <span class="estado-pill__dot"></span>
+                        <span class="estado-pill__label">Consulta</span>
+                    </button>
+                    <button type="button" class="estado-pill" data-estado="activo" role="radio" aria-checked="false">
+                        <span class="estado-pill__dot"></span>
+                        <span class="estado-pill__label">Activo</span>
+                    </button>
+                    <button type="button" class="estado-pill" data-estado="veterano" role="radio" aria-checked="false">
+                        <span class="estado-pill__dot"></span>
+                        <span class="estado-pill__label">Veterano</span>
+                    </button>
+                    <button type="button" class="estado-pill" data-estado="ex_cliente" role="radio" aria-checked="false">
+                        <span class="estado-pill__dot"></span>
+                        <span class="estado-pill__label">Ex cliente</span>
+                    </button>
+                </div>
                 <button type="button" class="btn-invitar" id="btn-invitar">Invitar a la app</button>
                 <dl class="detalle-campos">
                     <div class="campo">

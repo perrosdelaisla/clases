@@ -32,6 +32,7 @@ async function bootstrap() {
     showScreen('loading');
     bindInvitarUI();
     bindWidgetPack();
+    bindEstadoSelector();
 
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) {
@@ -118,12 +119,7 @@ function renderCliente(c) {
     setText('cliente-zona', c.zona || '—');
     setText('cliente-desde', formatearClienteDesde(c.cliente_desde));
 
-    const estadoEl = document.getElementById('cliente-estado');
-    const estado = (c.estado || '').toLowerCase();
-    estadoEl.className = `cliente-badge ${badgeClassFor(estado)}`;
-    estadoEl.textContent = estado
-        ? estado.charAt(0).toUpperCase() + estado.slice(1)
-        : 'Sin estado';
+    renderEstadoSelector((c.estado || 'consulta').toLowerCase());
 
     actualizarBotonInvitar(c);
 
@@ -188,14 +184,52 @@ function formatearClienteDesde(valor) {
     return `Cliente desde ${formatter.format(d)}`;
 }
 
-function badgeClassFor(estado) {
-    switch (estado) {
-        case 'consulta': return 'badge-consulta';
-        case 'activo': return 'badge-activo';
-        case 'veterano': return 'badge-veterano';
-        case 'ex_cliente': return 'badge-ex-cliente';
-        default: return 'badge-desconocido';
-    }
+// ===================== Selector de estado =====================
+
+const ESTADO_LABELS = {
+    consulta: 'Consulta',
+    activo: 'Activo',
+    veterano: 'Veterano',
+    ex_cliente: 'Ex cliente',
+};
+
+function renderEstadoSelector(estadoActual) {
+    document.querySelectorAll('.estado-pill').forEach((pill) => {
+        const esActivo = pill.dataset.estado === estadoActual;
+        pill.classList.toggle('is-active', esActivo);
+        pill.setAttribute('aria-checked', esActivo ? 'true' : 'false');
+    });
+}
+
+function bindEstadoSelector() {
+    document.querySelectorAll('.estado-pill').forEach((pill) => {
+        pill.addEventListener('click', async () => {
+            const nuevoEstado = pill.dataset.estado;
+            if (!nuevoEstado || pill.classList.contains('is-active')) return;
+
+            const estadoAnterior = state.cliente?.estado;
+            renderEstadoSelector(nuevoEstado);
+
+            document.querySelectorAll('.estado-pill').forEach((p) => { p.disabled = true; });
+
+            const { error } = await supabase
+                .from('clientes')
+                .update({ estado: nuevoEstado })
+                .eq('id', state.clienteId);
+
+            document.querySelectorAll('.estado-pill').forEach((p) => { p.disabled = false; });
+
+            if (error) {
+                console.error('[cliente] error cambiando estado:', error);
+                renderEstadoSelector(estadoAnterior || 'consulta');
+                toast('No se pudo actualizar el estado', 'error');
+                return;
+            }
+
+            if (state.cliente) state.cliente.estado = nuevoEstado;
+            toast(`Estado: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`);
+        });
+    });
 }
 
 // ---------- Helpers ----------
