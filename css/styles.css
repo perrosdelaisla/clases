@@ -591,6 +591,8 @@ body {
     font-style: italic;
 }
 
+.placeholder[hidden] { display: none; }
+
 /* ===================== Footer (oculto en V1) ===================== */
 
 .footer-cliente { display: none; }
