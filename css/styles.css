@@ -1770,3 +1770,66 @@ body {
     color: var(--pdli-oliva);
     margin-top: 0;
 }
+
+/* ===================== Card "Evalúa la salud comportamental" ===================== */
+
+.card-salud {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--pdli-oliva);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+.card-salud[hidden] { display: none; }
+
+.card-salud__icon {
+    font-size: 1.7rem;
+    flex-shrink: 0;
+}
+
+.card-salud__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.card-salud__title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+    color: var(--color-text);
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.card-salud__title span {
+    color: var(--pdli-rojo);
+}
+
+.card-salud__desc {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    line-height: 1.4;
+}
+
+.card-salud__btn {
+    flex-shrink: 0;
+    background: var(--pdli-oliva);
+    color: var(--pdli-crema);
+    border: 0;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s;
+}
+
+.card-salud__btn:hover {
+    background: var(--pdli-oliva-claro);
+}

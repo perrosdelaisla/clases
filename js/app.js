@@ -225,6 +225,10 @@ function bindEventos() {
     const ctaReservar = document.getElementById('btn-ir-reservar');
     if (ctaReservar) ctaReservar.addEventListener('click', () => showTab('reservar'));
 
+    // CTA "Empezar →" de la card de evaluación de salud comportamental.
+    // Abre La Isla en pestaña nueva con perro_id, cliente_id y origen.
+    document.getElementById('btn-iniciar-evaluacion')?.addEventListener('click', abrirLaIsla);
+
     // Foto del perro
     const fotoBtn = document.getElementById('perro-foto-btn');
     if (fotoBtn) fotoBtn.addEventListener('click', abrirModalFoto);
@@ -470,6 +474,18 @@ function showTab(name) {
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+// ===================== Salud comportamental → La Isla =====================
+
+function abrirLaIsla() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    if (!perro || !state.cliente) return;
+    const url = new URL('https://perrosdelaisla.github.io/isla/');
+    url.searchParams.set('perro_id', perro.id);
+    url.searchParams.set('cliente_id', state.cliente.id);
+    url.searchParams.set('origen', 'cliente_activo');
+    window.open(url.toString(), '_blank', 'noopener');
+}
+
 // ===================== Tab Rutina =====================
 
 function renderHeader() {
@@ -537,6 +553,8 @@ async function renderRutinaPerroSeleccionado() {
     const loading = document.getElementById('rutina-loading');
     const empty = document.getElementById('rutina-empty');
     const sinPerro = document.getElementById('rutina-sin-perro');
+    const cardSalud = document.getElementById('card-salud');
+    const cardSaludNombre = document.getElementById('card-salud-perro');
 
     // Reset
     lista.innerHTML = '';
@@ -546,6 +564,7 @@ async function renderRutinaPerroSeleccionado() {
     loading.removeAttribute('hidden');
     protoBox.setAttribute('hidden', '');
     saldoBox.setAttribute('hidden', '');
+    cardSalud?.setAttribute('hidden', '');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
 
@@ -561,6 +580,12 @@ async function renderRutinaPerroSeleccionado() {
     heroNombre.textContent = perro.nombre || 'Tu perro';
     const partesMeta = [perro.raza, formatearEdadPerro(perro)].filter(Boolean);
     heroMeta.textContent = partesMeta.join(' · ');
+
+    // Card "Evalúa la salud comportamental"
+    if (cardSalud) {
+        if (cardSaludNombre) cardSaludNombre.textContent = perro.nombre || 'tu perro';
+        cardSalud.removeAttribute('hidden');
+    }
 
     // Foto
     if (perro.foto_url) {
