@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=18">
+    <link rel="stylesheet" href="./css/styles.css?v=19">
 </head>
 <body class="app-cliente">
 
@@ -211,6 +211,12 @@
                     <h2 class="rutina-titulo">Reservar</h2>
                     <p class="reservar-subtitulo" id="reservar-subtitulo">Elige cuándo quieres tu próxima clase</p>
                 </header>
+
+                <!-- Banner que aparece SOLO cuando el cliente está modificando una cita -->
+                <div id="reservar-banner-modificar" class="reservar-banner-modif" hidden>
+                    <p class="reservar-banner-modif__texto" id="reservar-banner-modificar-texto">—</p>
+                    <button type="button" class="reservar-banner-modif__cancel" id="reservar-banner-modificar-cancelar">Cancelar cambio</button>
+                </div>
 
                 <!-- Mensaje de estado (sin pack / pack completo / muy pronto / sin primera clase) -->
                 <div id="reservar-mensaje" class="placeholder placeholder--soft" hidden>
@@ -492,6 +498,6 @@
 
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script type="module" src="./js/app.js?v=17"></script>
+    <script type="module" src="./js/app.js?v=18"></script>
 </body>
 </html>
