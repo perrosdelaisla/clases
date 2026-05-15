@@ -48,6 +48,14 @@ const state = {
     reservandoSlot: null,    // { fecha, hora, label } cuando se abre modal
     citaACancelar: null,     // cita object cuando se abre modal
     fotoSeleccionada: null,  // { file, dataUrl } cuando hay preview en modal foto
+    calMes: {
+        anchorIso: null,           // 1er día del mes mostrado (ISO)
+        diaSeleccionadoIso: null,  // día seleccionado, ISO
+        slotsPorFecha: {},         // { '2026-05-26': ['10:00','11:00'] }
+        sugerencia: null,          // { fecha, hora, label } o null
+        numeroProxima: null,       // número de clase de la próxima reserva
+    },
+    sugerenciaActiva: null,  // sugerencia activa en el modo sugerencia del modal
 };
 
 // Token incremental para detectar renders concurrentes de la rutina.
@@ -851,156 +859,150 @@ function formatearDetallePack(pack) {
 // ===================== Tab Reservar =====================
 
 async function renderTabReservar() {
-    const cont = document.getElementById('reservar-content');
     const sub = document.getElementById('reservar-subtitulo');
-    if (!cont) return;
+    const mensajeBox = document.getElementById('reservar-mensaje');
+    const avisoBox = document.getElementById('reservar-aviso');
+    const calMes = document.getElementById('reservar-calendario-mes');
+    const diaPanel = document.getElementById('reservar-dia-panel');
+    const diaVacio = document.getElementById('reservar-dia-vacio');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     const nombrePerro = perro?.nombre || 'tu perro';
     sub.textContent = `Elige cuándo quieres tu próxima clase con ${nombrePerro}`;
 
-    cont.innerHTML = '<div class="placeholder placeholder--soft"><p>Cargando…</p></div>';
+    // Reset visual
+    avisoBox.setAttribute('hidden', '');
+    calMes.setAttribute('hidden', '');
+    diaPanel.setAttribute('hidden', '');
+    diaVacio.setAttribute('hidden', '');
+    mensajeBox.removeAttribute('hidden');
+    mensajeBox.innerHTML = '<p>Cargando…</p>';
 
     const estado = await llamarPuedeReservar();
 
+    // Casos de bloqueo: mostrar mensaje y salir
     if (estado.razon === 'sin_primera_clase') {
-        cont.innerHTML = `
+        mensajeBox.innerHTML = `
             <div class="reservar-msg">
                 <h3>Aún no tienes tu primera clase reservada</h3>
                 <p>La primera clase la coordina el adiestrador contigo. Si tienes dudas, escríbenos al ${TELEFONO_PUBLICO}.</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
-
     if (estado.razon === 'muy_pronto') {
         const desde = estado.puede_reservar_desde
             ? formatearFechaLarga(estado.puede_reservar_desde)
             : 'pronto';
-        cont.innerHTML = `
+        mensajeBox.innerHTML = `
             <div class="reservar-msg">
                 <h3>Tu próxima clase estará disponible para reservar el ${desde}</h3>
                 <p>Dejamos al menos 5 días entre clase y clase para que ${escapeHTML(nombrePerro)} practique lo aprendido.</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
-
     if (estado.razon === 'limite_alcanzado') {
         const reservas = estado.reservas_actuales ?? '';
-        cont.innerHTML = `
+        mensajeBox.innerHTML = `
             <div class="reservar-msg">
                 <h3>Ya has reservado ${reservas} clase${reservas === 1 ? '' : 's'} por adelantado</h3>
                 <p>Si quieres reservar más, háblalo con el adiestrador en la próxima clase.</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
 
-    // razon === 'ok' → decidir copy y calendario según estado del pack
     const pack = calcularEstadoPack(state.cliente, state.citas);
 
-    // 1) Sin pack registrado → no se renderiza calendario
     if (pack.pack_actual == null) {
-        cont.innerHTML = `
+        mensajeBox.innerHTML = `
             <div class="reservar-aviso reservar-aviso--cuidado">
                 <h3>Tu adiestrador está coordinando tu pack</h3>
                 <p>Te avisaremos cuando puedas reservar.</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
-
-    // 2) Pack completo, todas las clases ya reservadas/realizadas
     if (pack.por_reservar === 0) {
-        cont.innerHTML = `
+        mensajeBox.innerHTML = `
             <div class="reservar-aviso reservar-aviso--cuidado">
                 <h3>Tu pack actual está completo</h3>
                 <p>Cuando quieras continuar, háblalo con el adiestrador en la próxima clase.</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
 
-    // 3) Hay clases por reservar → mostramos copy editorial + calendario
-    const desdeIso = new Date().toISOString().slice(0, 10);
-    const hastaIso = sumarDiasIso(desdeIso, 8 * 7); // 8 semanas
+    // Hay slots para mostrar — pintamos el calendario mes
+    mensajeBox.setAttribute('hidden', '');
 
-    const minIso = estado.puede_reservar_desde && estado.puede_reservar_desde > desdeIso
-        ? estado.puede_reservar_desde
-        : desdeIso;
-
-    const slotsDisponibles = await cargarSlotsDisponibles(minIso, hastaIso);
-    const grid = construirGridDeSlots(slotsDisponibles);
-
+    // Aviso editorial arriba del calendario
     const x = pack.por_reservar;
     const sPlural = x === 1 ? '' : 's';
     const verbo = x === 1 ? 'Te queda' : 'Te quedan';
+    document.getElementById('reservar-aviso-titulo').textContent =
+        `${verbo} ${x} clase${sPlural} por reservar del pack`;
+    document.getElementById('reservar-aviso-sub').textContent =
+        `Cuando la reserves, será la clase ${pack.proximo_numero} de ${nombrePerro}.`;
+    avisoBox.removeAttribute('hidden');
 
-    cont.innerHTML = `
-        <div class="reservar-aviso">
-            <h3>${verbo} ${x} clase${sPlural} por reservar del pack</h3>
-            <p class="reservar-aviso__sub">Cuando la reserves, será la clase ${pack.proximo_numero} de ${escapeHTML(nombrePerro)}.</p>
-            <p class="reservar-aviso__nota">Cada clase tiene un para qué dentro del proceso. No son sesiones sueltas.</p>
-        </div>
-        <div class="reservar-calendario">
-            ${grid}
-        </div>
-    `;
+    // Cargar slots de la ventana 8 semanas
+    const hoyIso = new Date().toISOString().slice(0, 10);
+    const hastaIso = sumarDiasIso(hoyIso, 8 * 7);
+    const minIso = estado.puede_reservar_desde && estado.puede_reservar_desde > hoyIso
+        ? estado.puede_reservar_desde
+        : hoyIso;
 
-    // Wire up los slots disponibles
-    cont.querySelectorAll('.slot-card.is-libre').forEach((el) => {
-        el.addEventListener('click', () => {
-            const fecha = el.dataset.fecha;
-            const hora = el.dataset.hora;
-            const label = el.dataset.label;
-            abrirModalReservar({ fecha, hora, label });
-        });
+    const slotsRaw = await cargarSlotsDisponibles(minIso, hastaIso);
+
+    // Filtro 5 días entre clases del cliente (en cliente — RPC global se mantiene).
+    const fechasMiasIso = state.citas
+        .filter((c) => c.estado === 'confirmada' || c.estado === 'realizada')
+        .map((c) => c.fecha);
+    const slotsFiltrados = slotsRaw.filter((s) => {
+        for (const fMia of fechasMiasIso) {
+            const diff = Math.abs(diasEntreIso(s.fecha, fMia));
+            if (diff < 5) return false;
+        }
+        return true;
     });
-}
 
-function construirGridDeSlots(slotsDisponibles) {
-    if (!slotsDisponibles.length) {
-        return '<div class="reservar-msg"><p>No hay horarios disponibles en este momento. Vuelve a probar más tarde.</p></div>';
+    // Agrupar por fecha
+    state.calMes.slotsPorFecha = {};
+    slotsFiltrados.forEach((s) => {
+        const hora = typeof s.hora === 'string' ? s.hora.substring(0, 5) : s.hora;
+        if (!state.calMes.slotsPorFecha[s.fecha]) state.calMes.slotsPorFecha[s.fecha] = [];
+        state.calMes.slotsPorFecha[s.fecha].push(hora);
+    });
+
+    state.calMes.numeroProxima = pack.proximo_numero;
+
+    // Anchor inicial: mes del primer día con disponibilidad
+    const fechasDisp = Object.keys(state.calMes.slotsPorFecha).sort();
+    if (fechasDisp.length === 0) {
+        state.calMes.anchorIso = primerDiaDelMes(hoyIso);
+        state.calMes.diaSeleccionadoIso = null;
+        calMes.removeAttribute('hidden');
+        renderCalMes();
+        diaVacio.removeAttribute('hidden');
+        return;
     }
 
-    // Agrupar por fecha respetando el orden que devuelve la RPC.
-    const porFecha = {};
-    const ordenFechas = [];
-    slotsDisponibles.forEach((s) => {
-        const fechaIso = s.fecha;
-        const hora = typeof s.hora === 'string' ? s.hora.substring(0, 5) : s.hora;
-        if (!porFecha[fechaIso]) {
-            porFecha[fechaIso] = [];
-            ordenFechas.push(fechaIso);
-        }
-        porFecha[fechaIso].push(hora);
-    });
+    const primerDisponible = fechasDisp[0];
+    state.calMes.anchorIso = primerDiaDelMes(primerDisponible);
+    state.calMes.diaSeleccionadoIso = primerDisponible;
 
-    const html = [];
-    ordenFechas.forEach((isoDia) => {
-        const horasDelDia = porFecha[isoDia];
-        const labelDia = formatearFechaLarga(isoDia);
-        html.push(`<div class="reservar-dia">`);
-        html.push(`<h4 class="reservar-dia__label">${labelDia}</h4>`);
-        html.push(`<div class="reservar-dia__slots">`);
-        horasDelDia.forEach((hora) => {
-            const label = `${labelDia} · ${hora}`;
-            html.push(`
-                <button type="button" class="slot-card is-libre"
-                        data-fecha="${isoDia}" data-hora="${hora}"
-                        data-label="${escapeHTML(label)}">
-                    <span class="slot-card__hora">${hora}</span>
-                </button>
-            `);
-        });
-        html.push(`</div></div>`);
-    });
+    calMes.removeAttribute('hidden');
+    renderCalMes();
+    renderDiaPanel();
 
-    return html.join('');
+    // Wire up flechas (idempotente — sobreescribimos handlers)
+    document.getElementById('cal-mes-prev').onclick = () => navegarMes(-1);
+    document.getElementById('cal-mes-next').onclick = () => navegarMes(1);
 }
 
 function abrirModalReservar({ fecha, hora, label }) {
+    // Reset a modo confirmar (por si quedó en sugerencia de una iteración previa).
+    const modal = document.getElementById('modal-reservar');
+    modal.querySelector('[data-modo="confirmar"]').removeAttribute('hidden');
+    modal.querySelector('[data-modo="sugerencia"]').setAttribute('hidden', '');
+
     state.reservandoSlot = { fecha, hora, label };
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     setText('modal-reservar-slot', label || `${formatearFechaLarga(fecha)} · ${hora}`);
@@ -1008,6 +1010,9 @@ function abrirModalReservar({ fecha, hora, label }) {
     const err = document.getElementById('modal-reservar-error');
     err.textContent = '';
     err.hidden = true;
+    const btn = document.getElementById('modal-reservar-confirmar');
+    btn.disabled = false;
+    btn.textContent = 'Sí, reservar';
     abrirModal('modal-reservar');
 }
 
@@ -1053,13 +1058,31 @@ async function confirmarReserva() {
             console.warn('[app] Cita creada pero falló crear bloqueo:', bloqErr);
         }
 
-        cerrarModal('modal-reservar');
         toast('Reserva confirmada');
+        const slotReservado = state.reservandoSlot;
         state.reservandoSlot = null;
 
-        // Recargar citas y saltar a Mis citas
+        // Recargar citas (necesario para que la sugerencia y el filtro 5d
+        // estén actualizados con la cita recién creada).
         state.citas = await cargarCitasCliente();
-        showTab('mis-citas');
+
+        // Verificar si el cliente puede reservar más
+        const estado2 = await llamarPuedeReservar();
+        const pack2 = calcularEstadoPack(state.cliente, state.citas);
+        const puedeMas = estado2.razon === 'ok' && pack2.por_reservar > 0;
+
+        if (!puedeMas) {
+            cerrarModal('modal-reservar');
+            // Refrescar tab Reservar para que próxima visita parta limpia.
+            await renderTabReservar();
+            showTab('mis-citas');
+            return;
+        }
+
+        // Calcular sugerencia: mismo día de semana, +7 días, misma hora.
+        // Si no está libre, la helper busca el slot disponible más cercano.
+        const sugerencia = calcularSugerencia(slotReservado);
+        mostrarModoSugerencia(slotReservado, sugerencia, pack2.proximo_numero);
     } catch (e) {
         console.error('[app] error reservando cita:', e);
         err.textContent = 'No se pudo reservar. Inténtalo de nuevo.';
@@ -1636,4 +1659,226 @@ function cerrarModalIOS() {
         modal.setAttribute('hidden', '');
         modal.setAttribute('aria-hidden', 'true');
     }, 250);
+}
+
+// ===================== Helpers de fecha (calendario mes) =====================
+
+function primerDiaDelMes(fechaIso) {
+    const [y, m] = fechaIso.split('-');
+    return `${y}-${m}-01`;
+}
+
+function diasEntreIso(aIso, bIso) {
+    const a = new Date(aIso + 'T00:00:00');
+    const b = new Date(bIso + 'T00:00:00');
+    return Math.round((a - b) / 86400000);
+}
+
+function nombreMesAnio(fechaIso) {
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const [y, m] = fechaIso.split('-');
+    return `${meses[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function sumarMesesIso(fechaIso, n) {
+    const [y, m] = fechaIso.split('-').map(Number);
+    const total = (y * 12 + (m - 1)) + n;
+    const ny = Math.floor(total / 12);
+    const nm = (total % 12) + 1;
+    return `${ny}-${String(nm).padStart(2, '0')}-01`;
+}
+
+// ===================== Render del calendario mes =====================
+
+function renderCalMes() {
+    const grid = document.getElementById('cal-mes-grid');
+    const titulo = document.getElementById('cal-mes-titulo');
+    const prev = document.getElementById('cal-mes-prev');
+    const next = document.getElementById('cal-mes-next');
+    const anchor = state.calMes.anchorIso;
+    if (!grid || !anchor) return;
+
+    titulo.textContent = nombreMesAnio(anchor).toUpperCase();
+
+    // Límites de navegación: hoy → +2 meses (cubre las 8 semanas del fetch).
+    const hoy = new Date();
+    const hoyMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
+    const limiteSup = sumarMesesIso(hoyMes, 2);
+
+    prev.disabled = anchor <= hoyMes;
+    next.disabled = anchor >= limiteSup;
+
+    // Construir grilla (lunes = 0; getDay() retorna 0=domingo)
+    const [y, m] = anchor.split('-').map(Number);
+    const primero = new Date(y, m - 1, 1);
+    const ultimoDia = new Date(y, m, 0).getDate();
+    const diaSemanaInicio = (primero.getDay() + 6) % 7;
+
+    const fechasMias = new Set(state.citas
+        .filter((c) => c.estado === 'confirmada' || c.estado === 'realizada')
+        .map((c) => c.fecha));
+
+    const hoyIso = new Date().toISOString().slice(0, 10);
+    const cells = [];
+
+    for (let i = 0; i < diaSemanaInicio; i++) {
+        cells.push('<button type="button" class="cal-dia is-fuera-mes" disabled></button>');
+    }
+
+    for (let d = 1; d <= ultimoDia; d++) {
+        const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const tieneDispo = !!state.calMes.slotsPorFecha[iso];
+        const esMia = fechasMias.has(iso);
+        const esSeleccionado = iso === state.calMes.diaSeleccionadoIso;
+        const esPasado = iso < hoyIso;
+
+        const clases = ['cal-dia'];
+        if (esPasado || !tieneDispo) clases.push('is-deshabilitado');
+        if (tieneDispo) clases.push('is-disponible');
+        if (esSeleccionado) clases.push('is-seleccionado');
+        if (esMia) clases.push('is-mia');
+
+        const punto = tieneDispo ? '<span class="cal-dia__punto" aria-hidden="true"></span>' : '';
+        const disabled = (esPasado || !tieneDispo) ? 'disabled' : '';
+        cells.push(`
+            <button type="button" class="${clases.join(' ')}" data-fecha="${iso}" ${disabled}>
+                <span>${d}</span>
+                ${punto}
+            </button>
+        `);
+    }
+
+    grid.innerHTML = cells.join('');
+
+    grid.querySelectorAll('.cal-dia.is-disponible').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            state.calMes.diaSeleccionadoIso = btn.dataset.fecha;
+            renderCalMes();
+            renderDiaPanel();
+        });
+    });
+}
+
+function renderDiaPanel() {
+    const panel = document.getElementById('reservar-dia-panel');
+    const vacio = document.getElementById('reservar-dia-vacio');
+    const titulo = document.getElementById('cal-dia-panel-titulo');
+    const slots = document.getElementById('cal-dia-panel-slots');
+
+    const iso = state.calMes.diaSeleccionadoIso;
+    if (!iso || !state.calMes.slotsPorFecha[iso]) {
+        panel.setAttribute('hidden', '');
+        vacio.removeAttribute('hidden');
+        return;
+    }
+
+    vacio.setAttribute('hidden', '');
+    titulo.textContent = formatearFechaLarga(iso).toUpperCase();
+
+    const horas = state.calMes.slotsPorFecha[iso];
+    slots.innerHTML = horas.map((h) => `
+        <button type="button" class="slot-card is-libre"
+                data-fecha="${iso}" data-hora="${h}"
+                data-label="${escapeHTML(formatearFechaLarga(iso))} · ${h}">
+            <span class="slot-card__hora">${h}</span>
+        </button>
+    `).join('');
+
+    panel.removeAttribute('hidden');
+
+    slots.querySelectorAll('.slot-card.is-libre').forEach((el) => {
+        el.addEventListener('click', () => {
+            abrirModalReservar({
+                fecha: el.dataset.fecha,
+                hora: el.dataset.hora,
+                label: el.dataset.label,
+            });
+        });
+    });
+}
+
+function navegarMes(delta) {
+    state.calMes.anchorIso = sumarMesesIso(state.calMes.anchorIso, delta);
+    renderCalMes();
+}
+
+// ===================== Flujo guiado post-reserva (sugerencia) =====================
+
+function calcularSugerencia(slotReservado) {
+    // Sugerencia: mismo día de semana + 7 días, misma hora.
+    // Si ese slot exacto no está libre, buscar la fecha disponible más cercana.
+    const fechaSug = sumarDiasIso(slotReservado.fecha, 7);
+    const hora = slotReservado.hora;
+
+    const slotsDelDia = state.calMes.slotsPorFecha[fechaSug] || [];
+    if (slotsDelDia.includes(hora)) {
+        return { fecha: fechaSug, hora, label: `${formatearFechaLarga(fechaSug)} · ${hora}`, exacta: true };
+    }
+
+    const fechasDisp = Object.keys(state.calMes.slotsPorFecha).sort();
+    if (fechasDisp.length === 0) return null;
+
+    let mejor = null;
+    let mejorDist = Infinity;
+    fechasDisp.forEach((f) => {
+        const dist = Math.abs(diasEntreIso(f, fechaSug));
+        if (dist < mejorDist) {
+            mejorDist = dist;
+            mejor = f;
+        }
+    });
+    if (!mejor) return null;
+    const hSug = state.calMes.slotsPorFecha[mejor][0];
+    return { fecha: mejor, hora: hSug, label: `${formatearFechaLarga(mejor)} · ${hSug}`, exacta: false };
+}
+
+function mostrarModoSugerencia(slotReservado, sugerencia, numProxima) {
+    const modal = document.getElementById('modal-reservar');
+    const modoConfirmar = modal.querySelector('[data-modo="confirmar"]');
+    const modoSugerencia = modal.querySelector('[data-modo="sugerencia"]');
+
+    // Sin sugerencia válida: cerrar y mandar a Mis citas.
+    if (!sugerencia) {
+        cerrarModal('modal-reservar');
+        showTab('mis-citas');
+        return;
+    }
+
+    modoConfirmar.setAttribute('hidden', '');
+    modoSugerencia.removeAttribute('hidden');
+
+    setText('modal-sugerencia-confirmada', slotReservado.label);
+    setText('modal-sugerencia-num', `clase ${numProxima}`);
+    setText('modal-sugerencia-slot', sugerencia.label);
+    setText('modal-sugerencia-nota', sugerencia.exacta
+        ? 'Mismo día y hora de la semana próxima.'
+        : 'La fecha sugerida no estaba libre; te proponemos la más cercana.');
+
+    state.sugerenciaActiva = sugerencia;
+
+    // Wire idempotente (sobreescribimos handlers cada vez)
+    document.getElementById('modal-sugerencia-reservar').onclick = () => {
+        const sug = state.sugerenciaActiva;
+        if (!sug) return;
+        // Pasar al modo confirmar con el slot sugerido precargado.
+        // El usuario hace un tap consciente en "Sí, reservar" — evita reservas accidentales.
+        state.reservandoSlot = sug;
+        state.sugerenciaActiva = null;
+        modoSugerencia.setAttribute('hidden', '');
+        modoConfirmar.removeAttribute('hidden');
+        setText('modal-reservar-slot', sug.label);
+        const btn = document.getElementById('modal-reservar-confirmar');
+        btn.disabled = false;
+        btn.textContent = 'Sí, reservar';
+        const err = document.getElementById('modal-reservar-error');
+        err.textContent = '';
+        err.hidden = true;
+    };
+
+    document.getElementById('modal-sugerencia-otra').onclick = () => {
+        cerrarModal('modal-reservar');
+        // Refrescar la tab para que el cliente vea el calendario actualizado.
+        renderTabReservar();
+    };
 }
