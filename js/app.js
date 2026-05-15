@@ -873,7 +873,7 @@ async function renderTabReservar() {
         cont.innerHTML = `
             <div class="reservar-msg">
                 <h3>Ya has reservado ${reservas} clase${reservas === 1 ? '' : 's'} por adelantado</h3>
-                <p>Si quieres reservar más, hablalo con el adiestrador en la próxima clase.</p>
+                <p>Si quieres reservar más, háblalo con el adiestrador en la próxima clase.</p>
             </div>
         `;
         return;
@@ -898,7 +898,7 @@ async function renderTabReservar() {
         cont.innerHTML = `
             <div class="reservar-aviso reservar-aviso--cuidado">
                 <h3>Tu pack actual está completo</h3>
-                <p>Cuando quieras continuar, hablalo con el adiestrador en la próxima clase.</p>
+                <p>Cuando quieras continuar, háblalo con el adiestrador en la próxima clase.</p>
             </div>
         `;
         return;
@@ -922,7 +922,7 @@ async function renderTabReservar() {
     cont.innerHTML = `
         <div class="reservar-aviso">
             <h3>${verbo} ${x} clase${sPlural} por reservar del pack</h3>
-            <p class="reservar-aviso__sub">Cuando agendes, será la clase ${pack.proximo_numero} de ${escapeHTML(nombrePerro)}.</p>
+            <p class="reservar-aviso__sub">Cuando la reserves, será la clase ${pack.proximo_numero} de ${escapeHTML(nombrePerro)}.</p>
             <p class="reservar-aviso__nota">Cada clase tiene un para qué dentro del proceso. No son sesiones sueltas.</p>
         </div>
         <div class="reservar-calendario">
