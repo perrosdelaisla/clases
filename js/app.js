@@ -449,7 +449,7 @@ async function llamarPuedeReservar() {
     const clienteId = state.usuarioCliente?.cliente_id;
     if (!clienteId) return { razon: 'sin_primera_clase' };
     try {
-        const { data, error } = await supabase.rpc('puede_cliente_reservar', { cliente_id: clienteId });
+        const { data, error } = await supabase.rpc('puede_cliente_reservar', { p_cliente_id: clienteId });
         if (error) throw error;
         return data || { razon: 'sin_primera_clase' };
     } catch (err) {
