@@ -16,7 +16,7 @@ const SCREENS = {
     perro: document.getElementById('screen-perro'),
 };
 
-const TABS = ['plan', 'ejercicios', 'herramientas', 'historico', 'notas'];
+const TABS = ['plan', 'ejercicios', 'herramientas', 'salud', 'historico', 'notas'];
 const DEFAULT_TAB = 'ejercicios';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -234,6 +234,8 @@ function activarTab(tabRaw, { updateUrl } = {}) {
         else url.searchParams.set('tab', tab);
         window.history.replaceState({}, '', url);
     }
+
+    if (tab === 'salud') renderSaludPerro();
 }
 
 // ===================== Sub-pestañas (Ejercicios / Cambios / Tareas) =====================
@@ -720,4 +722,61 @@ function escapeHTML(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+// ===================== Tab Salud Comportamental =====================
+
+async function renderSaludPerro() {
+    const loadingEl = document.getElementById('admin-salud-loading');
+    const emptyEl = document.getElementById('admin-salud-empty');
+    const contentEl = document.getElementById('admin-salud-content');
+    if (!loadingEl || !emptyEl || !contentEl) return;
+
+    loadingEl.removeAttribute('hidden');
+    emptyEl.setAttribute('hidden', '');
+    contentEl.setAttribute('hidden', '');
+
+    if (!state.perroId) {
+        loadingEl.setAttribute('hidden', '');
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    const { data, error } = await supabase.rpc('listar_evaluaciones_perro', {
+        p_perro_id: state.perroId,
+    });
+
+    loadingEl.setAttribute('hidden', '');
+
+    if (error) {
+        console.error('[admin/perro] error cargando salud:', error);
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    const ultima = data[0];
+    setText('admin-salud-fisica', ultima.score_fisica);
+    setText('admin-salud-emocional', ultima.score_emocional);
+    setText('admin-salud-social', ultima.score_social);
+    setText('admin-salud-cognitiva', ultima.score_cognitiva);
+    setText('admin-salud-total', ultima.score_total + '/100');
+    setText('admin-salud-fecha', new Date(ultima.created_at).toLocaleString('es-ES'));
+
+    document.getElementById('admin-salud-historico').innerHTML = data.map((ev) => `
+        <li class="admin-salud-historico-item">
+            <span class="admin-salud-historico-fecha">${new Date(ev.created_at).toLocaleDateString('es-ES')}</span>
+            <span class="admin-salud-historico-scores">
+                F:${ev.score_fisica} · E:${ev.score_emocional} · S:${ev.score_social} · C:${ev.score_cognitiva}
+            </span>
+            <span class="admin-salud-historico-total">${ev.score_total}/100</span>
+            ${ev.bandera_roja ? '<span class="bandera-roja" title="Bandera roja">🚩</span>' : ''}
+        </li>
+    `).join('');
+
+    contentEl.removeAttribute('hidden');
 }

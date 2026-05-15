@@ -65,6 +65,7 @@
                 <button type="button" class="tab" data-tab="plan" role="tab" aria-selected="false">Plan de caso</button>
                 <button type="button" class="tab is-active" data-tab="ejercicios" role="tab" aria-selected="true">Ejercicios</button>
                 <button type="button" class="tab" data-tab="herramientas" role="tab" aria-selected="false">Herramientas</button>
+                <button type="button" class="tab" data-tab="salud" role="tab" aria-selected="false">Salud</button>
                 <button type="button" class="tab" data-tab="historico" role="tab" aria-selected="false">Histórico</button>
                 <button type="button" class="tab" data-tab="notas" role="tab" aria-selected="false">Notas</button>
             </nav>
@@ -114,6 +115,43 @@
                             <path d="M12 7 V12 L15 14"/>
                         </svg>
                         <p>Próximamente</p>
+                    </div>
+                </section>
+                <section class="tab-panel" data-panel="salud" role="tabpanel" hidden>
+                    <div id="admin-salud-loading" class="placeholder placeholder--soft">
+                        <p>Cargando evaluaciones…</p>
+                    </div>
+
+                    <div id="admin-salud-empty" class="placeholder placeholder--soft" hidden>
+                        <p>Aún no hay evaluaciones para este perro.</p>
+                    </div>
+
+                    <div id="admin-salud-content" hidden>
+                        <div class="admin-salud-grid">
+                            <div class="admin-salud-kpi">
+                                <div class="admin-salud-kpi__num" id="admin-salud-fisica">—</div>
+                                <div class="admin-salud-kpi__label">Física</div>
+                            </div>
+                            <div class="admin-salud-kpi">
+                                <div class="admin-salud-kpi__num" id="admin-salud-emocional">—</div>
+                                <div class="admin-salud-kpi__label">Emocional</div>
+                            </div>
+                            <div class="admin-salud-kpi">
+                                <div class="admin-salud-kpi__num" id="admin-salud-social">—</div>
+                                <div class="admin-salud-kpi__label">Social</div>
+                            </div>
+                            <div class="admin-salud-kpi">
+                                <div class="admin-salud-kpi__num" id="admin-salud-cognitiva">—</div>
+                                <div class="admin-salud-kpi__label">Cognitiva</div>
+                            </div>
+                        </div>
+
+                        <div class="admin-salud-total">
+                            Score total: <strong id="admin-salud-total">—</strong> · <span id="admin-salud-fecha"></span>
+                        </div>
+
+                        <h4 class="admin-salud-h">Histórico</h4>
+                        <ul class="admin-salud-historico" id="admin-salud-historico"></ul>
                     </div>
                 </section>
                 <section class="tab-panel" data-panel="historico" role="tabpanel" hidden>

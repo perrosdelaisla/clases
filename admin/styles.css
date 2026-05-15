@@ -2949,3 +2949,81 @@ body {
 
 .llamada-item--no-show { border-left: 3px solid #8E8A82; }
 .llamada-item--no-show .llamada-num { color: #8E8A82; }
+
+/* ===================== Tab Salud Comportamental (admin/perro) ===================== */
+
+.admin-salud-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.admin-salud-kpi {
+    text-align: center;
+    padding: 0.85rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid #9CB64B;
+    border-radius: 8px;
+}
+.admin-salud-kpi__num {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    color: #9CB64B;
+    line-height: 1;
+}
+.admin-salud-kpi__label {
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.25rem;
+}
+
+.admin-salud-total {
+    padding: 0.85rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    color: var(--color-text);
+    font-size: 0.92rem;
+    margin-bottom: 1rem;
+}
+.admin-salud-total strong {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    color: var(--color-red);
+    margin: 0 0.4rem;
+}
+
+.admin-salud-h {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+}
+
+.admin-salud-historico {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.admin-salud-historico-item {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto auto;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.85rem;
+}
+.admin-salud-historico-item:last-child { border-bottom: 0; }
+.admin-salud-historico-fecha { color: var(--color-muted); }
+.admin-salud-historico-scores { color: var(--color-text); font-size: 0.8rem; opacity: 0.85; }
+.admin-salud-historico-total {
+    font-family: var(--font-display);
+    color: var(--color-red);
+    font-size: 1.05rem;
+}
