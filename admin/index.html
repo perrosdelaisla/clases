@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=33">
+    <link rel="stylesheet" href="./styles.css?v=34">
 </head>
 <body>
 
@@ -226,6 +226,34 @@
                             <div class="llamada-item llamada-item--no-show">
                                 <span class="llamada-num" id="llamada-no-show">—</span>
                                 <span class="llamada-label">No show</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="stats-row">
+                    <section class="stats-card stats-vicky-card">
+                        <h3>Reservas asistidas por Vicky — desglose</h3>
+                        <div id="stats-vicky" class="stats-vicky">
+                            <div class="vicky-item vicky-item--generados">
+                                <span class="vicky-num" id="vicky-generados">—</span>
+                                <span class="vicky-label">Links generados</span>
+                            </div>
+                            <div class="vicky-item vicky-item--abiertos">
+                                <span class="vicky-num" id="vicky-abiertos">—</span>
+                                <span class="vicky-label">Abiertos por el lead</span>
+                            </div>
+                            <div class="vicky-item vicky-item--citas">
+                                <span class="vicky-num" id="vicky-citas">—</span>
+                                <span class="vicky-label">Citas confirmadas</span>
+                            </div>
+                            <div class="vicky-item vicky-item--expirados">
+                                <span class="vicky-num" id="vicky-expirados">—</span>
+                                <span class="vicky-label">Caducados sin usar</span>
+                            </div>
+                            <div class="vicky-item vicky-item--conversion">
+                                <span class="vicky-num" id="vicky-conversion">—</span>
+                                <span class="vicky-label">Conversión (citas / links)</span>
                             </div>
                         </div>
                     </section>
@@ -548,6 +576,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script type="module" src="./admin.js?v=38"></script>
+    <script type="module" src="./admin.js?v=39"></script>
 </body>
 </html>

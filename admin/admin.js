@@ -9,7 +9,7 @@
 
 import { supabase } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=8';
-import * as stats from './stats/api.js?v=2';
+import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
@@ -1839,6 +1839,7 @@ async function cargarTodoStats() {
         cargarDoughnut('clientes',  () => stats.obtenerDistribucionClientes(),       'chart-clientes'),
         cargarBarrasCitasMes(),
         cargarLlamadasStats(rango),
+        cargarVickyStats(rango),
     ]);
 }
 
@@ -2006,6 +2007,18 @@ async function cargarLlamadasStats(rango) {
         document.getElementById('llamada-cancelada').textContent = String(data.por_estado.cancelada);
         document.getElementById('llamada-no-show').textContent = String(data.por_estado.no_show);
     } catch (err) { console.error('Llamadas:', err); }
+}
+
+async function cargarVickyStats(rango) {
+    try {
+        const v = await stats.obtenerStatsVicky(rango);
+        document.getElementById('vicky-generados').textContent  = String(v.links_generados);
+        document.getElementById('vicky-abiertos').textContent   = String(v.links_abiertos);
+        document.getElementById('vicky-citas').textContent      = String(v.citas_confirmadas);
+        document.getElementById('vicky-expirados').textContent  = String(v.links_expirados);
+        // conversion_pct ya viene formateado: '12.5%' o '—'
+        document.getElementById('vicky-conversion').textContent = v.conversion_pct;
+    } catch (err) { console.error('Vicky:', err); }
 }
 
 /* ═══════════════════════════════════════════

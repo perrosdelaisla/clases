@@ -2976,6 +2976,71 @@ body {
 .llamada-item--no-show { border-left: 3px solid #8E8A82; }
 .llamada-item--no-show .llamada-num { color: #8E8A82; }
 
+/* ===================== Stats — Reservas asistidas por Vicky (desglose) ===================== */
+
+.stats-vicky-card {
+    width: 100%;
+}
+
+.stats-vicky {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 700px) {
+    .stats-vicky {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.vicky-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.85rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    transition: border-color 0.18s;
+}
+
+.vicky-num {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+}
+
+.vicky-label {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    text-align: center;
+}
+
+/* Color por categoría (paleta núcleo PDLI): generados rojo principal,
+   abiertos verde acento, citas verde oliva, expirados gris, conversión
+   marrón cálido — distingue sin salirse del canal B. */
+.vicky-item--generados  { border-left: 3px solid #C8102E; }
+.vicky-item--generados .vicky-num  { color: #C8102E; }
+
+.vicky-item--abiertos   { border-left: 3px solid #9CB64B; }
+.vicky-item--abiertos .vicky-num   { color: #9CB64B; }
+
+.vicky-item--citas      { border-left: 3px solid #6B7A3A; }
+.vicky-item--citas .vicky-num      { color: #6B7A3A; }
+
+.vicky-item--expirados  { border-left: 3px solid #8E8A82; }
+.vicky-item--expirados .vicky-num  { color: #8E8A82; }
+
+.vicky-item--conversion { border-left: 3px solid #8B7355; }
+.vicky-item--conversion .vicky-num { color: #8B7355; }
+
 /* ===================== Tab Salud Comportamental (admin/perro) ===================== */
 
 .admin-salud-grid {

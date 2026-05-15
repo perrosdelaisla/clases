@@ -21,9 +21,14 @@
 
 import { supabase } from '../../js/supabase.js';
 
-// Filtro de sesiones reales (sin pruebas) — idéntico al admin viejo.
+// Filtro de sesiones reales del embudo Victoria: excluye pruebas
+// (es_prueba) Y el flujo Vicky (es_vicky). Las sesiones es_vicky=true
+// arrancan con un token de la Vicky humana y saltean el embudo
+// conversacional (entran directo a la agenda), así que contaminarían
+// las métricas de conversión. Se filtran en este único punto para
+// todas las funciones que usan traerSesionesReales.
 function aplicarFiltroNoPrueba(query) {
-    return query.eq('es_prueba', false);
+    return query.eq('es_prueba', false).eq('es_vicky', false);
 }
 
 // Acota por timestamp de inicio. Acepta rango como {desde, hasta} con
@@ -319,4 +324,60 @@ export async function obtenerLlamadasReservadas(rango) {
     };
 
     return { total, por_estado };
+}
+
+/**
+ * Stats del canal Vicky (humana). Trae datos de las tablas:
+ *   - tokens_vicky → links generados, links abiertos, links expirados sin uso
+ *   - sesiones (filtrado es_vicky=true) → cuántos abrieron el link
+ *   - tokens_vicky.usado=true → cuántos terminaron en cita confirmada
+ *
+ * El rango se aplica sobre tokens_vicky.created_at (cuándo Vicky generó
+ * el link), no sobre cuándo se usó. Misma lógica que llamadas_solicitadas.
+ *
+ * Devuelve:
+ *   {
+ *     links_generados:    int,  // total tokens creados en el rango
+ *     links_abiertos:     int,  // sesiones es_vicky=true en el rango (sobre tokens del rango)
+ *     citas_confirmadas:  int,  // tokens usados (con cita_id) en el rango
+ *     links_expirados:    int,  // tokens vencidos sin usar (caducaron sin reserva)
+ *     conversion_pct:     string  // citas_confirmadas / links_generados, formato '12.5%' o '—'
+ *   }
+ *
+ * "links_abiertos" se calcula vía join lógico: sesiones es_vicky=true en
+ * el mismo rango. Es una aproximación buena porque el lead suele abrir
+ * el link el mismo día que Vicky lo genera (24h max antes de expirar).
+ */
+export async function obtenerStatsVicky(rango) {
+    // Tokens en rango
+    let qTokens = supabase.from('tokens_vicky').select('token, usado, cita_id, expires_at');
+    if (rango?.desde) qTokens = qTokens.gte('created_at', rango.desde + 'T00:00:00');
+    if (rango?.hasta) qTokens = qTokens.lte('created_at', rango.hasta + 'T23:59:59');
+    const { data: tokens, error: errT } = await qTokens;
+    if (errT) throw errT;
+
+    const links_generados   = tokens?.length || 0;
+    const citas_confirmadas = (tokens || []).filter((t) => t.usado === true && t.cita_id !== null).length;
+    const links_expirados   = (tokens || []).filter((t) => t.usado === false && new Date(t.expires_at) < new Date()).length;
+
+    // Sesiones Vicky en el mismo rango (proxy de "links abiertos")
+    let qSes = supabase.from('sesiones').select('id').eq('es_vicky', true).eq('es_prueba', false);
+    if (rango?.desde) qSes = qSes.gte('inicio', rango.desde + 'T00:00:00');
+    if (rango?.hasta) qSes = qSes.lte('inicio', rango.hasta + 'T23:59:59');
+    const { data: sesiones, error: errS } = await qSes;
+    if (errS) throw errS;
+
+    const links_abiertos = sesiones?.length || 0;
+
+    const conversion_pct = links_generados > 0
+        ? ((citas_confirmadas / links_generados) * 100).toFixed(1) + '%'
+        : '—';
+
+    return {
+        links_generados,
+        links_abiertos,
+        citas_confirmadas,
+        links_expirados,
+        conversion_pct,
+    };
 }
