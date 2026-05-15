@@ -9,6 +9,7 @@
 
 import { supabase } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
+import { initSwipeTabs } from '../js/swipe-tabs.js';
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -222,6 +223,15 @@ function bindTabs() {
         if (!tab) return;
         activarTab(tab, { updateUrl: true });
     });
+
+    // Swipe horizontal entre tabs principales de la ficha perro.
+    // Orden HTML: plan, ejercicios, herramientas, salud, historico, notas.
+    initSwipeTabs({
+        container: document.querySelector('.tab-content'),
+        tabs: ['plan', 'ejercicios', 'herramientas', 'salud', 'historico', 'notas'],
+        getCurrent: () => document.querySelector('.tab-panel:not([hidden])')?.dataset.panel,
+        onChange: (tab) => activarTab(tab, { updateUrl: true }),
+    });
 }
 
 function activarTab(tabRaw, { updateUrl } = {}) {
@@ -260,6 +270,14 @@ function bindSubtabs() {
             if (!subtab || subtab === state.subtabActiva) return;
             activarSubtab(subtab);
         });
+    });
+
+    // Swipe horizontal entre sub-tabs (Ejercicios / Cambios / Tareas).
+    initSwipeTabs({
+        container: document.querySelector('.tab-panel--ejercicios'),
+        tabs: ['ejercicio', 'cambio_rutina', 'tarea'],
+        getCurrent: () => state.subtabActiva,
+        onChange: (subtab) => activarSubtab(subtab),
     });
 }
 
