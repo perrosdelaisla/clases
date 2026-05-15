@@ -229,7 +229,7 @@ body {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: transparent;
+    background: #1A1A1A;
     border: 2px solid var(--pdli-rojo);
     box-sizing: border-box;
     display: flex;

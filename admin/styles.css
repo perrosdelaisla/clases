@@ -104,7 +104,7 @@ body {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: transparent;
+    background: #1A1A1A;
     border: 2px solid var(--color-red);
     box-sizing: border-box;
     display: flex;
@@ -1382,7 +1382,7 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: transparent;
+    background: #1A1A1A;
     border: 2px solid var(--color-red);
     box-sizing: border-box;
     display: flex;
