@@ -2227,3 +2227,15 @@ body {
     height: 64px;
     object-fit: contain;
 }
+
+/* ===================== Swipe tabs — animación fade ===================== */
+
+.tab-panel {
+    transition: opacity 0.18s ease;
+}
+.tab-panel[hidden] {
+    opacity: 0;
+}
+.tab-panel:not([hidden]) {
+    opacity: 1;
+}

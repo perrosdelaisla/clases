@@ -16,6 +16,7 @@
 // =====================================================================
 
 import { supabase } from './supabase.js';
+import { initSwipeTabs } from './swipe-tabs.js';
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -293,6 +294,30 @@ function bindEventos() {
             state.rutinaCategoriaActiva = cat;
             renderRutinaPerroSeleccionado();
         });
+    });
+
+    // Swipe horizontal entre tabs principales (bottom-nav)
+    initSwipeTabs({
+        container: document.querySelector('.app-main'),
+        tabs: ['rutina', 'reservar', 'mis-citas', 'salud'],
+        getCurrent: () => state.currentTab,
+        onChange: (newTab) => showTab(newTab),
+    });
+
+    // Swipe horizontal entre sub-tabs de Rutina
+    initSwipeTabs({
+        container: document.getElementById('tab-rutina'),
+        tabs: ['ejercicio', 'cambio_rutina', 'tarea', 'herramienta'],
+        getCurrent: () => state.rutinaCategoriaActiva,
+        onChange: (cat) => {
+            state.rutinaCategoriaActiva = cat;
+            document.querySelectorAll('.rutina-subtab').forEach((b) => {
+                const isActive = b.dataset.cat === cat;
+                b.classList.toggle('is-active', isActive);
+                b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+            renderRutinaPerroSeleccionado();
+        },
     });
 }
 
