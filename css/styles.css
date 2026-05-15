@@ -179,7 +179,7 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.brand--splash .logo-circle { width: 64px; height: 64px; padding: 5px; }
+.brand--splash .logo-circle { width: 64px; height: 64px; padding: 0; }
 .brand--splash .brand__name { font-size: 1.85rem; }
 .brand--splash .brand__tagline { font-size: 0.78rem; }
 
@@ -220,7 +220,7 @@ body {
 @media (max-width: 380px) {
     .brand--header .brand__name { font-size: 0.95rem; }
     .brand--header .brand__tagline { font-size: 0.65rem; }
-    .brand--header .logo-circle { width: 38px; height: 38px; padding: 3px; }
+    .brand--header .logo-circle { width: 38px; height: 38px; padding: 0; }
 }
 
 /* Logo PDLI con aro rojo (patrón Paseos) — sobre fondos oscuros y claros.
@@ -237,7 +237,7 @@ body {
     justify-content: center;
     flex-shrink: 0;
     overflow: hidden;
-    padding: 4px;
+    padding: 0;
 }
 .logo-circle__img {
     width: 100%;
@@ -673,7 +673,6 @@ body {
     border-radius: 50%;
     border: 2px solid var(--pdli-rojo);
     background: transparent;
-    padding: 3px;
     box-sizing: border-box;
     flex-shrink: 0;
 }
@@ -1694,7 +1693,7 @@ body {
     width: 96px;
     height: 96px;
     border-width: 3px;
-    padding: 6px;
+    padding: 0;
 }
 .welcome-brand__name {
     font-family: var(--font-display);
