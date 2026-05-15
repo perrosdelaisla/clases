@@ -2889,3 +2889,63 @@ body {
        separar la pill central de los círculos de flecha sin romper el flow. */
     margin: 0 0.15rem;
 }
+
+/* ===================== Stats — Llamadas reservadas (desglose) ===================== */
+
+.stats-llamadas-card {
+    width: 100%;
+}
+
+.stats-llamadas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+    .stats-llamadas {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.llamada-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.85rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    transition: border-color 0.18s;
+}
+
+.llamada-num {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+}
+
+.llamada-label {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+}
+
+/* Color por estado: pendiente amarillo, realizada verde,
+   cancelada rojo, no_show gris (matchea estado-pill del cliente). */
+.llamada-item--pendiente { border-left: 3px solid #E8B62D; }
+.llamada-item--pendiente .llamada-num { color: #E8B62D; }
+
+.llamada-item--realizada { border-left: 3px solid #9CB64B; }
+.llamada-item--realizada .llamada-num { color: #9CB64B; }
+
+.llamada-item--cancelada { border-left: 3px solid #C8102E; }
+.llamada-item--cancelada .llamada-num { color: #C8102E; }
+
+.llamada-item--no-show { border-left: 3px solid #8E8A82; }
+.llamada-item--no-show .llamada-num { color: #8E8A82; }

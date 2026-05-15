@@ -1981,6 +1981,10 @@ async function cargarLlamadasStats(rango) {
     try {
         const data = await stats.obtenerLlamadasReservadas(rango);
         document.getElementById('kpi-llamadas').textContent = String(data.total);
+        document.getElementById('llamada-pendiente').textContent = String(data.por_estado.pendiente);
+        document.getElementById('llamada-realizada').textContent = String(data.por_estado.realizada);
+        document.getElementById('llamada-cancelada').textContent = String(data.por_estado.cancelada);
+        document.getElementById('llamada-no-show').textContent = String(data.por_estado.no_show);
     } catch (err) { console.error('Llamadas:', err); }
 }
 
