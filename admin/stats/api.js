@@ -293,3 +293,30 @@ export async function obtenerDistribucionDispositivo(rango) {
         desktop: { n: desktopN, pct: pctDesktop },
     };
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Llamadas reservadas en el período (created_at dentro del rango).
+// Acotamos por created_at — no por fecha — porque nos interesa cuántas
+// se reservaron en el período de Stats, no cuándo van a ocurrir.
+// Estados posibles: pendiente, realizada, cancelada, no_show.
+// ────────────────────────────────────────────────────────────────────
+export async function obtenerLlamadasReservadas(rango) {
+    let q = supabase.from('llamadas_solicitadas').select('estado, created_at');
+
+    if (rango?.desde) q = q.gte('created_at', rango.desde + 'T00:00:00');
+    if (rango?.hasta) q = q.lte('created_at', rango.hasta + 'T23:59:59');
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    const llamadas = data || [];
+    const total = llamadas.length;
+    const por_estado = {
+        pendiente: llamadas.filter((l) => l.estado === 'pendiente').length,
+        realizada: llamadas.filter((l) => l.estado === 'realizada').length,
+        cancelada: llamadas.filter((l) => l.estado === 'cancelada').length,
+        no_show:   llamadas.filter((l) => l.estado === 'no_show').length,
+    };
+
+    return { total, por_estado };
+}

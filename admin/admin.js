@@ -9,7 +9,7 @@
 
 import { supabase } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=8';
-import * as stats from './stats/api.js';
+import * as stats from './stats/api.js?v=2';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
@@ -1818,6 +1818,7 @@ async function cargarTodoStats() {
         cargarDoughnut('origen',    () => stats.obtenerDistribucionOrigen(rango),    'chart-origen',    'tabla-origen'),
         cargarDoughnut('clientes',  () => stats.obtenerDistribucionClientes(),       'chart-clientes'),
         cargarBarrasCitasMes(),
+        cargarLlamadasStats(rango),
     ]);
 }
 
@@ -1974,6 +1975,13 @@ async function cargarBarrasCitasMes() {
             },
         });
     } catch (err) { console.error('CitasMes:', err); }
+}
+
+async function cargarLlamadasStats(rango) {
+    try {
+        const data = await stats.obtenerLlamadasReservadas(rango);
+        document.getElementById('kpi-llamadas').textContent = String(data.total);
+    } catch (err) { console.error('Llamadas:', err); }
 }
 
 /* ═══════════════════════════════════════════
