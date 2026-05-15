@@ -2141,3 +2141,72 @@ body {
 }
 
 .btn-tertiary:hover { color: var(--color-text); }
+
+/* ===================== Banner modo modificación (Reservar) ===================== */
+
+.reservar-banner-modif {
+    background: var(--pdli-oliva);
+    color: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reservar-banner-modif[hidden] { display: none; }
+
+.reservar-banner-modif__texto {
+    font-size: 14px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.reservar-banner-modif__cancel {
+    background: transparent;
+    border: 1px solid var(--color-surface);
+    color: var(--color-surface);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background 0.12s ease;
+}
+
+.reservar-banner-modif__cancel:hover {
+    background: rgba(245, 239, 224, 0.15);
+}
+
+/* ===================== Botón Modificar en Mis citas ===================== */
+
+.cita-destacada__acciones,
+.cita-item__acciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cita-modificar-btn {
+    background: transparent;
+    border: 1px solid var(--pdli-oliva);
+    color: var(--pdli-oliva);
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.cita-modificar-btn:hover {
+    background: rgba(107, 122, 58, 0.08);
+}
+
+.cita-modificar-btn--small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
