@@ -2845,3 +2845,47 @@ body {
     color: var(--color-red);
     border-color: rgba(200, 16, 46, 0.4);
 }
+
+/* ===================== Stats — Navegación mes-a-mes ===================== */
+
+.stats-mes-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 999px;
+    padding: 2px;
+    border: 1px solid var(--color-border);
+}
+
+.stats-mes-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: 0;
+    color: var(--color-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+}
+
+.stats-mes-btn:hover:not(:disabled) {
+    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.stats-mes-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.stats-mes-label {
+    /* Hereda .stats-periodo-btn (padding/color/etc). Margen mínimo para
+       separar la pill central de los círculos de flecha sin romper el flow. */
+    margin: 0 0.15rem;
+}

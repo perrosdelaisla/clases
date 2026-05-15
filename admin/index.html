@@ -167,8 +167,12 @@
                     <h2>Estadísticas</h2>
                     <div class="stats-periodo" role="tablist">
                         <button class="stats-periodo-btn" data-periodo="7d" type="button">7 días</button>
-                        <button class="stats-periodo-btn active" data-periodo="30d" type="button">30 días</button>
-                        <button class="stats-periodo-btn" data-periodo="mes" type="button">Este mes</button>
+                        <button class="stats-periodo-btn" data-periodo="30d" type="button">30 días</button>
+                        <div class="stats-mes-nav" id="stats-mes-nav" role="group" aria-label="Navegación mensual">
+                            <button class="stats-mes-btn stats-mes-prev" id="stats-mes-prev" type="button" aria-label="Mes anterior">‹</button>
+                            <button class="stats-periodo-btn stats-mes-label active" data-periodo="mes" id="stats-mes-label" type="button">Mayo 2026</button>
+                            <button class="stats-mes-btn stats-mes-next" id="stats-mes-next" type="button" aria-label="Mes siguiente">›</button>
+                        </div>
                         <button class="stats-periodo-btn" data-periodo="ano" type="button">Este año</button>
                         <button class="stats-periodo-btn" data-periodo="todo" type="button">Todo</button>
                     </div>

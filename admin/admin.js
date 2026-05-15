@@ -1698,7 +1698,8 @@ function bindModalCitaEdit() {
    ═══════════════════════════════════════════ */
 
 const statsState = {
-    periodo: '30d',
+    periodo: 'mes',
+    mesOffset: 0,  // 0 = mes actual, -1 = mes anterior, etc. Solo aplica cuando periodo==='mes'.
     charts: {},
     bound: false,
 };
@@ -1715,14 +1716,35 @@ function calcularRango(periodo) {
         return { desde: formatearFechaLocal(desde), hasta: hoyStr };
     }
     if (periodo === 'mes') {
-        const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        return { desde: formatearFechaLocal(desde), hasta: hoyStr };
+        const offset = statsState.mesOffset || 0;
+        const base = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
+        const desde = new Date(base.getFullYear(), base.getMonth(), 1);
+        // Si es el mes actual, hasta hoy. Si es un mes pasado, hasta el último día del mes.
+        const ultimoDiaMes = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+        const hasta = offset === 0 ? hoy : ultimoDiaMes;
+        return { desde: formatearFechaLocal(desde), hasta: formatearFechaLocal(hasta) };
     }
     if (periodo === 'ano') {
         const desde = new Date(hoy.getFullYear(), 0, 1);
         return { desde: formatearFechaLocal(desde), hasta: hoyStr };
     }
     return null;
+}
+
+function formatearLabelMes(offset) {
+    const hoy = new Date();
+    const base = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return `${meses[base.getMonth()]} ${base.getFullYear()}`;
+}
+
+function actualizarLabelMes() {
+    const labelEl = document.getElementById('stats-mes-label');
+    if (labelEl) labelEl.textContent = formatearLabelMes(statsState.mesOffset || 0);
+    // Deshabilitar "siguiente" si estamos en el mes actual: no se puede ir al futuro.
+    const nextBtn = document.getElementById('stats-mes-next');
+    if (nextBtn) nextBtn.disabled = (statsState.mesOffset || 0) >= 0;
 }
 
 function formatearFechaLocal(d) {
@@ -1737,6 +1759,7 @@ function initStats() {
         bindStatsPeriodos();
         statsState.bound = true;
     }
+    actualizarLabelMes();
     cargarTodoStats();
 }
 
@@ -1745,10 +1768,42 @@ function bindStatsPeriodos() {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.stats-periodo-btn').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
-            statsState.periodo = btn.dataset.periodo;
+            const nuevoPeriodo = btn.dataset.periodo;
+            // Al volver a 'mes' desde otro período, resetear al mes actual.
+            if (nuevoPeriodo === 'mes' && statsState.periodo !== 'mes') {
+                statsState.mesOffset = 0;
+                actualizarLabelMes();
+            }
+            statsState.periodo = nuevoPeriodo;
             cargarTodoStats();
         });
     });
+
+    // Flechas de navegación mensual
+    const prevBtn = document.getElementById('stats-mes-prev');
+    const nextBtn = document.getElementById('stats-mes-next');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            // Si no estamos en período 'mes', cambiar primero y marcar la pill como activa.
+            if (statsState.periodo !== 'mes') {
+                statsState.periodo = 'mes';
+                document.querySelectorAll('.stats-periodo-btn').forEach((b) => b.classList.remove('active'));
+                document.getElementById('stats-mes-label')?.classList.add('active');
+            }
+            statsState.mesOffset = (statsState.mesOffset || 0) - 1;
+            actualizarLabelMes();
+            cargarTodoStats();
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            const offset = statsState.mesOffset || 0;
+            if (offset >= 0) return;  // no ir al futuro
+            statsState.mesOffset = offset + 1;
+            actualizarLabelMes();
+            cargarTodoStats();
+        });
+    }
 }
 
 async function cargarTodoStats() {
