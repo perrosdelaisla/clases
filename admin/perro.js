@@ -726,7 +726,15 @@ function escapeHTML(str) {
 
 // ===================== Tab Salud Comportamental =====================
 
+// Token incremental — mismo patrón que _renderEjerciciosToken: si entre el
+// await del RPC y la pintada llegó otra llamada (cambio de tab rápido,
+// rebote), la primera abandona sin tocar el DOM y evita el flicker
+// "Cargando + empty + content visibles a la vez".
+let _renderSaludToken = 0;
+
 async function renderSaludPerro() {
+    const myToken = ++_renderSaludToken;
+
     const loadingEl = document.getElementById('admin-salud-loading');
     const emptyEl = document.getElementById('admin-salud-empty');
     const contentEl = document.getElementById('admin-salud-content');
@@ -745,6 +753,9 @@ async function renderSaludPerro() {
     const { data, error } = await supabase.rpc('listar_evaluaciones_perro', {
         p_perro_id: state.perroId,
     });
+
+    // Si otra llamada ya tomó el control, dejamos que esa pinte.
+    if (myToken !== _renderSaludToken) return;
 
     loadingEl.setAttribute('hidden', '');
 
