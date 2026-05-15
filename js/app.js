@@ -50,6 +50,13 @@ const state = {
     fotoSeleccionada: null,  // { file, dataUrl } cuando hay preview en modal foto
 };
 
+// Token incremental para detectar renders concurrentes de la rutina.
+// Cada llamada incrementa el token y, después del await de Supabase, vuelve
+// a chequear que sigue siendo el render activo antes de pintar el DOM —
+// así evitamos "Cargando…" + lista + empty visibles a la vez cuando dos
+// renders se pisan (cambio rápido de sub-pestañas, foco/blur, etc.).
+let _renderRutinaToken = 0;
+
 // Mapeo de citas.protocolo (técnico) a label cliente
 const PROTOCOLO_LABEL_CLIENTE = {
     cachorros:    'Educación del cachorro',
@@ -603,6 +610,8 @@ function renderSelectorPerros() {
 }
 
 async function renderRutinaPerroSeleccionado() {
+    const myToken = ++_renderRutinaToken;
+
     const hero = document.getElementById('perro-hero');
     const heroNombre = document.getElementById('perro-hero-nombre');
     const heroMeta = document.getElementById('perro-hero-meta');
@@ -687,6 +696,9 @@ async function renderRutinaPerroSeleccionado() {
         const filas = await cargarRutinaDelPerro(perro.id);
 
         if (filas.length === 0) {
+            // Si otra llamada ya tomó el control, dejamos que esa pinte.
+            if (myToken !== _renderRutinaToken) return;
+            loading.setAttribute('hidden', '');
             empty.removeAttribute('hidden');
             return;
         }
@@ -697,14 +709,20 @@ async function renderRutinaPerroSeleccionado() {
         });
 
         if (filasFiltradas.length === 0) {
+            if (myToken !== _renderRutinaToken) return;
+            loading.setAttribute('hidden', '');
             lista.setAttribute('hidden', '');
             empty.removeAttribute('hidden');
         } else {
+            if (myToken !== _renderRutinaToken) return;
+            loading.setAttribute('hidden', '');
             lista.innerHTML = filasFiltradas.map(renderRutinaCard).join('');
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
         }
     } catch (err) {
+        if (myToken !== _renderRutinaToken) return;
+        loading.setAttribute('hidden', '');
         empty.removeAttribute('hidden');
         toast('No pudimos cargar la rutina. Inténtalo de nuevo.', 'error');
     } finally {
