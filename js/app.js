@@ -56,6 +56,7 @@ const state = {
         numeroProxima: null,       // número de clase de la próxima reserva
     },
     sugerenciaActiva: null,  // sugerencia activa en el modo sugerencia del modal
+    modificando: null,       // cita en proceso de modificación: { id, fecha_vieja, hora_vieja, numero_clase }
 };
 
 // Token incremental para detectar renders concurrentes de la rutina.
@@ -472,6 +473,12 @@ function showTab(name) {
     if (!name) return;
     state.currentTab = name;
 
+    // Si el usuario sale de Reservar sin completar una modificación,
+    // descartamos el estado de modificación.
+    if (name !== 'reservar' && state.modificando) {
+        state.modificando = null;
+    }
+
     document.querySelectorAll('.tab-panel').forEach((panel) => {
         const match = panel.dataset.tab === name;
         if (match) panel.removeAttribute('hidden');
@@ -860,6 +867,22 @@ function formatearDetallePack(pack) {
 
 async function renderTabReservar() {
     const sub = document.getElementById('reservar-subtitulo');
+
+    // Modo modificación: si venimos de "Cambiar fecha" en Mis citas,
+    // mostramos un banner y la lógica de confirmar va a UPDATE en lugar
+    // de INSERT. El cliente puede cancelar y volver a Mis citas.
+    const banner = document.getElementById('reservar-banner-modificar');
+    const mod = state.modificando;
+    if (mod && banner) {
+        const fechaVieja = formatearFechaLarga(mod.fecha_vieja);
+        const horaVieja = (mod.hora_vieja || '').substring(0, 5);
+        document.getElementById('reservar-banner-modificar-texto').textContent =
+            `Estás cambiando tu clase ${mod.numero_clase} del ${fechaVieja} · ${horaVieja}. Elige una nueva fecha y hora.`;
+        banner.removeAttribute('hidden');
+    } else if (banner) {
+        banner.setAttribute('hidden', '');
+    }
+
     const mensajeBox = document.getElementById('reservar-mensaje');
     const avisoBox = document.getElementById('reservar-aviso');
     const calMes = document.getElementById('reservar-calendario-mes');
@@ -952,8 +975,11 @@ async function renderTabReservar() {
     const slotsRaw = await cargarSlotsDisponibles(minIso, hastaIso);
 
     // Filtro 5 días entre clases del cliente (en cliente — RPC global se mantiene).
+    // Si estamos modificando, la cita en proceso NO cuenta para la regla
+    // de 5 días (es la que estamos moviendo).
     const fechasMiasIso = state.citas
         .filter((c) => c.estado === 'confirmada' || c.estado === 'realizada')
+        .filter((c) => !state.modificando || c.id !== state.modificando.id)
         .map((c) => c.fecha);
     const slotsFiltrados = slotsRaw.filter((s) => {
         for (const fMia of fechasMiasIso) {
@@ -995,6 +1021,15 @@ async function renderTabReservar() {
     // Wire up flechas (idempotente — sobreescribimos handlers)
     document.getElementById('cal-mes-prev').onclick = () => navegarMes(-1);
     document.getElementById('cal-mes-next').onclick = () => navegarMes(1);
+
+    // Wire del botón "Cancelar cambio" del banner de modificación
+    const btnCancelarMod = document.getElementById('reservar-banner-modificar-cancelar');
+    if (btnCancelarMod) {
+        btnCancelarMod.onclick = () => {
+            state.modificando = null;
+            showTab('mis-citas');
+        };
+    }
 }
 
 function abrirModalReservar({ fecha, hora, label }) {
@@ -1004,55 +1039,96 @@ function abrirModalReservar({ fecha, hora, label }) {
     modal.querySelector('[data-modo="sugerencia"]').setAttribute('hidden', '');
 
     state.reservandoSlot = { fecha, hora, label };
+
+    // Ajustar copy del modal según si es reserva normal o modificación.
+    const titulo = document.getElementById('modal-reservar-titulo');
+    const btn = document.getElementById('modal-reservar-confirmar');
+    if (state.modificando) {
+        titulo.textContent = 'Confirmar cambio';
+        btn.textContent = 'Sí, cambiar';
+    } else {
+        titulo.textContent = 'Confirmar reserva';
+        btn.textContent = 'Sí, reservar';
+    }
+
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     setText('modal-reservar-slot', label || `${formatearFechaLarga(fecha)} · ${hora}`);
     setText('modal-reservar-perro', perro?.nombre || 'tu perro');
     const err = document.getElementById('modal-reservar-error');
     err.textContent = '';
     err.hidden = true;
-    const btn = document.getElementById('modal-reservar-confirmar');
     btn.disabled = false;
-    btn.textContent = 'Sí, reservar';
     abrirModal('modal-reservar');
 }
 
 async function confirmarReserva() {
     const slot = state.reservandoSlot;
     if (!slot) return;
+    const esModif = !!state.modificando;
     const btn = document.getElementById('modal-reservar-confirmar');
     const err = document.getElementById('modal-reservar-error');
     btn.disabled = true;
-    btn.textContent = 'Reservando…';
+    btn.textContent = esModif ? 'Cambiando…' : 'Reservando…';
     err.hidden = true;
 
     const clienteId = state.usuarioCliente?.cliente_id;
     const horaCompleta = slot.hora.length === 5 ? `${slot.hora}:00` : slot.hora;
 
     try {
-        // 0) Calcular el número de clase que corresponde a esta reserva.
-        // Es max(numero_clase) de citas confirmadas/realizadas + 1.
-        // La RLS exige numero_clase NOT NULL en INSERT de cliente.
-        const packPrevio = calcularEstadoPack(state.cliente, state.citas);
-        const proximoNumero = packPrevio.proximo_numero || 1;
+        let citaData;
 
-        // 1) Crear cita
-        const { data: citaData, error: citaErr } = await supabase
-            .from('citas')
-            .insert({
-                cliente_id:    clienteId,
-                fecha:         slot.fecha,
-                hora:          horaCompleta,
-                estado:        'confirmada',
-                confirmada:    true,
-                modalidad:     'presencial',
-                tipo_reserva:  'siguiente',
-                numero_clase:  proximoNumero,
-            })
-            .select()
-            .single();
-        if (citaErr) throw citaErr;
+        if (state.modificando) {
+            // Modo MODIFICAR: UPDATE de la cita existente + ajuste de bloqueos.
+            // numero_clase no se toca: la cita conserva su número.
+            const mod = state.modificando;
 
-        // 2) Crear bloqueo "Auto: cita {id}" — sigue el patrón del admin
+            // 1) UPDATE cita con nueva fecha/hora
+            const { data: upData, error: upErr } = await supabase
+                .from('citas')
+                .update({
+                    fecha: slot.fecha,
+                    hora:  horaCompleta,
+                })
+                .eq('id', mod.id)
+                .select()
+                .single();
+            if (upErr) throw upErr;
+            citaData = upData;
+
+            // 2) DELETE bloqueo viejo "Auto: cita {id}"
+            const { error: delErr } = await supabase
+                .from('bloqueos')
+                .delete()
+                .eq('motivo', `Auto: cita ${mod.id}`);
+            if (delErr) {
+                console.warn('[app] No se pudo borrar el bloqueo viejo en modificar:', delErr);
+            }
+        } else {
+            // Modo RESERVA NORMAL: INSERT cita nueva.
+            // La RLS exige numero_clase NOT NULL en INSERT de cliente.
+            const packPrevio = calcularEstadoPack(state.cliente, state.citas);
+            const proximoNumero = packPrevio.proximo_numero || 1;
+
+            const { data: insData, error: citaErr } = await supabase
+                .from('citas')
+                .insert({
+                    cliente_id:    clienteId,
+                    fecha:         slot.fecha,
+                    hora:          horaCompleta,
+                    estado:        'confirmada',
+                    confirmada:    true,
+                    modalidad:     'presencial',
+                    tipo_reserva:  'siguiente',
+                    numero_clase:  proximoNumero,
+                })
+                .select()
+                .single();
+            if (citaErr) throw citaErr;
+            citaData = insData;
+        }
+
+        // Crear bloqueo "Auto: cita {id}" para el nuevo slot — patrón del admin.
+        // Aplica tanto a INSERT como a UPDATE (en UPDATE el bloqueo viejo ya se borró arriba).
         const { error: bloqErr } = await supabase
             .from('bloqueos')
             .insert({
@@ -1062,16 +1138,26 @@ async function confirmarReserva() {
             });
         if (bloqErr) {
             // No revertimos — la cita quedó válida. Solo loggeamos.
-            console.warn('[app] Cita creada pero falló crear bloqueo:', bloqErr);
+            console.warn('[app] Cita creada/modificada pero falló crear bloqueo:', bloqErr);
         }
 
-        toast('Reserva confirmada');
+        const eraModificacion = !!state.modificando;
+        toast(eraModificacion ? 'Cita modificada' : 'Reserva confirmada');
         const slotReservado = state.reservandoSlot;
         state.reservandoSlot = null;
 
         // Recargar citas (necesario para que la sugerencia y el filtro 5d
-        // estén actualizados con la cita recién creada).
+        // estén actualizados con la cita recién creada/modificada).
         state.citas = await cargarCitasCliente();
+
+        // En modificación NO mostramos sugerencia: cerrar y volver a Mis citas.
+        if (eraModificacion) {
+            state.modificando = null;
+            cerrarModal('modal-reservar');
+            await renderTabReservar();
+            showTab('mis-citas');
+            return;
+        }
 
         // Verificar si el cliente puede reservar más
         const estado2 = await llamarPuedeReservar();
@@ -1091,12 +1177,14 @@ async function confirmarReserva() {
         const sugerencia = calcularSugerencia(slotReservado);
         mostrarModoSugerencia(slotReservado, sugerencia, pack2.proximo_numero);
     } catch (e) {
-        console.error('[app] error reservando cita:', e);
-        err.textContent = 'No se pudo reservar. Inténtalo de nuevo.';
+        console.error('[app] error reservando/modificando cita:', e);
+        err.textContent = esModif
+            ? 'No se pudo modificar. Inténtalo de nuevo.'
+            : 'No se pudo reservar. Inténtalo de nuevo.';
         err.hidden = false;
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Sí, reservar';
+        btn.textContent = esModif ? 'Sí, cambiar' : 'Sí, reservar';
     }
 }
 
@@ -1174,6 +1262,15 @@ function renderTabMisCitas() {
             if (cita) abrirModalCancelar(cita);
         });
     });
+
+    // Wire up botones modificar
+    cont.querySelectorAll('[data-modificar-cita]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.modificarCita;
+            const cita = state.citas.find((c) => c.id === id);
+            if (cita) iniciarModificarCita(cita);
+        });
+    });
 }
 
 function renderCitaDestacada(cita, ahora) {
@@ -1182,7 +1279,7 @@ function renderCitaDestacada(cita, ahora) {
     const hora = (cita.hora || '').substring(0, 5);
     const cuanto = cuantoFalta(dt, ahora);
     const horasFaltan = (dt - ahora) / 36e5;
-    const cancelable = horasFaltan > 24;
+    const cancelable = horasFaltan > 48;
     return `
         <article class="cita-destacada">
             ${cita.numero_clase != null ? `<span class="cita-numero">Clase ${cita.numero_clase}</span>` : ''}
@@ -1191,8 +1288,11 @@ function renderCitaDestacada(cita, ahora) {
             <p class="cita-destacada__cuanto">${escapeHTML(cuanto)}</p>
             <span class="badge badge--ok">Confirmada</span>
             ${cancelable
-                ? `<button type="button" class="cita-cancelar-btn" data-cancelar-cita="${escapeHTML(cita.id)}">Cancelar</button>`
-                : `<p class="cita-destacada__nota">Para cancelar, escribe al ${TELEFONO_PUBLICO}</p>`}
+                ? `<div class="cita-destacada__acciones">
+                       <button type="button" class="cita-modificar-btn" data-modificar-cita="${escapeHTML(cita.id)}">Cambiar fecha</button>
+                       <button type="button" class="cita-cancelar-btn" data-cancelar-cita="${escapeHTML(cita.id)}">Cancelar</button>
+                   </div>`
+                : `<p class="cita-destacada__nota">Para cambios, escribe al ${TELEFONO_PUBLICO}</p>`}
         </article>
     `;
 }
@@ -1203,7 +1303,7 @@ function renderCitaItem(cita, ahora) {
     const hora = (cita.hora || '').substring(0, 5);
     const cuanto = cuantoFalta(dt, ahora);
     const horasFaltan = (dt - ahora) / 36e5;
-    const cancelable = horasFaltan > 24;
+    const cancelable = horasFaltan > 48;
     return `
         <article class="cita-item">
             <div class="cita-item__main">
@@ -1211,7 +1311,10 @@ function renderCitaItem(cita, ahora) {
                 <p class="cita-item__cuanto">${escapeHTML(cuanto)}</p>
             </div>
             ${cancelable
-                ? `<button type="button" class="cita-cancelar-btn cita-cancelar-btn--small" data-cancelar-cita="${escapeHTML(cita.id)}">Cancelar</button>`
+                ? `<div class="cita-item__acciones">
+                       <button type="button" class="cita-modificar-btn cita-modificar-btn--small" data-modificar-cita="${escapeHTML(cita.id)}">Cambiar</button>
+                       <button type="button" class="cita-cancelar-btn cita-cancelar-btn--small" data-cancelar-cita="${escapeHTML(cita.id)}">Cancelar</button>
+                   </div>`
                 : ''}
         </article>
     `;
@@ -1888,4 +1991,28 @@ function mostrarModoSugerencia(slotReservado, sugerencia, numProxima) {
         // Refrescar la tab para que el cliente vea el calendario actualizado.
         renderTabReservar();
     };
+}
+
+// ===================== Modificar cita existente =====================
+
+function iniciarModificarCita(cita) {
+    // Verificación de seguridad: ventana >48h (la UI ya filtra esto, defensa).
+    const dt = _datetimeCita(cita);
+    const horasFaltan = (dt - new Date()) / 36e5;
+    if (horasFaltan <= 48) {
+        toast(`Para cambios a menos de 48h, escribe al ${TELEFONO_PUBLICO}`, 'error');
+        return;
+    }
+
+    // Guardar el contexto de modificación.
+    state.modificando = {
+        id: cita.id,
+        fecha_vieja: cita.fecha,
+        hora_vieja: cita.hora,
+        numero_clase: cita.numero_clase,
+    };
+
+    // Saltar a Reservar — renderTabReservar detecta state.modificando y se
+    // adapta visualmente (banner arriba + lógica de UPDATE al confirmar).
+    showTab('reservar');
 }
