@@ -1216,33 +1216,6 @@ body {
     margin-top: 16px;
 }
 
-.reservar-calendario {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.reservar-dia__label,
-.dia-block__titulo {
-    font-family: var(--font-display);
-    font-size: 18px;
-    letter-spacing: 1.2px;
-    color: var(--color-text);
-    margin-bottom: 10px;
-    position: sticky;
-    top: 64px;
-    background: var(--color-bg);
-    padding: 8px 0 6px;
-    z-index: 5;
-    text-transform: uppercase;
-}
-
-.reservar-dia__slots {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-
 .slot-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1292,7 +1265,6 @@ body {
 }
 
 @media (max-width: 380px) {
-    .reservar-dia__slots,
     .slot-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -1932,3 +1904,240 @@ body {
     border: 1px solid var(--pdli-oliva);
     color: var(--pdli-oliva);
 }
+
+/* ===================== Calendario mes (Reservar) ===================== */
+
+.cal-mes {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 16px 12px 12px;
+    box-shadow: 0 1px 3px rgba(26, 26, 26, 0.06);
+    margin-bottom: 20px;
+}
+
+.cal-mes[hidden] { display: none; }
+
+.cal-mes__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.cal-mes__titulo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--color-text);
+    margin: 0;
+    text-align: center;
+    flex: 1;
+}
+
+.cal-mes__nav {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.cal-mes__nav:hover:not(:disabled) {
+    background: rgba(200, 16, 46, 0.08);
+    border-color: var(--pdli-rojo);
+}
+
+.cal-mes__nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.cal-mes__dias-semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.cal-mes__dias-semana span {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--color-muted);
+    text-align: center;
+    text-transform: uppercase;
+    padding: 4px 0;
+}
+
+.cal-mes__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.cal-dia {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    padding: 0;
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    transition: background 0.12s ease;
+}
+
+.cal-dia.is-fuera-mes {
+    visibility: hidden;
+}
+
+.cal-dia.is-deshabilitado {
+    color: var(--color-muted);
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.cal-dia.is-disponible {
+    color: var(--pdli-rojo);
+    font-weight: 600;
+}
+
+.cal-dia.is-disponible:hover {
+    background: rgba(200, 16, 46, 0.08);
+}
+
+.cal-dia__punto {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--pdli-rojo);
+}
+
+.cal-dia.is-deshabilitado .cal-dia__punto,
+.cal-dia.is-fuera-mes .cal-dia__punto {
+    display: none;
+}
+
+.cal-dia.is-seleccionado {
+    background: var(--pdli-rojo);
+    color: var(--color-surface);
+}
+
+.cal-dia.is-seleccionado .cal-dia__punto {
+    background: var(--color-surface);
+}
+
+.cal-dia.is-mia {
+    outline: 2px solid var(--pdli-oliva);
+    outline-offset: -2px;
+}
+
+/* ===================== Panel de horarios del día seleccionado ===================== */
+
+.cal-dia-panel {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 16px 14px;
+    box-shadow: 0 1px 3px rgba(26, 26, 26, 0.06);
+    margin-bottom: 20px;
+}
+
+.cal-dia-panel[hidden] { display: none; }
+
+.cal-dia-panel__titulo {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-text);
+    margin: 0 0 12px;
+}
+
+.cal-dia-vacio {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--color-muted);
+    font-style: italic;
+}
+
+.cal-dia-vacio[hidden] { display: none; }
+
+/* ===================== Modal Reservar — modos confirmar/sugerencia ===================== */
+
+.modal-reservar__modo[hidden] { display: none; }
+
+.modal-reservar__exito {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--pdli-oliva);
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.modal-reservar__check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pdli-oliva);
+    color: var(--color-surface);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.modal-reservar__slot--sugerido {
+    color: var(--pdli-rojo);
+    font-weight: 600;
+}
+
+.modal-pdli__lead--separador {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border);
+}
+
+.modal-pdli__actions--triple {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-pdli__actions--triple .btn {
+    width: 100%;
+}
+
+.btn-tertiary {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    padding: 10px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    text-decoration: underline;
+}
+
+.btn-tertiary:hover { color: var(--color-text); }
