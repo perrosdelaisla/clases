@@ -12,6 +12,7 @@ import * as agenda from './agenda/api.js?v=8';
 import * as stats from './stats/api.js?v=2';
 import * as catalogo from './catalogo/api.js';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
+import { initSwipeTabs } from '../js/swipe-tabs.js';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
 
@@ -163,6 +164,16 @@ async function afterLogin(session) {
     showScreen('app');
     bindTabs();
     bindBackNavigation();
+
+    // Swipe horizontal entre tabs principales del admin.
+    // 'inicio' está oculto (decisión 08/05) — solo navegamos entre los 4 visibles.
+    initSwipeTabs({
+        container: document.querySelector('.admin-main'),
+        tabs: ['agenda', 'clientes', 'stats', 'catalogo'],
+        getCurrent: () => document.querySelector('.admin-panel:not([hidden])')?.dataset.panel,
+        onChange: (tab) => activarTab(tab),
+    });
+
     // Default 'agenda'. Guard: si tab guardada es 'inicio' (oculto), fallback al default.
     let tabGuardada = localStorage.getItem('pdli_admin_tab') || 'agenda';
     if (tabGuardada === 'inicio') tabGuardada = 'agenda';
@@ -343,6 +354,15 @@ function escapeHTML(str) {
 function bindAgendaSubtabs() {
     document.querySelectorAll('.agenda-subtab').forEach((btn) => {
         btn.addEventListener('click', () => activarAgendaSubtab(btn.dataset.subtab));
+    });
+
+    // Swipe horizontal entre sub-tabs de Agenda.
+    // Orden HTML: citas, bloqueos, plantilla — respetamos el visual.
+    initSwipeTabs({
+        container: document.querySelector('[data-panel="agenda"]'),
+        tabs: ['citas', 'bloqueos', 'plantilla'],
+        getCurrent: () => document.querySelector('.agenda-subtab.active')?.dataset.subtab,
+        onChange: (sub) => activarAgendaSubtab(sub),
     });
 }
 
