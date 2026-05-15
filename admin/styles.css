@@ -2807,3 +2807,41 @@ body {
 .estado-pill[data-estado="ex_cliente"] .estado-pill__dot { background: #8E8A82; }
 
 .estado-pill:disabled { opacity: 0.5; cursor: wait; }
+
+/* ===================== Sub-pestañas (dentro del tab Ejercicios) ===================== */
+
+.subtabs {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.subtabs::-webkit-scrollbar { display: none; }
+
+.subtab {
+    flex-shrink: 0;
+    padding: 0.5rem 0.9rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.subtab:hover:not(.is-active) {
+    color: var(--color-text);
+}
+
+.subtab.is-active {
+    background: rgba(200, 16, 46, 0.15);
+    color: var(--color-red);
+    border-color: rgba(200, 16, 46, 0.4);
+}

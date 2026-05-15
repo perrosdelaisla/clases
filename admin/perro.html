@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=23">
+    <link rel="stylesheet" href="./styles.css?v=24">
 </head>
 <body>
 
@@ -80,12 +80,18 @@
                     </div>
                 </section>
                 <section class="tab-panel tab-panel--ejercicios" data-panel="ejercicios" role="tabpanel" hidden>
+                    <nav class="subtabs" role="tablist" aria-label="Filtrar por categoría">
+                        <button type="button" class="subtab is-active" data-subtab="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
+                        <button type="button" class="subtab" data-subtab="cambio_rutina" role="tab" aria-selected="false">Cambios</button>
+                        <button type="button" class="subtab" data-subtab="tarea" role="tab" aria-selected="false">Tareas</button>
+                    </nav>
+
                     <div id="ejercicios-loading" class="placeholder placeholder--soft">
                         <p>Cargando ejercicios…</p>
                     </div>
 
                     <div id="ejercicios-empty" class="empty-ejercicios" hidden>
-                        <p class="empty-msg">Aún no hay ejercicios activos para <span id="empty-perro-nombre"></span></p>
+                        <p class="empty-msg">Aún no hay <span id="empty-categoria-label">items</span> activos para <span id="empty-perro-nombre"></span></p>
                         <div class="empty-arrow" aria-hidden="true">
                             <svg viewBox="0 0 100 80" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M 12 14 Q 60 14 80 58"/>
@@ -161,6 +167,6 @@
 
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script type="module" src="./perro.js?v=5"></script>
+    <script type="module" src="./perro.js?v=6"></script>
 </body>
 </html>

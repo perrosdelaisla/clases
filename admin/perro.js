@@ -20,6 +20,13 @@ const TABS = ['plan', 'ejercicios', 'herramientas', 'historico', 'notas'];
 const DEFAULT_TAB = 'ejercicios';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const SUBTAB_LABELS = {
+    ejercicio: 'ejercicios',
+    cambio_rutina: 'cambios de rutina',
+    tarea: 'tareas',
+};
+const DEFAULT_SUBTAB = 'ejercicio';
+
 const state = {
     perroId: null,
     perro: null,
@@ -27,6 +34,7 @@ const state = {
     asignados: new Map(),            // ejercicio_id → { activo, posicion_rutina }
     modalCatFilter: 'todos',
     modalSearch: '',
+    subtabActiva: DEFAULT_SUBTAB,
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);
@@ -34,6 +42,7 @@ document.addEventListener('DOMContentLoaded', bootstrap);
 async function bootstrap() {
     showScreen('loading');
     bindTabs();
+    bindSubtabs();
     bindModal();
     bindCasoComplejo();
 
@@ -227,6 +236,28 @@ function activarTab(tabRaw, { updateUrl } = {}) {
     }
 }
 
+// ===================== Sub-pestañas (Ejercicios / Cambios / Tareas) =====================
+
+function bindSubtabs() {
+    document.querySelectorAll('.subtab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const subtab = btn.dataset.subtab;
+            if (!subtab || subtab === state.subtabActiva) return;
+            activarSubtab(subtab);
+        });
+    });
+}
+
+function activarSubtab(subtab) {
+    state.subtabActiva = subtab;
+    document.querySelectorAll('.subtab').forEach((b) => {
+        const active = b.dataset.subtab === subtab;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    renderEjerciciosActivos();
+}
+
 // ===================== Tab Ejercicios — vista principal =====================
 
 // Token incremental para detectar render concurrente. Cada vez que arranca
@@ -260,19 +291,28 @@ async function renderEjerciciosActivos() {
 
     loadingEl.setAttribute('hidden', '');
 
+    const labelEl = document.getElementById('empty-categoria-label');
+    if (labelEl) labelEl.textContent = SUBTAB_LABELS[state.subtabActiva] || 'items';
+
     if (error) {
         console.error('[perro] error cargando ejercicios activos:', error);
         emptyEl.removeAttribute('hidden');
         return;
     }
 
-    if (!data || data.length === 0) {
+    // Filtramos por la sub-pestaña activa en cliente. El query trae todas las
+    // categorías; el filtro es solo visual — el modal sigue ofreciendo todas.
+    const filtered = (data || []).filter(
+        (row) => row.ejercicios?.categoria === state.subtabActiva,
+    );
+
+    if (!filtered.length) {
         emptyEl.removeAttribute('hidden');
         return;
     }
 
     listaEl.removeAttribute('hidden');
-    listaEl.innerHTML = data
+    listaEl.innerHTML = filtered
         .map((row) => renderEjercicioActivoCard(row))
         .join('');
 
