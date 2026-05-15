@@ -29,6 +29,18 @@ const state = {
 document.addEventListener('DOMContentLoaded', bootstrap);
 
 async function bootstrap() {
+    // Back físico siempre vuelve a index.html — reescribimos la entrada
+    // anterior con index.html y pusheamos la actual; así, el primer back
+    // consume cliente y queda index.html en la pila (sin recorrer el
+    // historial entre páginas del admin).
+    if (!window.__backFixApplied) {
+        window.__backFixApplied = true;
+        const indexUrl = new URL('./index.html', window.location.href).href;
+        const currentUrl = window.location.href;
+        history.replaceState({ pdli: 'index-fallback' }, '', indexUrl);
+        history.pushState({ pdli: 'cliente' }, '', currentUrl);
+    }
+
     showScreen('loading');
     bindInvitarUI();
     bindWidgetPack();

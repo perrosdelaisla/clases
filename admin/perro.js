@@ -40,6 +40,19 @@ const state = {
 document.addEventListener('DOMContentLoaded', bootstrap);
 
 async function bootstrap() {
+    // Back físico siempre vuelve a index.html — reescribimos la entrada
+    // anterior con index.html y pusheamos la actual; así, el primer back
+    // consume perro y queda index.html en la pila (sin recorrer el
+    // historial entre páginas del admin). Va antes que el replaceState
+    // de tabs (~línea 235) — opera sobre la entrada anterior, no la actual.
+    if (!window.__backFixApplied) {
+        window.__backFixApplied = true;
+        const indexUrl = new URL('./index.html', window.location.href).href;
+        const currentUrl = window.location.href;
+        history.replaceState({ pdli: 'index-fallback' }, '', indexUrl);
+        history.pushState({ pdli: 'perro' }, '', currentUrl);
+    }
+
     showScreen('loading');
     bindTabs();
     bindSubtabs();
