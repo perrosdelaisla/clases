@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=17">
+    <link rel="stylesheet" href="./css/styles.css?v=18">
 </head>
 <body class="app-cliente">
 
@@ -207,10 +207,44 @@
 
             <!-- ── TAB RESERVAR ── -->
             <section class="tab-panel" id="tab-reservar" data-tab="reservar" hidden>
-                <h2 class="rutina-titulo">Reservar</h2>
-                <p class="reservar-subtitulo" id="reservar-subtitulo">Elige cuándo quieres tu próxima clase</p>
-                <div id="reservar-content">
-                    <div class="placeholder placeholder--soft"><p>Cargando…</p></div>
+                <header class="tab-header">
+                    <h2 class="rutina-titulo">Reservar</h2>
+                    <p class="reservar-subtitulo" id="reservar-subtitulo">Elige cuándo quieres tu próxima clase</p>
+                </header>
+
+                <!-- Mensaje de estado (sin pack / pack completo / muy pronto / sin primera clase) -->
+                <div id="reservar-mensaje" class="placeholder placeholder--soft" hidden>
+                    <p>Cargando…</p>
+                </div>
+
+                <!-- Aviso editorial superior cuando hay disponibilidad -->
+                <div id="reservar-aviso" class="reservar-aviso" hidden>
+                    <h3 id="reservar-aviso-titulo"></h3>
+                    <p class="reservar-aviso__sub" id="reservar-aviso-sub"></p>
+                </div>
+
+                <!-- Calendario mes -->
+                <div id="reservar-calendario-mes" class="cal-mes" hidden>
+                    <div class="cal-mes__header">
+                        <button type="button" class="cal-mes__nav" id="cal-mes-prev" aria-label="Mes anterior">‹</button>
+                        <h3 class="cal-mes__titulo" id="cal-mes-titulo">—</h3>
+                        <button type="button" class="cal-mes__nav" id="cal-mes-next" aria-label="Mes siguiente">›</button>
+                    </div>
+                    <div class="cal-mes__dias-semana">
+                        <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+                    </div>
+                    <div class="cal-mes__grid" id="cal-mes-grid"></div>
+                </div>
+
+                <!-- Panel de horarios del día seleccionado -->
+                <div id="reservar-dia-panel" class="cal-dia-panel" hidden>
+                    <h4 class="cal-dia-panel__titulo" id="cal-dia-panel-titulo">—</h4>
+                    <div class="slot-grid" id="cal-dia-panel-slots"></div>
+                </div>
+
+                <!-- Hint si no hay día seleccionado -->
+                <div id="reservar-dia-vacio" class="cal-dia-vacio" hidden>
+                    <p>Toca un día con disponibilidad para ver los horarios.</p>
                 </div>
             </section>
 
@@ -342,14 +376,35 @@
                     <line x1="18" y1="6" x2="6" y2="18"/>
                 </svg>
             </button>
-            <h2 id="modal-reservar-titulo">Confirmar reserva</h2>
-            <p class="modal-reservar__slot" id="modal-reservar-slot">…</p>
-            <p class="modal-pdli__lead">Clase con el adiestrador para <strong id="modal-reservar-perro">tu perro</strong>.</p>
-            <p class="modal-pdli__nota">Hasta 24h antes podrás cancelar desde esta misma app.</p>
-            <p class="error-message" id="modal-reservar-error" hidden></p>
-            <div class="modal-pdli__actions">
-                <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
-                <button type="button" class="btn btn-primary" id="modal-reservar-confirmar">Sí, reservar</button>
+
+            <!-- Modo 1: confirmar reserva (estado inicial) -->
+            <div class="modal-reservar__modo" data-modo="confirmar">
+                <h2 id="modal-reservar-titulo">Confirmar reserva</h2>
+                <p class="modal-reservar__slot" id="modal-reservar-slot">…</p>
+                <p class="modal-pdli__lead">Clase con el adiestrador para <strong id="modal-reservar-perro">tu perro</strong>.</p>
+                <p class="modal-pdli__nota">Hasta 24h antes podrás cancelar desde esta misma app.</p>
+                <p class="error-message" id="modal-reservar-error" hidden></p>
+                <div class="modal-pdli__actions">
+                    <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="modal-reservar-confirmar">Sí, reservar</button>
+                </div>
+            </div>
+
+            <!-- Modo 2: sugerencia post-reserva (clase siguiente) -->
+            <div class="modal-reservar__modo" data-modo="sugerencia" hidden>
+                <div class="modal-reservar__exito">
+                    <span class="modal-reservar__check" aria-hidden="true">✓</span>
+                    <span>Reservada</span>
+                </div>
+                <p class="modal-reservar__slot" id="modal-sugerencia-confirmada">—</p>
+                <p class="modal-pdli__lead modal-pdli__lead--separador">Te sugerimos para tu <strong id="modal-sugerencia-num">próxima clase</strong>:</p>
+                <p class="modal-reservar__slot modal-reservar__slot--sugerido" id="modal-sugerencia-slot">—</p>
+                <p class="modal-pdli__nota" id="modal-sugerencia-nota">Mismo día y hora de la semana próxima.</p>
+                <div class="modal-pdli__actions modal-pdli__actions--triple">
+                    <button type="button" class="btn btn-primary" id="modal-sugerencia-reservar">Reservar esta</button>
+                    <button type="button" class="btn btn-secondary" id="modal-sugerencia-otra">Elegir otra fecha</button>
+                    <button type="button" class="btn btn-tertiary" data-close>Después</button>
+                </div>
             </div>
         </div>
     </div>
@@ -437,6 +492,6 @@
 
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script type="module" src="./js/app.js?v=15"></script>
+    <script type="module" src="./js/app.js?v=16"></script>
 </body>
 </html>
