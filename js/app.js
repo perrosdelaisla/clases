@@ -1029,6 +1029,12 @@ async function confirmarReserva() {
     const horaCompleta = slot.hora.length === 5 ? `${slot.hora}:00` : slot.hora;
 
     try {
+        // 0) Calcular el número de clase que corresponde a esta reserva.
+        // Es max(numero_clase) de citas confirmadas/realizadas + 1.
+        // La RLS exige numero_clase NOT NULL en INSERT de cliente.
+        const packPrevio = calcularEstadoPack(state.cliente, state.citas);
+        const proximoNumero = packPrevio.proximo_numero || 1;
+
         // 1) Crear cita
         const { data: citaData, error: citaErr } = await supabase
             .from('citas')
@@ -1040,6 +1046,7 @@ async function confirmarReserva() {
                 confirmada:    true,
                 modalidad:     'presencial',
                 tipo_reserva:  'siguiente',
+                numero_clase:  proximoNumero,
             })
             .select()
             .single();
