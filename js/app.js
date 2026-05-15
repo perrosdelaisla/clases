@@ -571,7 +571,9 @@ async function cargarTabSalud() {
 
 function formatearFechaSalud(iso) {
     const d = new Date(iso);
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    const fecha = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    const hora = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return `${fecha} · ${hora}`;
 }
 
 // ===================== Tab Rutina =====================
