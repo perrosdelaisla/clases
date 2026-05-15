@@ -99,10 +99,26 @@ body {
     line-height: 1;
 }
 
-.logo-img {
+/* Logo PDLI con aro rojo (patrón Paseos) — coherente cliente/admin. */
+.logo-circle {
+    width: 44px;
     height: 44px;
-    width: auto;
-    display: block;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--color-red);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.logo-circle__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* ===================== Botones ===================== */
@@ -1365,6 +1381,16 @@ body {
 .admin-nav-logo {
     width: 36px;
     height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--color-red);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 .admin-nav-name {

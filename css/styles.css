@@ -141,14 +141,6 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.logo-img {
-    height: 44px;
-    width: auto;
-    display: block;
-}
-
-.logo--big .logo-img { height: 56px; }
-
 /* ===================== Brand (Perros de la Isla + tagline) ===================== */
 
 .brand {
@@ -157,11 +149,6 @@ body {
     align-items: center;
     text-align: center;
     line-height: 1;
-}
-
-.brand__img {
-    width: auto;
-    display: block;
 }
 
 .brand__text {
@@ -192,7 +179,7 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.brand--splash .brand__img { height: 64px; }
+.brand--splash .logo-circle { width: 64px; height: 64px; padding: 5px; }
 .brand--splash .brand__name { font-size: 1.85rem; }
 .brand--splash .brand__tagline { font-size: 0.78rem; }
 
@@ -211,7 +198,6 @@ body {
     min-width: 0;
 }
 
-.brand--header .brand__img { height: 36px; flex-shrink: 0; }
 .brand--header .brand__text { align-items: flex-start; gap: 0.15rem; min-width: 0; }
 .brand--header .brand__name {
     font-size: 1.05rem;
@@ -234,7 +220,6 @@ body {
 @media (max-width: 380px) {
     .brand--header .brand__name { font-size: 0.95rem; }
     .brand--header .brand__tagline { font-size: 0.65rem; }
-    .brand--header .brand__img { height: 32px; }
     .brand--header .logo-circle { width: 38px; height: 38px; padding: 3px; }
 }
 
@@ -686,6 +671,10 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
+    border: 2px solid var(--pdli-rojo);
+    background: transparent;
+    padding: 3px;
+    box-sizing: border-box;
     flex-shrink: 0;
 }
 
