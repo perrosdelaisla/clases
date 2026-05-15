@@ -3053,3 +3053,15 @@ body {
     color: var(--color-red);
     font-size: 1.05rem;
 }
+
+/* ===================== Hidden attribute guard =====================
+   Reglas con display: flex/grid (como .placeholder, .empty-ejercicios)
+   pisan el atributo HTML `hidden` y dejan los elementos visibles aunque
+   tengan hidden seteado. Esto causaba que "Cargando…" + empty + lista
+   se vieran juntos. Esta regla fuerza la regla del navegador para
+   `[hidden]` con specificity suficiente para ganar a cualquier display. */
+.placeholder[hidden],
+.empty-ejercicios[hidden],
+[hidden] {
+    display: none !important;
+}
