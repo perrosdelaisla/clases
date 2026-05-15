@@ -1748,9 +1748,12 @@ body {
 }
 .card-salud[hidden] { display: none; }
 
-.card-salud__icon {
-    font-size: 1.7rem;
+/* Logo SC en card cliente (reemplaza el icon emoji viejo) */
+.card-salud__logo {
+    width: 56px;
+    height: 56px;
     flex-shrink: 0;
+    object-fit: contain;
 }
 
 .card-salud__content {
@@ -2209,4 +2212,18 @@ body {
 .cita-modificar-btn--small {
     padding: 6px 12px;
     font-size: 13px;
+}
+
+/* ===================== Logo SC en hero de tab Salud cliente ===================== */
+
+.tab-header--centrado {
+    text-align: center;
+}
+
+.salud-hero-logo {
+    display: block;
+    margin: 8px auto 12px;
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
 }
