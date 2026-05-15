@@ -214,6 +214,43 @@
                 </div>
             </section>
 
+            <!-- ── TAB SALUD COMPORTAMENTAL ── -->
+            <section class="tab-panel" id="tab-salud" data-tab="salud" hidden>
+                <header class="tab-header">
+                    <h2 class="rutina-titulo">Salud Comportamental</h2>
+                    <p class="tab-subtitle" id="salud-subtitle">Evaluaciones de tu perro</p>
+                </header>
+
+                <div id="salud-loading" class="placeholder placeholder--soft">
+                    <p>Cargando evaluaciones…</p>
+                </div>
+
+                <div id="salud-empty" class="empty-salud" hidden>
+                    <p class="empty-msg">Aún no hay evaluaciones de <span id="salud-empty-perro">tu perro</span>.</p>
+                    <button type="button" class="btn-cta" id="btn-iniciar-evaluacion-empty">
+                        Hacer primera evaluación
+                    </button>
+                </div>
+
+                <div id="salud-content" class="salud-content" hidden>
+                    <section class="salud-card salud-ultima">
+                        <h3 class="salud-card__title">Última evaluación</h3>
+                        <p class="salud-card__fecha" id="salud-ultima-fecha"></p>
+                        <div class="salud-scores" id="salud-ultima-scores"></div>
+                        <p class="salud-card__total">Score total: <strong id="salud-ultima-total">—</strong></p>
+                    </section>
+
+                    <section class="salud-card salud-historico">
+                        <h3 class="salud-card__title">Histórico</h3>
+                        <ul class="salud-historico-lista" id="salud-historico-lista"></ul>
+                    </section>
+
+                    <button type="button" class="btn-cta btn-cta--secondary" id="btn-nueva-evaluacion">
+                        Hacer nueva evaluación
+                    </button>
+                </div>
+            </section>
+
         </main>
 
         <nav class="bottom-nav" aria-label="Navegación principal">
@@ -244,6 +281,13 @@
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                 </svg>
                 <span class="bottom-nav__label">Mis citas</span>
+            </button>
+            <button type="button" class="bottom-nav__btn" data-tab-target="salud">
+                <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.8 2c1 5 .5 10-2.8 13.4a7 7 0 0 1-6 4.6Z"/>
+                    <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
+                </svg>
+                <span class="bottom-nav__label">Salud</span>
             </button>
         </nav>
     </section>

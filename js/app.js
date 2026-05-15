@@ -228,6 +228,8 @@ function bindEventos() {
     // CTA "Empezar →" de la card de evaluación de salud comportamental.
     // Abre La Isla en pestaña nueva con perro_id, cliente_id y origen.
     document.getElementById('btn-iniciar-evaluacion')?.addEventListener('click', abrirLaIsla);
+    document.getElementById('btn-iniciar-evaluacion-empty')?.addEventListener('click', abrirLaIsla);
+    document.getElementById('btn-nueva-evaluacion')?.addEventListener('click', abrirLaIsla);
 
     // Foto del perro
     const fotoBtn = document.getElementById('perro-foto-btn');
@@ -469,6 +471,7 @@ function showTab(name) {
     // Render de cada tab al cambiarse (data fresca)
     if (name === 'reservar') renderTabReservar();
     if (name === 'mis-citas') renderTabMisCitas();
+    if (name === 'salud') cargarTabSalud();
 
     // Scroll al inicio del panel para que la transición se sienta limpia
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -484,6 +487,69 @@ function abrirLaIsla() {
     url.searchParams.set('cliente_id', state.cliente.id);
     url.searchParams.set('origen', 'cliente_activo');
     window.open(url.toString(), '_blank', 'noopener');
+}
+
+async function cargarTabSalud() {
+    const loadingEl = document.getElementById('salud-loading');
+    const emptyEl = document.getElementById('salud-empty');
+    const contentEl = document.getElementById('salud-content');
+    if (!loadingEl || !emptyEl || !contentEl) return;
+
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+
+    loadingEl.removeAttribute('hidden');
+    emptyEl.setAttribute('hidden', '');
+    contentEl.setAttribute('hidden', '');
+
+    if (!perro) {
+        loadingEl.setAttribute('hidden', '');
+        document.getElementById('salud-empty-perro').textContent = 'tu perro';
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    const { data, error } = await supabase.rpc('listar_evaluaciones_perro', {
+        p_perro_id: perro.id,
+    });
+
+    loadingEl.setAttribute('hidden', '');
+
+    if (error) {
+        console.error('[salud] error cargando:', error);
+        document.getElementById('salud-empty-perro').textContent = perro.nombre || 'tu perro';
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        document.getElementById('salud-empty-perro').textContent = perro.nombre || 'tu perro';
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    const ultima = data[0];
+    document.getElementById('salud-ultima-fecha').textContent = formatearFechaSalud(ultima.created_at);
+    document.getElementById('salud-ultima-total').textContent = ultima.score_total + '/100';
+    document.getElementById('salud-ultima-scores').innerHTML = `
+        <div class="salud-score-item"><span class="salud-score-num">${ultima.score_fisica}</span><span class="salud-score-label">Física</span></div>
+        <div class="salud-score-item"><span class="salud-score-num">${ultima.score_emocional}</span><span class="salud-score-label">Emocional</span></div>
+        <div class="salud-score-item"><span class="salud-score-num">${ultima.score_social}</span><span class="salud-score-label">Social</span></div>
+        <div class="salud-score-item"><span class="salud-score-num">${ultima.score_cognitiva}</span><span class="salud-score-label">Cognitiva</span></div>
+    `;
+
+    document.getElementById('salud-historico-lista').innerHTML = data.map((ev) => `
+        <li class="salud-historico-item">
+            <span class="salud-historico-fecha">${formatearFechaSalud(ev.created_at)}</span>
+            <span class="salud-historico-total">${ev.score_total}/100</span>
+        </li>
+    `).join('');
+
+    contentEl.removeAttribute('hidden');
+}
+
+function formatearFechaSalud(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // ===================== Tab Rutina =====================
