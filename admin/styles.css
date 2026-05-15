@@ -3065,3 +3065,19 @@ body {
 [hidden] {
     display: none !important;
 }
+
+/* ===================== Logo SC en pestaña Salud admin ===================== */
+
+.admin-salud-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-salud-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
