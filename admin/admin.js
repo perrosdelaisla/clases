@@ -19,7 +19,7 @@ const Chart = window.Chart;
 const state = {
     admin: null,            // { auth_user_id, email, nombre }
     clientes: [],           // resultado crudo del SELECT con perros anidados
-    filtroEstado: 'todos',  // 'todos' | 'consulta' | 'activo' | 'veterano' | 'ex_cliente'
+    filtroEstado: 'activo', // 'todos' | 'consulta' | 'activo' | 'veterano' | 'ex_cliente'
     busqueda: '',
     citas: [],              // citas vigentes cacheadas para el modal editar
     clientesCache: [],      // lista plana de clientes para el autocomplete (crear+editar)
@@ -211,7 +211,7 @@ async function handleLogout() {
     }
     state.admin = null;
     state.clientes = [];
-    state.filtroEstado = 'todos';
+    state.filtroEstado = 'activo';
     state.busqueda = '';
     document.getElementById('login-form').reset();
     document.getElementById('cliente-search').value = '';
