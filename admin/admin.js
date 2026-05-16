@@ -7,7 +7,7 @@
 // usuario logueado y deja pasar el SELECT a clientes/perros/admins.
 // =====================================================================
 
-import { supabase } from '../js/supabase.js';
+import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=8';
 import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js';
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function bootstrap() {
     showScreen('loading');
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSessionConTimeout();
         if (!session) {
             showScreen('login');
             return;

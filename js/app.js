@@ -15,7 +15,7 @@
 // lo suyo en perros, planes_caso, ejercicios_asignados, citas, etc.
 // =====================================================================
 
-import { supabase } from './supabase.js';
+import { supabase, getSessionConTimeout } from './supabase.js';
 import { initSwipeTabs } from './swipe-tabs.js';
 
 const SCREENS = {
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function bootstrap() {
     showScreen('loading');
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSessionConTimeout();
         if (!session) {
             showScreen('login');
             return;

@@ -7,7 +7,7 @@
 // placeholders "Próximamente".
 // =====================================================================
 
-import { supabase } from '../js/supabase.js';
+import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 
@@ -75,7 +75,7 @@ async function bootstrap() {
     state.perroId = id;
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSessionConTimeout();
         if (!session) {
             window.location.replace('./index.html');
             return;

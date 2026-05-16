@@ -8,7 +8,7 @@
 // link via supabase.auth.signInWithOtp + opción de compartir por WhatsApp.
 // =====================================================================
 
-import { supabase } from '../js/supabase.js';
+import { supabase, getSessionConTimeout } from '../js/supabase.js';
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -60,7 +60,7 @@ async function bootstrap() {
     state.clienteId = id;
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSessionConTimeout();
         if (!session) {
             window.location.replace('./index.html');
             return;
