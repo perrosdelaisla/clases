@@ -752,6 +752,17 @@ async function renderRutinaPerroSeleccionado() {
 
         if (filasFiltradas.length === 0) {
             if (myToken !== _renderRutinaToken) return;
+            const labelsVacio = {
+                ejercicio: 'Aún no hay ejercicios en la rutina.',
+                cambio_rutina: 'Aún no hay cambios de rutina.',
+                tarea: 'Aún no hay tareas.',
+                herramienta: 'Aún no hay herramientas.',
+            };
+            const pVacio = empty.querySelector('p');
+            if (pVacio) {
+                pVacio.textContent = labelsVacio[state.rutinaCategoriaActiva]
+                    || 'Aún no hay nada en esta categoría.';
+            }
             loading.setAttribute('hidden', '');
             lista.setAttribute('hidden', '');
             empty.removeAttribute('hidden');
@@ -779,11 +790,16 @@ function renderRutinaCard(row) {
     const ej = row.ejercicios;
     if (!ej) return '';
     const nombre = escapeHTML(ej.nombre || 'Ejercicio');
+    const categoria = ej.categoria || 'ejercicio';
+    const desc = ej.descripcion && ej.descripcion.trim()
+        ? `<p class="rutina-card__desc">${escapeHTML(ej.descripcion)}</p>`
+        : '';
     return `
-        <li class="rutina-card">
+        <li class="rutina-card" data-categoria="${escapeHTML(categoria)}">
             <div class="rutina-card__head">
                 <h3 class="rutina-card__nombre">${nombre}</h3>
             </div>
+            ${desc}
         </li>
     `;
 }

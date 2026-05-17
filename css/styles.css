@@ -514,6 +514,12 @@ body {
     gap: 0.6rem;
 }
 
+.rutina-card { border-left-width: 4px; }
+.rutina-card[data-categoria="ejercicio"]     { border-left-color: var(--color-cat-ejercicio); }
+.rutina-card[data-categoria="cambio_rutina"] { border-left-color: var(--color-cat-cambio); }
+.rutina-card[data-categoria="tarea"]         { border-left-color: var(--color-cat-tarea); }
+.rutina-card[data-categoria="herramienta"]   { border-left-color: var(--color-cat-herramienta); }
+
 .rutina-card__head {
     display: flex;
     align-items: flex-start;
