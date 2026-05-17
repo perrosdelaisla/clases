@@ -69,14 +69,16 @@ const state = {
 let _renderRutinaToken = 0;
 
 // Mapeo de citas.protocolo (técnico) a label cliente
-const PROTOCOLO_LABEL_CLIENTE = {
-    cachorros:    'Educación del cachorro',
-    basica:       'Educación básica',
-    separacion:   'Modificación de conducta',
-    generalizada: 'Modificación de conducta',
-    miedos:       'Modificación de conducta',
-    reactividad:  'Modificación de conducta',
-    posesion:     'Modificación de conducta',
+const PROTOCOLOS_LABEL = {
+    educacion_basica:         'Educación básica',
+    educacion_cachorro:       'Educación del cachorro',
+    gestion_ansiedad:         'Gestión de ansiedad',
+    reactividad_impulsividad: 'Reactividad e impulsividad',
+    proteccion_recursos:      'Protección de recursos',
+    depresion:                'Depresión y estados depresivos',
+    celos:                    'Celos y competiciones afectivas',
+    conflictividad_peleas:    'Conflictividad y peleas entre perros que conviven',
+    miedos_fobias:            'Miedos y fobias',
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -739,10 +741,17 @@ async function renderRutinaPerroSeleccionado() {
     }
 
     // Protocolo (label cliente + duración estimada)
-    const proto = formatearProtocolo(perro, state.citas);
+    const proto = formatearProtocolo(perro);
     if (proto && proto.nombre) {
         protoNombre.textContent = proto.nombre;
         protoDuracion.textContent = proto.duracion;
+        const protoComp = document.getElementById('perro-protocolo-comp');
+        if (proto.comp.length > 0) {
+            protoComp.textContent = 'También: ' + proto.comp.join(', ');
+            protoComp.removeAttribute('hidden');
+        } else {
+            protoComp.setAttribute('hidden', '');
+        }
         protoBox.removeAttribute('hidden');
     }
 
@@ -883,30 +892,26 @@ function calcularEstadoPack(cliente, citasCliente) {
 
 // Devuelve { nombre, duracion } o null si no hay protocolo conocido.
 // Toma el protocolo de la última cita con numero_clase del cliente.
-function formatearProtocolo(perro, citasCliente) {
-    if (!perro) return null;
-    const numeradas = (citasCliente || [])
-        .filter((c) => c.numero_clase != null)
-        .slice()
-        .sort((a, b) => b.numero_clase - a.numero_clase);
-    const ultima = numeradas[0];
-    if (!ultima || !ultima.protocolo) return null;
-
-    const nombre = PROTOCOLO_LABEL_CLIENTE[ultima.protocolo];
+function formatearProtocolo(perro) {
+    if (!perro || !perro.protocolo_principal) return null;
+    const nombre = PROTOCOLOS_LABEL[perro.protocolo_principal];
     if (!nombre) return null;
 
+    const comp = (perro.protocolos_complementarios || [])
+        .map((slug) => PROTOCOLOS_LABEL[slug])
+        .filter(Boolean);
+
     let duracion;
-    if (nombre === 'Educación del cachorro' || nombre === 'Educación básica') {
+    if (perro.protocolo_principal === 'educacion_basica' ||
+        perro.protocolo_principal === 'educacion_cachorro') {
         duracion = 'Suele llevar 4 clases.';
-    } else if (nombre === 'Modificación de conducta') {
+    } else {
         duracion = perro.caso_complejo
             ? 'Suele llevar entre 4 y 12 clases, hasta 14 en casos como el suyo.'
             : 'Suele llevar entre 4 y 12 clases.';
-    } else {
-        duracion = '';
     }
 
-    return { nombre, duracion };
+    return { nombre, comp, duracion };
 }
 
 // Formatea "{realizadas} realizada(s) · {futuras} reservada(s) · {por_reservar} por reservar"

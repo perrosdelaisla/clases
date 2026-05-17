@@ -1081,6 +1081,20 @@ body {
     text-transform: uppercase;
 }
 
+.perro-protocolo__label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 0.15rem;
+}
+.perro-protocolo__comp {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-top: 0.2rem;
+}
+.perro-protocolo__comp[hidden] { display: none; }
+
 .perro-protocolo__duracion {
     font-size: 0.875rem;
     color: var(--color-muted);
