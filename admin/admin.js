@@ -2052,6 +2052,7 @@ function abrirModalEditarEjercicio(ej) {
     document.getElementById('ee-categoria').value = ej.categoria || 'ejercicio';
     document.getElementById('ee-descripcion').value = ej.descripcion || '';
     document.getElementById('ee-instrucciones').value = ej.instrucciones || '';
+    document.getElementById('ee-video').value = ej.video_url || '';
     const err = document.getElementById('ee-error');
     if (err) err.hidden = true;
     document.getElementById('modal-editar-ejercicio').dataset.ejercicioId = ej.id;
@@ -2066,6 +2067,7 @@ async function guardarEdicionEjercicio() {
     const categoria = document.getElementById('ee-categoria').value;
     const descripcion = document.getElementById('ee-descripcion').value.trim();
     const instrucciones = document.getElementById('ee-instrucciones').value.trim();
+    const videoUrl = document.getElementById('ee-video').value.trim();
     if (!nombre) {
         if (err) { err.textContent = 'El nombre no puede quedar vacío.'; err.hidden = false; }
         return;
@@ -2078,6 +2080,7 @@ async function guardarEdicionEjercicio() {
             categoria,
             descripcion: descripcion || null,
             instrucciones: instrucciones || null,
+            video_url: videoUrl || null,
         });
         closeModal('modal-editar-ejercicio');
         await cargarCatalogoAdmin();

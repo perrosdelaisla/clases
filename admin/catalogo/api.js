@@ -30,7 +30,7 @@ import { supabase } from '../../js/supabase.js';
 export async function obtenerCatalogo() {
     const { data, error } = await supabase
         .from('ejercicios')
-        .select('id, codigo, nombre, descripcion, instrucciones, plantilla, categoria, orden_catalogo')
+        .select('id, codigo, nombre, descripcion, instrucciones, video_url, plantilla, categoria, orden_catalogo')
         .eq('activo', true)
         .order('orden_catalogo', { ascending: true });
     if (error) throw error;
@@ -49,6 +49,7 @@ export async function actualizarEjercicio(id, campos) {
             categoria: campos.categoria,
             descripcion: campos.descripcion,
             instrucciones: campos.instrucciones,
+            video_url: campos.video_url,
         })
         .eq('id', id);
     if (error) throw error;

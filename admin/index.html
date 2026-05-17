@@ -602,6 +602,10 @@
                     <span>Instrucciones detalladas</span>
                     <textarea id="ee-instrucciones" rows="8" placeholder="Explica paso a paso cómo se hace el ejercicio. El cliente lo ve al tocar la tarjeta."></textarea>
                 </label>
+                <label class="form-field">
+                    <span>Video explicativo (YouTube)</span>
+                    <input type="url" id="ee-video" inputmode="url" placeholder="Pega aquí el enlace de YouTube del video">
+                </label>
                 <p class="error-message" id="ee-error" hidden></p>
             </div>
             <footer class="modal-footer">
@@ -615,6 +619,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=42"></script>
+    <script type="module" src="./admin.js?v=43"></script>
 </body>
 </html>
