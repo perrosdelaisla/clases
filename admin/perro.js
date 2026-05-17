@@ -36,6 +36,7 @@ const state = {
     modalCatFilter: 'todos',
     modalSearch: '',
     subtabActiva: DEFAULT_SUBTAB,
+    progresionContext: null,         // { vigenteId, posicion } cuando el modal se abre en modo progresión
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);
@@ -370,7 +371,7 @@ async function renderEjerciciosActivos() {
 
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('ejercicio_id, activo, posicion_rutina, ejercicios (id, codigo, nombre, categoria)')
+        .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, ejercicios (id, codigo, nombre, categoria)')
         .eq('perro_id', state.perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -389,45 +390,152 @@ async function renderEjerciciosActivos() {
         return;
     }
 
-    // Filtramos por la sub-pestaña activa en cliente. El query trae todas las
-    // categorías; el filtro es solo visual — el modal sigue ofreciendo todas.
-    const filtered = (data || []).filter(
-        (row) => row.ejercicios?.categoria === state.subtabActiva,
-    );
+    // Cada renglón de la rutina es una cadena de filas (progresiones). Lo que
+    // se muestra es la punta de cada cadena (el "vigente"); las filas previas
+    // son historia. El filtro por sub-pestaña se aplica sobre la categoría del
+    // vigente, no sobre cada fila. El modal sigue ofreciendo todas.
+    const cadenas = construirCadenas(data || [])
+        .filter((c) => c.vigente.ejercicios?.categoria === state.subtabActiva)
+        .sort((a, b) => (a.vigente.posicion_rutina ?? 0) - (b.vigente.posicion_rutina ?? 0));
 
-    if (!filtered.length) {
+    if (!cadenas.length) {
         emptyEl.removeAttribute('hidden');
         return;
     }
 
     listaEl.removeAttribute('hidden');
-    listaEl.innerHTML = filtered
-        .map((row) => renderEjercicioActivoCard(row))
+    listaEl.innerHTML = cadenas
+        .map((c) => renderEjercicioActivoCard(c.vigente, c.history))
         .join('');
 
-    // Wire toggles inline (pausar desde la lista principal).
+    // Wire toggle inline de pausa (solo renglones simples) + acciones de progresión.
     listaEl.querySelectorAll('.toggle').forEach((btn) => {
         btn.addEventListener('click', () => onTogglePrincipal(btn));
     });
+    listaEl.querySelectorAll('[data-accion="progresar"]').forEach((btn) => {
+        btn.addEventListener('click', () => abrirModalProgresion(btn));
+    });
+    listaEl.querySelectorAll('[data-accion="ver"]').forEach((btn) => {
+        btn.addEventListener('click', () => toggleHistoria(btn));
+    });
+    listaEl.querySelectorAll('[data-accion="borrar"]').forEach((btn) => {
+        btn.addEventListener('click', () => borrarUltimoPaso(btn));
+    });
 }
 
-function renderEjercicioActivoCard(row) {
+// Arma las cadenas de progresión a partir de las filas activas.
+// vigente = fila cuyo id no aparece en progresa_de de ninguna otra fila.
+// history = filas superadas, del paso más reciente (padre directo) al más viejo.
+function construirCadenas(rows) {
+    const byId = new Map();
+    rows.forEach((r) => byId.set(r.id, r));
+
+    const referenced = new Set();
+    rows.forEach((r) => {
+        if (r.progresa_de) referenced.add(r.progresa_de);
+    });
+
+    return rows
+        .filter((r) => !referenced.has(r.id))
+        .map((vigente) => {
+            const history = [];
+            const guard = new Set();   // corta loops si los datos vinieran corruptos
+            let cur = vigente.progresa_de ? byId.get(vigente.progresa_de) : null;
+            while (cur && !guard.has(cur.id)) {
+                guard.add(cur.id);
+                history.push(cur);
+                cur = cur.progresa_de ? byId.get(cur.progresa_de) : null;
+            }
+            return { vigente, history };
+        });
+}
+
+function renderEjercicioActivoCard(row, history = []) {
     const ej = row.ejercicios;
     if (!ej) return '';
     const nombre = escapeHTML(ej.nombre || 'Sin nombre');
     const categoria = ej.categoria || 'ejercicio';
+    const tieneHistoria = history.length > 0;
+    const catChip = `<span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>`;
+
+    // El toggle de pausa solo va en renglones simples (sin historia). Los
+    // renglones con progresiones se retroceden con "Borrar último paso".
+    const toggle = tieneHistoria ? '' : `
+                <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}">
+                    <span class="toggle-thumb"></span>
+                </button>`;
+
+    let historiaHtml = '';
+    if (tieneHistoria) {
+        const pasos = history.map((h) => {
+            const hnombre = escapeHTML(h.ejercicios?.nombre || 'Sin nombre');
+            return `<li class="progresion-paso">${hnombre}</li>`;
+        }).join('');
+        historiaHtml = `<ul class="progresion-historia" hidden>${pasos}</ul>`;
+    }
+
+    const accVer = tieneHistoria
+        ? `<button type="button" class="progresion-link" data-accion="ver" aria-expanded="false">Ver pasos anteriores</button>`
+        : '';
+    const accBorrar = tieneHistoria
+        ? `<button type="button" class="progresion-link progresion-link--danger" data-accion="borrar">Borrar último paso</button>`
+        : '';
 
     return `
-        <li class="ejercicio-activo-card" data-ejercicio-id="${escapeHTML(ej.id)}">
-            <div class="ejercicio-activo-info">
-                <span class="ejercicio-activo-nombre">${nombre}</span>
-                <span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
+        <li class="ejercicio-activo-card" data-vigente-id="${escapeHTML(row.id)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-posicion="${escapeHTML(String(row.posicion_rutina ?? ''))}">
+            <div class="ejercicio-activo-top">
+                <div class="ejercicio-activo-info">
+                    <span class="ejercicio-activo-nombre">${nombre}</span>
+                    ${catChip}
+                </div>${toggle}
             </div>
-            <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}">
-                <span class="toggle-thumb"></span>
-            </button>
+            ${historiaHtml}
+            <div class="ejercicio-activo-acciones">
+                ${accVer}
+                <button type="button" class="progresion-link" data-accion="progresar">+ Agregar progresión</button>
+                ${accBorrar}
+            </div>
         </li>
     `;
+}
+
+function toggleHistoria(btn) {
+    const card = btn.closest('.ejercicio-activo-card');
+    const hist = card?.querySelector('.progresion-historia');
+    if (!hist) return;
+    if (hist.hasAttribute('hidden')) {
+        hist.removeAttribute('hidden');
+        btn.textContent = 'Ocultar pasos anteriores';
+        btn.setAttribute('aria-expanded', 'true');
+    } else {
+        hist.setAttribute('hidden', '');
+        btn.textContent = 'Ver pasos anteriores';
+        btn.setAttribute('aria-expanded', 'false');
+    }
+}
+
+// Borra la fila vigente de un renglón con historia: la fila a la que apuntaba
+// pasa a ser vigente. Solo se ofrece en renglones con ≥2 pasos.
+async function borrarUltimoPaso(btn) {
+    const card = btn.closest('.ejercicio-activo-card');
+    const vigenteId = card?.dataset.vigenteId;
+    if (!vigenteId) return;
+    if (!confirm('¿Borrar este paso? El renglón vuelve al ejercicio anterior.')) return;
+
+    btn.disabled = true;
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .delete()
+            .eq('id', vigenteId);
+        if (error) throw error;
+        toast('Paso borrado');
+        await renderEjerciciosActivos();
+    } catch (err) {
+        console.error('[perro] error borrando paso:', err);
+        btn.disabled = false;
+        toast('No se pudo borrar el paso', 'error');
+    }
 }
 
 async function onTogglePrincipal(btn) {
@@ -488,9 +596,30 @@ function bindModal() {
     bindSwipeClose();
 }
 
+// Apertura normal: toggles ON/OFF sobre el catálogo.
 async function abrirModal() {
+    state.progresionContext = null;
+    await abrirSheetCatalogo('Agregar ejercicios');
+}
+
+// Apertura en modo progresión: tocar un ejercicio lo inserta como nuevo
+// paso del renglón sobre el que se abrió (hereda posicion_rutina, apunta
+// con progresa_de al vigente actual).
+async function abrirModalProgresion(btn) {
+    const card = btn.closest('.ejercicio-activo-card');
+    if (!card || !card.dataset.vigenteId) return;
+    state.progresionContext = {
+        vigenteId: card.dataset.vigenteId,
+        posicion: Number(card.dataset.posicion),
+    };
+    await abrirSheetCatalogo('Agregar progresión');
+}
+
+async function abrirSheetCatalogo(titulo) {
     const modal = document.getElementById('modal-ejercicios');
     const lista = document.getElementById('modal-lista');
+    const tituloEl = document.getElementById('modal-titulo');
+    if (tituloEl) tituloEl.textContent = titulo;
 
     // Reset de filtros y búsqueda al abrir.
     state.modalSearch = '';
@@ -530,6 +659,7 @@ function cerrarModal() {
 
     modal.classList.remove('is-open');
     document.body.style.overflow = '';
+    state.progresionContext = null;
 
     setTimeout(() => {
         modal.setAttribute('hidden', '');
@@ -593,11 +723,20 @@ function renderModalLista() {
         return;
     }
 
-    lista.innerHTML = filtrados.map((ej) => renderModalRow(ej)).join('');
+    const enProgresion = !!state.progresionContext;
+    lista.innerHTML = filtrados
+        .map((ej) => (enProgresion ? renderModalRowProgresion(ej) : renderModalRow(ej)))
+        .join('');
 
-    lista.querySelectorAll('.toggle').forEach((btn) => {
-        btn.addEventListener('click', () => onToggleModal(btn));
-    });
+    if (enProgresion) {
+        lista.querySelectorAll('.modal-row--progresion').forEach((btn) => {
+            btn.addEventListener('click', () => onSeleccionarProgresion(btn));
+        });
+    } else {
+        lista.querySelectorAll('.toggle').forEach((btn) => {
+            btn.addEventListener('click', () => onToggleModal(btn));
+        });
+    }
 }
 
 function renderModalRow(ej) {
@@ -654,6 +793,56 @@ async function onToggleModal(btn) {
         toast('No se pudo guardar el cambio', 'error');
     } finally {
         btn.disabled = false;
+    }
+}
+
+// ===================== Modo progresión =====================
+
+function renderModalRowProgresion(ej) {
+    const id = ej.id;
+    const nombre = escapeHTML(ej.nombre || 'Sin nombre');
+    const desc = ej.descripcion ? escapeHTML(ej.descripcion) : '';
+    const categoria = ej.categoria || 'ejercicio';
+
+    return `
+        <button type="button" class="modal-row modal-row--progresion" role="listitem" data-ejercicio-id="${escapeHTML(id)}">
+            <div class="modal-row__info">
+                <span class="modal-row__nombre">${nombre}</span>
+                <span class="cat-chip cat-chip--${escapeHTML(categoria)} cat-chip--mini">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
+                ${desc ? `<span class="modal-row__desc">${desc}</span>` : ''}
+            </div>
+            <span class="modal-row__add" aria-hidden="true">+</span>
+        </button>
+    `;
+}
+
+// Inserta el ejercicio elegido como nuevo paso del renglón: hereda
+// posicion_rutina del vigente y lo apunta con progresa_de. El que era
+// vigente queda superado solo (nadie más lo necesita marcar).
+async function onSeleccionarProgresion(btn) {
+    const ejercicioId = btn.dataset.ejercicioId;
+    const ctx = state.progresionContext;
+    if (!ejercicioId || !ctx || !ctx.vigenteId) return;
+
+    btn.disabled = true;
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .insert({
+                perro_id: state.perroId,
+                ejercicio_id: ejercicioId,
+                activo: true,
+                posicion_rutina: ctx.posicion,
+                progresa_de: ctx.vigenteId,
+                actualizado_en: new Date().toISOString(),
+            });
+        if (error) throw error;
+        toast('Progresión agregada');
+        cerrarModal();
+    } catch (err) {
+        console.error('[perro] error agregando progresión:', err);
+        btn.disabled = false;
+        toast('No se pudo agregar la progresión', 'error');
     }
 }
 
