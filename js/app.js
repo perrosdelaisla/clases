@@ -475,7 +475,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('ejercicio_id, posicion_rutina, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -484,6 +484,34 @@ async function cargarRutinaDelPerro(perroId) {
         throw error;
     }
     return data || [];
+}
+
+// Arma las cadenas de progresión a partir de las filas activas (copiada de
+// admin/perro.js). vigente = fila cuyo id no aparece en progresa_de de ninguna
+// otra fila. history = filas superadas, del paso más reciente al más viejo.
+// En P3.1 el cliente solo usa el vigente; la historia es para P3.2.
+function construirCadenas(rows) {
+    const byId = new Map();
+    rows.forEach((r) => byId.set(r.id, r));
+
+    const referenced = new Set();
+    rows.forEach((r) => {
+        if (r.progresa_de) referenced.add(r.progresa_de);
+    });
+
+    return rows
+        .filter((r) => !referenced.has(r.id))
+        .map((vigente) => {
+            const history = [];
+            const guard = new Set();   // corta loops si los datos vinieran corruptos
+            let cur = vigente.progresa_de ? byId.get(vigente.progresa_de) : null;
+            while (cur && !guard.has(cur.id)) {
+                guard.add(cur.id);
+                history.push(cur);
+                cur = cur.progresa_de ? byId.get(cur.progresa_de) : null;
+            }
+            return { vigente, history };
+        });
 }
 
 async function cargarSlotsDisponibles(desdeIso, hastaIso) {
@@ -776,10 +804,13 @@ async function renderRutinaPerroSeleccionado() {
             return;
         }
 
-        const filasFiltradas = filas.filter((row) => {
-            const cat = row.ejercicios?.categoria || 'ejercicio';
-            return cat === state.rutinaCategoriaActiva;
-        });
+        // Cada renglón es una cadena de filas (progresa_de). El cliente ve solo
+        // el vigente de cada cadena; la historia no se muestra en P3.1. El
+        // filtro de sub-pestaña se aplica sobre la categoría del vigente.
+        const filasFiltradas = construirCadenas(filas)
+            .map((c) => c.vigente)
+            .filter((row) => (row.ejercicios?.categoria || 'ejercicio') === state.rutinaCategoriaActiva)
+            .sort((a, b) => (a.posicion_rutina ?? 0) - (b.posicion_rutina ?? 0));
 
         if (filasFiltradas.length === 0) {
             if (myToken !== _renderRutinaToken) return;
