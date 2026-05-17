@@ -1,9 +1,9 @@
 // =====================================================================
 // admin/catalogo/api.js — query del catálogo de ejercicios.
 //
-// Solo lectura. La pestaña Catálogo del admin no permite crear,
-// editar ni borrar; los renombres se hacen por SQL desde Opus.
-// Si en el futuro se agregan operaciones de escritura, viven acá.
+// Lectura + edición. La pestaña Catálogo del admin permite editar
+// nombre, descripción e instrucciones de cada ejercicio (modal de
+// edición). No permite crear ni borrar ejercicios.
 // =====================================================================
 
 import { supabase } from '../../js/supabase.js';
@@ -30,9 +30,25 @@ import { supabase } from '../../js/supabase.js';
 export async function obtenerCatalogo() {
     const { data, error } = await supabase
         .from('ejercicios')
-        .select('id, codigo, nombre, descripcion, plantilla, categoria, orden_catalogo')
+        .select('id, codigo, nombre, descripcion, instrucciones, plantilla, categoria, orden_catalogo')
         .eq('activo', true)
         .order('orden_catalogo', { ascending: true });
     if (error) throw error;
     return data || [];
+}
+
+/**
+ * Actualiza los campos editables de un ejercicio del catálogo.
+ * Tabla: ejercicios (UPDATE). RLS: es_admin() = true.
+ */
+export async function actualizarEjercicio(id, campos) {
+    const { error } = await supabase
+        .from('ejercicios')
+        .update({
+            nombre: campos.nombre,
+            descripcion: campos.descripcion,
+            instrucciones: campos.instrucciones,
+        })
+        .eq('id', id);
+    if (error) throw error;
 }

@@ -10,7 +10,7 @@
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=8';
 import * as stats from './stats/api.js?v=3';
-import * as catalogo from './catalogo/api.js';
+import * as catalogo from './catalogo/api.js?v=1';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
@@ -25,6 +25,7 @@ const state = {
     citas: [],              // citas vigentes cacheadas para el modal editar
     clientesCache: [],      // lista plana de clientes para el autocomplete (crear+editar)
     perrosClienteCache: [], // perros del cliente actualmente elegido en modal crear
+    catalogoEjercicios: [],
 };
 
 // ---------- Navegación entre pantallas ----------
@@ -85,6 +86,8 @@ function bindEvents() {
         state.busqueda = e.target.value.trim().toLowerCase();
         renderClientes();
     });
+
+    bindCatalogoActions();
 }
 
 // ---------- Login ----------
@@ -2025,6 +2028,64 @@ async function cargarVickyStats(rango) {
    CATÁLOGO — Bloque 5 (solo lectura)
    ═══════════════════════════════════════════ */
 
+function bindCatalogoActions() {
+    const grupos = document.getElementById('catalogo-grupos');
+    if (grupos) {
+        grupos.addEventListener('click', (e) => {
+            const card = e.target.closest('.catalogo-card');
+            if (!card) return;
+            const ej = state.catalogoEjercicios.find((x) => x.id === card.dataset.ejercicioId);
+            if (ej) abrirModalEditarEjercicio(ej);
+        });
+    }
+    // El bind global de [data-modal-close] vive en bindAgendaModals(),
+    // que solo corre si se abrió la pestaña Agenda. Lo garantizamos acá
+    // para este modal.
+    document.querySelectorAll('#modal-editar-ejercicio [data-modal-close]')
+        .forEach((el) => el.addEventListener('click', () => closeModal('modal-editar-ejercicio')));
+    const btnGuardar = document.getElementById('ee-guardar');
+    if (btnGuardar) btnGuardar.addEventListener('click', guardarEdicionEjercicio);
+}
+
+function abrirModalEditarEjercicio(ej) {
+    document.getElementById('ee-nombre').value = ej.nombre || '';
+    document.getElementById('ee-descripcion').value = ej.descripcion || '';
+    document.getElementById('ee-instrucciones').value = ej.instrucciones || '';
+    const err = document.getElementById('ee-error');
+    if (err) err.hidden = true;
+    document.getElementById('modal-editar-ejercicio').dataset.ejercicioId = ej.id;
+    openModal('modal-editar-ejercicio');
+}
+
+async function guardarEdicionEjercicio() {
+    const modal = document.getElementById('modal-editar-ejercicio');
+    const id = modal.dataset.ejercicioId;
+    const err = document.getElementById('ee-error');
+    const nombre = document.getElementById('ee-nombre').value.trim();
+    const descripcion = document.getElementById('ee-descripcion').value.trim();
+    const instrucciones = document.getElementById('ee-instrucciones').value.trim();
+    if (!nombre) {
+        if (err) { err.textContent = 'El nombre no puede quedar vacío.'; err.hidden = false; }
+        return;
+    }
+    const btn = document.getElementById('ee-guardar');
+    btn.disabled = true;
+    try {
+        await catalogo.actualizarEjercicio(id, {
+            nombre,
+            descripcion: descripcion || null,
+            instrucciones: instrucciones || null,
+        });
+        closeModal('modal-editar-ejercicio');
+        await cargarCatalogoAdmin();
+    } catch (e) {
+        console.error('[admin/catalogo] error al guardar:', e);
+        if (err) { err.textContent = 'No se pudo guardar. Inténtalo de nuevo.'; err.hidden = false; }
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 async function cargarCatalogoAdmin() {
     const grupos = document.getElementById('catalogo-grupos');
     const subtitle = document.getElementById('catalogo-subtitle');
@@ -2033,6 +2094,7 @@ async function cargarCatalogoAdmin() {
     if (subtitle) subtitle.textContent = '';
     try {
         const ejercicios = await catalogo.obtenerCatalogo();
+        state.catalogoEjercicios = ejercicios;
         renderCatalogoAdmin(ejercicios);
     } catch (err) {
         console.error('[admin/catalogo] error:', err);
@@ -2091,7 +2153,7 @@ function renderCatalogoCard(ej) {
         : '';
 
     return `
-        <li class="catalogo-card">
+        <li class="catalogo-card catalogo-card--editable" data-ejercicio-id="${escapeHTML(ej.id)}">
             <div class="catalogo-card-row">
                 <span class="catalogo-card-nombre">${nombre}</span>
                 ${plantilla}

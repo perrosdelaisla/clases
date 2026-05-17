@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=34">
+    <link rel="stylesheet" href="./styles.css?v=35">
 </head>
 <body>
 
@@ -573,10 +573,39 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-editar-ejercicio" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Editar ejercicio</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <label class="form-field">
+                    <span>Nombre</span>
+                    <input type="text" id="ee-nombre" maxlength="120">
+                </label>
+                <label class="form-field">
+                    <span>Descripción corta</span>
+                    <input type="text" id="ee-descripcion" maxlength="200" placeholder="Línea breve que ve el cliente en la tarjeta">
+                </label>
+                <label class="form-field">
+                    <span>Instrucciones detalladas</span>
+                    <textarea id="ee-instrucciones" rows="8" placeholder="Explica paso a paso cómo se hace el ejercicio. El cliente lo ve al tocar la tarjeta."></textarea>
+                </label>
+                <p class="error-message" id="ee-error" hidden></p>
+            </div>
+            <footer class="modal-footer">
+                <button id="ee-cancel" class="btn-secondary" type="button" data-modal-close>Cancelar</button>
+                <button id="ee-guardar" class="btn-primary" type="button">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=40"></script>
+    <script type="module" src="./admin.js?v=41"></script>
 </body>
 </html>

@@ -2517,6 +2517,9 @@ body {
     gap: 6px;
 }
 
+.catalogo-card--editable { cursor: pointer; }
+.catalogo-card--editable:active { opacity: 0.7; }
+
 .catalogo-card-row {
     display: flex;
     align-items: center;
