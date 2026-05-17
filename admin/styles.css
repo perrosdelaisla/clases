@@ -3161,3 +3161,28 @@ body {
 .tab-panel:not([hidden]) {
     opacity: 1;
 }
+
+/* Panel Protocolo (ficha del perro) */
+.protocolo-bloque + .protocolo-bloque { margin-top: 1.5rem; }
+.protocolo-bloque__titulo {
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.95rem;
+    margin: 0 0 0.2rem;
+}
+.protocolo-bloque__hint {
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    margin: 0 0 0.75rem;
+}
+.protocolo-comp-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.protocolo-comp-item {
+    grid-template-rows: auto;
+    margin-top: 0;
+}
+.protocolo-comp-item.is-disabled { opacity: 0.4; }

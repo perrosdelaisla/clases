@@ -59,6 +59,7 @@ async function bootstrap() {
     bindSubtabs();
     bindModal();
     bindCasoComplejo();
+    bindProtocolo();
 
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -160,6 +161,7 @@ function renderPerro(p) {
     } else if (p.cliente_id) {
         back.href = `./cliente.html?id=${encodeURIComponent(p.cliente_id)}`;
     }
+    renderProtocoloUI();
 }
 
 // ===================== Formato edad / peso =====================
@@ -210,6 +212,60 @@ async function guardarCasoComplejo(e) {
         toast('No se pudo guardar', 'error');
     } finally {
         chk.disabled = false;
+    }
+}
+
+// ===================== Protocolo =====================
+
+function renderProtocoloUI() {
+    const p = state.perro || {};
+    const principal = p.protocolo_principal || '';
+    const comp = Array.isArray(p.protocolos_complementarios) ? p.protocolos_complementarios : [];
+    const sel = document.getElementById('protocolo-principal');
+    if (sel) sel.value = principal;
+    document.querySelectorAll('.protocolo-comp').forEach((chk) => {
+        const slug = chk.dataset.protocolo;
+        const esPrincipal = slug === principal;
+        chk.checked = !esPrincipal && comp.includes(slug);
+        chk.disabled = esPrincipal;
+        const item = chk.closest('.protocolo-comp-item');
+        if (item) item.classList.toggle('is-disabled', esPrincipal);
+    });
+}
+
+function bindProtocolo() {
+    const sel = document.getElementById('protocolo-principal');
+    if (sel) sel.addEventListener('change', guardarProtocolo);
+    document.querySelectorAll('.protocolo-comp').forEach((chk) => {
+        chk.addEventListener('change', guardarProtocolo);
+    });
+}
+
+async function guardarProtocolo() {
+    if (!state.perroId) return;
+    const principal = document.getElementById('protocolo-principal').value || null;
+    const comp = [...document.querySelectorAll('.protocolo-comp:checked')]
+        .map((c) => c.dataset.protocolo)
+        .filter((slug) => slug && slug !== principal);
+    try {
+        const { error } = await supabase
+            .from('perros')
+            .update({
+                protocolo_principal: principal,
+                protocolos_complementarios: comp,
+            })
+            .eq('id', state.perroId);
+        if (error) throw error;
+        if (state.perro) {
+            state.perro.protocolo_principal = principal;
+            state.perro.protocolos_complementarios = comp;
+        }
+        renderProtocoloUI();
+        toast('Protocolo actualizado');
+    } catch (err) {
+        console.error('[perro] error guardando protocolo:', err);
+        toast('No se pudo guardar', 'error');
+        renderProtocoloUI();
     }
 }
 

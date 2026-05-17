@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=33">
+    <link rel="stylesheet" href="./styles.css?v=36">
 </head>
 <body>
 
@@ -65,7 +65,7 @@
             </section>
 
             <nav class="tabs" id="tabs" role="tablist" aria-label="Secciones del perro">
-                <button type="button" class="tab" data-tab="plan" role="tab" aria-selected="false">Plan de caso</button>
+                <button type="button" class="tab" data-tab="plan" role="tab" aria-selected="false">Protocolo</button>
                 <button type="button" class="tab is-active" data-tab="ejercicios" role="tab" aria-selected="true">Ejercicios</button>
                 <button type="button" class="tab" data-tab="herramientas" role="tab" aria-selected="false">Herramientas</button>
                 <button type="button" class="tab" data-tab="salud" role="tab" aria-selected="false">Salud</button>
@@ -75,12 +75,37 @@
 
             <div class="tab-content">
                 <section class="tab-panel" data-panel="plan" role="tabpanel" hidden>
-                    <div class="placeholder">
-                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/>
-                            <path d="M12 7 V12 L15 14"/>
-                        </svg>
-                        <p>Próximamente</p>
+                    <div class="protocolo-bloque">
+                        <label class="form-field">
+                            <span>Protocolo principal</span>
+                            <select id="protocolo-principal">
+                                <option value="">— Sin definir —</option>
+                                <option value="educacion_basica">Educación básica</option>
+                                <option value="educacion_cachorro">Educación del cachorro</option>
+                                <option value="gestion_ansiedad">Gestión de ansiedad</option>
+                                <option value="reactividad_impulsividad">Reactividad e impulsividad</option>
+                                <option value="proteccion_recursos">Protección de recursos</option>
+                                <option value="depresion">Depresión y estados depresivos</option>
+                                <option value="celos">Celos y competiciones afectivas</option>
+                                <option value="conflictividad_peleas">Conflictividad y peleas entre perros que conviven</option>
+                                <option value="miedos_fobias">Miedos y fobias</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="protocolo-bloque">
+                        <p class="protocolo-bloque__titulo">Protocolos complementarios</p>
+                        <p class="protocolo-bloque__hint">Marca los que se trabajan además del principal.</p>
+                        <div class="protocolo-comp-lista">
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="educacion_basica"><span class="admin-toggle__label">Educación básica</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="educacion_cachorro"><span class="admin-toggle__label">Educación del cachorro</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="gestion_ansiedad"><span class="admin-toggle__label">Gestión de ansiedad</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="reactividad_impulsividad"><span class="admin-toggle__label">Reactividad e impulsividad</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="proteccion_recursos"><span class="admin-toggle__label">Protección de recursos</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="depresion"><span class="admin-toggle__label">Depresión y estados depresivos</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="celos"><span class="admin-toggle__label">Celos y competiciones afectivas</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="conflictividad_peleas"><span class="admin-toggle__label">Conflictividad y peleas entre perros que conviven</span></label>
+                            <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="miedos_fobias"><span class="admin-toggle__label">Miedos y fobias</span></label>
+                        </div>
                     </div>
                 </section>
                 <section class="tab-panel tab-panel--ejercicios" data-panel="ejercicios" role="tabpanel" hidden>
@@ -214,6 +239,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=11"></script>
+    <script type="module" src="./perro.js?v=12"></script>
 </body>
 </html>
