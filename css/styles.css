@@ -2245,3 +2245,32 @@ body {
 .tab-panel:not([hidden]) {
     opacity: 1;
 }
+
+/* Tarjeta de rutina tocable + chevron */
+.rutina-card { cursor: pointer; }
+.rutina-card:active { transform: scale(0.99); }
+.rutina-card__chevron {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--color-muted);
+}
+
+/* Modal detalle de ejercicio */
+.modal-ejercicio__desc {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    margin: 0 0 14px;
+}
+.modal-ejercicio__instrucciones {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    white-space: pre-wrap;
+}
+.modal-ejercicio__instrucciones--vacio {
+    color: var(--color-muted);
+    font-style: italic;
+}

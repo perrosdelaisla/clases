@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=22">
+    <link rel="stylesheet" href="./css/styles.css?v=23">
 </head>
 <body class="app-cliente">
 
@@ -437,6 +437,21 @@
         </div>
     </div>
 
+    <div class="modal-pdli" id="modal-ejercicio-detalle" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-ejercicio-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-ejercicio-titulo">Ejercicio</h2>
+            <p class="modal-ejercicio__desc" id="modal-ejercicio-desc"></p>
+            <div class="modal-ejercicio__instrucciones" id="modal-ejercicio-instrucciones"></div>
+        </div>
+    </div>
+
     <aside class="install-banner" id="install-banner" hidden aria-label="Instalar la app">
         <img src="./img/logo.png" alt="" class="install-banner__icon">
         <p class="install-banner__text">
@@ -500,6 +515,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=22"></script>
+    <script type="module" src="./js/app.js?v=23"></script>
 </body>
 </html>

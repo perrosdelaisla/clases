@@ -46,6 +46,7 @@ const state = {
     citas: [],               // todas las citas del cliente (cualquier estado)
     currentTab: 'rutina',
     rutinaCategoriaActiva: 'ejercicio',  // sub-pestaña activa dentro de Rutina
+    rutinaFilas: [],
     reservandoSlot: null,    // { fecha, hora, label } cuando se abre modal
     citaACancelar: null,     // cita object cuando se abre modal
     fotoSeleccionada: null,  // { file, dataUrl } cuando hay preview en modal foto
@@ -296,6 +297,26 @@ function bindEventos() {
         });
     });
 
+    // Tarjeta de rutina → abre el detalle del ejercicio
+    const rutinaLista = document.getElementById('rutina-lista');
+    if (rutinaLista) {
+        const abrirDesdeCard = (card) => {
+            if (!card) return;
+            const ej = (state.rutinaFilas || [])
+                .map((r) => r.ejercicios)
+                .find((x) => x && x.id === card.dataset.ejercicioId);
+            if (ej) abrirModalEjercicio(ej);
+        };
+        rutinaLista.addEventListener('click', (e) => {
+            abrirDesdeCard(e.target.closest('.rutina-card'));
+        });
+        rutinaLista.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            abrirDesdeCard(e.target.closest('.rutina-card'));
+        });
+    }
+
     // Swipe horizontal entre tabs principales (bottom-nav)
     initSwipeTabs({
         container: document.querySelector('.app-main'),
@@ -452,7 +473,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('ejercicio_id, posicion_rutina, ejercicios (id, codigo, nombre, descripcion, categoria)')
+        .select('ejercicio_id, posicion_rutina, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -736,6 +757,7 @@ async function renderRutinaPerroSeleccionado() {
     // Ejercicios
     try {
         const filas = await cargarRutinaDelPerro(perro.id);
+        state.rutinaFilas = filas;
 
         if (filas.length === 0) {
             // Si otra llamada ya tomó el control, dejamos que esa pinte.
@@ -795,9 +817,10 @@ function renderRutinaCard(row) {
         ? `<p class="rutina-card__desc">${escapeHTML(ej.descripcion)}</p>`
         : '';
     return `
-        <li class="rutina-card" data-categoria="${escapeHTML(categoria)}">
+        <li class="rutina-card" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
                 <h3 class="rutina-card__nombre">${nombre}</h3>
+                <svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             ${desc}
         </li>
@@ -1384,6 +1407,26 @@ function abrirModalCancelar(cita) {
     err.textContent = '';
     err.hidden = true;
     abrirModal('modal-cancelar');
+}
+
+function abrirModalEjercicio(ej) {
+    setText('modal-ejercicio-titulo', ej.nombre || 'Ejercicio');
+    const desc = document.getElementById('modal-ejercicio-desc');
+    if (ej.descripcion && ej.descripcion.trim()) {
+        desc.textContent = ej.descripcion;
+        desc.removeAttribute('hidden');
+    } else {
+        desc.setAttribute('hidden', '');
+    }
+    const inst = document.getElementById('modal-ejercicio-instrucciones');
+    if (ej.instrucciones && ej.instrucciones.trim()) {
+        inst.textContent = ej.instrucciones;
+        inst.classList.remove('modal-ejercicio__instrucciones--vacio');
+    } else {
+        inst.textContent = 'Tu adiestrador todavía no ha añadido una explicación detallada para este ejercicio.';
+        inst.classList.add('modal-ejercicio__instrucciones--vacio');
+    }
+    abrirModal('modal-ejercicio-detalle');
 }
 
 async function confirmarCancelacion() {
