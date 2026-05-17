@@ -586,6 +586,15 @@
                     <input type="text" id="ee-nombre" maxlength="120">
                 </label>
                 <label class="form-field">
+                    <span>Categoría</span>
+                    <select id="ee-categoria">
+                        <option value="ejercicio">Ejercicio</option>
+                        <option value="cambio_rutina">Cambio de rutina</option>
+                        <option value="tarea">Tarea</option>
+                        <option value="herramienta">Herramienta</option>
+                    </select>
+                </label>
+                <label class="form-field">
                     <span>Descripción corta</span>
                     <input type="text" id="ee-descripcion" maxlength="200" placeholder="Línea breve que ve el cliente en la tarjeta">
                 </label>
@@ -606,6 +615,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=41"></script>
+    <script type="module" src="./admin.js?v=42"></script>
 </body>
 </html>

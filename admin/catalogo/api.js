@@ -46,6 +46,7 @@ export async function actualizarEjercicio(id, campos) {
         .from('ejercicios')
         .update({
             nombre: campos.nombre,
+            categoria: campos.categoria,
             descripcion: campos.descripcion,
             instrucciones: campos.instrucciones,
         })

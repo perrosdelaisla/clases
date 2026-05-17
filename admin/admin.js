@@ -2049,6 +2049,7 @@ function bindCatalogoActions() {
 
 function abrirModalEditarEjercicio(ej) {
     document.getElementById('ee-nombre').value = ej.nombre || '';
+    document.getElementById('ee-categoria').value = ej.categoria || 'ejercicio';
     document.getElementById('ee-descripcion').value = ej.descripcion || '';
     document.getElementById('ee-instrucciones').value = ej.instrucciones || '';
     const err = document.getElementById('ee-error');
@@ -2062,6 +2063,7 @@ async function guardarEdicionEjercicio() {
     const id = modal.dataset.ejercicioId;
     const err = document.getElementById('ee-error');
     const nombre = document.getElementById('ee-nombre').value.trim();
+    const categoria = document.getElementById('ee-categoria').value;
     const descripcion = document.getElementById('ee-descripcion').value.trim();
     const instrucciones = document.getElementById('ee-instrucciones').value.trim();
     if (!nombre) {
@@ -2073,6 +2075,7 @@ async function guardarEdicionEjercicio() {
     try {
         await catalogo.actualizarEjercicio(id, {
             nombre,
+            categoria,
             descripcion: descripcion || null,
             instrucciones: instrucciones || null,
         });
