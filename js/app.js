@@ -473,7 +473,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('ejercicio_id, posicion_rutina, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones)')
+        .select('ejercicio_id, posicion_rutina, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -1409,6 +1409,14 @@ function abrirModalCancelar(cita) {
     abrirModal('modal-cancelar');
 }
 
+function extraerYouTubeId(url) {
+    if (!url) return null;
+    const m = String(url).trim().match(
+        /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+    );
+    return m ? m[1] : null;
+}
+
 function abrirModalEjercicio(ej) {
     setText('modal-ejercicio-titulo', ej.nombre || 'Ejercicio');
     const desc = document.getElementById('modal-ejercicio-desc');
@@ -1417,6 +1425,15 @@ function abrirModalEjercicio(ej) {
         desc.removeAttribute('hidden');
     } else {
         desc.setAttribute('hidden', '');
+    }
+    const videoBox = document.getElementById('modal-ejercicio-video');
+    const ytId = extraerYouTubeId(ej.video_url);
+    if (ytId) {
+        videoBox.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}" title="Video del ejercicio" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        videoBox.removeAttribute('hidden');
+    } else {
+        videoBox.innerHTML = '';
+        videoBox.setAttribute('hidden', '');
     }
     const inst = document.getElementById('modal-ejercicio-instrucciones');
     if (ej.instrucciones && ej.instrucciones.trim()) {
@@ -1590,6 +1607,10 @@ function cerrarModal(id) {
     if (!modal || modal.hasAttribute('hidden')) return;
     modal.classList.remove('is-open');
     document.body.style.overflow = '';
+    if (id === 'modal-ejercicio-detalle') {
+        const videoBox = document.getElementById('modal-ejercicio-video');
+        if (videoBox) videoBox.innerHTML = '';
+    }
     setTimeout(() => {
         modal.setAttribute('hidden', '');
         modal.setAttribute('aria-hidden', 'true');
