@@ -3227,6 +3227,20 @@ body {
     color: var(--color-red);
 }
 
+/* Ejercicio que el perro ya tiene: fila apagada, no seleccionable */
+.modal-row--progresion.modal-row--ocupada {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.modal-row__ocupada {
+    flex-shrink: 0;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    text-align: right;
+}
+
 /* Panel Protocolo (ficha del perro) */
 .protocolo-bloque + .protocolo-bloque { margin-top: 1.5rem; }
 .protocolo-bloque__titulo {

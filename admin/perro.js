@@ -923,14 +923,22 @@ function renderModalRowProgresion(ej) {
     const desc = ej.descripcion ? escapeHTML(ej.descripcion) : '';
     const categoria = ej.categoria || 'ejercicio';
 
+    // El perro ya tiene este ejercicio (activo o en pausa): no se puede volver
+    // a insertar — chocaría con el UNIQUE (perro_id, ejercicio_id). Se muestra
+    // apagado y no clickeable.
+    const ocupado = state.asignados.has(ej.id);
+    const sufijo = ocupado
+        ? '<span class="modal-row__ocupada">Ya está en la rutina</span>'
+        : '<span class="modal-row__add" aria-hidden="true">+</span>';
+
     return `
-        <button type="button" class="modal-row modal-row--progresion" role="listitem" data-ejercicio-id="${escapeHTML(id)}">
+        <button type="button" class="modal-row modal-row--progresion${ocupado ? ' modal-row--ocupada' : ''}" role="listitem" data-ejercicio-id="${escapeHTML(id)}"${ocupado ? ' disabled' : ''}>
             <div class="modal-row__info">
                 <span class="modal-row__nombre">${nombre}</span>
                 <span class="cat-chip cat-chip--${escapeHTML(categoria)} cat-chip--mini">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
                 ${desc ? `<span class="modal-row__desc">${desc}</span>` : ''}
             </div>
-            <span class="modal-row__add" aria-hidden="true">+</span>
+            ${sufijo}
         </button>
     `;
 }
