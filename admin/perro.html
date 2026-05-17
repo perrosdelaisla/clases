@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=37">
+    <link rel="stylesheet" href="./styles.css?v=38">
 </head>
 <body>
 
@@ -115,6 +115,8 @@
                         <button type="button" class="subtab" data-subtab="tarea" role="tab" aria-selected="false">Tareas</button>
                     </nav>
 
+                    <button type="button" class="btn-reordenar" id="abrir-reordenar" hidden>Reordenar</button>
+
                     <div id="ejercicios-loading" class="placeholder placeholder--soft">
                         <p>Cargando ejercicios…</p>
                     </div>
@@ -134,6 +136,9 @@
 
                     <button type="button" class="btn-add-fixed" id="abrir-modal-ejercicios">
                         + Agregar ejercicios
+                    </button>
+                    <button type="button" class="btn-add-fixed" id="btn-finalizar-reordenar" hidden>
+                        Listo
                     </button>
                 </section>
                 <section class="tab-panel" data-panel="herramientas" role="tabpanel" hidden>
@@ -239,6 +244,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=13"></script>
+    <script type="module" src="./perro.js?v=14"></script>
 </body>
 </html>

@@ -3251,3 +3251,60 @@ body {
     margin-top: 0;
 }
 .protocolo-comp-item.is-disabled { opacity: 0.4; }
+
+/* ===================== Reordenar renglones ===================== */
+
+.btn-reordenar {
+    display: block;
+    width: fit-content;
+    margin: 0 0 0.6rem auto;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    padding: 0.4rem 0.95rem;
+    cursor: pointer;
+}
+.btn-reordenar[hidden] { display: none; }
+.btn-reordenar:active { opacity: 0.7; }
+
+.subtab:disabled { opacity: 0.4; cursor: default; }
+
+/* Controles ▲▼ — ocultos salvo en modo reordenar */
+.reordenar-controles {
+    display: none;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.reordenar-btn {
+    width: 46px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+.reordenar-btn:active { opacity: 0.7; }
+.reordenar-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Modo reordenar: la tarjeta pasa a fila, sin acciones ni toggle */
+.modo-reordenar .ejercicio-activo-card {
+    flex-direction: row;
+    align-items: center;
+}
+.modo-reordenar .ejercicio-activo-top { flex: 1; min-width: 0; }
+.modo-reordenar .ejercicio-activo-acciones,
+.modo-reordenar .progresion-historia,
+.modo-reordenar .toggle {
+    display: none;
+}
+.modo-reordenar .reordenar-controles { display: flex; }

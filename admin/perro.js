@@ -37,6 +37,8 @@ const state = {
     modalSearch: '',
     subtabActiva: DEFAULT_SUBTAB,
     progresionContext: null,         // { vigenteId, posicion } cuando el modal se abre en modo progresión
+    modoReordenar: false,            // true mientras se reordenan los renglones de la sub-pestaña
+    reordenInicial: null,            // orden de vigente-ids al entrar al modo reordenar (para detectar cambios)
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);
@@ -59,6 +61,7 @@ async function bootstrap() {
     bindTabs();
     bindSubtabs();
     bindModal();
+    bindReordenar();
     bindCasoComplejo();
     bindProtocolo();
 
@@ -339,6 +342,9 @@ function bindSubtabs() {
 }
 
 function activarSubtab(subtab) {
+    // Mientras se reordena, las sub-pestañas quedan bloqueadas (también las
+    // que dispararía el swipe horizontal).
+    if (state.modoReordenar) return;
     state.subtabActiva = subtab;
     document.querySelectorAll('.subtab').forEach((b) => {
         const active = b.dataset.subtab === subtab;
@@ -368,6 +374,8 @@ async function renderEjerciciosActivos() {
     emptyEl.setAttribute('hidden', '');
     listaEl.setAttribute('hidden', '');
     listaEl.innerHTML = '';
+    // El botón "Reordenar" se vuelve a mostrar al final si corresponde.
+    document.getElementById('abrir-reordenar')?.setAttribute('hidden', '');
 
     const { data, error } = await supabase
         .from('ejercicios_asignados')
@@ -421,6 +429,15 @@ async function renderEjerciciosActivos() {
     listaEl.querySelectorAll('[data-accion="borrar"]').forEach((btn) => {
         btn.addEventListener('click', () => borrarUltimoPaso(btn));
     });
+    listaEl.querySelectorAll('[data-mover]').forEach((btn) => {
+        btn.addEventListener('click', () => moverRenglon(btn, btn.dataset.mover));
+    });
+
+    // "Reordenar" solo tiene sentido con ≥2 renglones en la sub-pestaña.
+    const btnReordenar = document.getElementById('abrir-reordenar');
+    if (btnReordenar && cadenas.length >= 2 && !state.modoReordenar) {
+        btnReordenar.removeAttribute('hidden');
+    }
 }
 
 // Arma las cadenas de progresión a partir de las filas activas.
@@ -495,6 +512,10 @@ function renderEjercicioActivoCard(row, history = []) {
                 <button type="button" class="progresion-link" data-accion="progresar">+ Agregar progresión</button>
                 ${accBorrar}
             </div>
+            <div class="reordenar-controles">
+                <button type="button" class="reordenar-btn" data-mover="subir" aria-label="Subir renglón">▲</button>
+                <button type="button" class="reordenar-btn" data-mover="bajar" aria-label="Bajar renglón">▼</button>
+            </div>
         </li>
     `;
 }
@@ -557,6 +578,104 @@ async function onTogglePrincipal(btn) {
         btn.setAttribute('aria-checked', 'true');
         btn.disabled = false;
         toast('No se pudo pausar el ejercicio', 'error');
+    }
+}
+
+// ===================== Reordenar renglones =====================
+
+function bindReordenar() {
+    document.getElementById('abrir-reordenar')
+        ?.addEventListener('click', entrarModoReordenar);
+    document.getElementById('btn-finalizar-reordenar')
+        ?.addEventListener('click', finalizarReordenar);
+}
+
+// Lee el orden actual de renglones (vigente-ids) según el DOM.
+function leerOrdenRenglones() {
+    return [...document.querySelectorAll('#ejercicios-lista .ejercicio-activo-card')]
+        .map((card) => card.dataset.vigenteId);
+}
+
+function entrarModoReordenar() {
+    state.modoReordenar = true;
+    state.reordenInicial = leerOrdenRenglones();
+
+    document.getElementById('ejercicios-lista').classList.add('modo-reordenar');
+    document.getElementById('abrir-reordenar').setAttribute('hidden', '');
+    document.getElementById('abrir-modal-ejercicios').setAttribute('hidden', '');
+    document.getElementById('btn-finalizar-reordenar').removeAttribute('hidden');
+    document.querySelectorAll('.subtab').forEach((b) => { b.disabled = true; });
+
+    actualizarFlechasReordenar();
+}
+
+function salirModoReordenar() {
+    state.modoReordenar = false;
+    state.reordenInicial = null;
+
+    document.getElementById('ejercicios-lista').classList.remove('modo-reordenar');
+    document.getElementById('abrir-modal-ejercicios').removeAttribute('hidden');
+    document.getElementById('btn-finalizar-reordenar').setAttribute('hidden', '');
+    document.querySelectorAll('.subtab').forEach((b) => { b.disabled = false; });
+
+    // "Reordenar" vuelve a estar disponible si el render no lo refresca después.
+    const n = document.querySelectorAll('#ejercicios-lista .ejercicio-activo-card').length;
+    document.getElementById('abrir-reordenar').toggleAttribute('hidden', n < 2);
+}
+
+// Deshabilita ▲ en la primera tarjeta y ▼ en la última.
+function actualizarFlechasReordenar() {
+    const cards = [...document.querySelectorAll('#ejercicios-lista .ejercicio-activo-card')];
+    cards.forEach((card, i) => {
+        const subir = card.querySelector('[data-mover="subir"]');
+        const bajar = card.querySelector('[data-mover="bajar"]');
+        if (subir) subir.disabled = i === 0;
+        if (bajar) bajar.disabled = i === cards.length - 1;
+    });
+}
+
+// Mueve la tarjeta en el DOM. Todavía no persiste nada.
+function moverRenglon(btn, dir) {
+    const card = btn.closest('.ejercicio-activo-card');
+    if (!card) return;
+    if (dir === 'subir') {
+        const prev = card.previousElementSibling;
+        if (prev) card.parentNode.insertBefore(card, prev);
+    } else {
+        const next = card.nextElementSibling;
+        if (next) card.parentNode.insertBefore(next, card);
+    }
+    actualizarFlechasReordenar();
+}
+
+async function finalizarReordenar() {
+    const orden = leerOrdenRenglones();
+    const inicial = state.reordenInicial || [];
+    const sinCambios = orden.length === inicial.length
+        && orden.every((id, i) => id === inicial[i]);
+
+    if (sinCambios) {
+        salirModoReordenar();
+        return;
+    }
+
+    const btn = document.getElementById('btn-finalizar-reordenar');
+    btn.disabled = true;
+    try {
+        const { error } = await supabase.rpc('reordenar_renglones', {
+            p_perro_id: state.perroId,
+            p_vigentes_ordenados: orden,
+        });
+        if (error) throw error;
+        toast('Orden guardado');
+        salirModoReordenar();
+        await renderEjerciciosActivos();
+    } catch (err) {
+        console.error('[perro] error reordenando renglones:', err);
+        toast('No se pudo guardar el orden', 'error');
+        // Nos quedamos en modo reordenar para que se pueda reintentar.
+    } finally {
+        btn.disabled = false;
     }
 }
 
