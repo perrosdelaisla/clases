@@ -833,26 +833,6 @@ async function renderRutinaPerroSeleccionado() {
             lista.innerHTML = cadenasFiltradas.map(renderRutinaCard).join('');
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
-            // Cada carrusel arranca mostrando el vigente (última tarjeta, a la
-            // derecha). Para posicionarlo sin que lo pisen el snap ni la
-            // animación: soltamos scroll-snap-type y scroll-behavior, saltamos
-            // instantáneo al extremo derecho, y recién en el SEGUNDO rAF —con
-            // el scrollLeft ya asentado— restauramos ambos al valor del CSS.
-            // Así el snap, al re-activarse, encaja en el vigente.
-            requestAnimationFrame(() => {
-                const tracks = lista.querySelectorAll('.rutina-track');
-                tracks.forEach((track) => {
-                    track.style.scrollSnapType = 'none';   // soltar el snap
-                    track.style.scrollBehavior = 'auto';   // salto instantáneo, sin animar
-                    track.scrollLeft = track.scrollWidth;  // al vigente (extremo derecho)
-                });
-                requestAnimationFrame(() => {
-                    tracks.forEach((track) => {
-                        track.style.scrollSnapType = '';   // restaurar (valor del CSS)
-                        track.style.scrollBehavior = '';   // restaurar (valor del CSS)
-                    });
-                });
-            });
         }
     } catch (err) {
         if (myToken !== _renderRutinaToken) return;
@@ -876,15 +856,18 @@ function renderRutinaCard(cadena) {
     if (!history || history.length === 0) {
         return rutinaCardHTML(vigente, { tag: 'li', superado: false });
     }
-    // history viene de la más reciente a la más vieja → invertir para que las
-    // tarjetas vayan de la más vieja a la más reciente, y el vigente al final.
-    const tarjetas = [...history].reverse()
-        .map((row) => rutinaCardHTML(row, { tag: 'article', superado: true }))
-        .concat(rutinaCardHTML(vigente, { tag: 'article', superado: false }))
+    // DOM: vigente PRIMERO, después la historia (de más reciente a más vieja).
+    // El track usa flex-direction: row-reverse, así que el vigente queda
+    // visualmente a la derecha y la historia a la izquierda — igual que antes.
+    // Clave: con row-reverse, scrollLeft = 0 (el estado natural en que el
+    // navegador SIEMPRE arranca) ya muestra el primer hijo del DOM = el
+    // vigente. No hay que posicionar nada por JS.
+    const tarjetas = [rutinaCardHTML(vigente, { tag: 'article', superado: false })]
+        .concat(history.map((row) => rutinaCardHTML(row, { tag: 'article', superado: true })))
         .join('');
     return `
         <li class="rutina-renglon">
-            <div class="rutina-track">
+            <div class="rutina-track" style="flex-direction: row-reverse;">
                 ${tarjetas}
             </div>
         </li>
