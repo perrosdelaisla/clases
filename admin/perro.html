@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=39">
+    <link rel="stylesheet" href="./styles.css?v=40">
 </head>
 <body>
 
@@ -115,7 +115,10 @@
                         <button type="button" class="subtab" data-subtab="tarea" role="tab" aria-selected="false">Tareas</button>
                     </nav>
 
-                    <button type="button" class="btn-reordenar" id="abrir-reordenar" hidden>Reordenar</button>
+                    <div class="ejercicios-toolbar">
+                        <button type="button" class="btn-reordenar" id="abrir-pausados">Ver pausados</button>
+                        <button type="button" class="btn-reordenar" id="abrir-reordenar" hidden>Reordenar</button>
+                    </div>
 
                     <div id="ejercicios-loading" class="placeholder placeholder--soft">
                         <p>Cargando ejercicios…</p>
@@ -241,9 +244,26 @@
         </div>
     </div>
 
+    <div class="bottom-sheet" id="modal-pausados" hidden aria-hidden="true">
+        <div class="bottom-sheet__overlay" data-close></div>
+        <div class="bottom-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="modal-pausados-titulo">
+            <div class="bottom-sheet__handle" id="modal-pausados-handle" aria-hidden="true"></div>
+            <header class="bottom-sheet__header">
+                <h2 id="modal-pausados-titulo">Ejercicios pausados</h2>
+                <button type="button" class="bottom-sheet__close" data-close aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                    </svg>
+                </button>
+            </header>
+            <div class="bottom-sheet__lista" id="pausados-lista" role="list"></div>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=15"></script>
+    <script type="module" src="./perro.js?v=16"></script>
 </body>
 </html>

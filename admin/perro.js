@@ -62,6 +62,7 @@ async function bootstrap() {
     bindSubtabs();
     bindModal();
     bindReordenar();
+    bindPausados();
     bindCasoComplejo();
     bindProtocolo();
 
@@ -602,6 +603,7 @@ function entrarModoReordenar() {
 
     document.getElementById('ejercicios-lista').classList.add('modo-reordenar');
     document.getElementById('abrir-reordenar').setAttribute('hidden', '');
+    document.getElementById('abrir-pausados').setAttribute('hidden', '');
     document.getElementById('abrir-modal-ejercicios').setAttribute('hidden', '');
     document.getElementById('btn-finalizar-reordenar').removeAttribute('hidden');
     document.querySelectorAll('.subtab').forEach((b) => { b.disabled = true; });
@@ -615,6 +617,7 @@ function salirModoReordenar() {
 
     document.getElementById('ejercicios-lista').classList.remove('modo-reordenar');
     document.getElementById('abrir-modal-ejercicios').removeAttribute('hidden');
+    document.getElementById('abrir-pausados').removeAttribute('hidden');
     document.getElementById('btn-finalizar-reordenar').setAttribute('hidden', '');
     document.querySelectorAll('.subtab').forEach((b) => { b.disabled = false; });
 
@@ -712,7 +715,7 @@ function bindModal() {
         renderModalLista();
     });
 
-    bindSwipeClose();
+    bindSwipeClose('modal-handle', 'modal-ejercicios', cerrarModal);
 }
 
 // Apertura normal: toggles ON/OFF sobre el catálogo.
@@ -1035,9 +1038,10 @@ async function toggleOff(perroId, ejercicioId) {
 
 // ===================== Swipe-to-close del bottom sheet =====================
 
-function bindSwipeClose() {
-    const handle = document.getElementById('modal-handle');
-    const modal = document.getElementById('modal-ejercicios');
+function bindSwipeClose(handleId, modalId, onClose) {
+    const handle = document.getElementById(handleId);
+    const modal = document.getElementById(modalId);
+    if (!handle || !modal) return;
     const panel = modal.querySelector('.bottom-sheet__panel');
 
     let startY = 0;
@@ -1064,7 +1068,7 @@ function bindSwipeClose() {
         dragging = false;
         panel.style.transition = '';
         if (currentY > 100) {
-            cerrarModal();
+            onClose();
         } else {
             panel.style.transform = '';
         }
@@ -1078,6 +1082,147 @@ function bindSwipeClose() {
         panel.style.transform = '';
         currentY = 0;
     });
+}
+
+// ===================== Hoja de ejercicios pausados =====================
+
+function bindPausados() {
+    document.getElementById('abrir-pausados')
+        ?.addEventListener('click', abrirSheetPausados);
+
+    const modal = document.getElementById('modal-pausados');
+    modal.addEventListener('click', (e) => {
+        if (e.target.closest('[data-close]')) cerrarSheetPausados();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hasAttribute('hidden')) cerrarSheetPausados();
+    });
+
+    bindSwipeClose('modal-pausados-handle', 'modal-pausados', cerrarSheetPausados);
+}
+
+function abrirSheetPausados() {
+    const modal = document.getElementById('modal-pausados');
+    modal.removeAttribute('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    // Forzar reflow antes de aplicar la clase para que la transición se vea.
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+    cargarYRenderPausados();
+}
+
+function cerrarSheetPausados() {
+    const modal = document.getElementById('modal-pausados');
+    if (modal.hasAttribute('hidden')) return;
+    const panel = modal.querySelector('.bottom-sheet__panel');
+
+    // Limpiamos cualquier transform de drag pendiente.
+    panel.style.transform = '';
+    panel.style.transition = '';
+
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+
+    setTimeout(() => {
+        modal.setAttribute('hidden', '');
+        modal.setAttribute('aria-hidden', 'true');
+    }, 300);
+}
+
+async function cargarYRenderPausados() {
+    const lista = document.getElementById('pausados-lista');
+    lista.innerHTML = '<p class="muted modal-lista__empty">Cargando…</p>';
+
+    const { data, error } = await supabase
+        .from('ejercicios_asignados')
+        .select('id, ejercicio_id, ejercicios (id, nombre, categoria)')
+        .eq('perro_id', state.perroId)
+        .eq('activo', false);
+
+    if (error) {
+        console.error('[perro] error cargando pausados:', error);
+        lista.innerHTML = '<p class="muted modal-lista__empty">Error al cargar. Cerrá y reintentá.</p>';
+        return;
+    }
+
+    const filas = data || [];
+    if (!filas.length) {
+        lista.innerHTML = '<p class="muted modal-lista__empty">No hay ejercicios pausados.</p>';
+        return;
+    }
+
+    lista.innerHTML = filas.map(renderPausadoRow).join('');
+
+    lista.querySelectorAll('[data-accion="reactivar"]').forEach((btn) => {
+        btn.addEventListener('click', () => onReactivarPausado(btn));
+    });
+    lista.querySelectorAll('[data-accion="eliminar"]').forEach((btn) => {
+        btn.addEventListener('click', () => onEliminarPausado(btn));
+    });
+}
+
+function renderPausadoRow(row) {
+    const ej = row.ejercicios;
+    const nombre = escapeHTML(ej?.nombre || 'Sin nombre');
+    const categoria = ej?.categoria || 'ejercicio';
+
+    return `
+        <article class="modal-row" role="listitem" data-id="${escapeHTML(row.id)}" data-ejercicio-id="${escapeHTML(row.ejercicio_id)}">
+            <div class="modal-row__info">
+                <span class="modal-row__nombre">${nombre}</span>
+                <span class="cat-chip cat-chip--${escapeHTML(categoria)} cat-chip--mini">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
+            </div>
+            <div class="pausado-acciones">
+                <button type="button" class="pausado-btn" data-accion="reactivar">Reactivar</button>
+                <button type="button" class="pausado-btn pausado-btn--danger" data-accion="eliminar">Eliminar</button>
+            </div>
+        </article>
+    `;
+}
+
+// Reactiva un ejercicio pausado: vuelve a activo=true en su posición original.
+async function onReactivarPausado(btn) {
+    const row = btn.closest('.modal-row');
+    const ejercicioId = row?.dataset.ejercicioId;
+    if (!ejercicioId) return;
+
+    btn.disabled = true;
+    try {
+        await toggleOn(state.perroId, ejercicioId);
+        toast('Ejercicio reactivado');
+        await cargarYRenderPausados();
+        await renderEjerciciosActivos();
+    } catch (err) {
+        console.error('[perro] error reactivando pausado:', err);
+        btn.disabled = false;
+        toast('No se pudo reactivar', 'error');
+    }
+}
+
+// Elimina de verdad la fila pausada (DELETE por id). Mismo patrón que
+// borrarUltimoPaso. Los pausados son siempre renglones simples.
+async function onEliminarPausado(btn) {
+    const row = btn.closest('.modal-row');
+    const id = row?.dataset.id;
+    if (!id) return;
+    if (!confirm('¿Eliminar este ejercicio de la rutina? No se puede deshacer.')) return;
+
+    btn.disabled = true;
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        toast('Ejercicio eliminado');
+        await cargarYRenderPausados();
+        await renderEjerciciosActivos();
+    } catch (err) {
+        console.error('[perro] error eliminando pausado:', err);
+        btn.disabled = false;
+        toast('No se pudo eliminar', 'error');
+    }
 }
 
 // ===================== Toast =====================
