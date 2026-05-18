@@ -63,6 +63,7 @@ async function bootstrap() {
     bindModal();
     bindReordenar();
     bindPausados();
+    bindHerramientas();
     bindCasoComplejo();
     bindProtocolo();
 
@@ -320,6 +321,7 @@ function activarTab(tabRaw, { updateUrl } = {}) {
     }
 
     if (tab === 'salud') renderSaludPerro();
+    if (tab === 'herramientas') renderHerramientas();
 }
 
 // ===================== Sub-pestañas (Ejercicios / Cambios / Tareas) =====================
@@ -786,8 +788,8 @@ function cerrarModal() {
     setTimeout(() => {
         modal.setAttribute('hidden', '');
         modal.setAttribute('aria-hidden', 'true');
-        // Refrescamos la vista principal con los nuevos activos.
-        renderEjerciciosActivos();
+        // Refrescamos el panel de rutina que esté activo (Ejercicios o Herramientas).
+        refrescarPanelActivo();
     }, 300);
 }
 
@@ -1192,7 +1194,7 @@ async function onReactivarPausado(btn) {
         await toggleOn(state.perroId, ejercicioId);
         toast('Ejercicio reactivado');
         await cargarYRenderPausados();
-        await renderEjerciciosActivos();
+        refrescarPanelActivo();
     } catch (err) {
         console.error('[perro] error reactivando pausado:', err);
         btn.disabled = false;
@@ -1217,12 +1219,136 @@ async function onEliminarPausado(btn) {
         if (error) throw error;
         toast('Ejercicio eliminado');
         await cargarYRenderPausados();
-        await renderEjerciciosActivos();
+        refrescarPanelActivo();
     } catch (err) {
         console.error('[perro] error eliminando pausado:', err);
         btn.disabled = false;
         toast('No se pudo eliminar', 'error');
     }
+}
+
+// ===================== Tab Herramientas =====================
+
+// Mismo patrón de token que renderEjerciciosActivos: si entre el await y la
+// pintada llegó otra llamada (cambio de pestaña rápido), la primera abandona
+// sin tocar el DOM.
+let _renderHerramientasToken = 0;
+
+async function renderHerramientas() {
+    const myToken = ++_renderHerramientasToken;
+
+    const loadingEl = document.getElementById('herramientas-loading');
+    const emptyEl = document.getElementById('herramientas-empty');
+    const listaEl = document.getElementById('herramientas-lista');
+    if (!loadingEl || !emptyEl || !listaEl) return;
+
+    loadingEl.removeAttribute('hidden');
+    emptyEl.setAttribute('hidden', '');
+    listaEl.setAttribute('hidden', '');
+    listaEl.innerHTML = '';
+
+    const { data, error } = await supabase
+        .from('ejercicios_asignados')
+        .select('id, ejercicio_id, posicion_rutina, ejercicios (id, nombre, categoria)')
+        .eq('perro_id', state.perroId)
+        .eq('activo', true)
+        .order('posicion_rutina', { ascending: true });
+
+    if (myToken !== _renderHerramientasToken) return;
+
+    loadingEl.setAttribute('hidden', '');
+
+    if (error) {
+        console.error('[perro] error cargando herramientas:', error);
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    // Las herramientas no se encadenan: una fila = una herramienta.
+    const herramientas = (data || []).filter(
+        (row) => row.ejercicios?.categoria === 'herramienta',
+    );
+
+    if (!herramientas.length) {
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    listaEl.removeAttribute('hidden');
+    listaEl.innerHTML = herramientas.map(renderHerramientaCard).join('');
+    listaEl.querySelectorAll('.toggle').forEach((btn) => {
+        btn.addEventListener('click', () => onToggleHerramienta(btn));
+    });
+}
+
+function renderHerramientaCard(row) {
+    const ej = row.ejercicios;
+    if (!ej) return '';
+    const nombre = escapeHTML(ej.nombre || 'Sin nombre');
+    const categoria = ej.categoria || 'herramienta';
+
+    return `
+        <li class="ejercicio-activo-card" data-ejercicio-id="${escapeHTML(ej.id)}">
+            <div class="ejercicio-activo-top">
+                <div class="ejercicio-activo-info">
+                    <span class="ejercicio-activo-nombre">${nombre}</span>
+                    <span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
+                </div>
+                <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}">
+                    <span class="toggle-thumb"></span>
+                </button>
+            </div>
+        </li>
+    `;
+}
+
+async function onToggleHerramienta(btn) {
+    const ejercicioId = btn.dataset.ejercicioId;
+    if (!ejercicioId) return;
+
+    // Está activa → la pausamos (off). Optimistic UI.
+    btn.setAttribute('aria-checked', 'false');
+    btn.disabled = true;
+
+    try {
+        await toggleOff(state.perroId, ejercicioId);
+        toast('Herramienta pausada');
+        // Desaparece de la lista de activas: refrescamos.
+        await renderHerramientas();
+    } catch (err) {
+        console.error('[perro] toggle off herramienta falló:', err);
+        btn.setAttribute('aria-checked', 'true');
+        btn.disabled = false;
+        toast('No se pudo pausar la herramienta', 'error');
+    }
+}
+
+function bindHerramientas() {
+    document.getElementById('abrir-modal-herramientas')
+        ?.addEventListener('click', abrirModalHerramienta);
+    document.getElementById('abrir-pausados-herr')
+        ?.addEventListener('click', abrirSheetPausados);
+}
+
+// Abre el bottom-sheet de catálogo (el mismo del panel Ejercicios) y lo deja
+// pre-filtrado en la categoría herramienta. No toca la lógica del modal: reusa
+// su apertura normal y después ajusta el filtro.
+async function abrirModalHerramienta() {
+    await abrirModal();
+    state.modalCatFilter = 'herramienta';
+    document.querySelectorAll('#modal-filtros .chip').forEach((c) => {
+        const active = c.dataset.cat === 'herramienta';
+        c.classList.toggle('is-active', active);
+        c.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    renderModalLista();
+}
+
+// Re-renderiza el panel de rutina que esté activo (Ejercicios o Herramientas).
+function refrescarPanelActivo() {
+    const panel = document.querySelector('.tab-panel:not([hidden])')?.dataset.panel;
+    if (panel === 'herramientas') renderHerramientas();
+    else renderEjerciciosActivos();
 }
 
 // ===================== Toast =====================

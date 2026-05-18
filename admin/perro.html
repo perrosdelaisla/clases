@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=40">
+    <link rel="stylesheet" href="./styles.css?v=41">
 </head>
 <body>
 
@@ -144,14 +144,24 @@
                         Listo
                     </button>
                 </section>
-                <section class="tab-panel" data-panel="herramientas" role="tabpanel" hidden>
-                    <div class="placeholder">
-                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/>
-                            <path d="M12 7 V12 L15 14"/>
-                        </svg>
-                        <p>Próximamente</p>
+                <section class="tab-panel tab-panel--herramientas" data-panel="herramientas" role="tabpanel" hidden>
+                    <div class="ejercicios-toolbar">
+                        <button type="button" class="btn-reordenar" id="abrir-pausados-herr">Ver pausados</button>
                     </div>
+
+                    <div id="herramientas-loading" class="placeholder placeholder--soft">
+                        <p>Cargando herramientas…</p>
+                    </div>
+
+                    <div id="herramientas-empty" class="empty-ejercicios" hidden>
+                        <p class="empty-msg">Este perro no tiene herramientas asignadas.</p>
+                    </div>
+
+                    <ul id="herramientas-lista" class="ejercicios-lista" hidden></ul>
+
+                    <button type="button" class="btn-add-fixed" id="abrir-modal-herramientas">
+                        + Agregar herramienta
+                    </button>
                 </section>
                 <section class="tab-panel" data-panel="salud" role="tabpanel" hidden>
                     <header class="admin-salud-header">
@@ -264,6 +274,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=16"></script>
+    <script type="module" src="./perro.js?v=17"></script>
 </body>
 </html>

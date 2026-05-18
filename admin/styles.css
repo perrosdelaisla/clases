@@ -831,7 +831,8 @@ body {
 
 /* ===================== Tab Ejercicios — vista principal ===================== */
 
-.tab-panel--ejercicios {
+.tab-panel--ejercicios,
+.tab-panel--herramientas {
     /* Espacio para que el botón fixed no tape el último ítem. */
     padding-bottom: 5.5rem;
     position: relative;
