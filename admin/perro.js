@@ -44,19 +44,6 @@ const state = {
 document.addEventListener('DOMContentLoaded', bootstrap);
 
 async function bootstrap() {
-    // Back físico siempre vuelve a index.html — reescribimos la entrada
-    // anterior con index.html y pusheamos la actual; así, el primer back
-    // consume perro y queda index.html en la pila (sin recorrer el
-    // historial entre páginas del admin). Va antes que el replaceState
-    // de tabs (~línea 235) — opera sobre la entrada anterior, no la actual.
-    if (!window.__backFixApplied) {
-        window.__backFixApplied = true;
-        const indexUrl = new URL('./index.html', window.location.href).href;
-        const currentUrl = window.location.href;
-        history.replaceState({ pdli: 'index-fallback' }, '', indexUrl);
-        history.pushState({ pdli: 'perro' }, '', currentUrl);
-    }
-
     showScreen('loading');
     bindTabs();
     bindSubtabs();
@@ -96,6 +83,7 @@ async function bootstrap() {
 
         await cargarYRenderPerro(id);
         activarTab(params.get('tab'), { updateUrl: false });
+        bindBackNavigation();
 
         // La carga de la lista de ejercicios activos no bloquea la UI:
         // el panel ya está visible con su loading propio.
@@ -611,6 +599,7 @@ function entrarModoReordenar() {
     document.querySelectorAll('.subtab').forEach((b) => { b.disabled = true; });
 
     actualizarFlechasReordenar();
+    pushHistoriaUI();
 }
 
 function salirModoReordenar() {
@@ -626,6 +615,8 @@ function salirModoReordenar() {
     // "Reordenar" vuelve a estar disponible si el render no lo refresca después.
     const n = document.querySelectorAll('#ejercicios-lista .ejercicio-activo-card').length;
     document.getElementById('abrir-reordenar').toggleAttribute('hidden', n < 2);
+
+    consumirHistoriaUI();
 }
 
 // Deshabilita ▲ en la primera tarjeta y ▼ en la última.
@@ -681,6 +672,91 @@ async function finalizarReordenar() {
         // Nos quedamos en modo reordenar para que se pueda reintentar.
     } finally {
         btn.disabled = false;
+    }
+}
+
+// ═══════════════════════ Back navigation (botón atrás) ═══════════════════════
+// Mismo patrón que admin.js: un "anchor" siempre en la historia; abrir una
+// hoja/modal o entrar en modo reordenar suma una entrada. El handler de
+// popstate decide, según la UI visible, qué hace el back físico.
+
+let navegandoPorPopstate = false;
+let cierreUiPendiente = false;
+let saliendoDePerro = false;
+
+function bindBackNavigation() {
+    if (window.__perroBackNavBound) return;
+    window.__perroBackNavBound = true;
+
+    // Anchor inicial: el primer back físico dispara popstate en vez de salir.
+    history.pushState({ pdli: 'anchor' }, '');
+
+    window.addEventListener('popstate', () => {
+        if (saliendoDePerro) return;   // ya estamos volviendo al cliente
+
+        // Back originado por un cierre desde la UI: solo consumir y re-anclar.
+        if (cierreUiPendiente) {
+            cierreUiPendiente = false;
+            history.pushState({ pdli: 'anchor' }, '');
+            return;
+        }
+
+        // Prioridad 1: hoja/modal abierta o modo reordenar → cerrar / salir.
+        if (hayUiAbierta()) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { cerrarUiAbierta(); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 2: pestaña ≠ default → volver a la default.
+        const tabActual = document.querySelector('.tab.is-active')?.dataset.tab;
+        if (tabActual && tabActual !== DEFAULT_TAB) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { activarTab(DEFAULT_TAB); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 3: nada abierto, pestaña default → back natural al cliente.
+        saliendoDePerro = true;
+        history.back();
+    });
+}
+
+// ¿Hay una hoja/modal abierta o el modo reordenar activo?
+function hayUiAbierta() {
+    const cat = document.getElementById('modal-ejercicios');
+    const pau = document.getElementById('modal-pausados');
+    return (cat && !cat.hasAttribute('hidden'))
+        || (pau && !pau.hasAttribute('hidden'))
+        || state.modoReordenar === true;
+}
+
+// Cierra la primera UI abierta que encuentre (solo hay una a la vez).
+function cerrarUiAbierta() {
+    const cat = document.getElementById('modal-ejercicios');
+    const pau = document.getElementById('modal-pausados');
+    if (cat && !cat.hasAttribute('hidden')) { cerrarModal(); return; }
+    if (pau && !pau.hasAttribute('hidden')) { cerrarSheetPausados(); return; }
+    if (state.modoReordenar) { salirModoReordenar(); return; }
+}
+
+// Al abrir una hoja/modal o entrar en modo reordenar: sumamos una entrada al
+// historial para que el back físico la consuma (salvo que el cambio venga
+// de un popstate, donde el handler ya re-ancló).
+function pushHistoriaUI() {
+    if (!navegandoPorPopstate) {
+        history.pushState({ pdli: 'perro-ui' }, '');
+    }
+}
+
+// Al cerrar desde la UI (X, backdrop, swipe, botón): consumimos la entrada
+// que sumamos al abrir. cierreUiPendiente evita que el handler haga de más.
+function consumirHistoriaUI() {
+    if (!navegandoPorPopstate) {
+        cierreUiPendiente = true;
+        history.back();
     }
 }
 
@@ -762,6 +838,7 @@ async function abrirSheetCatalogo(titulo) {
     // Forzar reflow antes de aplicar la clase para que la transición se vea.
     requestAnimationFrame(() => modal.classList.add('is-open'));
     document.body.style.overflow = 'hidden';
+    pushHistoriaUI();
 
     try {
         await Promise.all([cargarCatalogo(), cargarAsignados()]);
@@ -775,6 +852,7 @@ async function abrirSheetCatalogo(titulo) {
 function cerrarModal() {
     const modal = document.getElementById('modal-ejercicios');
     if (modal.hasAttribute('hidden')) return;
+    consumirHistoriaUI();
     const panel = modal.querySelector('.bottom-sheet__panel');
 
     // Limpiamos cualquier transform de drag pendiente.
@@ -1111,12 +1189,14 @@ function abrirSheetPausados() {
     // Forzar reflow antes de aplicar la clase para que la transición se vea.
     requestAnimationFrame(() => modal.classList.add('is-open'));
     document.body.style.overflow = 'hidden';
+    pushHistoriaUI();
     cargarYRenderPausados();
 }
 
 function cerrarSheetPausados() {
     const modal = document.getElementById('modal-pausados');
     if (modal.hasAttribute('hidden')) return;
+    consumirHistoriaUI();
     const panel = modal.querySelector('.bottom-sheet__panel');
 
     // Limpiamos cualquier transform de drag pendiente.
