@@ -1335,6 +1335,9 @@ function bindHerramientas() {
 // su apertura normal y después ajusta el filtro.
 async function abrirModalHerramienta() {
     await abrirModal();
+    // abrirModal dejó el título en "Agregar ejercicios"; lo ajustamos.
+    const tituloEl = document.getElementById('modal-titulo');
+    if (tituloEl) tituloEl.textContent = 'Agregar herramienta';
     state.modalCatFilter = 'herramienta';
     document.querySelectorAll('#modal-filtros .chip').forEach((c) => {
         const active = c.dataset.cat === 'herramienta';
