@@ -15,7 +15,7 @@
 // lo suyo en perros, planes_caso, ejercicios_asignados, citas, etc.
 // =====================================================================
 
-import { supabase, getSessionConTimeout } from './supabase.js';
+import { supabase, getSessionConTimeout, recuperarSesionDeStorage } from './supabase.js';
 import { initSwipeTabs } from './swipe-tabs.js';
 
 const SCREENS = {
@@ -104,17 +104,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function bootstrap() {
     showScreen('loading');
+
+    // Timeout tolerante (25s): en iOS, con red lenta, getSession() puede
+    // tardar mientras renueva el token. No queremos mandar al login por
+    // impaciencia y descartar una sesión que sí existe.
+    let session = null;
     try {
-        const { data: { session } } = await getSessionConTimeout();
-        if (!session) {
-            showScreen('login');
-            return;
-        }
-        await onSesionLista(session);
+        const { data } = await getSessionConTimeout(25000);
+        session = data?.session || null;
     } catch (err) {
-        console.error('[app] bootstrap error:', err);
-        showScreen('login');
+        // getSession() venció: NO descartamos la sesión. La rescatamos
+        // leyéndola directamente del storage resistente.
+        console.warn('[app] getSession lento, recuperando del storage:', err);
+        try {
+            session = await recuperarSesionDeStorage();
+        } catch (_e) {
+            session = null;
+        }
     }
+
+    if (!session) {
+        showScreen('login');
+        return;
+    }
+
+    await onSesionLista(session);
 }
 
 async function onSesionLista(session) {
