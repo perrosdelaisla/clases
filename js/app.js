@@ -834,10 +834,16 @@ async function renderRutinaPerroSeleccionado() {
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
             // Cada carrusel arranca mostrando el vigente (última tarjeta, a la
-            // derecha). behavior:'instant' para que ese posicionamiento inicial
-            // no se anime aunque el track tenga scroll-behavior: smooth.
-            lista.querySelectorAll('.rutina-track').forEach((track) => {
-                track.scrollTo({ left: track.scrollWidth, behavior: 'instant' });
+            // derecha). Va dentro de un requestAnimationFrame para correr
+            // después del primer layout/snap; y se suelta scroll-snap-type
+            // mientras posicionamos, porque con 'mandatory' el navegador
+            // pisaría el scrollLeft reseteándolo al primer punto de snap.
+            requestAnimationFrame(() => {
+                lista.querySelectorAll('.rutina-track').forEach((track) => {
+                    track.style.scrollSnapType = 'none';
+                    track.scrollLeft = track.scrollWidth;
+                    track.style.scrollSnapType = '';   // vuelve al valor del CSS
+                });
             });
         }
     } catch (err) {
