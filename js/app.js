@@ -804,15 +804,14 @@ async function renderRutinaPerroSeleccionado() {
             return;
         }
 
-        // Cada renglón es una cadena de filas (progresa_de). El cliente ve solo
-        // el vigente de cada cadena; la historia no se muestra en P3.1. El
-        // filtro de sub-pestaña se aplica sobre la categoría del vigente.
-        const filasFiltradas = construirCadenas(filas)
-            .map((c) => c.vigente)
-            .filter((row) => (row.ejercicios?.categoria || 'ejercicio') === state.rutinaCategoriaActiva)
-            .sort((a, b) => (a.posicion_rutina ?? 0) - (b.posicion_rutina ?? 0));
+        // Cada renglón es una cadena de filas (progresa_de). El filtro de
+        // sub-pestaña y el orden se aplican sobre el vigente, pero la historia
+        // se conserva: un renglón con pasos superados se pinta como carrusel.
+        const cadenasFiltradas = construirCadenas(filas)
+            .filter((c) => (c.vigente.ejercicios?.categoria || 'ejercicio') === state.rutinaCategoriaActiva)
+            .sort((a, b) => (a.vigente.posicion_rutina ?? 0) - (b.vigente.posicion_rutina ?? 0));
 
-        if (filasFiltradas.length === 0) {
+        if (cadenasFiltradas.length === 0) {
             if (myToken !== _renderRutinaToken) return;
             const labelsVacio = {
                 ejercicio: 'Aún no hay ejercicios en la rutina.',
@@ -831,9 +830,15 @@ async function renderRutinaPerroSeleccionado() {
         } else {
             if (myToken !== _renderRutinaToken) return;
             loading.setAttribute('hidden', '');
-            lista.innerHTML = filasFiltradas.map(renderRutinaCard).join('');
+            lista.innerHTML = cadenasFiltradas.map(renderRutinaCard).join('');
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
+            // Cada carrusel arranca mostrando el vigente (última tarjeta, a la
+            // derecha). behavior:'instant' para que ese posicionamiento inicial
+            // no se anime aunque el track tenga scroll-behavior: smooth.
+            lista.querySelectorAll('.rutina-track').forEach((track) => {
+                track.scrollTo({ left: track.scrollWidth, behavior: 'instant' });
+            });
         }
     } catch (err) {
         if (myToken !== _renderRutinaToken) return;
@@ -848,7 +853,33 @@ async function renderRutinaPerroSeleccionado() {
     }
 }
 
-function renderRutinaCard(row) {
+// Recibe la cadena {vigente, history} de un renglón.
+// Sin historia: una tarjeta simple (igual que siempre).
+// Con historia: un carrusel horizontal con scroll-snap nativo, tarjetas en
+// orden [paso más viejo … paso más reciente, vigente].
+function renderRutinaCard(cadena) {
+    const { vigente, history } = cadena;
+    if (!history || history.length === 0) {
+        return rutinaCardHTML(vigente, { tag: 'li', superado: false });
+    }
+    // history viene de la más reciente a la más vieja → invertir para que las
+    // tarjetas vayan de la más vieja a la más reciente, y el vigente al final.
+    const tarjetas = [...history].reverse()
+        .map((row) => rutinaCardHTML(row, { tag: 'article', superado: true }))
+        .concat(rutinaCardHTML(vigente, { tag: 'article', superado: false }))
+        .join('');
+    return `
+        <li class="rutina-renglon">
+            <div class="rutina-track">
+                ${tarjetas}
+            </div>
+        </li>
+    `;
+}
+
+// Markup de una tarjeta de rutina. tag = 'li' para el renglón simple, 'article'
+// para las tarjetas dentro de un carrusel. superado = paso anterior (apagado).
+function rutinaCardHTML(row, { tag, superado }) {
     const ej = row.ejercicios;
     if (!ej) return '';
     const nombre = escapeHTML(ej.nombre || 'Ejercicio');
@@ -856,14 +887,15 @@ function renderRutinaCard(row) {
     const desc = ej.descripcion && ej.descripcion.trim()
         ? `<p class="rutina-card__desc">${escapeHTML(ej.descripcion)}</p>`
         : '';
+    const claseSuperado = superado ? ' rutina-card--superado' : '';
     return `
-        <li class="rutina-card" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" role="button" tabindex="0">
+        <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
                 <h3 class="rutina-card__nombre">${nombre}</h3>
                 <svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             ${desc}
-        </li>
+        </${tag}>
     `;
 }
 

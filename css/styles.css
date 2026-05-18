@@ -2307,3 +2307,28 @@ body {
     height: 100%;
     border: 0;
 }
+
+/* ===================== Carrusel de progresiones (renglón con historia) ===================== */
+
+.rutina-track {
+    display: flex;
+    gap: 0.6rem;
+    padding: 4px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.rutina-track::-webkit-scrollbar { display: none; }
+
+/* Tarjetas del carrusel: ~88% del ancho para que asome la vecina (indicador
+   de que el renglón tiene historia). */
+.rutina-track .rutina-card {
+    flex: 0 0 88%;
+    scroll-snap-align: end;
+}
+
+/* Paso superado: tarjeta apagada. */
+.rutina-card--superado { opacity: 0.5; }

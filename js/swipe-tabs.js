@@ -39,6 +39,12 @@ export function initSwipeTabs({ container, tabs, getCurrent, onChange }) {
     let direccionDecidida = null; // 'h' | 'v' | null
 
     const onStart = (e) => {
+        // El carrusel de un renglón con historia tiene su propio scroll
+        // horizontal nativo: si el gesto arranca dentro de un track, no lo
+        // capturamos — lo dejamos para el scroll del carrusel, no para
+        // cambiar de pestaña.
+        if (e.target.closest && e.target.closest('.rutina-track')) return;
+
         // Si el target es un input/select/button/anchor propio, no capturamos —
         // salvo que esté dentro de una card de slot/calendario (donde el botón
         // ocupa toda la celda y queremos poder iniciar el swipe desde ahí).
