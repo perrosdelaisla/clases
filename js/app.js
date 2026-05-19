@@ -111,6 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
 async function bootstrap() {
     showScreen('loading');
 
+    // ¿La URL trae ?invite=<email>? Es el enlace del correo de invitación.
+    // Lo leemos una vez y lo limpiamos de la URL para que no quede pegado.
+    const inviteEmail = leerYlimpiarInvite();
+
     // Timeout tolerante (25s): en iOS, con red lenta, getSession() puede
     // tardar mientras renueva el token. No queremos mandar al login por
     // impaciencia y descartar una sesión que sí existe.
@@ -130,7 +134,14 @@ async function bootstrap() {
     }
 
     if (!session) {
-        showScreen('login');
+        // Cliente invitado: el código ya se lo mandó la edge function.
+        // Lo llevamos directo a la pantalla de código con el email cargado,
+        // sin pedir otro código (eso invalidaría el de la invitación).
+        if (inviteEmail) {
+            mostrarPantallaCodigoInvitacion(inviteEmail);
+        } else {
+            showScreen('login');
+        }
         return;
     }
 
@@ -559,6 +570,45 @@ function iniciarCooldownReenvio() {
             btn.textContent = `Reenviar código (${restante}s)`;
         }
     }, 1000);
+}
+
+// Lee ?invite=<email> de la URL (el enlace del correo de invitación) y lo
+// borra de la barra de direcciones para que no quede pegado. Devuelve el
+// email validado, o null si no viene o no parece un email.
+function leerYlimpiarInvite() {
+    let email = null;
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const raw = params.get('invite');
+        if (raw) {
+            email = raw.trim().toLowerCase();
+            params.delete('invite');
+            const qs = params.toString();
+            const nuevaUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+            history.replaceState(null, '', nuevaUrl);
+        }
+    } catch (_e) { /* URL rara: seguimos sin invite */ }
+    return (email && EMAIL_RE.test(email)) ? email : null;
+}
+
+// Flujo de invitación: el cliente llega con el código YA enviado por la
+// edge function. Lo dejamos directo en la pantalla de código con el email
+// cargado, sin llamar a signInWithOtp. El cooldown del botón "Reenviar"
+// arranca igual que en enviarCodigo: evita que un toque por reflejo pida
+// otro código y, con eso, invalide el de la invitación.
+function mostrarPantallaCodigoInvitacion(email) {
+    emailEnVerificacion = email;
+    const emailEl = document.getElementById('email-enviado');
+    if (emailEl) emailEl.textContent = email;
+
+    const codigoInput = document.getElementById('codigo-input');
+    if (codigoInput) codigoInput.value = '';
+    ocultarMensaje('codigo-error');
+    ocultarMensaje('codigo-aviso');
+
+    showScreen('login-sent');
+    if (codigoInput) codigoInput.focus();
+    iniciarCooldownReenvio();
 }
 
 // ¿El error de Supabase es un rate-limit de envío de emails? El SMTP tiene

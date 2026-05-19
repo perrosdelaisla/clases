@@ -63,12 +63,19 @@ async function enviarCorreo(email: string, nombre: string, codigo: string): Prom
     const nombrePila = (nombre || '').trim().split(/\s+/)[0] || '';
     const saludo = nombrePila ? `Hola ${nombrePila}:` : 'Hola:';
 
+    // Enlace que abre la app directo en la pantalla de código, con el
+    // correo ya cargado (?invite=<email>). NO es un magic link: no lleva
+    // token, así que ningún escáner de correo puede invalidar el código.
+    const inviteLink = `${APP_URL}?invite=${encodeURIComponent(email)}`;
+
     const textContent = [
         saludo,
         'Te damos acceso a la app de Perros de la Isla.',
-        `Tu código de acceso es: ${codigo}`,
-        `Entra en ${APP_URL}, introduce tu correo y luego este código de 6 dígitos.`,
-        'Si no lo recibes, revisa la carpeta de spam.',
+        'Pulsa este enlace para abrir la app con tu correo ya cargado:',
+        inviteLink,
+        `Y escribe este código de acceso: ${codigo}`,
+        'Si no recibes bien el correo, revisa la carpeta de spam.',
+        `Si el enlace no funciona, entra en ${APP_URL}, introduce tu correo y luego el código.`,
         'Si no lo has solicitado, puedes ignorar este mensaje.',
         'Un saludo,',
         'El equipo de Perros de la Isla',
@@ -77,10 +84,12 @@ async function enviarCorreo(email: string, nombre: string, codigo: string): Prom
     const htmlContent = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222222;line-height:1.6">
   <p>${saludo}</p>
   <p>Te damos acceso a la app de Perros de la Isla.</p>
-  <p>Tu código de acceso es:</p>
+  <p>Pulsa este enlace para abrir la app con tu correo ya cargado:<br>
+  <a href="${inviteLink}">Abrir la app de Perros de la Isla</a></p>
+  <p>Y escribe este código de acceso:</p>
   <p style="font-size:30px;font-weight:bold;letter-spacing:6px;margin:8px 0;color:#111111">${codigo}</p>
-  <p>Entra en <a href="${APP_URL}">${APP_URL}</a>, introduce tu correo y luego este código de 6 dígitos.</p>
-  <p>Si no lo recibes, revisa la carpeta de spam.</p>
+  <p>Si no recibes bien el correo, revisa la carpeta de spam.</p>
+  <p>Si el enlace no funciona, entra en <a href="${APP_URL}">${APP_URL}</a>, introduce tu correo y luego el código.</p>
   <p>Si no lo has solicitado, puedes ignorar este mensaje.</p>
   <p>Un saludo,<br>El equipo de Perros de la Isla</p>
 </div>`;
