@@ -86,9 +86,12 @@ async function verificarAdmin(authUserId) {
 
 async function cargarYRender(clienteId) {
     // SELECT * para no asumir nombres de columna más allá de los necesarios.
-    const [clienteRes, perrosRes] = await Promise.all([
+    // El count de usuarios_cliente decide el texto del botón de invitar:
+    // "ya invitado" = el cliente tiene al menos un usuario vinculado.
+    const [clienteRes, perrosRes, usuariosRes] = await Promise.all([
         supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
         supabase.from('perros').select('*').eq('cliente_id', clienteId).order('created_at', { ascending: true }),
+        supabase.from('usuarios_cliente').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
     ]);
 
     if (clienteRes.error) {
@@ -107,12 +110,19 @@ async function cargarYRender(clienteId) {
         // Mostramos al cliente igual; los perros caen al estado vacío con aviso.
     }
 
-    renderCliente(clienteRes.data);
+    if (usuariosRes.error) {
+        console.error('[cliente] error contando usuarios vinculados:', usuariosRes.error);
+        // No abortamos: tratamos el count como 0 → el botón cae en
+        // "Invitar a la app", que es el lado seguro.
+    }
+    const tieneUsuario = (usuariosRes.count || 0) >= 1;
+
+    renderCliente(clienteRes.data, tieneUsuario);
     renderPerros(perrosRes.data || []);
     showScreen('cliente');
 }
 
-function renderCliente(c) {
+function renderCliente(c, tieneUsuario) {
     state.cliente = c;
     setText('cliente-nombre', c.nombre || 'Sin nombre');
     setText('cliente-telefono', c.telefono || '—');
@@ -122,7 +132,7 @@ function renderCliente(c) {
 
     renderEstadoSelector((c.estado || 'consulta').toLowerCase());
 
-    actualizarBotonInvitar(c);
+    actualizarBotonInvitar(tieneUsuario);
 
     // Widget pack_actual
     const packInput = document.getElementById('cliente-pack-actual');
@@ -131,10 +141,13 @@ function renderCliente(c) {
     document.title = `${c.nombre || 'Cliente'} — Admin PDLI`;
 }
 
-function actualizarBotonInvitar(c) {
+// El texto del botón depende de si el cliente YA fue invitado, es decir,
+// si tiene al menos un usuario vinculado en usuarios_cliente. NO se mira
+// el email: una ficha puede tener email cargado sin haber sido invitada.
+function actualizarBotonInvitar(tieneUsuario) {
     const btn = document.getElementById('btn-invitar');
     if (!btn) return;
-    btn.textContent = c?.email ? 'Reenviar invitación' : 'Invitar a la app';
+    btn.textContent = tieneUsuario ? 'Reenviar invitación' : 'Invitar a la app';
 }
 
 function renderPerros(perros) {
@@ -419,7 +432,8 @@ async function enviarInvitacion() {
     // Éxito — reflejamos el nuevo email en pantalla y mostramos paso success.
     if (state.cliente) state.cliente.email = email;
     setText('cliente-email', email);
-    actualizarBotonInvitar(state.cliente);
+    // La invitación salió bien: el cliente ya tiene usuario vinculado.
+    actualizarBotonInvitar(true);
     mostrarSuccessInvitacion(email);
 
     btn.disabled = false;
