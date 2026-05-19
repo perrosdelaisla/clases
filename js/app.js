@@ -233,6 +233,14 @@ function bindEventos() {
     const reenviar = document.getElementById('codigo-reenviar');
     if (reenviar) reenviar.addEventListener('click', reenviarCodigo);
 
+    // Si la app corre como PWA instalada, mostramos el aviso de iniciar
+    // sesión aquí dentro: en iOS el storage de Safari y el de la PWA están
+    // separados, la sesión no pasa de uno al otro.
+    if (isStandalone()) {
+        const pwaHint = document.getElementById('login-pwa-hint');
+        if (pwaHint) pwaHint.hidden = false;
+    }
+
     const otraVez = document.getElementById('login-otra-vez');
     if (otraVez) otraVez.addEventListener('click', () => {
         document.getElementById('login-email').value = '';
@@ -421,6 +429,9 @@ async function enviarCodigo(e) {
 
         showScreen('login-sent');
         if (codigoInput) codigoInput.focus();
+        // Acabamos de mandar un código: el botón "Reenviar" arranca en
+        // cooldown para que nadie pida otro antes de que llegue el primero.
+        iniciarCooldownReenvio();
     } catch (err) {
         console.error('[app] envío de código error:', err);
         errEl.textContent = mensajeErrorEnvio(err);
@@ -509,14 +520,45 @@ async function reenviarCodigo() {
         avisoEl.hidden = false;
         const input = document.getElementById('codigo-input');
         if (input) { input.value = ''; input.focus(); }
+        // Código nuevo en camino: el botón vuelve a quedar en cooldown.
+        iniciarCooldownReenvio();
     } catch (err) {
         console.error('[app] reenvío de código error:', err);
         errEl.textContent = mensajeErrorEnvio(err);
         errEl.hidden = false;
-    } finally {
+        // El envío falló: dejamos reintentar de inmediato, sin cooldown.
         btn.disabled = false;
         btn.textContent = 'Reenviar código';
     }
+}
+
+// Cooldown del botón "Reenviar código". Cada reenvío dispara un correo y
+// el SMTP tiene rate-limit; 30s da tiempo a que llegue el primer código
+// antes de tentar otro. El botón queda deshabilitado mostrando la cuenta
+// regresiva ("Reenviar código (30s)") hasta volver a su estado normal.
+const REENVIO_COOLDOWN_S = 30;
+let _reenvioTimer = null;
+
+function iniciarCooldownReenvio() {
+    const btn = document.getElementById('codigo-reenviar');
+    if (!btn) return;
+    if (_reenvioTimer) clearInterval(_reenvioTimer);
+
+    let restante = REENVIO_COOLDOWN_S;
+    btn.disabled = true;
+    btn.textContent = `Reenviar código (${restante}s)`;
+
+    _reenvioTimer = setInterval(() => {
+        restante -= 1;
+        if (restante <= 0) {
+            clearInterval(_reenvioTimer);
+            _reenvioTimer = null;
+            btn.disabled = false;
+            btn.textContent = 'Reenviar código';
+        } else {
+            btn.textContent = `Reenviar código (${restante}s)`;
+        }
+    }, 1000);
 }
 
 // ¿El error de Supabase es un rate-limit de envío de emails? El SMTP tiene
@@ -540,7 +582,7 @@ function mensajeErrorEnvio(err) {
 function mensajeErrorCodigo(err) {
     const txt = `${err?.code || ''} ${err?.message || ''}`.toLowerCase();
     if (txt.includes('expired') || txt.includes('invalid') || txt.includes('token')) {
-        return 'El código no es correcto o ha caducado. Revísalo, o pide uno nuevo con «Reenviar código».';
+        return 'El código no es correcto o ha caducado. Pide uno nuevo.';
     }
     return err?.message
         ? `No se pudo verificar el código: ${err.message}`

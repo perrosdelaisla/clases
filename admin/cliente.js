@@ -4,8 +4,9 @@
 // Carga datos del cliente identificado por ?id=<uuid> y la lista de
 // perros vinculados. Si no hay sesión o el usuario no es admin,
 // redirige al login. RLS de Victoria deja pasar todo si es_admin().
-// Botón "Invitar a la app": UPSERT en invitaciones_pendientes + magic
-// link via supabase.auth.signInWithOtp + opción de compartir por WhatsApp.
+// Botón "Invitar a la app": UPSERT en invitaciones_pendientes + envío
+// del código de acceso via supabase.auth.signInWithOtp + opción de
+// compartir las instrucciones por WhatsApp.
 // =====================================================================
 
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
@@ -442,7 +443,6 @@ async function enviarInvitacion() {
     const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-            emailRedirectTo: APP_CLIENTE_URL,
             shouldCreateUser: true,
         },
     });
@@ -489,12 +489,16 @@ function mostrarSuccessInvitacion(email) {
     const wa = document.getElementById('invitar-whatsapp');
     const tel = telefonoParaWhatsapp(state.cliente?.telefono);
     if (tel) {
-        const nombrePila = (state.cliente?.nombre || '').split(/\s+/)[0] || 'hola';
+        const nombrePila = (state.cliente?.nombre || '').split(/\s+/)[0] || '';
+        const saludo = nombrePila ? `Hola ${nombrePila}, ` : 'Hola, ';
+        // Texto para el cliente: español de España, tono sobrio PDLI.
+        // Incluye la URL de la app y la instrucción del flujo de código.
         const msg =
-            `Hola ${nombrePila}! Te paso el acceso a tu app de Perros de la Isla, ` +
-            `donde vas a ver los ejercicios para tu perro día a día. ` +
-            `Revisá tu mail (${email}) para entrar. ` +
-            `Si no te llegó, avisame y te lo reenvío. 🐾`;
+            `${saludo}te damos acceso a la app de Perros de la Isla. ` +
+            `Entra desde aquí: ${APP_CLIENTE_URL} ` +
+            `Introduce tu correo (${email}) y te enviaremos un código de 6 dígitos para acceder. ` +
+            `Si no lo recibes, revisa la carpeta de spam. ` +
+            `Un saludo, el equipo de Perros de la Isla.`;
         wa.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
         wa.removeAttribute('hidden');
     } else {
