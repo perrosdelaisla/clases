@@ -68,6 +68,12 @@ const state = {
 // renders se pisan (cambio rápido de sub-pestañas, foco/blur, etc.).
 let _renderRutinaToken = 0;
 
+// Email en proceso de verificación por código OTP. Lo fija enviarCodigo()
+// y lo usan verificarCodigo() y reenviarCodigo(): el código de 6 dígitos se
+// confirma con verifyOtp({ email, token }), así que hay que recordar a qué
+// email pertenece el código que la persona está escribiendo.
+let emailEnVerificacion = null;
+
 // Mapeo de citas.protocolo (técnico) a label cliente
 const PROTOCOLOS_LABEL = {
     educacion_basica:         'Educación básica',
@@ -219,7 +225,13 @@ async function confirmarWelcomeVisto() {
 function bindEventos() {
     // Login
     const form = document.getElementById('login-form');
-    if (form) form.addEventListener('submit', enviarMagicLink);
+    if (form) form.addEventListener('submit', enviarCodigo);
+
+    const codigoForm = document.getElementById('codigo-form');
+    if (codigoForm) codigoForm.addEventListener('submit', verificarCodigo);
+
+    const reenviar = document.getElementById('codigo-reenviar');
+    if (reenviar) reenviar.addEventListener('click', reenviarCodigo);
 
     const otraVez = document.getElementById('login-otra-vez');
     if (otraVez) otraVez.addEventListener('click', () => {
@@ -359,8 +371,23 @@ function bindEventos() {
 }
 
 // ===================== Login =====================
+//
+// Acceso por código de 6 dígitos (OTP por email), NO por enlace mágico.
+//
+// En iOS el enlace mágico abre siempre en Safari, mientras la clienta
+// usa la PWA instalada — son almacenamientos separados y la sesión queda
+// en el contexto equivocado. Con el código, la persona lo escribe DENTRO
+// de la app: la sesión nace en el contexto correcto.
+//
+// Flujo: login (email) → signInWithOtp → login-sent (código) →
+// verifyOtp → onAuthStateChange(SIGNED_IN) → onSesionLista.
 
-async function enviarMagicLink(e) {
+/**
+ * Paso 1: la clienta escribe su email. Pedimos el código a Supabase
+ * (signInWithOtp manda el código de 6 dígitos según la plantilla de
+ * email) y pasamos a la pantalla de ingreso de código.
+ */
+async function enviarCodigo(e) {
     e.preventDefault();
     const input = document.getElementById('login-email');
     const errEl = document.getElementById('login-error');
@@ -380,24 +407,149 @@ async function enviarMagicLink(e) {
     btn.textContent = 'Enviando…';
 
     try {
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: window.location.origin + window.location.pathname },
-        });
+        const { error } = await supabase.auth.signInWithOtp({ email });
         if (error) throw error;
 
+        emailEnVerificacion = email;
         document.getElementById('email-enviado').textContent = email;
+
+        // Dejamos la pantalla de código limpia antes de mostrarla.
+        const codigoInput = document.getElementById('codigo-input');
+        if (codigoInput) codigoInput.value = '';
+        ocultarMensaje('codigo-error');
+        ocultarMensaje('codigo-aviso');
+
         showScreen('login-sent');
+        if (codigoInput) codigoInput.focus();
     } catch (err) {
-        console.error('[app] magic link error:', err);
-        errEl.textContent = err?.message
-            ? `No se pudo enviar: ${err.message}`
-            : 'No se pudo enviar el email. Inténtalo de nuevo.';
+        console.error('[app] envío de código error:', err);
+        errEl.textContent = mensajeErrorEnvio(err);
         errEl.hidden = false;
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Enviar enlace';
+        btn.textContent = 'Enviar código';
     }
+}
+
+/**
+ * Paso 2: la clienta escribe el código de 6 dígitos. Lo verificamos con
+ * verifyOtp. Si crea sesión, onAuthStateChange (SIGNED_IN) toma el control
+ * y arranca onSesionLista() — no tocamos la pantalla acá. Si el código es
+ * incorrecto o caducó, mostramos el error y dejamos reintentar sin recargar.
+ */
+async function verificarCodigo(e) {
+    e.preventDefault();
+    const input = document.getElementById('codigo-input');
+    const errEl = document.getElementById('codigo-error');
+    const btn = document.getElementById('codigo-submit');
+
+    const token = (input.value || '').replace(/\D/g, '');
+    ocultarMensaje('codigo-error');
+    ocultarMensaje('codigo-aviso');
+
+    if (token.length !== 6) {
+        errEl.textContent = 'El código tiene 6 dígitos.';
+        errEl.hidden = false;
+        return;
+    }
+    if (!emailEnVerificacion) {
+        errEl.textContent = 'Vuelve a introducir tu email para pedir un código nuevo.';
+        errEl.hidden = false;
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+
+    try {
+        const { error } = await supabase.auth.verifyOtp({
+            email: emailEnVerificacion,
+            token,
+            type: 'email',
+        });
+        if (error) throw error;
+        // Sesión creada: onAuthStateChange (SIGNED_IN) → onSesionLista().
+        // No reseteamos el botón: la pantalla cambia sola.
+    } catch (err) {
+        console.error('[app] verificación de código error:', err);
+        errEl.textContent = mensajeErrorCodigo(err);
+        errEl.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+        input.focus();
+        input.select();
+    }
+}
+
+/**
+ * "Reenviar código": vuelve a pedir un código a Supabase. Esto dispara un
+ * correo y el SMTP tiene rate-limit — si responde 429, avisamos que espere.
+ */
+async function reenviarCodigo() {
+    const errEl = document.getElementById('codigo-error');
+    const avisoEl = document.getElementById('codigo-aviso');
+    const btn = document.getElementById('codigo-reenviar');
+
+    ocultarMensaje('codigo-error');
+    ocultarMensaje('codigo-aviso');
+
+    if (!emailEnVerificacion) {
+        showScreen('login');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    try {
+        const { error } = await supabase.auth.signInWithOtp({ email: emailEnVerificacion });
+        if (error) throw error;
+
+        avisoEl.textContent = 'Te hemos enviado un código nuevo. Revisa tu correo.';
+        avisoEl.hidden = false;
+        const input = document.getElementById('codigo-input');
+        if (input) { input.value = ''; input.focus(); }
+    } catch (err) {
+        console.error('[app] reenvío de código error:', err);
+        errEl.textContent = mensajeErrorEnvio(err);
+        errEl.hidden = false;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Reenviar código';
+    }
+}
+
+// ¿El error de Supabase es un rate-limit de envío de emails? El SMTP tiene
+// cupo limitado; cuando se agota, signInWithOtp responde 429.
+function esRateLimit(err) {
+    if (!err) return false;
+    if (err.status === 429) return true;
+    const txt = `${err.code || ''} ${err.message || ''}`.toLowerCase();
+    return /rate.?limit|too many|429/.test(txt);
+}
+
+function mensajeErrorEnvio(err) {
+    if (esRateLimit(err)) {
+        return 'Has pedido varios códigos seguidos. Espera un minuto antes de volver a intentarlo.';
+    }
+    return err?.message
+        ? `No se pudo enviar el código: ${err.message}`
+        : 'No se pudo enviar el código. Inténtalo de nuevo.';
+}
+
+function mensajeErrorCodigo(err) {
+    const txt = `${err?.code || ''} ${err?.message || ''}`.toLowerCase();
+    if (txt.includes('expired') || txt.includes('invalid') || txt.includes('token')) {
+        return 'El código no es correcto o ha caducado. Revísalo, o pide uno nuevo con «Reenviar código».';
+    }
+    return err?.message
+        ? `No se pudo verificar el código: ${err.message}`
+        : 'No se pudo verificar el código. Inténtalo de nuevo.';
+}
+
+function ocultarMensaje(id) {
+    const el = document.getElementById(id);
+    if (el) { el.hidden = true; el.textContent = ''; }
 }
 
 async function cerrarSesion() {

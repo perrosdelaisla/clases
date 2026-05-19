@@ -43,15 +43,14 @@
                 </div>
             </div>
             <h1 class="title-display">Bienvenido</h1>
-            <p class="lead">Para entrar a la app, abre el enlace que te enviamos por correo.</p>
-            <p class="lead">Introduce tu email aquí abajo y te enviamos uno nuevo.</p>
+            <p class="lead">Introduce tu email y te enviaremos un código de 6 dígitos para entrar.</p>
 
             <form id="login-form" class="form" novalidate>
                 <label class="field">
                     <span>Email</span>
                     <input type="email" id="login-email" autocomplete="email" inputmode="email" required>
                 </label>
-                <button type="submit" class="btn btn-primary" id="login-submit">Enviar enlace</button>
+                <button type="submit" class="btn btn-primary" id="login-submit">Enviar código</button>
                 <p class="error-message" id="login-error" hidden></p>
             </form>
 
@@ -60,7 +59,7 @@
     </section>
 
     <section class="screen" id="screen-login-sent" hidden>
-        <main class="centered centered--narrow">
+        <main class="login-cliente">
             <div class="brand brand--splash">
                 <div class="logo-circle">
                     <img src="./img/logo.png" alt="" class="logo-circle__img">
@@ -70,8 +69,22 @@
                     <span class="brand__tagline">Adiestramiento canino profesional</span>
                 </div>
             </div>
-            <h2 class="title-display">Email enviado</h2>
-            <p class="lead">Te hemos enviado un email a <strong id="email-enviado"></strong>. Ábrelo desde el móvil para entrar a la app.</p>
+            <h2 class="title-display">Revisa tu correo</h2>
+            <p class="lead">Te hemos enviado un código de 6 dígitos a <strong id="email-enviado"></strong>. Introdúcelo aquí abajo para entrar.</p>
+
+            <form id="codigo-form" class="form" novalidate>
+                <label class="field">
+                    <span>Código de acceso</span>
+                    <input type="text" id="codigo-input" inputmode="numeric" autocomplete="one-time-code"
+                           maxlength="6" pattern="[0-9]*"
+                           style="text-align:center;font-size:1.6rem;letter-spacing:0.4em" required>
+                </label>
+                <button type="submit" class="btn btn-primary" id="codigo-submit">Entrar</button>
+                <p class="error-message" id="codigo-error" hidden></p>
+            </form>
+
+            <p class="muted" id="codigo-aviso" hidden></p>
+            <button type="button" class="btn-link" id="codigo-reenviar">Reenviar código</button>
             <button type="button" class="btn-link" id="login-otra-vez">Probar con otro email</button>
         </main>
     </section>
@@ -519,6 +532,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=31"></script>
+    <script type="module" src="./js/app.js?v=32"></script>
 </body>
 </html>
