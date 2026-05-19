@@ -244,6 +244,9 @@ function bindEventos() {
     const reenviar = document.getElementById('codigo-reenviar');
     if (reenviar) reenviar.addEventListener('click', reenviarCodigo);
 
+    const pegar = document.getElementById('codigo-pegar');
+    if (pegar) pegar.addEventListener('click', pegarCodigo);
+
     // Si la app corre como PWA instalada, mostramos el aviso de iniciar
     // sesión aquí dentro: en iOS el storage de Safari y el de la PWA están
     // separados, la sesión no pasa de uno al otro.
@@ -501,6 +504,38 @@ async function verificarCodigo(e) {
         input.focus();
         input.select();
     }
+}
+
+/**
+ * Botón "Pegar código": lee el portapapeles y, si encuentra un código de
+ * 6 dígitos, lo carga en el campo. navigator.clipboard puede fallar (el
+ * navegador lo bloquea, iOS pide permiso, etc.) — si pasa, no rompe nada:
+ * el cliente escribe el código a mano como siempre. El pegado normal del
+ * teclado sobre el input sigue funcionando aparte de este botón.
+ */
+async function pegarCodigo() {
+    const input = document.getElementById('codigo-input');
+    if (!input) return;
+    ocultarMensaje('codigo-aviso');
+    try {
+        const texto = await navigator.clipboard.readText();
+        const digitos = (texto || '').replace(/\D/g, '');
+        if (digitos.length === 6) {
+            input.value = digitos;
+            input.focus();
+            ocultarMensaje('codigo-error');
+        } else {
+            avisarCodigo('No encontramos un código de 6 dígitos. Escríbelo a mano.');
+        }
+    } catch (_e) {
+        avisarCodigo('Pega el código en la casilla o escríbelo a mano.');
+    }
+}
+
+// Muestra un aviso suave en la pantalla de código (no es un error).
+function avisarCodigo(mensaje) {
+    const avisoEl = document.getElementById('codigo-aviso');
+    if (avisoEl) { avisoEl.textContent = mensaje; avisoEl.hidden = false; }
 }
 
 /**

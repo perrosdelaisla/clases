@@ -21,6 +21,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const APP_URL = 'https://perrosdelaisla.github.io/clases/';
+const LOGO_URL = 'https://perrosdelaisla.github.io/clases/img/icon-192.png';
 const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
 const MAIL_FROM = 'clasesperrosdelaisla@gmail.com';
 const MAIL_FROM_NAME = 'Perros de la Isla';
@@ -70,29 +71,271 @@ async function enviarCorreo(email: string, nombre: string, codigo: string): Prom
 
     const textContent = [
         saludo,
-        'Te damos acceso a la app de Perros de la Isla.',
-        'Pulsa este enlace para abrir la app con tu correo ya cargado:',
+        'Te damos acceso a la app de clases de Perros de la Isla.',
+        'Para entrar necesitas hacer 3 cosas. Te llevará un minuto.',
+        '',
+        'Paso 1 — Copia este código:',
+        codigo,
+        '(mantén el dedo pulsado sobre él para copiarlo)',
+        '',
+        'Paso 2 — Abre la app desde este enlace:',
         inviteLink,
-        `Y escribe este código de acceso: ${codigo}`,
+        '',
+        'Paso 3 — La app se abrirá con tu correo ya puesto. Pega el código en la casilla y pulsa Entrar.',
+        '',
         'Si no recibes bien el correo, revisa la carpeta de spam.',
-        `Si el enlace no funciona, entra en ${APP_URL}, introduce tu correo y luego el código.`,
-        'Si no lo has solicitado, puedes ignorar este mensaje.',
+        'Si no has solicitado esto, puedes ignorar este mensaje.',
+        '',
         'Un saludo,',
         'El equipo de Perros de la Isla',
     ].join('\n');
 
-    const htmlContent = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222222;line-height:1.6">
-  <p>${saludo}</p>
-  <p>Te damos acceso a la app de Perros de la Isla.</p>
-  <p>Pulsa este enlace para abrir la app con tu correo ya cargado:<br>
-  <a href="${inviteLink}">Abrir la app de Perros de la Isla</a></p>
-  <p>Y escribe este código de acceso:</p>
-  <p style="font-size:30px;font-weight:bold;letter-spacing:6px;margin:8px 0;color:#111111">${codigo}</p>
-  <p>Si no recibes bien el correo, revisa la carpeta de spam.</p>
-  <p>Si el enlace no funciona, entra en <a href="${APP_URL}">${APP_URL}</a>, introduce tu correo y luego el código.</p>
-  <p>Si no lo has solicitado, puedes ignorar este mensaje.</p>
-  <p>Un saludo,<br>El equipo de Perros de la Isla</p>
-</div>`;
+    // Plantilla HTML de Design — 3 pasos numerados. Los placeholders
+    // ({{CODIGO}}, {{ENLACE_INVITE}}, {{LOGO_URL}}) van interpolados; el
+    // saludo se agrega como primer párrafo del cuerpo, antes del <h1>.
+    const htmlContent = `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>Te damos acceso a la app de clases</title>
+  <!--[if mso]>
+  <style>
+    table, td, div, h1, p { font-family: Arial, Helvetica, sans-serif !important; }
+    .btn-mso { padding: 18px 0 !important; }
+  </style>
+  <![endif]-->
+  <style>
+    /* Email-safe: only used by clients that support <style>. Everything visual is also inlined below. */
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+      .code-num { font-size: 40px !important; letter-spacing: 8px !important; }
+      .btn a { font-size: 17px !important; padding: 18px 24px !important; }
+      .step-row td.num-cell { width: 44px !important; }
+      .step-num { width: 36px !important; height: 36px !important; line-height: 36px !important; font-size: 18px !important; }
+    }
+    a { color: #C8102E; }
+    .code-num::selection { background: #C8102E; color: #F5EFE0; }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#F5EFE0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+
+  <!-- Preheader -->
+  <div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all; color:#F5EFE0;">
+    Tu código de acceso a la app de clases. Tres pasos sencillos. Un minuto.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5EFE0;">
+    <tr>
+      <td align="center" style="padding: 32px 16px 48px 16px;">
+
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background-color:#F5EFE0;">
+
+          <!-- LOGO -->
+          <tr>
+            <td align="center" style="padding: 8px 24px 18px 24px;">
+              <img src="${LOGO_URL}" width="88" height="88" alt="Perros de la Isla" style="display:block; width:88px; height:88px; border:0; outline:none; text-decoration:none;">
+            </td>
+          </tr>
+
+          <!-- Brand lockup -->
+          <tr>
+            <td align="center" style="padding: 0 24px 6px 24px;">
+              <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:22px; line-height:1.1; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#C8102E;">
+                Perros de la Isla
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 0 24px 22px 24px;">
+              <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:13px; line-height:1.3; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#1A1A1A;">
+                Adiestramiento canino profesional
+              </p>
+            </td>
+          </tr>
+
+          <!-- Red accent line -->
+          <tr>
+            <td align="center" style="padding: 0 24px 24px 24px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="width:36px; height:2px; background-color:#C8102E; font-size:0; line-height:0;">&nbsp;</td></tr></table>
+            </td>
+          </tr>
+
+          <!-- HEADER COPY -->
+          <tr>
+            <td class="px" align="left" style="padding: 0 40px 8px 40px;">
+              <p style="margin:0 0 14px 0; font-family: Arial, Helvetica, sans-serif; font-size:17px; line-height:1.55; color:#1A1A1A;">
+                ${saludo}
+              </p>
+              <h1 style="margin:0 0 14px 0; font-family: Arial, Helvetica, sans-serif; font-size:26px; line-height:1.25; font-weight:700; color:#1A1A1A; letter-spacing:-0.2px;">
+                Te damos acceso a la app de clases.
+              </h1>
+              <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:17px; line-height:1.55; color:#1A1A1A;">
+                Para entrar a la app necesitas hacer <strong style="font-weight:700;">3 cosas</strong>.<br>
+                Te llevará un minuto.
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="font-size:0; line-height:0; height:32px;">&nbsp;</td></tr>
+
+          <!-- PASO 1 -->
+          <tr>
+            <td class="px" style="padding: 0 40px;">
+              <table role="presentation" class="step-row" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="num-cell" valign="top" width="56" style="width:56px;">
+                    <div class="step-num" style="width:40px; height:40px; line-height:40px; background-color:#C8102E; color:#F5EFE0; font-family: Arial, Helvetica, sans-serif; font-size:20px; font-weight:700; text-align:center; border-radius:999px;">1</div>
+                  </td>
+                  <td valign="top" style="padding:4px 0 0 0;">
+                    <p style="margin:0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#6B7A3A;">Paso 1</p>
+                    <h2 style="margin:0 0 10px 0; font-family: Arial, Helvetica, sans-serif; font-size:20px; line-height:1.3; font-weight:700; color:#1A1A1A;">Copia este código.</h2>
+                    <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:16px; line-height:1.55; color:#1A1A1A;">
+                      Mantén el dedo pulsado sobre él hasta que aparezca la opción de copiar.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Code box -->
+          <tr>
+            <td class="px" align="center" style="padding: 18px 40px 0 96px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EBE2CD; border:1px solid #D9CFB6; border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding: 22px 16px;">
+                    <div class="code-num" style="font-family: 'Courier New', Courier, monospace; font-size:44px; line-height:1; font-weight:700; color:#1A1A1A; letter-spacing:12px; padding-left:12px;">${codigo}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="font-size:0; line-height:0; height:36px;">&nbsp;</td></tr>
+          <tr><td class="px" style="padding: 0 40px;"><div style="border-top:1px solid #E2D8BF; font-size:0; line-height:0; height:1px;">&nbsp;</div></td></tr>
+          <tr><td style="font-size:0; line-height:0; height:36px;">&nbsp;</td></tr>
+
+          <!-- PASO 2 -->
+          <tr>
+            <td class="px" style="padding: 0 40px;">
+              <table role="presentation" class="step-row" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="num-cell" valign="top" width="56" style="width:56px;">
+                    <div class="step-num" style="width:40px; height:40px; line-height:40px; background-color:#C8102E; color:#F5EFE0; font-family: Arial, Helvetica, sans-serif; font-size:20px; font-weight:700; text-align:center; border-radius:999px;">2</div>
+                  </td>
+                  <td valign="top" style="padding:4px 0 0 0;">
+                    <p style="margin:0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#6B7A3A;">Paso 2</p>
+                    <h2 style="margin:0 0 10px 0; font-family: Arial, Helvetica, sans-serif; font-size:20px; line-height:1.3; font-weight:700; color:#1A1A1A;">Abre la app.</h2>
+                    <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:16px; line-height:1.55; color:#1A1A1A;">
+                      Pulsa este botón para abrir la app.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Bulletproof button -->
+          <tr>
+            <td class="px" align="center" style="padding: 20px 40px 0 96px;">
+              <table role="presentation" class="btn" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+                <tr>
+                  <td align="center" bgcolor="#C8102E" style="background-color:#C8102E; border-radius:10px; mso-padding-alt:0;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${inviteLink}" style="height:56px;v-text-anchor:middle;width:420px;" arcsize="18%" stroke="f" fillcolor="#C8102E">
+                      <w:anchorlock/>
+                      <center style="color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;">Abrir la app</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-- -->
+                    <a href="${inviteLink}" target="_blank" style="display:block; padding:20px 28px; font-family: Arial, Helvetica, sans-serif; font-size:18px; font-weight:700; line-height:1; color:#FFFFFF; text-decoration:none; border-radius:10px; background-color:#C8102E; mso-hide:all;">
+                      Abrir la app
+                    </a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="font-size:0; line-height:0; height:36px;">&nbsp;</td></tr>
+          <tr><td class="px" style="padding: 0 40px;"><div style="border-top:1px solid #E2D8BF; font-size:0; line-height:0; height:1px;">&nbsp;</div></td></tr>
+          <tr><td style="font-size:0; line-height:0; height:36px;">&nbsp;</td></tr>
+
+          <!-- PASO 3 -->
+          <tr>
+            <td class="px" style="padding: 0 40px;">
+              <table role="presentation" class="step-row" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="num-cell" valign="top" width="56" style="width:56px;">
+                    <div class="step-num" style="width:40px; height:40px; line-height:40px; background-color:#C8102E; color:#F5EFE0; font-family: Arial, Helvetica, sans-serif; font-size:20px; font-weight:700; text-align:center; border-radius:999px;">3</div>
+                  </td>
+                  <td valign="top" style="padding:4px 0 0 0;">
+                    <p style="margin:0 0 6px 0; font-family: Arial, Helvetica, sans-serif; font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#6B7A3A;">Paso 3</p>
+                    <h2 style="margin:0 0 10px 0; font-family: Arial, Helvetica, sans-serif; font-size:20px; line-height:1.3; font-weight:700; color:#1A1A1A;">Pega el código y entra.</h2>
+                    <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:16px; line-height:1.55; color:#1A1A1A;">
+                      La app se abrirá con tu correo ya puesto. Pega el código en la casilla y pulsa <strong style="font-weight:700;">Entrar</strong>.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="font-size:0; line-height:0; height:48px;">&nbsp;</td></tr>
+
+          <!-- CLOSING NOTES -->
+          <tr>
+            <td class="px" align="left" style="padding: 0 40px;">
+              <p style="margin:0 0 10px 0; font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.55; color:#5B5B5B;">
+                Si no recibes bien el correo, revisa la carpeta de spam.
+              </p>
+              <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.55; color:#5B5B5B;">
+                Si no has solicitado esto, puedes ignorar este mensaje.
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="font-size:0; line-height:0; height:32px;">&nbsp;</td></tr>
+
+          <!-- SIGNATURE -->
+          <tr>
+            <td class="px" align="left" style="padding: 0 40px;">
+              <p style="margin:0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size:16px; line-height:1.55; color:#1A1A1A;">Un saludo,</p>
+              <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:16px; line-height:1.55; color:#1A1A1A; font-weight:700;">El equipo de Perros de la Isla</p>
+            </td>
+          </tr>
+
+          <tr><td style="font-size:0; line-height:0; height:40px;">&nbsp;</td></tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td class="px" align="center" style="padding: 0 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="width:24px; height:2px; background-color:#C8102E; font-size:0; line-height:0;">&nbsp;</td></tr></table>
+            </td>
+          </tr>
+          <tr><td style="font-size:0; line-height:0; height:14px;">&nbsp;</td></tr>
+          <tr>
+            <td class="px" align="center" style="padding: 0 40px;">
+              <p style="margin:0; font-family: Arial, Helvetica, sans-serif; font-size:12px; line-height:1.5; letter-spacing:1px; text-transform:uppercase; color:#8A8A8A;">
+                Perros de la Isla &middot; Adiestramiento canino &middot; Mallorca
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
 
     const resp = await fetch(BREVO_ENDPOINT, {
         method: 'POST',
