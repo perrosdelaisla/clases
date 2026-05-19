@@ -4,9 +4,9 @@
 // Carga datos del cliente identificado por ?id=<uuid> y la lista de
 // perros vinculados. Si no hay sesión o el usuario no es admin,
 // redirige al login. RLS de Victoria deja pasar todo si es_admin().
-// Botón "Invitar a la app": UPSERT en invitaciones_pendientes + envío
-// del código de acceso via supabase.auth.signInWithOtp + opción de
-// compartir las instrucciones por WhatsApp.
+// Botón "Invitar a la app": llama a la edge function invitar-cliente
+// (un solo correo con el código de acceso) + opción de compartir las
+// instrucciones por WhatsApp.
 // =====================================================================
 
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
@@ -381,86 +381,36 @@ async function enviarInvitacion() {
         return;
     }
 
-    // Conseguimos el auth.uid() del admin justo antes del UPSERT (más
-    // fresco que un cache potencialmente stale en state.adminAuthId).
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !userData?.user?.id) {
-        console.error('[invitar] no se pudo recuperar auth.user:', userErr);
-        mostrarErrorInvitar('No pudimos identificarte como admin. Volvé a entrar.');
-        return;
-    }
-    const invitadoPor = userData.user.id;
-
     errorEl.hidden = true;
     errorEl.textContent = '';
     btn.disabled = true;
     btn.textContent = 'Enviando…';
 
-    const payload = {
-        email,
-        cliente_id: state.clienteId,
-        nombre: state.cliente?.nombre || null,
-        invitado_por: invitadoPor,
-    };
-    console.log('[invitar] paso 1/2 — UPSERT invitaciones_pendientes:', payload);
-
-    // ¿Existía ya una invitación con este email? Si sí, el UPSERT hace
-    // UPDATE y NO debemos rollback en caso de fallo del mail.
-    const { data: existente, error: existeErr } = await supabase
-        .from('invitaciones_pendientes')
-        .select('email')
-        .eq('email', email)
-        .maybeSingle();
-    if (existeErr) {
-        console.error('[invitar] error consultando existente:', existeErr);
-        mostrarErrorInvitar(`No se pudo verificar la invitación: ${existeErr.message}`);
-        btn.disabled = false;
-        btn.textContent = 'Enviar invitación';
-        return;
-    }
-    const fueInsert = !existente;
-
-    // PASO 1 — UPSERT. SIEMPRE va antes que el mail.
-    const { data: invData, error: invError } = await supabase
-        .from('invitaciones_pendientes')
-        .upsert(payload, { onConflict: 'email' })
-        .select()
-        .maybeSingle();
-
-    console.log('[invitar] resultado UPSERT:', { invData, invError });
-
-    if (invError) {
-        console.error('[invitar] UPSERT falló:', invError);
-        mostrarErrorInvitar(`Error al preparar la invitación: ${invError.message}`);
-        toast('Error al preparar la invitación', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Enviar invitación';
-        return;
-    }
-
-    // PASO 2 — solo si el UPSERT salió ok, mandamos el mail.
-    console.log('[invitar] paso 2/2 — signInWithOtp');
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-            shouldCreateUser: true,
+    // Todo el trabajo lo hace la edge function invitar-cliente, server-side:
+    // verifica que seamos admin, UPSERT en invitaciones_pendientes, crea el
+    // usuario sin correos de GoTrue y manda UN solo mail con el código de
+    // acceso. Acá solo disparamos la llamada y leemos el resultado.
+    const { data, error } = await supabase.functions.invoke('invitar-cliente', {
+        body: {
+            email,
+            cliente_id: state.clienteId,
+            nombre: state.cliente?.nombre,
         },
     });
 
-    if (otpError) {
-        console.error('[invitar] signInWithOtp falló:', otpError);
-        // Rollback solo si nosotros creamos la fila. Si era un re-envío
-        // sobre una invitación previa, la dejamos como estaba.
-        if (fueInsert) {
-            console.warn('[invitar] rollback: borrando invitación recién creada');
-            const { error: delErr } = await supabase
-                .from('invitaciones_pendientes')
-                .delete()
-                .eq('email', email);
-            if (delErr) console.error('[invitar] rollback DELETE falló:', delErr);
-        }
-        mostrarErrorInvitar(`Error al enviar el mail: ${otpError.message}`);
-        toast('Error al enviar el mail', 'error');
+    // functions.invoke: si la función responde 2xx, el cuerpo viene en
+    // `data`. Si responde con error (4xx/5xx), supabase-js lo pone en
+    // `error` y el cuerpo { ok, error } queda en error.context (la Response).
+    let resultado = data;
+    if (error?.context && typeof error.context.json === 'function') {
+        resultado = await error.context.json().catch(() => null);
+    }
+
+    if (!resultado?.ok) {
+        const detalle = resultado?.error || error?.message || 'No se pudo enviar la invitación.';
+        console.error('[invitar] invitar-cliente falló:', { detalle, error });
+        mostrarErrorInvitar(detalle);
+        toast('Error al enviar la invitación', 'error');
         btn.disabled = false;
         btn.textContent = 'Enviar invitación';
         return;
