@@ -139,6 +139,9 @@ function renderCliente(c, tieneUsuario) {
     if (packInput) packInput.value = c.pack_actual != null ? c.pack_actual : '';
 
     document.title = `${c.nombre || 'Cliente'} — Admin PDLI`;
+
+    // Feed de mensajes del cliente (Bloque A.3)
+    renderAdminMensajes(c.id);
 }
 
 // El texto del botón depende de si el cliente YA fue invitado, es decir,
@@ -495,4 +498,167 @@ function toast(msg, kind = 'info') {
     el.removeAttribute('hidden');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.setAttribute('hidden', ''), 2200);
+}
+
+// ───────────────────────────────────────────────────────────
+// Feed de mensajes del cliente (Bloque A.3)
+// ───────────────────────────────────────────────────────────
+
+function _adminEscapeHTML(s) {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _adminFormatearFechaRelativa(dateStr) {
+    const fecha = new Date(dateStr);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaSinHora = new Date(fecha);
+    fechaSinHora.setHours(0, 0, 0, 0);
+    const diffDias = Math.floor((hoy - fechaSinHora) / (1000 * 60 * 60 * 24));
+    if (diffDias === 0) return 'HOY';
+    if (diffDias === 1) return 'AYER';
+    if (diffDias < 7) return `HACE ${diffDias} DÍAS`;
+    const dias = ['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+    const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    return `${dias[fecha.getDay()]} ${fecha.getDate()} DE ${meses[fecha.getMonth()]}`;
+}
+
+function _adminFormatearHora(dateStr) {
+    const f = new Date(dateStr);
+    return f.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+async function cargarMensajesCliente(clienteId) {
+    const { data, error } = await supabase
+        .from('mensajes')
+        .select(`
+            id, cliente_id, perro_id, ejercicio_asignado_id,
+            contenido, guardar, leido_por_admin, leido_en, created_at,
+            ejercicios_asignados (
+                id,
+                ejercicios ( nombre )
+            )
+        `)
+        .eq('cliente_id', clienteId)
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error('[admin-mensajes] error:', error);
+        return [];
+    }
+    return data || [];
+}
+
+async function marcarMensajesLeidos(clienteId) {
+    const { error } = await supabase
+        .from('mensajes')
+        .update({ leido_por_admin: true, leido_en: new Date().toISOString() })
+        .eq('cliente_id', clienteId)
+        .eq('leido_por_admin', false);
+    if (error) console.error('[admin-marcar-leido] error:', error);
+}
+
+async function toggleGuardarMensaje(mensajeId, valor) {
+    const { error } = await supabase
+        .from('mensajes')
+        .update({ guardar: valor })
+        .eq('id', mensajeId);
+    if (error) {
+        console.error('[admin-toggle-guardar] error:', error);
+        return false;
+    }
+    return true;
+}
+
+async function renderAdminMensajes(clienteId) {
+    if (!clienteId) return;
+    const seccion = document.getElementById('admin-mensajes');
+    const feed = document.getElementById('admin-mensajes-feed');
+    const count = document.getElementById('admin-mensajes-count');
+    if (!seccion || !feed) return;
+
+    seccion.removeAttribute('hidden');
+
+    const mensajes = await cargarMensajesCliente(clienteId);
+    const noLeidos = mensajes.filter((m) => !m.leido_por_admin).length;
+
+    if (count) {
+        const num = count.querySelector('.num');
+        if (num) {
+            num.textContent = noLeidos;
+            num.classList.toggle('is-cero', noLeidos === 0);
+        }
+    }
+
+    if (mensajes.length === 0) {
+        feed.innerHTML = `
+            <p style="color: var(--pdli-tinta-3); font-style: italic; padding: 12px 0;">Este cliente aún no ha enviado ningún mensaje.</p>
+        `;
+        return;
+    }
+
+    // Agrupar por fecha
+    const porFecha = {};
+    mensajes.forEach((m) => {
+        const fecha = _adminFormatearFechaRelativa(m.created_at);
+        if (!porFecha[fecha]) porFecha[fecha] = [];
+        porFecha[fecha].push(m);
+    });
+
+    feed.innerHTML = Object.entries(porFecha).map(([fecha, items]) => `
+        <div class="feed-date-row" style="padding-left:0;">
+            <span class="feed-date-label">${_adminEscapeHTML(fecha)}</span>
+            <span class="feed-date-rule"></span>
+        </div>
+        ${items.map((m) => {
+            const esNota = !!m.ejercicio_asignado_id;
+            const nombreEjercicio = m.ejercicios_asignados?.ejercicios?.nombre || 'ejercicio';
+            const classes = ['admin-entry'];
+            if (!m.leido_por_admin) classes.push('is-unread');
+            else classes.push('is-read');
+            if (m.guardar) classes.push('is-pinned');
+            return `
+                <div class="${classes.join(' ')}" data-mensaje-id="${_adminEscapeHTML(m.id)}">
+                    <div class="admin-entry__head">
+                        <span class="admin-entry__time">${_adminFormatearHora(m.created_at)}</span>
+                        <span class="admin-entry__tag">
+                            ${esNota ? `Nota en <span class="ex-name">${_adminEscapeHTML(nombreEjercicio)}</span>` : 'Mensaje general'}
+                        </span>
+                    </div>
+                    <div class="admin-entry__body">${_adminEscapeHTML(m.contenido)}</div>
+                    <button type="button" class="admin-entry__pin" data-action="toggle-pin" data-id="${_adminEscapeHTML(m.id)}">
+                        <span class="pin-ico">📌</span>
+                        ${m.guardar ? 'Guardado' : 'Guardar'}
+                    </button>
+                </div>
+            `;
+        }).join('')}
+    `).join('');
+
+    // Bind toggles de pin
+    feed.querySelectorAll('[data-action="toggle-pin"]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            const entry = btn.closest('.admin-entry');
+            const yaPinned = entry?.classList.contains('is-pinned');
+            const ok = await toggleGuardarMensaje(id, !yaPinned);
+            if (ok && entry) {
+                entry.classList.toggle('is-pinned');
+                btn.lastChild.textContent = !yaPinned ? ' Guardado' : ' Guardar';
+            }
+        });
+    });
+
+    // Auto-marcar todos como leídos al entrar (UX: si el admin abre,
+    // los lee). Esto desmarcará el badge de "X nuevos" en el próximo
+    // render, pero por ahora dejamos el badge mostrando el conteo
+    // que había al entrar para que vea cuántos eran nuevos.
+    if (noLeidos > 0) {
+        await marcarMensajesLeidos(clienteId);
+        // refrescar opacidad sin recargar todo
+        feed.querySelectorAll('.admin-entry.is-unread').forEach((el) => {
+            el.classList.remove('is-unread');
+            el.classList.add('is-read');
+        });
+    }
 }

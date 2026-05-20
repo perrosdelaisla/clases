@@ -312,6 +312,10 @@ function bindEventos() {
     // Form "añadir perro" (Bloque 4: solo UI)
     bindFormAgregarPerro();
 
+    // Mensajes y notas (Bloque A.2)
+    bindComposerMensaje();
+    bindNotasEjercicio();
+
     // Modales: cierres genéricos por data-close
     document.querySelectorAll('.modal-pdli').forEach((modal) => {
         modal.addEventListener('click', (e) => {
@@ -355,10 +359,9 @@ function bindEventos() {
     if (rutinaLista) {
         const abrirDesdeCard = (card) => {
             if (!card) return;
-            const ej = (state.rutinaFilas || [])
-                .map((r) => r.ejercicios)
-                .find((x) => x && x.id === card.dataset.ejercicioId);
-            if (ej) abrirModalEjercicio(ej);
+            const fila = (state.rutinaFilas || [])
+                .find((r) => r.ejercicios && r.ejercicios.id === card.dataset.ejercicioId);
+            if (fila) abrirModalEjercicio(fila.ejercicios, fila.id);
         };
         rutinaLista.addEventListener('click', (e) => {
             abrirDesdeCard(e.target.closest('.rutina-card'));
@@ -867,6 +870,7 @@ function showTab(name) {
     if (name === 'reservar') renderTabReservar();
     if (name === 'mis-citas') renderTabMisCitas();
     if (name === 'salud') cargarTabSalud();
+    if (name === 'mensajes') renderFeedMensajes();
 
     // Scroll al inicio del panel para que la transición se sienta limpia
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1788,7 +1792,7 @@ function extraerYouTubeId(url) {
     return m ? m[1] : null;
 }
 
-function abrirModalEjercicio(ej) {
+function abrirModalEjercicio(ej, ejercicioAsignadoId) {
     setText('modal-ejercicio-titulo', ej.nombre || 'Ejercicio');
     const desc = document.getElementById('modal-ejercicio-desc');
     if (ej.descripcion && ej.descripcion.trim()) {
@@ -1815,6 +1819,7 @@ function abrirModalEjercicio(ej) {
         inst.classList.add('modal-ejercicio__instrucciones--vacio');
     }
     abrirModal('modal-ejercicio-detalle');
+    renderNotasEjercicio(ejercicioAsignadoId);
 }
 
 async function confirmarCancelacion() {
@@ -2616,4 +2621,269 @@ function iniciarModificarCita(cita) {
     // Saltar a Reservar — renderTabReservar detecta state.modificando y se
     // adapta visualmente (banner arriba + lógica de UPDATE al confirmar).
     showTab('reservar');
+}
+
+// ───────────────────────────────────────────────────────────
+// Mensajes y notas en ejercicio (Bloque A.2)
+// ───────────────────────────────────────────────────────────
+
+let _ejercicioModalActualId = null;
+
+// Helpers de fecha
+function formatearFechaRelativa(dateStr) {
+    const fecha = new Date(dateStr);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaSinHora = new Date(fecha);
+    fechaSinHora.setHours(0, 0, 0, 0);
+    const diffMs = hoy - fechaSinHora;
+    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDias === 0) return 'HOY';
+    if (diffDias === 1) return 'AYER';
+    if (diffDias < 7) return `HACE ${diffDias} DÍAS`;
+
+    const dias = ['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+    const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    return `${dias[fecha.getDay()]} ${fecha.getDate()} DE ${meses[fecha.getMonth()]}`;
+}
+
+function formatearHora(dateStr) {
+    const f = new Date(dateStr);
+    return f.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+// escapeHTML ya está definida arriba en este archivo — reutilizamos.
+
+// === Mensajes generales (tab Mensajes) ===
+
+async function cargarMensajes() {
+    const clienteId = state.usuarioCliente?.cliente_id;
+    if (!clienteId) return [];
+    const { data, error } = await supabase
+        .from('mensajes')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .is('ejercicio_asignado_id', null)
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error('[mensajes] error:', error);
+        return [];
+    }
+    return data || [];
+}
+
+async function renderFeedMensajes() {
+    const feed = document.getElementById('feed-mensajes');
+    if (!feed) return;
+    const mensajes = await cargarMensajes();
+
+    if (mensajes.length === 0) {
+        feed.innerHTML = `
+            <div class="feed-empty">
+                <span class="feed-empty__title">Sin mensajes aún</span>
+                <p class="feed-empty__text">Aquí aparecerán los mensajes que envíes al adiestrador.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Agrupar por fecha (más reciente arriba)
+    const porFecha = {};
+    mensajes.forEach((m) => {
+        const fecha = formatearFechaRelativa(m.created_at);
+        if (!porFecha[fecha]) porFecha[fecha] = [];
+        porFecha[fecha].push(m);
+    });
+
+    const html = Object.entries(porFecha).map(([fecha, items]) => `
+        <div class="feed-date-row">
+            <span class="feed-date-label">${escapeHTML(fecha)}</span>
+            <span class="feed-date-rule"></span>
+        </div>
+        <div class="feed-entries">
+            ${items.map((m) => `
+                <div class="feed-entry">
+                    <div class="feed-entry__head">
+                        <span class="feed-entry__time">${formatearHora(m.created_at)}</span>
+                        ${m.leido_por_admin ? '<span class="feed-entry__seen">Visto</span>' : ''}
+                    </div>
+                    <div class="feed-entry__body">${escapeHTML(m.contenido)}</div>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+
+    feed.innerHTML = html;
+}
+
+async function enviarMensaje() {
+    const ta = document.getElementById('mensaje-textarea');
+    const btn = document.getElementById('mensaje-enviar');
+    const status = document.getElementById('mensaje-status');
+    if (!ta || !btn) return;
+    const contenido = ta.value.trim();
+    if (!contenido) return;
+
+    const clienteId = state.usuarioCliente?.cliente_id;
+    const autorId = state.usuarioCliente?.id;
+    if (!clienteId) {
+        if (status) { status.textContent = 'No hemos podido identificar tu sesión.'; status.classList.add('is-err'); }
+        return;
+    }
+
+    btn.disabled = true;
+    btn.classList.remove('is-ready');
+    if (status) { status.textContent = 'Enviando…'; status.classList.remove('is-err'); }
+
+    try {
+        const { error } = await supabase
+            .from('mensajes')
+            .insert({
+                cliente_id: clienteId,
+                autor_usuario_cliente_id: autorId,
+                contenido,
+            });
+        if (error) throw error;
+        ta.value = '';
+        if (status) { status.textContent = ''; }
+        await renderFeedMensajes();
+        validarComposerMensaje();
+    } catch (e) {
+        console.error('[enviar-mensaje] error:', e);
+        if (status) { status.textContent = 'No hemos podido enviar. Inténtalo de nuevo.'; status.classList.add('is-err'); }
+        btn.disabled = false;
+    }
+}
+
+function validarComposerMensaje() {
+    const ta = document.getElementById('mensaje-textarea');
+    const btn = document.getElementById('mensaje-enviar');
+    if (!ta || !btn) return;
+    const ok = ta.value.trim().length > 0;
+    btn.disabled = !ok;
+    btn.classList.toggle('is-ready', ok);
+}
+
+function bindComposerMensaje() {
+    const ta = document.getElementById('mensaje-textarea');
+    const btn = document.getElementById('mensaje-enviar');
+    if (ta) {
+        ta.addEventListener('input', () => {
+            validarComposerMensaje();
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 96) + 'px';
+        });
+    }
+    if (btn) btn.addEventListener('click', enviarMensaje);
+}
+
+// === Notas en ejercicio (dentro del modal-ejercicio-detalle) ===
+
+async function cargarNotasEjercicio(ejercicioAsignadoId) {
+    const clienteId = state.usuarioCliente?.cliente_id;
+    if (!clienteId || !ejercicioAsignadoId) return [];
+    const { data, error } = await supabase
+        .from('mensajes')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .eq('ejercicio_asignado_id', ejercicioAsignadoId)
+        .order('created_at', { ascending: false });
+    if (error) {
+        console.error('[notas] error:', error);
+        return [];
+    }
+    return data || [];
+}
+
+async function renderNotasEjercicio(ejercicioAsignadoId) {
+    _ejercicioModalActualId = ejercicioAsignadoId;
+    const lista = document.getElementById('notas-ejercicio-lista');
+    const count = document.getElementById('notas-ejercicio-count');
+    if (!lista) return;
+
+    if (!ejercicioAsignadoId) {
+        lista.innerHTML = '';
+        if (count) count.textContent = '0 notas';
+        return;
+    }
+
+    const notas = await cargarNotasEjercicio(ejercicioAsignadoId);
+
+    if (count) {
+        count.textContent = notas.length === 0
+            ? 'Sin notas'
+            : (notas.length === 1 ? '1 nota' : `${notas.length} notas`);
+    }
+
+    if (notas.length === 0) {
+        lista.innerHTML = '';
+        return;
+    }
+
+    lista.innerHTML = notas.map((n) => `
+        <div class="feed-entry${n.leido_por_admin ? '' : ' is-unread'}" style="padding-left:0;">
+            <div class="feed-entry__head">
+                <span class="feed-entry__time">
+                    <span class="feed-date-label" style="margin-right:8px;">${escapeHTML(formatearFechaRelativa(n.created_at))}</span>
+                    ${formatearHora(n.created_at)}
+                </span>
+                ${n.leido_por_admin ? '<span class="feed-entry__seen">Visto</span>' : ''}
+            </div>
+            <div class="feed-entry__body">${escapeHTML(n.contenido)}</div>
+        </div>
+    `).join('');
+}
+
+async function guardarNotaEjercicio() {
+    const ta = document.getElementById('notas-textarea');
+    const expand = document.getElementById('notas-expand');
+    if (!ta || !_ejercicioModalActualId) return;
+    const contenido = ta.value.trim();
+    if (!contenido) return;
+
+    const clienteId = state.usuarioCliente?.cliente_id;
+    const autorId = state.usuarioCliente?.id;
+    if (!clienteId) return;
+
+    try {
+        const { error } = await supabase
+            .from('mensajes')
+            .insert({
+                cliente_id: clienteId,
+                autor_usuario_cliente_id: autorId,
+                ejercicio_asignado_id: _ejercicioModalActualId,
+                contenido,
+            });
+        if (error) throw error;
+        ta.value = '';
+        if (expand) expand.classList.remove('is-open');
+        await renderNotasEjercicio(_ejercicioModalActualId);
+        if (typeof toast === 'function') toast('Nota añadida');
+    } catch (e) {
+        console.error('[guardar-nota] error:', e);
+        if (typeof toast === 'function') toast('No hemos podido guardar la nota', 'error');
+    }
+}
+
+function bindNotasEjercicio() {
+    const btnAdd = document.getElementById('notas-add-btn');
+    const btnCancel = document.getElementById('notas-cancel');
+    const btnConfirm = document.getElementById('notas-confirm');
+    const expand = document.getElementById('notas-expand');
+    const ta = document.getElementById('notas-textarea');
+
+    if (btnAdd && expand && ta) {
+        btnAdd.addEventListener('click', () => {
+            expand.classList.add('is-open');
+            setTimeout(() => ta.focus(), 50);
+        });
+    }
+    if (btnCancel && expand && ta) {
+        btnCancel.addEventListener('click', () => {
+            ta.value = '';
+            expand.classList.remove('is-open');
+        });
+    }
+    if (btnConfirm) btnConfirm.addEventListener('click', guardarNotaEjercicio);
 }

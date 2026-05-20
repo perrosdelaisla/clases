@@ -93,6 +93,18 @@
                 <ul id="perros-lista" class="perros-lista"></ul>
                 <p class="empty-state" id="perros-empty" hidden>Aún no hay perros registrados.</p>
             </section>
+
+            <section class="admin-mensajes" id="admin-mensajes" hidden>
+                <div class="admin-mensajes__head">
+                    <h2 class="admin-mensajes__titulo">Mensajes del cliente</h2>
+                    <span class="admin-mensajes__count" id="admin-mensajes-count">
+                        <span class="num is-cero">0</span> nuevos
+                    </span>
+                </div>
+                <div id="admin-mensajes-feed">
+                    <!-- Renderiza JS -->
+                </div>
+            </section>
         </main>
     </section>
 
@@ -134,6 +146,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./cliente.js?v=13"></script>
+    <script type="module" src="./cliente.js?v=14"></script>
 </body>
 </html>

@@ -319,6 +319,32 @@
                 </div>
             </section>
 
+            <section class="tab-panel" id="tab-mensajes" data-tab="mensajes" hidden>
+                <div class="mensajes-screen">
+                    <div class="mensajes-screen__head">
+                        <p class="mensajes-screen__eyebrow">Mensajes</p>
+                        <h1 class="mensajes-screen__titulo">Habla con el adiestrador</h1>
+                        <p class="mensajes-screen__lead">Comparte dudas, comentarios o cualquier cosa que quieras contarle. Te responderemos en cuanto podamos.</p>
+                    </div>
+
+                    <div class="feed-timeline" id="feed-mensajes">
+                        <!-- Renderiza JS -->
+                    </div>
+
+                    <div class="composer">
+                        <div class="composer__field">
+                            <textarea class="composer__textarea"
+                                      id="mensaje-textarea"
+                                      placeholder="Escríbele al adiestrador…"
+                                      rows="1"
+                                      maxlength="5000"></textarea>
+                            <button type="button" class="composer__send" id="mensaje-enviar" disabled>Enviar</button>
+                        </div>
+                        <p class="composer__status" id="mensaje-status"></p>
+                    </div>
+                </div>
+            </section>
+
         </main>
 
         <nav class="bottom-nav" aria-label="Navegación principal">
@@ -356,6 +382,12 @@
                     <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
                 </svg>
                 <span class="bottom-nav__label">Salud</span>
+            </button>
+            <button type="button" class="bottom-nav__btn" data-tab-target="mensajes">
+                <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+                <span class="bottom-nav__label">Mensajes</span>
             </button>
         </nav>
     </section>
@@ -469,6 +501,33 @@
             <p class="modal-ejercicio__desc" id="modal-ejercicio-desc"></p>
             <div class="modal-ejercicio__video" id="modal-ejercicio-video" hidden></div>
             <div class="modal-ejercicio__instrucciones" id="modal-ejercicio-instrucciones"></div>
+
+            <div class="notas-ejercicio">
+                <div class="notas-ejercicio__head">
+                    <span class="notas-ejercicio__label">Tus notas en este ejercicio</span>
+                    <span class="notas-ejercicio__count" id="notas-ejercicio-count">0 notas</span>
+                </div>
+
+                <div id="notas-ejercicio-lista">
+                    <!-- Renderiza JS -->
+                </div>
+
+                <button type="button" class="notas-add-btn" id="notas-add-btn">
+                    <span class="plus">+</span> Añadir nota
+                </button>
+
+                <div class="notas-expand" id="notas-expand">
+                    <textarea class="notas-expand__textarea"
+                              id="notas-textarea"
+                              placeholder="Cuéntale al adiestrador cómo fue hoy con este ejercicio…"
+                              rows="3"
+                              maxlength="5000"></textarea>
+                    <div class="notas-expand__actions">
+                        <button type="button" class="notas-expand__btn cancel" id="notas-cancel">Cancelar</button>
+                        <button type="button" class="notas-expand__btn confirm" id="notas-confirm">Añadir nota</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -628,6 +687,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=38"></script>
+    <script type="module" src="./js/app.js?v=39"></script>
 </body>
 </html>
