@@ -728,6 +728,7 @@ async function cargarPerros() {
     const { data, error } = await supabase
         .from('perros')
         .select('*')
+        .order('prioridad', { ascending: true })
         .order('created_at', { ascending: true });
     if (error) {
         console.error('[app] error cargando perros:', error);
