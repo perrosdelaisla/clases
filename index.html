@@ -472,6 +472,99 @@
         </div>
     </div>
 
+    <!-- ── MODAL: añadir perro ── -->
+
+    <div class="modal-pdli" id="modal-agregar-perro" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel modal-pdli__panel--form" role="dialog" aria-modal="true" aria-labelledby="modal-agregar-perro-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+
+            <div class="modal-pdli__brand">
+                <div class="logo-circle">
+                    <img src="./img/logo.png" alt="" class="logo-circle__img">
+                </div>
+            </div>
+
+            <h2 id="modal-agregar-perro-titulo" class="modal-pdli__titulo-display">AÑADIR UN PERRO</h2>
+            <p class="modal-pdli__lead">Te pediremos algunos datos básicos. Más adelante podrás completar foto y otros detalles.</p>
+
+            <form class="form-pdli" id="form-agregar-perro" autocomplete="off" novalidate>
+                <div class="form-field">
+                    <label class="form-field__label" for="agregar-perro-nombre">Nombre</label>
+                    <input type="text" class="input-pdli" id="agregar-perro-nombre"
+                           name="nombre" required maxlength="40"
+                           autocapitalize="words" enterkeyhint="next"
+                           placeholder="Nombre del perro">
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" for="agregar-perro-raza">Raza</label>
+                    <input type="text" class="input-pdli" id="agregar-perro-raza"
+                           name="raza" required maxlength="60"
+                           autocapitalize="words" enterkeyhint="next"
+                           placeholder="Raza o mezcla">
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" for="agregar-perro-edad">Edad</label>
+                    <select class="select-pdli" id="agregar-perro-edad" name="edad_meses" required>
+                        <option value="" disabled selected>Selecciona la edad</option>
+                        <option value="0">Menos de 1 mes</option>
+                        <option value="1">1 mes</option>
+                        <option value="2">2 meses</option>
+                        <option value="3">3 meses</option>
+                        <option value="4">4 meses</option>
+                        <option value="5">5 meses</option>
+                        <option value="6">6 meses</option>
+                        <option value="7">7 meses</option>
+                        <option value="8">8 meses</option>
+                        <option value="9">9 meses</option>
+                        <option value="10">10 meses</option>
+                        <option value="11">11 meses</option>
+                        <option value="12">1 año</option>
+                        <option value="24">2 años</option>
+                        <option value="36">3 años</option>
+                        <option value="48">4 años</option>
+                        <option value="60">5 años</option>
+                        <option value="72">6 años</option>
+                        <option value="84">7 años</option>
+                        <option value="96">8 años</option>
+                        <option value="108">9 años</option>
+                        <option value="120">10 años</option>
+                        <option value="132">11 años</option>
+                        <option value="144">12 años</option>
+                        <option value="156">13 años</option>
+                        <option value="168">14 años</option>
+                        <option value="180">15 años</option>
+                        <option value="192">Más de 15 años</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" for="agregar-perro-peso">Peso</label>
+                    <div class="input-with-suffix">
+                        <input type="number" class="input-pdli" id="agregar-perro-peso"
+                               name="peso_kg" required min="0.1" max="120" step="0.1"
+                               inputmode="decimal" enterkeyhint="done"
+                               placeholder="Peso">
+                        <span class="input-suffix">kg</span>
+                    </div>
+                </div>
+
+                <p class="error-message" id="agregar-perro-error" hidden></p>
+
+                <div class="modal-pdli__actions modal-pdli__actions--single">
+                    <button type="submit" class="btn btn-primary" id="agregar-perro-guardar" disabled>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <aside class="install-banner" id="install-banner" hidden aria-label="Instalar la app">
         <img src="./img/logo.png" alt="" class="install-banner__icon">
         <p class="install-banner__text">
@@ -535,6 +628,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=36"></script>
+    <script type="module" src="./js/app.js?v=37"></script>
 </body>
 </html>

@@ -2332,3 +2332,127 @@ body {
 
 /* Paso superado: tarjeta apagada. */
 .rutina-card--superado { opacity: 0.5; }
+
+/* ─── Modal Añadir Perro ──────────────────────────────── */
+
+.modal-pdli__brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.modal-pdli__titulo-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    font-size: 1.6rem;
+    text-align: center;
+    color: var(--color-text);
+    margin: 0 0 0.5rem;
+}
+
+.modal-pdli__panel--form {
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.modal-pdli__actions--single {
+    grid-template-columns: 1fr;
+}
+
+/* ─── Pill "Añadir perro" ─────────────────────────────── */
+
+.perro-pill--add {
+    background: transparent;
+    color: var(--pdli-rojo);
+    border: 1px dashed var(--pdli-rojo);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.perro-pill--add:hover {
+    background: rgba(200, 16, 46, 0.06);
+    color: var(--pdli-rojo);
+    border-color: var(--pdli-rojo);
+}
+
+.perro-pill--add span {
+    font-size: 1.2rem;
+    margin-right: 0.25rem;
+    line-height: 1;
+}
+
+/* ─── Form PDLI (inputs, select) ──────────────────────── */
+
+.form-pdli {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-field__label {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    letter-spacing: 0.02em;
+}
+
+.input-pdli,
+.select-pdli {
+    width: 100%;
+    min-height: var(--tap);
+    padding: 0 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-text);
+    transition: border-color 0.15s ease;
+    -webkit-appearance: none;
+            appearance: none;
+}
+
+.input-pdli:focus,
+.select-pdli:focus {
+    outline: none;
+    border-color: var(--pdli-rojo);
+}
+
+.select-pdli {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%231A1A1A' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1l5 5 5-5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+.input-with-suffix {
+    position: relative;
+}
+
+.input-with-suffix .input-pdli {
+    padding-right: 2.75rem;
+}
+
+.input-suffix {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    pointer-events: none;
+}

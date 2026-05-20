@@ -309,6 +309,9 @@ function bindEventos() {
     const fotoGuardar = document.getElementById('foto-guardar');
     if (fotoGuardar) fotoGuardar.addEventListener('click', guardarFotoPerro);
 
+    // Form "añadir perro" (Bloque 4: solo UI)
+    bindFormAgregarPerro();
+
     // Modales: cierres genéricos por data-close
     document.querySelectorAll('.modal-pdli').forEach((modal) => {
         modal.addEventListener('click', (e) => {
@@ -967,13 +970,9 @@ function renderHeader() {
 function renderSelectorPerros() {
     const sel = document.getElementById('perro-selector');
     if (!sel) return;
-    if (state.perros.length < 2) {
-        sel.innerHTML = '';
-        sel.setAttribute('hidden', '');
-        return;
-    }
     sel.removeAttribute('hidden');
-    sel.innerHTML = state.perros.map((p) => {
+
+    const pillsPerros = state.perros.map((p) => {
         const active = p.id === state.perroSeleccionadoId;
         return `
             <button type="button" class="perro-pill${active ? ' is-active' : ''}"
@@ -984,7 +983,15 @@ function renderSelectorPerros() {
         `;
     }).join('');
 
-    sel.querySelectorAll('.perro-pill').forEach((btn) => {
+    const pillAgregar = `
+        <button type="button" class="perro-pill perro-pill--add" id="perro-pill-add" aria-label="Añadir un perro">
+            <span aria-hidden="true">+</span> Añadir perro
+        </button>
+    `;
+
+    sel.innerHTML = pillsPerros + pillAgregar;
+
+    sel.querySelectorAll('.perro-pill:not(.perro-pill--add)').forEach((btn) => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.perroId;
             if (!id || id === state.perroSeleccionadoId) return;
@@ -994,6 +1001,11 @@ function renderSelectorPerros() {
             renderRutinaPerroSeleccionado();
         });
     });
+
+    const btnAdd = document.getElementById('perro-pill-add');
+    if (btnAdd) {
+        btnAdd.addEventListener('click', abrirModalAgregarPerro);
+    }
 }
 
 async function renderRutinaPerroSeleccionado() {
@@ -1865,6 +1877,68 @@ function abrirModalFoto() {
     err.textContent = '';
     input.value = '';
     abrirModal('modal-foto');
+}
+
+// ───────────────────────────────────────────────────────────
+// Modal Añadir Perro (Bloque 4: solo UI, sin INSERT todavía)
+// ───────────────────────────────────────────────────────────
+
+function abrirModalAgregarPerro() {
+    const form = document.getElementById('form-agregar-perro');
+    if (form) form.reset();
+    const err = document.getElementById('agregar-perro-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+    const btn = document.getElementById('agregar-perro-guardar');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Guardar';
+    }
+    abrirModal('modal-agregar-perro');
+    setTimeout(() => {
+        const primer = document.getElementById('agregar-perro-nombre');
+        if (primer) primer.focus();
+    }, 50);
+}
+
+function validarFormAgregarPerro() {
+    const nombre = (document.getElementById('agregar-perro-nombre')?.value || '').trim();
+    const raza   = (document.getElementById('agregar-perro-raza')?.value   || '').trim();
+    const edad   = document.getElementById('agregar-perro-edad')?.value || '';
+    const peso   = document.getElementById('agregar-perro-peso')?.value   || '';
+    const ok = nombre.length > 0
+            && raza.length > 0
+            && edad !== ''
+            && peso !== '' && parseFloat(peso) > 0;
+    const btn = document.getElementById('agregar-perro-guardar');
+    if (btn) btn.disabled = !ok;
+    return ok;
+}
+
+function onSubmitAgregarPerro(ev) {
+    ev.preventDefault();
+    if (!validarFormAgregarPerro()) return;
+    // Bloque 5: aquí va el INSERT a Supabase. Por ahora solo
+    // dejamos rastro en consola para validar UX.
+    console.warn('[agregar-perro] Bloque 5 pendiente: INSERT a Supabase');
+    const err = document.getElementById('agregar-perro-error');
+    if (err) {
+        err.textContent = 'UI lista. La función de guardar se conectará en el siguiente paso.';
+        err.hidden = false;
+    }
+}
+
+function bindFormAgregarPerro() {
+    const form = document.getElementById('form-agregar-perro');
+    if (!form) return;
+    ['agregar-perro-nombre','agregar-perro-raza','agregar-perro-edad','agregar-perro-peso']
+        .forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', validarFormAgregarPerro);
+                el.addEventListener('change', validarFormAgregarPerro);
+            }
+        });
+    form.addEventListener('submit', onSubmitAgregarPerro);
 }
 
 function onFotoSeleccionada(e) {
