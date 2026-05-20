@@ -455,13 +455,14 @@ function mostrarSuccessInvitacion(email) {
     if (tel) {
         const nombrePila = (state.cliente?.nombre || '').split(/\s+/)[0] || '';
         const saludo = nombrePila ? `Hola ${nombrePila}, ` : 'Hola, ';
-        // Texto para el cliente: español de España, tono sobrio PDLI.
-        // Incluye la URL de la app y la instrucción del flujo de código.
+        // Texto para el cliente: español neutro de España, tono PDLI.
+        // Apunta al correo (que tiene enlace pre-cargado con el email)
+        // en lugar de mandar al usuario a escribir el correo a mano en
+        // la app pelada.
         const msg =
-            `${saludo}te damos acceso a la app de Perros de la Isla. ` +
-            `Entra desde aquí: ${APP_CLIENTE_URL} ` +
-            `Introduce tu correo (${email}) y te enviaremos un código de 6 dígitos para acceder. ` +
-            `Si no lo recibes, revisa la carpeta de spam. ` +
+            `${saludo}acabamos de enviarte un correo a ${email} con tu código de acceso a la app de Perros de la Isla. ` +
+            `Ábrelo y toca el enlace que verás dentro — la app se abrirá con tu correo ya puesto y solo tendrás que pegar el código de 6 dígitos. ` +
+            `Si no encuentras el correo, revisa la carpeta de spam. ` +
             `Un saludo, el equipo de Perros de la Isla.`;
         wa.href = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
         wa.removeAttribute('hidden');
