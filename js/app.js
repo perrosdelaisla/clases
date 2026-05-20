@@ -1914,16 +1914,77 @@ function validarFormAgregarPerro() {
     return ok;
 }
 
-function onSubmitAgregarPerro(ev) {
+async function onSubmitAgregarPerro(ev) {
     ev.preventDefault();
     if (!validarFormAgregarPerro()) return;
-    // Bloque 5: aquí va el INSERT a Supabase. Por ahora solo
-    // dejamos rastro en consola para validar UX.
-    console.warn('[agregar-perro] Bloque 5 pendiente: INSERT a Supabase');
+
+    const clienteId = state.usuarioCliente?.cliente_id;
     const err = document.getElementById('agregar-perro-error');
-    if (err) {
-        err.textContent = 'UI lista. La función de guardar se conectará en el siguiente paso.';
-        err.hidden = false;
+    const btn = document.getElementById('agregar-perro-guardar');
+
+    if (!clienteId) {
+        if (err) {
+            err.textContent = 'No hemos podido identificar tu sesión. Vuelve a entrar e inténtalo de nuevo.';
+            err.hidden = false;
+        }
+        return;
+    }
+
+    const nombre = document.getElementById('agregar-perro-nombre').value.trim();
+    const raza   = document.getElementById('agregar-perro-raza').value.trim();
+    const edad   = parseInt(document.getElementById('agregar-perro-edad').value, 10);
+    const peso   = parseFloat(document.getElementById('agregar-perro-peso').value);
+
+    const proximaPrioridad = (state.perros || []).reduce(
+        (max, p) => Math.max(max, p.prioridad || 0),
+        0
+    ) + 1;
+
+    if (err) { err.textContent = ''; err.hidden = true; }
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('perros')
+            .insert({
+                cliente_id: clienteId,
+                nombre,
+                raza,
+                edad_meses: edad,
+                peso_kg: peso,
+                prioridad: proximaPrioridad,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Refrescar lista local (ya ordenada por prioridad gracias al Bloque 3)
+        state.perros = await cargarPerros();
+
+        // Marcar el nuevo perro como seleccionado para que el cliente lo vea
+        if (data?.id) {
+            state.perroSeleccionadoId = data.id;
+            sessionStorage.setItem(STORAGE_PERRO_KEY, data.id);
+        }
+        renderSelectorPerros();
+        await renderRutinaPerroSeleccionado();
+
+        cerrarModal('modal-agregar-perro');
+        toast('Perro añadido');
+    } catch (e) {
+        console.error('[agregar-perro] error:', e);
+        if (err) {
+            err.textContent = 'No hemos podido guardar. Inténtalo de nuevo.';
+            err.hidden = false;
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Guardar';
+        }
     }
 }
 
