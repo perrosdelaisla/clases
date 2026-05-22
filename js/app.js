@@ -1342,6 +1342,7 @@ async function renderTabReservar() {
     mensajeBox.removeAttribute('hidden');
     mensajeBox.innerHTML = '<p>Cargando…</p>';
 
+    try {
     const estado = await llamarPuedeReservar();
 
     // Casos de bloqueo: mostrar mensaje y salir
@@ -1370,6 +1371,18 @@ async function renderTabReservar() {
             <div class="reservar-msg">
                 <h3>Ya has reservado ${reservas} clase${reservas === 1 ? '' : 's'} por adelantado</h3>
                 <p>Si quieres reservar más, háblalo con el adiestrador en la próxima clase.</p>
+            </div>`;
+        return;
+    }
+
+    // Fallback: si la RPC devuelve puede:false con un motivo no contemplado,
+    // bloqueamos el flujo en lugar de seguir al calendario.
+    if (estado.puede === false) {
+        mensajeBox.removeAttribute('hidden');
+        mensajeBox.innerHTML = `
+            <div class="reservar-msg">
+                <h3>Por ahora no podemos reservar una clase nueva</h3>
+                <p>Si crees que es un error, escríbenos por WhatsApp y lo resolvemos.</p>
             </div>`;
         return;
     }
@@ -1471,6 +1484,18 @@ async function renderTabReservar() {
             showTab('mis-citas');
         };
     }
+    } catch (err) {
+        console.error('[app] renderTabReservar falló:', err);
+        avisoBox.setAttribute('hidden', '');
+        diaPanel.setAttribute('hidden', '');
+        diaVacio.setAttribute('hidden', '');
+        mensajeBox.removeAttribute('hidden');
+        mensajeBox.innerHTML = `
+            <div class="reservar-msg">
+                <h3>No hemos podido cargar tu agenda</h3>
+                <p>Vuelve a intentarlo en unos segundos. Si el problema persiste, escríbenos por WhatsApp y lo resolvemos.</p>
+            </div>`;
+    }
 }
 
 function abrirModalReservar({ fecha, hora, label }) {
@@ -1554,6 +1579,31 @@ async function confirmarReserva() {
         } else {
             // Modo RESERVA NORMAL: INSERT cita nueva.
             // La RLS exige numero_clase NOT NULL en INSERT de cliente.
+
+            // Gate previo: re-verificar que el cliente puede reservar.
+            // Cubre el caso raro de que el state cambie entre abrir el modal y
+            // confirmar (ej: pasaron 5 min y se llegó al límite).
+            const gate = await llamarPuedeReservar();
+            if (gate.razon !== 'ok') {
+                let mensajeGate;
+                if (gate.razon === 'muy_pronto') {
+                    const desde = gate.puede_reservar_desde
+                        ? formatearFechaLarga(gate.puede_reservar_desde) : 'más adelante';
+                    mensajeGate = `Podrás reservar tu siguiente clase el ${desde}. Dejamos al menos 5 días entre clases.`;
+                } else if (gate.razon === 'limite_alcanzado') {
+                    mensajeGate = `Ya tienes el máximo de reservas activas. Cuando se realice alguna, podrás reservar la siguiente.`;
+                } else if (gate.razon === 'sin_primera_clase') {
+                    mensajeGate = `Tu primera clase la coordinamos directamente. Escríbenos por WhatsApp.`;
+                } else {
+                    mensajeGate = `Por ahora no podemos crear esa reserva. Escríbenos por WhatsApp si crees que es un error.`;
+                }
+                toast(mensajeGate, 'error');
+                cerrarModal('modal-reservar');
+                await renderTabReservar();
+                btn.disabled = false;
+                return;
+            }
+
             const packPrevio = calcularEstadoPack(state.cliente, state.citas);
             const proximoNumero = packPrevio.proximo_numero || 1;
 
@@ -2199,8 +2249,15 @@ const MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'se
 
 function formatearFechaLarga(iso) {
     // 'YYYY-MM-DD' → 'lunes 13 may'
-    const [y, m, d] = iso.split('-').map(Number);
+    // Defensivo: la RPC puede devolver null, undefined, o un timestamptz
+    // con sufijo "T00:00:00" en vez de date plano.
+    if (!iso || typeof iso !== 'string') return 'pronto';
+    // Aceptar tanto "2026-05-27" como "2026-05-27T00:00:00..."
+    const fechaParte = iso.split('T')[0];
+    const [y, m, d] = fechaParte.split('-').map(Number);
+    if (!y || !m || !d) return 'pronto';
     const dt = new Date(y, m - 1, d);
+    if (isNaN(dt.getTime())) return 'pronto';
     return `${DIAS_NOMBRE[dt.getDay()].toLowerCase()} ${dt.getDate()} ${MESES_CORTO[dt.getMonth()]}`;
 }
 
