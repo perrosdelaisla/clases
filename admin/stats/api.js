@@ -103,9 +103,11 @@ export async function obtenerFunnelVictoria(rango) {
     );
 
     const PASOS_S4 = ['s4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 's12'];
+    const PASOS_ENGAGED = ['s_inicio', ...PASOS_S4];
 
     const etapas = [
         { etapa: 'Iniciaron conversación', n: sesiones.length },
+        { etapa: 'Describieron el problema', n: sesiones.filter((s) => PASOS_ENGAGED.includes(s.paso_maximo_alcanzado)).length },
         { etapa: 'Dieron datos del perro', n: sesiones.filter((s) => PASOS_S4.includes(s.paso_maximo_alcanzado)).length },
         { etapa: 'Vieron mensaje clave',   n: sesiones.filter((s) => s.vio_mensaje_principal).length },
         { etapa: 'Vieron precios',         n: sesiones.filter((s) => s.vio_precio).length },
