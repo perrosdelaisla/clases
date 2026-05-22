@@ -1354,35 +1354,12 @@ async function renderTabReservar() {
             </div>`;
         return;
     }
-    if (estado.razon === 'muy_pronto') {
-        const desde = estado.puede_reservar_desde
-            ? formatearFechaLarga(estado.puede_reservar_desde)
-            : 'pronto';
-        mensajeBox.innerHTML = `
-            <div class="reservar-msg">
-                <h3>Tu próxima clase estará disponible para reservar el ${desde}</h3>
-                <p>Dejamos al menos 5 días entre clase y clase para que ${escapeHTML(nombrePerro)} practique lo aprendido.</p>
-            </div>`;
-        return;
-    }
     if (estado.razon === 'limite_alcanzado') {
         const reservas = estado.reservas_actuales ?? '';
         mensajeBox.innerHTML = `
             <div class="reservar-msg">
                 <h3>Ya has reservado ${reservas} clase${reservas === 1 ? '' : 's'} por adelantado</h3>
                 <p>Si quieres reservar más, háblalo con el adiestrador en la próxima clase.</p>
-            </div>`;
-        return;
-    }
-
-    // Fallback: si la RPC devuelve puede:false con un motivo no contemplado,
-    // bloqueamos el flujo en lugar de seguir al calendario.
-    if (estado.puede === false) {
-        mensajeBox.removeAttribute('hidden');
-        mensajeBox.innerHTML = `
-            <div class="reservar-msg">
-                <h3>Por ahora no podemos reservar una clase nueva</h3>
-                <p>Si crees que es un error, escríbenos por WhatsApp y lo resolvemos.</p>
             </div>`;
         return;
     }
@@ -1584,25 +1561,19 @@ async function confirmarReserva() {
             // Cubre el caso raro de que el state cambie entre abrir el modal y
             // confirmar (ej: pasaron 5 min y se llegó al límite).
             const gate = await llamarPuedeReservar();
-            if (gate.razon !== 'ok') {
-                let mensajeGate;
-                if (gate.razon === 'muy_pronto') {
-                    const desde = gate.puede_reservar_desde
-                        ? formatearFechaLarga(gate.puede_reservar_desde) : 'más adelante';
-                    mensajeGate = `Podrás reservar tu siguiente clase el ${desde}. Dejamos al menos 5 días entre clases.`;
-                } else if (gate.razon === 'limite_alcanzado') {
-                    mensajeGate = `Ya tienes el máximo de reservas activas. Cuando se realice alguna, podrás reservar la siguiente.`;
-                } else if (gate.razon === 'sin_primera_clase') {
-                    mensajeGate = `Tu primera clase la coordinamos directamente. Escríbenos por WhatsApp.`;
-                } else {
-                    mensajeGate = `Por ahora no podemos crear esa reserva. Escríbenos por WhatsApp si crees que es un error.`;
-                }
+            if (gate.razon === 'limite_alcanzado' || gate.razon === 'sin_primera_clase') {
+                const mensajeGate = gate.razon === 'limite_alcanzado'
+                    ? `Ya tienes el máximo de reservas activas. Cuando se realice alguna, podrás reservar la siguiente.`
+                    : `Tu primera clase la coordinamos directamente. Escríbenos por WhatsApp.`;
                 toast(mensajeGate, 'error');
                 cerrarModal('modal-reservar');
                 await renderTabReservar();
                 btn.disabled = false;
                 return;
             }
+            // muy_pronto NO bloquea — el filtro de slots (slotsFiltrados en
+            // renderTabReservar) y minIso=puede_reservar_desde ya garantizan
+            // que el slot elegido esté en fecha válida.
 
             const packPrevio = calcularEstadoPack(state.cliente, state.citas);
             const proximoNumero = packPrevio.proximo_numero || 1;
