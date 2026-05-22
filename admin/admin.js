@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=8';
+import * as agenda from './agenda/api.js?v=9';
 import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js?v=1';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -501,6 +501,11 @@ function bindAgendaModals() {
                 resetCmForm();
                 await cargarCitas();
             } catch (err) {
+                if (err?.code === 'SLOT_TOMADO') {
+                    showCmError('Ese horario acaba de ser tomado por otra reserva. Refresca la agenda y elige otro.');
+                    await cargarCitas();
+                    return;
+                }
                 console.error('Error crearCitaManual:', err);
                 showCmError(err?.message || 'No se pudo crear la cita.');
             } finally {
@@ -1675,6 +1680,11 @@ function bindModalCitaEdit() {
                 editState.citaId = null;
                 await cargarCitas();
             } catch (err) {
+                if (err?.code === 'SLOT_TOMADO') {
+                    showCeError('Ese horario acaba de ser tomado por otra reserva. Refresca la agenda y elige otro.');
+                    await cargarCitas();
+                    return;
+                }
                 console.error('Error actualizarCita:', err);
                 showCeError(err?.message || 'No se pudo guardar la cita.');
             } finally {

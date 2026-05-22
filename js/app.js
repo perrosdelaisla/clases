@@ -1533,7 +1533,14 @@ async function confirmarReserva() {
                 .eq('id', mod.id)
                 .select()
                 .single();
-            if (upErr) throw upErr;
+            if (upErr) {
+                if (esErrorSlotTomado(upErr)) {
+                    toast('Acabamos de ver que ese horario ya no está disponible. Elige otro.', 'error');
+                    await renderTabReservar();
+                    return;
+                }
+                throw upErr;
+            }
             citaData = upData;
 
             // 2) DELETE bloqueo viejo "Auto: cita {id}"
@@ -1564,7 +1571,14 @@ async function confirmarReserva() {
                 })
                 .select()
                 .single();
-            if (citaErr) throw citaErr;
+            if (citaErr) {
+                if (esErrorSlotTomado(citaErr)) {
+                    toast('Acabamos de ver que ese horario ya no está disponible. Elige otro.', 'error');
+                    await renderTabReservar();
+                    return;
+                }
+                throw citaErr;
+            }
             citaData = insData;
         }
 
@@ -2138,6 +2152,17 @@ function escapeHTML(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+/**
+ * Detecta si un error de Supabase corresponde a violación del constraint
+ * UNIQUE citas_slot_unico (Capa 1, aplicado 22/05/2026).
+ */
+function esErrorSlotTomado(error) {
+    if (!error) return false;
+    if (error.code === '23505') return true;
+    const msg = typeof error.message === 'string' ? error.message : '';
+    return msg.includes('citas_slot_unico') || msg.includes('duplicate key');
 }
 
 let toastTimer = null;

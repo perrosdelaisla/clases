@@ -23,6 +23,17 @@
 
 import { supabase } from '../../js/supabase.js';
 
+/**
+ * Detecta si un error de Supabase corresponde a violación del constraint
+ * UNIQUE citas_slot_unico (Capa 1, aplicado 22/05/2026).
+ */
+export function esErrorSlotTomado(error) {
+    if (!error) return false;
+    if (error.code === '23505') return true;
+    const msg = typeof error.message === 'string' ? error.message : '';
+    return msg.includes('citas_slot_unico') || msg.includes('duplicate key');
+}
+
 // ────────────────────────────────────────────────────────────────────
 // PLANTILLA SEMANAL DE SLOTS
 // ────────────────────────────────────────────────────────────────────
@@ -447,7 +458,15 @@ export async function actualizarCita(citaId, parches) {
         .from('citas')
         .update(parches)
         .eq('id', citaId);
-    if (error) throw error;
+    if (error) {
+        if (esErrorSlotTomado(error)) {
+            const err = new Error('SLOT_TOMADO');
+            err.code = 'SLOT_TOMADO';
+            err.detalle = { fecha: parches?.fecha, hora: parches?.hora };
+            throw err;
+        }
+        throw error;
+    }
 }
 
 /**
@@ -691,7 +710,15 @@ export async function crearCitaManual(datos) {
             .insert(citaBody)
             .select()
             .single();
-        if (errCi) throw errCi;
+        if (errCi) {
+            if (esErrorSlotTomado(errCi)) {
+                const err = new Error('SLOT_TOMADO');
+                err.code = 'SLOT_TOMADO';
+                err.detalle = { fecha: cita.fecha, hora: horaCompleta };
+                throw err;
+            }
+            throw errCi;
+        }
         citaId = citaData?.id;
         if (!citaId) throw new Error('No se pudo crear la cita');
 
