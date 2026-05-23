@@ -2553,6 +2553,15 @@ const _voz = {
     finalAcumulado: '',   // segmentos finales acumulados en esta sesión
 };
 
+// Cada textarea con dictado tiene un botón "confirmar" asociado que
+// persiste la nota: al detener el dictado lo resaltamos brevemente
+// para evitar que el cliente cierre el modal pensando que ya guardó
+// (patrón WhatsApp: soltás el mic y se manda; acá no — falta tocar).
+const _vozBtnConfirmar = {
+    'notas-textarea': 'notas-confirm',
+    'reporte-nota': 'reporte-guardar',
+};
+
 function vozSoportada() {
     return !!_voz.SR;
 }
@@ -2629,6 +2638,17 @@ function detenerDictado() {
 }
 
 function limpiarDictado() {
+    // Antes de soltar las refs: si quedó texto en el textarea, resaltar
+    // el botón de confirmar correspondiente para guiar el siguiente paso.
+    if (_voz.activoTextareaId) {
+        const ta = document.getElementById(_voz.activoTextareaId);
+        const btnConfirmarId = _vozBtnConfirmar[_voz.activoTextareaId];
+        if (ta && ta.value.trim() && btnConfirmarId) {
+            const btnConfirmar = document.getElementById(btnConfirmarId);
+            if (btnConfirmar) resaltarBoton(btnConfirmar);
+        }
+    }
+
     if (_voz.activoBtn) {
         _voz.activoBtn.classList.remove('is-grabando');
         _voz.activoBtn.setAttribute('aria-label', 'Dictar nota por voz');
@@ -2638,6 +2658,11 @@ function limpiarDictado() {
     _voz.baseline = '';
     _voz.finalAcumulado = '';
     _voz.recognition = null;
+}
+
+function resaltarBoton(btn) {
+    btn.classList.add('is-resaltado-voz');
+    setTimeout(() => btn.classList.remove('is-resaltado-voz'), 4200);
 }
 
 function bindBotonesDictado() {
