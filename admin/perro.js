@@ -372,7 +372,7 @@ async function renderEjerciciosActivos() {
 
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_semanal, ejercicios (id, codigo, nombre, categoria)')
+        .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_semanal, min_diario, max_diario, ejercicios (id, codigo, nombre, categoria)')
         .eq('perro_id', state.perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -432,8 +432,10 @@ async function renderEjerciciosActivos() {
             abrirModalFrecuencia({
                 asignadoId: btn.dataset.asignadoId,
                 ejercicioNombre: nombre,
-                min: btn.dataset.min ? Number(btn.dataset.min) : null,
-                max: btn.dataset.max ? Number(btn.dataset.max) : null,
+                minSem: btn.dataset.minSem ? Number(btn.dataset.minSem) : null,
+                maxSem: btn.dataset.maxSem ? Number(btn.dataset.maxSem) : null,
+                minDia: btn.dataset.minDia ? Number(btn.dataset.minDia) : null,
+                maxDia: btn.dataset.maxDia ? Number(btn.dataset.maxDia) : null,
             });
         });
     });
@@ -472,14 +474,25 @@ function construirCadenas(rows) {
         });
 }
 
-// Label compacto para el chip de frecuencia semanal. Reglas exactas
-// definidas en la spec del Paso 4 (ambos NULL = pendiente, etc).
-function labelFrecuencia(min, max) {
-    if (min == null && max == null) return '+ Frecuencia';
-    if (min != null && max != null && min === max) return `${min} / sem`;
-    if (min != null && max != null) return `${min}–${max} / sem`;
-    if (min != null) return `≥${min} / sem`;
-    return `≤${max} / sem`;
+// Sub-resumen reutilizable para semanal/diario. Devuelve null si min y
+// max son ambos NULL para que el llamador pueda combinar partes.
+function formatRango(min, max, sufijo) {
+    if (min == null && max == null) return null;
+    if (min != null && max != null && min === max) return `${min} / ${sufijo}`;
+    if (min != null && max != null) return `${min}–${max} / ${sufijo}`;
+    if (min != null) return `≥${min} / ${sufijo}`;
+    return `≤${max} / ${sufijo}`;
+}
+
+// Label compacto para el chip de frecuencia. Combina los dos
+// sub-resúmenes (semanal · diario) cuando ambos están definidos.
+function labelFrecuencia(minSem, maxSem, minDia, maxDia) {
+    const partes = [];
+    const sem = formatRango(minSem, maxSem, 'sem');
+    const dia = formatRango(minDia, maxDia, 'día');
+    if (sem) partes.push(sem);
+    if (dia) partes.push(dia);
+    return partes.length === 0 ? '+ Frecuencia' : partes.join(' · ');
 }
 
 function renderEjercicioActivoCard(row, history = []) {
@@ -490,18 +503,22 @@ function renderEjercicioActivoCard(row, history = []) {
     const tieneHistoria = history.length > 0;
     const catChip = `<span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>`;
 
-    const min = row.min_semanal ?? null;
-    const max = row.max_semanal ?? null;
-    const vacio = (min == null && max == null);
-    const freqLabel = escapeHTML(labelFrecuencia(min, max));
+    const minSem = row.min_semanal ?? null;
+    const maxSem = row.max_semanal ?? null;
+    const minDia = row.min_diario ?? null;
+    const maxDia = row.max_diario ?? null;
+    const vacio = (minSem == null && maxSem == null && minDia == null && maxDia == null);
+    const freqLabel = escapeHTML(labelFrecuencia(minSem, maxSem, minDia, maxDia));
     const freqChip = `
         <button type="button"
                 class="frecuencia-chip${vacio ? ' frecuencia-chip--vacio' : ''}"
                 data-accion="frecuencia"
                 data-asignado-id="${escapeHTML(row.id)}"
-                data-min="${escapeHTML(min == null ? '' : String(min))}"
-                data-max="${escapeHTML(max == null ? '' : String(max))}"
-                aria-label="Configurar frecuencia semanal">
+                data-min-sem="${escapeHTML(minSem == null ? '' : String(minSem))}"
+                data-max-sem="${escapeHTML(maxSem == null ? '' : String(maxSem))}"
+                data-min-dia="${escapeHTML(minDia == null ? '' : String(minDia))}"
+                data-max-dia="${escapeHTML(maxDia == null ? '' : String(maxDia))}"
+                aria-label="Configurar frecuencia">
             ${freqLabel}
         </button>`;
 
@@ -1280,7 +1297,7 @@ function bindFrecuencia() {
     bindSwipeClose('frecuencia-handle', 'modal-frecuencia', cerrarModalFrecuencia);
 }
 
-function abrirModalFrecuencia({ asignadoId, ejercicioNombre, min, max }) {
+function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxSem, minDia, maxDia }) {
     const modal = document.getElementById('modal-frecuencia');
     if (!modal || !asignadoId) return;
 
@@ -1289,17 +1306,22 @@ function abrirModalFrecuencia({ asignadoId, ejercicioNombre, min, max }) {
     const tituloEj = document.getElementById('frecuencia-ejercicio');
     if (tituloEj) tituloEj.textContent = ejercicioNombre || '';
 
-    const minEl = document.getElementById('frecuencia-min');
-    const maxEl = document.getElementById('frecuencia-max');
-    if (minEl) minEl.value = (min == null ? '' : String(min));
-    if (maxEl) maxEl.value = (max == null ? '' : String(max));
+    const setInput = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = (val == null ? '' : String(val));
+    };
+    setInput('frecuencia-min-sem', minSem);
+    setInput('frecuencia-max-sem', maxSem);
+    setInput('frecuencia-min-dia', minDia);
+    setInput('frecuencia-max-dia', maxDia);
 
     const err = document.getElementById('frecuencia-error');
     if (err) { err.textContent = ''; err.hidden = true; }
 
     const btnQuitar = document.getElementById('frecuencia-quitar');
     if (btnQuitar) {
-        if (min != null || max != null) btnQuitar.removeAttribute('hidden');
+        const hayAlguno = (minSem != null || maxSem != null || minDia != null || maxDia != null);
+        if (hayAlguno) btnQuitar.removeAttribute('hidden');
         else btnQuitar.setAttribute('hidden', '');
     }
 
@@ -1329,31 +1351,42 @@ function cerrarModalFrecuencia() {
     }, 300);
 }
 
-// Lee y normaliza los dos inputs: '' → null; el resto Number(...).
-// Devuelve { ok, min, max, error } — si ok===false, error trae el msg.
-function leerYValidarFrecuencia() {
-    const minRaw = document.getElementById('frecuencia-min').value.trim();
-    const maxRaw = document.getElementById('frecuencia-max').value.trim();
-
-    const parse = (raw) => {
-        if (raw === '') return { ok: true, value: null };
-        const n = Number(raw);
-        if (!Number.isFinite(n) || !Number.isInteger(n)) {
-            return { ok: false, error: 'Debe ser un número entero.' };
-        }
-        if (n < 0) return { ok: false, error: 'No puede ser negativo.' };
-        return { ok: true, value: n };
-    };
-
-    const pMin = parse(minRaw);
-    if (!pMin.ok) return { ok: false, error: pMin.error };
-    const pMax = parse(maxRaw);
-    if (!pMax.ok) return { ok: false, error: pMax.error };
-
-    if (pMin.value != null && pMax.value != null && pMax.value < pMin.value) {
-        return { ok: false, error: 'El máximo no puede ser menor que el mínimo.' };
+// Parsea un input numérico opcional: '' → null; resto entero ≥ 0.
+function parseInputFrecuencia(raw) {
+    if (raw === '') return { ok: true, value: null };
+    const n = Number(raw);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+        return { ok: false };
     }
-    return { ok: true, min: pMin.value, max: pMax.value };
+    return { ok: true, value: n };
+}
+
+// Lee y valida los 4 inputs del modal. Devuelve { ok, valores, error }
+// donde valores = { minSem, maxSem, minDia, maxDia }.
+function leerYValidarFrecuencia() {
+    const ids = ['frecuencia-min-sem', 'frecuencia-max-sem', 'frecuencia-min-dia', 'frecuencia-max-dia'];
+    const [pMinSem, pMaxSem, pMinDia, pMaxDia] = ids.map((id) =>
+        parseInputFrecuencia(document.getElementById(id).value.trim()),
+    );
+
+    if (!pMinSem.ok || !pMaxSem.ok || !pMinDia.ok || !pMaxDia.ok) {
+        return { ok: false, error: 'Los valores deben ser números enteros.' };
+    }
+    if (pMinSem.value != null && pMaxSem.value != null && pMaxSem.value < pMinSem.value) {
+        return { ok: false, error: 'El máximo por semana no puede ser menor que el mínimo.' };
+    }
+    if (pMinDia.value != null && pMaxDia.value != null && pMaxDia.value < pMinDia.value) {
+        return { ok: false, error: 'El máximo por día no puede ser menor que el mínimo.' };
+    }
+    return {
+        ok: true,
+        valores: {
+            minSem: pMinSem.value,
+            maxSem: pMaxSem.value,
+            minDia: pMinDia.value,
+            maxDia: pMaxDia.value,
+        },
+    };
 }
 
 async function guardarFrecuencia() {
@@ -1367,16 +1400,18 @@ async function guardarFrecuencia() {
         return;
     }
 
-    await persistirFrecuencia(ctx.asignadoId, v.min, v.max);
+    await persistirFrecuencia(ctx.asignadoId, v.valores);
 }
 
 async function quitarFrecuencia() {
     const ctx = state.frecuenciaContext;
     if (!ctx?.asignadoId) return;
-    await persistirFrecuencia(ctx.asignadoId, null, null);
+    await persistirFrecuencia(ctx.asignadoId, {
+        minSem: null, maxSem: null, minDia: null, maxDia: null,
+    });
 }
 
-async function persistirFrecuencia(asignadoId, min, max) {
+async function persistirFrecuencia(asignadoId, valores) {
     const err = document.getElementById('frecuencia-error');
     const btnGuardar = document.getElementById('frecuencia-guardar');
     const btnQuitar = document.getElementById('frecuencia-quitar');
@@ -1387,8 +1422,10 @@ async function persistirFrecuencia(asignadoId, min, max) {
         const { error } = await supabase
             .from('ejercicios_asignados')
             .update({
-                min_semanal: min,
-                max_semanal: max,
+                min_semanal: valores.minSem,
+                max_semanal: valores.maxSem,
+                min_diario: valores.minDia,
+                max_diario: valores.maxDia,
                 actualizado_en: new Date().toISOString(),
             })
             .eq('id', asignadoId);

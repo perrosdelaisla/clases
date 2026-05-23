@@ -3626,6 +3626,30 @@ body {
     margin: 0;
 }
 
+.frecuencia-bloque {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.frecuencia-bloque__titulo {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    margin: 0;
+}
+
+.frecuencia-pareja {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+}
+
 .frecuencia-footer {
     display: flex;
     align-items: center;
