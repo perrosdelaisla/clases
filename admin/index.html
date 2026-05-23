@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=36">
+    <link rel="stylesheet" href="./styles.css?v=37">
 </head>
 <body>
 
@@ -627,10 +627,67 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-crear-ejercicio" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2>Nuevo ejercicio</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <label class="form-field">
+                    <span>Nombre</span>
+                    <input type="text" id="nc-nombre" maxlength="120">
+                </label>
+                <label class="form-field">
+                    <span>Categoría</span>
+                    <select id="nc-categoria">
+                        <option value="ejercicio">Ejercicio</option>
+                        <option value="cambio_rutina">Cambio de rutina</option>
+                        <option value="tarea">Tarea</option>
+                        <option value="herramienta">Herramienta</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Código</span>
+                    <input type="text" id="nc-codigo" maxlength="32" placeholder="Código corto en mayúsculas (ej. PERM_FORMAL). Si lo dejas vacío se rellena desde el nombre">
+                </label>
+                <label class="form-field">
+                    <span>Plantilla</span>
+                    <select id="nc-plantilla">
+                        <option value="">Elige una</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Descripción corta</span>
+                    <input type="text" id="nc-descripcion" maxlength="200" placeholder="Línea breve que ve el cliente en la tarjeta">
+                </label>
+                <label class="form-field">
+                    <span>Instrucciones detalladas</span>
+                    <textarea id="nc-instrucciones" rows="8" placeholder="Explica paso a paso cómo se hace el ejercicio. El cliente lo ve al tocar la tarjeta."></textarea>
+                </label>
+                <label class="form-field">
+                    <span>Video explicativo (YouTube)</span>
+                    <input type="url" id="nc-video" inputmode="url" placeholder="Pega aquí el enlace de YouTube del video">
+                </label>
+                <p class="error-message" id="nc-error" hidden></p>
+            </div>
+            <footer class="modal-footer">
+                <button id="nc-cancel" class="btn-secondary" type="button" data-modal-close>Cancelar</button>
+                <button id="nc-guardar" class="btn-primary" type="button">Crear</button>
+            </footer>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=45"></script>
+    <script type="module" src="./admin.js?v=46"></script>
 </body>
 </html>

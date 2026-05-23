@@ -2499,6 +2499,16 @@ body {
     border-bottom: 1px solid var(--color-border);
     padding-bottom: 8px;
     margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.catalogo-grupo-titulo {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
 }
 
 .catalogo-grupo-count {
@@ -2506,7 +2516,14 @@ body {
     font-size: 0.85rem;
     font-weight: normal;
     letter-spacing: 0.02em;
-    margin-left: 10px;
+}
+
+.catalogo-grupo-add {
+    min-height: 32px;
+    padding: 4px 12px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
 }
 
 .catalogo-list {

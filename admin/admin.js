@@ -10,7 +10,7 @@
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=11';
 import * as stats from './stats/api.js?v=3';
-import * as catalogo from './catalogo/api.js?v=1';
+import * as catalogo from './catalogo/api.js?v=2';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
@@ -2250,6 +2250,13 @@ function bindCatalogoActions() {
     const grupos = document.getElementById('catalogo-grupos');
     if (grupos) {
         grupos.addEventListener('click', (e) => {
+            // "+ Nuevo": abre modal de creación con categoría preseleccionada.
+            const btnNuevo = e.target.closest('[data-nuevo-ejercicio]');
+            if (btnNuevo) {
+                abrirModalCrearEjercicio(btnNuevo.dataset.categoria || 'ejercicio');
+                return;
+            }
+            // Click en card → modal de edición.
             const card = e.target.closest('.catalogo-card');
             if (!card) return;
             const ej = state.catalogoEjercicios.find((x) => x.id === card.dataset.ejercicioId);
@@ -2258,11 +2265,43 @@ function bindCatalogoActions() {
     }
     // El bind global de [data-modal-close] vive en bindAgendaModals(),
     // que solo corre si se abrió la pestaña Agenda. Lo garantizamos acá
-    // para este modal.
+    // para los modales del catálogo.
     document.querySelectorAll('#modal-editar-ejercicio [data-modal-close]')
         .forEach((el) => el.addEventListener('click', () => closeModal('modal-editar-ejercicio')));
+    document.querySelectorAll('#modal-crear-ejercicio [data-modal-close]')
+        .forEach((el) => el.addEventListener('click', () => closeModal('modal-crear-ejercicio')));
+
     const btnGuardar = document.getElementById('ee-guardar');
     if (btnGuardar) btnGuardar.addEventListener('click', guardarEdicionEjercicio);
+
+    const btnCrear = document.getElementById('nc-guardar');
+    if (btnCrear) btnCrear.addEventListener('click', guardarNuevoEjercicio);
+
+    // Autocompletar código a partir del nombre, solo si el código está vacío.
+    const ncNombre = document.getElementById('nc-nombre');
+    if (ncNombre) {
+        ncNombre.addEventListener('blur', () => {
+            const codigoEl = document.getElementById('nc-codigo');
+            if (!codigoEl) return;
+            if (codigoEl.value.trim() !== '') return;
+            const slug = slugCodigoDesdeNombre(ncNombre.value);
+            if (slug) codigoEl.value = slug;
+        });
+    }
+}
+
+// Normaliza un nombre humano a un código tipo PERM_FORMAL.
+// NFD → quita combining marks (U+0300–U+036F), separadores → "_",
+// solo [A-Z0-9_], max 32 chars. Sin underscores al inicio/fin.
+function slugCodigoDesdeNombre(nombre) {
+    if (!nombre) return '';
+    return nombre
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 32);
 }
 
 function abrirModalEditarEjercicio(ej) {
@@ -2305,6 +2344,67 @@ async function guardarEdicionEjercicio() {
     } catch (e) {
         console.error('[admin/catalogo] error al guardar:', e);
         if (err) { err.textContent = 'No se pudo guardar. Inténtalo de nuevo.'; err.hidden = false; }
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function abrirModalCrearEjercicio(categoria) {
+    document.getElementById('nc-nombre').value = '';
+    document.getElementById('nc-codigo').value = '';
+    document.getElementById('nc-plantilla').value = '';
+    document.getElementById('nc-descripcion').value = '';
+    document.getElementById('nc-instrucciones').value = '';
+    document.getElementById('nc-video').value = '';
+    const sel = document.getElementById('nc-categoria');
+    if (sel) sel.value = categoria || 'ejercicio';
+    const err = document.getElementById('nc-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+    openModal('modal-crear-ejercicio');
+}
+
+async function guardarNuevoEjercicio() {
+    const err = document.getElementById('nc-error');
+    const showErr = (msg) => { if (err) { err.textContent = msg; err.hidden = false; } };
+
+    const nombre = document.getElementById('nc-nombre').value.trim();
+    let codigo = document.getElementById('nc-codigo').value.trim();
+    const plantillaRaw = document.getElementById('nc-plantilla').value;
+    const categoria = document.getElementById('nc-categoria').value;
+    const descripcion = document.getElementById('nc-descripcion').value.trim();
+    const instrucciones = document.getElementById('nc-instrucciones').value.trim();
+    const videoUrl = document.getElementById('nc-video').value.trim();
+
+    if (!nombre) { showErr('El nombre es obligatorio.'); return; }
+    if (!plantillaRaw) { showErr('Elige una plantilla.'); return; }
+    if (!codigo) {
+        // Por si el usuario nunca disparó el blur sobre nc-nombre.
+        codigo = slugCodigoDesdeNombre(nombre);
+        if (codigo) document.getElementById('nc-codigo').value = codigo;
+    }
+    if (!codigo) { showErr('No se pudo generar el código desde el nombre. Escribe uno.'); return; }
+
+    const btn = document.getElementById('nc-guardar');
+    btn.disabled = true;
+    try {
+        await catalogo.crearEjercicio({
+            codigo,
+            nombre,
+            plantilla: parseInt(plantillaRaw, 10),
+            categoria,
+            descripcion: descripcion || null,
+            instrucciones: instrucciones || null,
+            video_url: videoUrl || null,
+        });
+        closeModal('modal-crear-ejercicio');
+        await cargarCatalogoAdmin();
+    } catch (e) {
+        console.error('[admin/catalogo] error al crear:', e);
+        if (e?.code === 'codigo_duplicado') {
+            showErr('Ya existe un ejercicio con ese código. Elige otro.');
+        } else {
+            showErr('No se pudo crear el ejercicio. Inténtalo de nuevo.');
+        }
     } finally {
         btn.disabled = false;
     }
@@ -2357,7 +2457,8 @@ function renderCatalogoAdmin(ejercicios) {
             return `
                 <section class="catalogo-grupo">
                     <h2 class="catalogo-grupo-header">
-                        ${escapeHTML(label)}<span class="catalogo-grupo-count">(${items.length})</span>
+                        <span class="catalogo-grupo-titulo">${escapeHTML(label)}<span class="catalogo-grupo-count">(${items.length})</span></span>
+                        <button type="button" class="btn-secondary catalogo-grupo-add" data-nuevo-ejercicio data-categoria="${escapeHTML(cat)}">+ Nuevo</button>
                     </h2>
                     <ul class="catalogo-list">${cards}</ul>
                 </section>
