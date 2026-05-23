@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=31">
+    <link rel="stylesheet" href="./css/styles.css?v=32">
 </head>
 <body class="app-cliente">
 
@@ -540,6 +540,15 @@
                 </div>
             </div>
 
+            <div class="mientreno" id="mientreno" hidden>
+                <h3 class="mientreno__titulo">Mis entrenos</h3>
+                <div id="mientreno-loading" class="mientreno__loading" hidden>Cargando…</div>
+                <div id="mientreno-empty" class="mientreno__empty" hidden>
+                    <p>Todavía no reportaste este ejercicio.</p>
+                </div>
+                <ul id="mientreno-lista" class="mientreno-lista" hidden></ul>
+            </div>
+
             <button type="button"
                     class="btn btn-primary btn-block modal-ejercicio__reportar"
                     id="btn-reportar-entreno">
@@ -820,6 +829,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=48"></script>
+    <script type="module" src="./js/app.js?v=49"></script>
 </body>
 </html>

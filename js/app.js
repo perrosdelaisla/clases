@@ -2111,6 +2111,7 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
         inst.classList.add('modal-ejercicio__instrucciones--vacio');
     }
     renderProgresoEnModal(ejercicioAsignadoId);
+    cargarMisEntrenos(ejercicioAsignadoId);
     abrirModal('modal-ejercicio-detalle');
     renderNotasEjercicio(ejercicioAsignadoId);
 }
@@ -2410,6 +2411,8 @@ function cerrarModal(id) {
     if (id === 'modal-ejercicio-detalle') {
         const videoBox = document.getElementById('modal-ejercicio-video');
         if (videoBox) videoBox.innerHTML = '';
+        const mientreno = document.getElementById('mientreno');
+        if (mientreno) mientreno.hidden = true;
     }
     setTimeout(() => {
         modal.setAttribute('hidden', '');
@@ -3599,6 +3602,14 @@ async function guardarReporteEjercicio() {
         const justoCumplido = (estadoAntes.estadoGlobal === 'debajo'
                               && estadoDespues.estadoGlobal === 'en_zona');
 
+        // Refrescar la lista "Mis entrenos" del modal de detalle que
+        // queda debajo, así el cliente ve el registro nuevo al cerrar.
+        try {
+            await cargarMisEntrenos(asignadoId);
+        } catch (e) {
+            console.error('[reporte] no se pudo refrescar mis entrenos:', e);
+        }
+
         cerrarModal('modal-reporte-ejercicio');
         toast('Entreno registrado');
 
@@ -3613,4 +3624,114 @@ async function guardarReporteEjercicio() {
     } finally {
         if (btn) btn.disabled = false;
     }
+}
+
+// ───────────────────────────────────────────────────────────
+// "Mis entrenos" dentro del modal de detalle del ejercicio
+// ───────────────────────────────────────────────────────────
+
+function fmtFechaCliente(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+    const dDia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (dDia.getTime() === hoy.getTime()) return 'Hoy';
+    if (dDia.getTime() === ayer.getTime()) return 'Ayer';
+    const str = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+    // "sáb. 23 may." → "Sáb 23 may"
+    return str.replace(/\./g, '').replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function fmtHoraCliente(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function fmtRepesCliente(datos) {
+    if (!datos || !Array.isArray(datos.repeticiones) || datos.repeticiones.length === 0) return '';
+    const n = datos.repeticiones.length;
+    const totalSeg = Number(datos.tiempo_total_seg) || 0;
+    const palabra = n === 1 ? 'rep' : 'reps';
+    if (totalSeg === 0) return `${n} ${palabra} · sin duración`;
+    const min = Math.floor(totalSeg / 60);
+    const sec = totalSeg % 60;
+    const dur = sec === 0 ? `${min} min` : `${min} min ${sec}s`;
+    return `${n} ${palabra} · ${dur}`;
+}
+
+async function cargarMisEntrenos(asignadoId) {
+    const cont = document.getElementById('mientreno');
+    const loading = document.getElementById('mientreno-loading');
+    const empty = document.getElementById('mientreno-empty');
+    const lista = document.getElementById('mientreno-lista');
+    if (!cont || !loading || !empty || !lista) return;
+
+    if (!asignadoId) {
+        cont.hidden = true;
+        loading.hidden = true;
+        empty.hidden = true;
+        lista.hidden = true;
+        return;
+    }
+
+    cont.hidden = false;
+    loading.hidden = false;
+    empty.hidden = true;
+    lista.hidden = true;
+    lista.innerHTML = '';
+
+    try {
+        const { data, error } = await supabase
+            .from('registros_ejercicio')
+            .select('id, registrado_en, datos_registro, tranquilidad, nota')
+            .eq('ejercicio_asignado_id', asignadoId)
+            .order('registrado_en', { ascending: false })
+            .limit(10);
+        if (error) throw error;
+
+        loading.hidden = true;
+        if (!data || data.length === 0) {
+            empty.hidden = false;
+            lista.hidden = true;
+            return;
+        }
+        lista.innerHTML = data.map(renderMiEntrenoItem).join('');
+        lista.hidden = false;
+        empty.hidden = true;
+    } catch (e) {
+        console.error('[mientreno] error cargando:', e);
+        // Defensivo: ocultar la sección entera para no dejar UI rota.
+        cont.hidden = true;
+    }
+}
+
+function renderMiEntrenoItem(reg) {
+    const fecha = fmtFechaCliente(reg.registrado_en);
+    const hora = fmtHoraCliente(reg.registrado_en);
+    const repesTexto = fmtRepesCliente(reg.datos_registro);
+    const tq = (reg.tranquilidad != null) ? Number(reg.tranquilidad) : null;
+
+    const tqChip = (tq != null)
+        ? `<span class="mientreno-tq mientreno-tq--${tq}">Tq ${tq}</span>`
+        : '';
+    const datos = repesTexto
+        ? `<p class="mientreno-item__datos">${escapeHTML(repesTexto)}</p>`
+        : '';
+    const nota = reg.nota
+        ? `<p class="mientreno-item__nota">${escapeHTML(reg.nota)}</p>`
+        : '';
+
+    return `
+        <li class="mientreno-item">
+            <div class="mientreno-item__cab">
+                <span class="mientreno-item__fecha">${escapeHTML(fecha)}</span>
+                <span class="mientreno-item__hora">${escapeHTML(hora)}</span>
+                ${tqChip}
+            </div>
+            ${datos}
+            ${nota}
+        </li>
+    `;
 }
