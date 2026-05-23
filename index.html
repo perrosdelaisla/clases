@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=28">
+    <link rel="stylesheet" href="./css/styles.css?v=29">
 </head>
 <body class="app-cliente">
 
@@ -591,18 +591,15 @@
             <div class="reporte-form">
 
                 <div class="reporte-field">
-                    <label class="reporte-label">Tiempo de la práctica</label>
-                    <div class="reporte-tiempo">
-                        <input type="number" id="reporte-min" inputmode="numeric" min="0" step="1" placeholder="0">
-                        <span class="reporte-tiempo__sep">min</span>
-                        <input type="number" id="reporte-seg" inputmode="numeric" min="0" max="59" step="1" placeholder="0">
-                        <span class="reporte-tiempo__sep">seg</span>
-                    </div>
-                </div>
-
-                <div class="reporte-field">
-                    <label class="reporte-label" for="reporte-reps">Repeticiones</label>
-                    <input type="number" id="reporte-reps" inputmode="numeric" min="0" step="1" placeholder="Opcional">
+                    <label class="reporte-label">Repeticiones</label>
+                    <p class="reporte-hint">Sumá cada repetición con su duración. Si no la cronometraste, dejala vacía.</p>
+                    <ul class="reporte-repes" id="reporte-repes-lista">
+                        <!-- Filas dinámicas. Vacío por default. -->
+                    </ul>
+                    <button type="button" class="reporte-repes__add" id="reporte-repes-add">
+                        <span class="plus">+</span> Sumar repetición
+                    </button>
+                    <p class="reporte-repes__total" id="reporte-repes-total" hidden></p>
                 </div>
 
                 <div class="reporte-field">
@@ -791,6 +788,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=45"></script>
+    <script type="module" src="./js/app.js?v=46"></script>
 </body>
 </html>

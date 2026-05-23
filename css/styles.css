@@ -3151,6 +3151,130 @@ body {
     font-weight: 700;
 }
 
+/* ─── Repeticiones dinámicas: hint, lista, fila, total ─── */
+.reporte-hint {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin: 0 0 0.5rem;
+    line-height: 1.35;
+}
+
+.reporte-repes {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.reporte-repe {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+}
+
+.reporte-repe__label {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    min-width: 4rem;
+}
+
+.reporte-repe__inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.reporte-repe__min,
+.reporte-repe__seg {
+    width: 4.5rem;
+    min-height: var(--tap);
+    padding: 0 0.6rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    text-align: center;
+    -webkit-appearance: none;
+    appearance: none;
+    -moz-appearance: textfield;
+}
+
+.reporte-repe__min::-webkit-outer-spin-button,
+.reporte-repe__min::-webkit-inner-spin-button,
+.reporte-repe__seg::-webkit-outer-spin-button,
+.reporte-repe__seg::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.reporte-repe__del {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0.4rem 0.5rem;
+    min-width: 32px;
+    min-height: 32px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: color 0.12s ease;
+}
+
+.reporte-repe__del:hover,
+.reporte-repe__del:focus-visible {
+    color: var(--pdli-rojo);
+    outline: none;
+}
+
+.reporte-repes__add {
+    align-self: flex-start;
+    margin-top: 0.6rem;
+    padding: 0.35rem 0.7rem 0.35rem 0.55rem;
+    background: transparent;
+    border: 1px dashed var(--pdli-rojo);
+    border-radius: 999px;
+    color: var(--pdli-rojo);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: background 0.12s ease;
+}
+
+.reporte-repes__add:hover,
+.reporte-repes__add:focus-visible {
+    background: rgba(200, 16, 46, 0.08);
+    outline: none;
+}
+
+.reporte-repes__add .plus {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.reporte-repes__total {
+    margin-top: 0.6rem;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--color-muted);
+}
+
+.reporte-repes__total[hidden] { display: none; }
+
 /* ─── Fix tranquilidad: etiquetas Nada/Mucha en los extremos ─── */
 .reporte-pills-wrap {
     display: flex;

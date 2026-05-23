@@ -2952,6 +2952,7 @@ function iniciarModificarCita(cita) {
 
 let _ejercicioModalActualId = null;
 let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccionado)
+let _reporteRepes = [];                // [{ minStr, segStr }, ...] — filas dinámicas de repeticiones
 
 // Helpers de fecha
 function formatearFechaRelativa(dateStr) {
@@ -3229,6 +3230,80 @@ function bindNotasEjercicio() {
             });
         });
     });
+
+    // Lista dinámica de repeticiones: sumar / editar / eliminar.
+    document.getElementById('reporte-repes-add')?.addEventListener('click', () => {
+        _reporteRepes.push({ minStr: '', segStr: '' });
+        renderRepesLista();
+        // Foco automático en el min de la nueva repe.
+        const ul = document.getElementById('reporte-repes-lista');
+        const lastMin = ul?.querySelector('li:last-child .reporte-repe__min');
+        lastMin?.focus();
+    });
+
+    const ulRepes = document.getElementById('reporte-repes-lista');
+    ulRepes?.addEventListener('input', (e) => {
+        const el = e.target.closest('input[data-idx]');
+        if (!el) return;
+        const idx = Number(el.dataset.idx);
+        const campo = el.dataset.campo;
+        if (!_reporteRepes[idx]) return;
+        if (campo === 'min') _reporteRepes[idx].minStr = el.value;
+        if (campo === 'seg') _reporteRepes[idx].segStr = el.value;
+        actualizarTotalRepes();
+    });
+    ulRepes?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.reporte-repe__del');
+        if (!btn) return;
+        const idx = Number(btn.dataset.idx);
+        _reporteRepes.splice(idx, 1);
+        renderRepesLista();
+    });
+}
+
+function renderRepesLista() {
+    const ul = document.getElementById('reporte-repes-lista');
+    if (!ul) return;
+    ul.innerHTML = _reporteRepes.map((rep, idx) => `
+        <li class="reporte-repe" data-idx="${idx}">
+            <span class="reporte-repe__label">Rep ${idx + 1}</span>
+            <div class="reporte-repe__inputs">
+                <input type="number" class="reporte-repe__min" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep.minStr || '')}" data-idx="${idx}" data-campo="min">
+                <span class="reporte-tiempo__sep">min</span>
+                <input type="number" class="reporte-repe__seg" inputmode="numeric" min="0" max="59" step="1" placeholder="—" value="${escapeHTML(rep.segStr || '')}" data-idx="${idx}" data-campo="seg">
+                <span class="reporte-tiempo__sep">seg</span>
+            </div>
+            <button type="button" class="reporte-repe__del" data-idx="${idx}" aria-label="Eliminar repetición">✕</button>
+        </li>
+    `).join('');
+    actualizarTotalRepes();
+}
+
+function actualizarTotalRepes() {
+    const totalEl = document.getElementById('reporte-repes-total');
+    if (!totalEl) return;
+    if (_reporteRepes.length === 0) {
+        totalEl.hidden = true;
+        return;
+    }
+    let segs = 0;
+    _reporteRepes.forEach((r) => {
+        const m = parseInt(r.minStr || '0', 10);
+        const s = parseInt(r.segStr || '0', 10);
+        if (!isNaN(m) && !isNaN(s) && (m > 0 || s > 0)) {
+            segs += m * 60 + s;
+        }
+    });
+    const n = _reporteRepes.length;
+    if (segs === 0) {
+        totalEl.textContent = `${n} ${n === 1 ? 'repetición' : 'repeticiones'} · sin duración registrada`;
+    } else {
+        const min = Math.floor(segs / 60);
+        const sec = segs % 60;
+        const dur = sec === 0 ? `${min} min` : `${min} min ${String(sec).padStart(2, '0')} seg`;
+        totalEl.textContent = `${n} ${n === 1 ? 'repetición' : 'repeticiones'} · total ${dur}`;
+    }
+    totalEl.hidden = false;
 }
 
 // ───────────────────────────────────────────────────────────
@@ -3246,10 +3321,8 @@ function abrirModalReporte() {
     if (nombreEl && tituloOrigen) nombreEl.textContent = tituloOrigen.textContent;
 
     // Reset form
-    ['reporte-min', 'reporte-seg', 'reporte-reps', 'reporte-nota'].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
+    const notaEl = document.getElementById('reporte-nota');
+    if (notaEl) notaEl.value = '';
     const err = document.getElementById('reporte-error');
     if (err) { err.textContent = ''; err.hidden = true; }
 
@@ -3258,6 +3331,9 @@ function abrirModalReporte() {
         p.classList.remove('is-active');
         p.setAttribute('aria-checked', 'false');
     });
+
+    _reporteRepes = [];
+    renderRepesLista();
 
     abrirModal('modal-reporte-ejercicio');
 }
@@ -3300,45 +3376,43 @@ async function guardarReporteEjercicio() {
     };
     if (errBox) { errBox.textContent = ''; errBox.hidden = true; }
 
-    const minRaw = document.getElementById('reporte-min').value.trim();
-    const segRaw = document.getElementById('reporte-seg').value.trim();
-    const repsRaw = document.getElementById('reporte-reps').value.trim();
     const nota = document.getElementById('reporte-nota').value.trim() || null;
     const trq = _reporteTranquilidad;
 
-    const parseEnteroNoNeg = (raw) => {
-        if (raw === '') return 0;
-        const n = Number(raw);
-        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) return NaN;
-        return n;
-    };
-
-    const min = parseEnteroNoNeg(minRaw);
-    const seg = parseEnteroNoNeg(segRaw);
-    if (Number.isNaN(min) || Number.isNaN(seg) || seg > 59) {
-        showErr('Revisá el tiempo (minutos y segundos enteros, segundos hasta 59).');
-        return;
-    }
-
-    let reps = null;
-    if (repsRaw !== '') {
-        const n = Number(repsRaw);
-        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
-            showErr('Las repeticiones deben ser un número entero.');
+    // Validar y normalizar repeticiones. Una fila con ambos campos vacíos es
+    // válida (repe sin duración registrada); si alguno tiene valor, los dos
+    // deben ser enteros >= 0 y los segundos <= 59.
+    const repeticionesData = [];
+    let tiempoTotalSeg = 0;
+    for (const r of _reporteRepes) {
+        const minStr = (r.minStr || '').trim();
+        const segStr = (r.segStr || '').trim();
+        const ambosVacios = (minStr === '' && segStr === '');
+        const m = minStr === '' ? 0 : Number(minStr);
+        const s = segStr === '' ? 0 : Number(segStr);
+        const validoNum = Number.isFinite(m) && Number.isInteger(m) && m >= 0
+                       && Number.isFinite(s) && Number.isInteger(s) && s >= 0 && s <= 59;
+        if (!ambosVacios && !validoNum) {
+            showErr('Revisá la duración de las repeticiones (números enteros, segundos hasta 59).');
             return;
         }
-        reps = n;
+        const dur = m * 60 + s;
+        if (dur > 0) tiempoTotalSeg += dur;
+        repeticionesData.push(dur > 0 ? { duracion_seg: dur } : {});
     }
 
-    const tiempoTotalSeg = min * 60 + seg;
-    if (!(tiempoTotalSeg > 0) && reps == null && trq == null) {
-        showErr('Cargá al menos uno de los datos para reportar el entreno.');
+    const tieneRepes = _reporteRepes.length > 0;
+    const tieneTrq = trq != null;
+    if (!tieneRepes && !tieneTrq) {
+        showErr('Cargá al menos una repetición o la tranquilidad para reportar.');
         return;
     }
 
     const datos_registro = {};
-    if (tiempoTotalSeg > 0) datos_registro.tiempo_total_seg = tiempoTotalSeg;
-    if (reps != null) datos_registro.repeticiones = reps;
+    if (tieneRepes) {
+        datos_registro.repeticiones = repeticionesData;
+        if (tiempoTotalSeg > 0) datos_registro.tiempo_total_seg = tiempoTotalSeg;
+    }
 
     const perroId = state.perroSeleccionadoId;
     if (!perroId) {
