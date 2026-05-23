@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=41">
+    <link rel="stylesheet" href="./styles.css?v=42">
 </head>
 <body>
 
@@ -271,9 +271,45 @@
         </div>
     </div>
 
+    <div class="bottom-sheet" id="modal-frecuencia" hidden aria-hidden="true">
+        <div class="bottom-sheet__overlay" data-close></div>
+        <div class="bottom-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="frecuencia-titulo">
+            <div class="bottom-sheet__handle" id="frecuencia-handle" aria-hidden="true"></div>
+            <header class="bottom-sheet__header">
+                <h2 id="frecuencia-titulo">Frecuencia semanal</h2>
+                <button type="button" class="bottom-sheet__close" data-close aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                    </svg>
+                </button>
+            </header>
+            <div class="bottom-sheet__body frecuencia-body">
+                <p class="frecuencia-ejercicio" id="frecuencia-ejercicio"></p>
+                <p class="muted">Define cuántas veces a la semana querés que el perro practique este ejercicio. Podés dejar vacío cualquiera de los dos campos.</p>
+                <label class="form-field">
+                    <span>Mínimo por semana</span>
+                    <input type="number" id="frecuencia-min" inputmode="numeric" min="0" step="1" placeholder="Vacío = sin mínimo">
+                </label>
+                <label class="form-field">
+                    <span>Máximo por semana</span>
+                    <input type="number" id="frecuencia-max" inputmode="numeric" min="0" step="1" placeholder="Vacío = sin máximo">
+                </label>
+                <p class="error-message" id="frecuencia-error" hidden></p>
+            </div>
+            <footer class="bottom-sheet__footer frecuencia-footer">
+                <button type="button" class="btn-tertiary" id="frecuencia-quitar" hidden>Quitar target</button>
+                <div class="frecuencia-footer__right">
+                    <button type="button" class="btn-secondary" data-close>Cancelar</button>
+                    <button type="button" class="btn-primary" id="frecuencia-guardar">Guardar</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=19"></script>
+    <script type="module" src="./perro.js?v=20"></script>
 </body>
 </html>

@@ -39,6 +39,7 @@ const state = {
     progresionContext: null,         // { vigenteId, posicion } cuando el modal se abre en modo progresión
     modoReordenar: false,            // true mientras se reordenan los renglones de la sub-pestaña
     reordenInicial: null,            // orden de vigente-ids al entrar al modo reordenar (para detectar cambios)
+    frecuenciaContext: null,         // { asignadoId, ejercicioNombre } cuando #modal-frecuencia está abierto
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);
@@ -50,6 +51,7 @@ async function bootstrap() {
     bindModal();
     bindReordenar();
     bindPausados();
+    bindFrecuencia();
     bindHerramientas();
     bindCasoComplejo();
     bindProtocolo();
@@ -370,7 +372,7 @@ async function renderEjerciciosActivos() {
 
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, ejercicios (id, codigo, nombre, categoria)')
+        .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_semanal, ejercicios (id, codigo, nombre, categoria)')
         .eq('perro_id', state.perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -423,6 +425,18 @@ async function renderEjerciciosActivos() {
     listaEl.querySelectorAll('[data-mover]').forEach((btn) => {
         btn.addEventListener('click', () => moverRenglon(btn, btn.dataset.mover));
     });
+    listaEl.querySelectorAll('[data-accion="frecuencia"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.ejercicio-activo-card');
+            const nombre = card?.querySelector('.ejercicio-activo-nombre')?.textContent || '';
+            abrirModalFrecuencia({
+                asignadoId: btn.dataset.asignadoId,
+                ejercicioNombre: nombre,
+                min: btn.dataset.min ? Number(btn.dataset.min) : null,
+                max: btn.dataset.max ? Number(btn.dataset.max) : null,
+            });
+        });
+    });
 
     // "Reordenar" solo tiene sentido con ≥2 renglones en la sub-pestaña.
     const btnReordenar = document.getElementById('abrir-reordenar');
@@ -458,6 +472,16 @@ function construirCadenas(rows) {
         });
 }
 
+// Label compacto para el chip de frecuencia semanal. Reglas exactas
+// definidas en la spec del Paso 4 (ambos NULL = pendiente, etc).
+function labelFrecuencia(min, max) {
+    if (min == null && max == null) return '+ Frecuencia';
+    if (min != null && max != null && min === max) return `${min} / sem`;
+    if (min != null && max != null) return `${min}–${max} / sem`;
+    if (min != null) return `≥${min} / sem`;
+    return `≤${max} / sem`;
+}
+
 function renderEjercicioActivoCard(row, history = []) {
     const ej = row.ejercicios;
     if (!ej) return '';
@@ -465,6 +489,21 @@ function renderEjercicioActivoCard(row, history = []) {
     const categoria = ej.categoria || 'ejercicio';
     const tieneHistoria = history.length > 0;
     const catChip = `<span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>`;
+
+    const min = row.min_semanal ?? null;
+    const max = row.max_semanal ?? null;
+    const vacio = (min == null && max == null);
+    const freqLabel = escapeHTML(labelFrecuencia(min, max));
+    const freqChip = `
+        <button type="button"
+                class="frecuencia-chip${vacio ? ' frecuencia-chip--vacio' : ''}"
+                data-accion="frecuencia"
+                data-asignado-id="${escapeHTML(row.id)}"
+                data-min="${escapeHTML(min == null ? '' : String(min))}"
+                data-max="${escapeHTML(max == null ? '' : String(max))}"
+                aria-label="Configurar frecuencia semanal">
+            ${freqLabel}
+        </button>`;
 
     // El toggle de pausa solo va en renglones simples (sin historia). Los
     // renglones con progresiones se retroceden con "Borrar último paso".
@@ -494,7 +533,10 @@ function renderEjercicioActivoCard(row, history = []) {
             <div class="ejercicio-activo-top">
                 <div class="ejercicio-activo-info">
                     <span class="ejercicio-activo-nombre">${nombre}</span>
-                    ${catChip}
+                    <div class="ejercicio-activo-chips">
+                        ${catChip}
+                        ${freqChip}
+                    </div>
                 </div>${toggle}
             </div>
             ${historiaHtml}
@@ -728,8 +770,10 @@ function bindBackNavigation() {
 function hayUiAbierta() {
     const cat = document.getElementById('modal-ejercicios');
     const pau = document.getElementById('modal-pausados');
+    const fre = document.getElementById('modal-frecuencia');
     return (cat && !cat.hasAttribute('hidden'))
         || (pau && !pau.hasAttribute('hidden'))
+        || (fre && !fre.hasAttribute('hidden'))
         || state.modoReordenar === true;
 }
 
@@ -737,8 +781,10 @@ function hayUiAbierta() {
 function cerrarUiAbierta() {
     const cat = document.getElementById('modal-ejercicios');
     const pau = document.getElementById('modal-pausados');
+    const fre = document.getElementById('modal-frecuencia');
     if (cat && !cat.hasAttribute('hidden')) { cerrarModal(); return; }
     if (pau && !pau.hasAttribute('hidden')) { cerrarSheetPausados(); return; }
+    if (fre && !fre.hasAttribute('hidden')) { cerrarModalFrecuencia(); return; }
     if (state.modoReordenar) { salirModoReordenar(); return; }
 }
 
@@ -1210,6 +1256,153 @@ function cerrarSheetPausados() {
         modal.setAttribute('hidden', '');
         modal.setAttribute('aria-hidden', 'true');
     }, 300);
+}
+
+// ===================== Hoja de frecuencia semanal =====================
+
+function bindFrecuencia() {
+    const modal = document.getElementById('modal-frecuencia');
+    if (!modal) return;
+
+    modal.addEventListener('click', (e) => {
+        if (e.target.closest('[data-close]')) cerrarModalFrecuencia();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hasAttribute('hidden')) cerrarModalFrecuencia();
+    });
+
+    document.getElementById('frecuencia-guardar')
+        ?.addEventListener('click', guardarFrecuencia);
+    document.getElementById('frecuencia-quitar')
+        ?.addEventListener('click', quitarFrecuencia);
+
+    bindSwipeClose('frecuencia-handle', 'modal-frecuencia', cerrarModalFrecuencia);
+}
+
+function abrirModalFrecuencia({ asignadoId, ejercicioNombre, min, max }) {
+    const modal = document.getElementById('modal-frecuencia');
+    if (!modal || !asignadoId) return;
+
+    state.frecuenciaContext = { asignadoId, ejercicioNombre };
+
+    const tituloEj = document.getElementById('frecuencia-ejercicio');
+    if (tituloEj) tituloEj.textContent = ejercicioNombre || '';
+
+    const minEl = document.getElementById('frecuencia-min');
+    const maxEl = document.getElementById('frecuencia-max');
+    if (minEl) minEl.value = (min == null ? '' : String(min));
+    if (maxEl) maxEl.value = (max == null ? '' : String(max));
+
+    const err = document.getElementById('frecuencia-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+
+    const btnQuitar = document.getElementById('frecuencia-quitar');
+    if (btnQuitar) {
+        if (min != null || max != null) btnQuitar.removeAttribute('hidden');
+        else btnQuitar.setAttribute('hidden', '');
+    }
+
+    modal.removeAttribute('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+    pushHistoriaUI();
+}
+
+function cerrarModalFrecuencia() {
+    const modal = document.getElementById('modal-frecuencia');
+    if (!modal || modal.hasAttribute('hidden')) return;
+    consumirHistoriaUI();
+    const panel = modal.querySelector('.bottom-sheet__panel');
+
+    panel.style.transform = '';
+    panel.style.transition = '';
+
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    state.frecuenciaContext = null;
+
+    setTimeout(() => {
+        modal.setAttribute('hidden', '');
+        modal.setAttribute('aria-hidden', 'true');
+    }, 300);
+}
+
+// Lee y normaliza los dos inputs: '' → null; el resto Number(...).
+// Devuelve { ok, min, max, error } — si ok===false, error trae el msg.
+function leerYValidarFrecuencia() {
+    const minRaw = document.getElementById('frecuencia-min').value.trim();
+    const maxRaw = document.getElementById('frecuencia-max').value.trim();
+
+    const parse = (raw) => {
+        if (raw === '') return { ok: true, value: null };
+        const n = Number(raw);
+        if (!Number.isFinite(n) || !Number.isInteger(n)) {
+            return { ok: false, error: 'Debe ser un número entero.' };
+        }
+        if (n < 0) return { ok: false, error: 'No puede ser negativo.' };
+        return { ok: true, value: n };
+    };
+
+    const pMin = parse(minRaw);
+    if (!pMin.ok) return { ok: false, error: pMin.error };
+    const pMax = parse(maxRaw);
+    if (!pMax.ok) return { ok: false, error: pMax.error };
+
+    if (pMin.value != null && pMax.value != null && pMax.value < pMin.value) {
+        return { ok: false, error: 'El máximo no puede ser menor que el mínimo.' };
+    }
+    return { ok: true, min: pMin.value, max: pMax.value };
+}
+
+async function guardarFrecuencia() {
+    const ctx = state.frecuenciaContext;
+    const err = document.getElementById('frecuencia-error');
+    if (!ctx?.asignadoId) return;
+
+    const v = leerYValidarFrecuencia();
+    if (!v.ok) {
+        if (err) { err.textContent = v.error; err.hidden = false; }
+        return;
+    }
+
+    await persistirFrecuencia(ctx.asignadoId, v.min, v.max);
+}
+
+async function quitarFrecuencia() {
+    const ctx = state.frecuenciaContext;
+    if (!ctx?.asignadoId) return;
+    await persistirFrecuencia(ctx.asignadoId, null, null);
+}
+
+async function persistirFrecuencia(asignadoId, min, max) {
+    const err = document.getElementById('frecuencia-error');
+    const btnGuardar = document.getElementById('frecuencia-guardar');
+    const btnQuitar = document.getElementById('frecuencia-quitar');
+    if (btnGuardar) btnGuardar.disabled = true;
+    if (btnQuitar) btnQuitar.disabled = true;
+
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({
+                min_semanal: min,
+                max_semanal: max,
+                actualizado_en: new Date().toISOString(),
+            })
+            .eq('id', asignadoId);
+        if (error) throw error;
+
+        cerrarModalFrecuencia();
+        await renderEjerciciosActivos();
+    } catch (e) {
+        console.error('[perro] error guardando frecuencia:', e);
+        if (err) { err.textContent = 'No se pudo guardar. Inténtalo de nuevo.'; err.hidden = false; }
+    } finally {
+        if (btnGuardar) btnGuardar.disabled = false;
+        if (btnQuitar) btnQuitar.disabled = false;
+    }
 }
 
 async function cargarYRenderPausados() {
