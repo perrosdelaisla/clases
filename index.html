@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=26">
+    <link rel="stylesheet" href="./css/styles.css?v=27">
 </head>
 <body class="app-cliente">
 
@@ -502,6 +502,12 @@
             <div class="modal-ejercicio__video" id="modal-ejercicio-video" hidden></div>
             <div class="modal-ejercicio__instrucciones" id="modal-ejercicio-instrucciones"></div>
 
+            <button type="button"
+                    class="btn btn-primary btn-block modal-ejercicio__reportar"
+                    id="btn-reportar-entreno">
+                Reportar entreno
+            </button>
+
             <div class="notas-ejercicio">
                 <div class="notas-ejercicio__head">
                     <span class="notas-ejercicio__label">Tus notas en este ejercicio</span>
@@ -527,6 +533,62 @@
                         <button type="button" class="notas-expand__btn confirm" id="notas-confirm">Añadir nota</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: reportar entreno por ejercicio ── -->
+    <div class="modal-pdli" id="modal-reporte-ejercicio" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel modal-pdli__panel--form" role="dialog" aria-modal="true" aria-labelledby="modal-reporte-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-reporte-titulo">Reportar entreno</h2>
+            <p class="modal-pdli__lead">¿Cómo fue esta práctica de <strong id="modal-reporte-ejercicio-nombre">este ejercicio</strong>?</p>
+
+            <div class="reporte-form">
+
+                <div class="reporte-field">
+                    <label class="reporte-label">Tiempo de la práctica</label>
+                    <div class="reporte-tiempo">
+                        <input type="number" id="reporte-min" inputmode="numeric" min="0" step="1" placeholder="0">
+                        <span class="reporte-tiempo__sep">min</span>
+                        <input type="number" id="reporte-seg" inputmode="numeric" min="0" max="59" step="1" placeholder="0">
+                        <span class="reporte-tiempo__sep">seg</span>
+                    </div>
+                </div>
+
+                <div class="reporte-field">
+                    <label class="reporte-label" for="reporte-reps">Repeticiones</label>
+                    <input type="number" id="reporte-reps" inputmode="numeric" min="0" step="1" placeholder="Opcional">
+                </div>
+
+                <div class="reporte-field">
+                    <label class="reporte-label">Tranquilidad del perro</label>
+                    <div class="reporte-pills" id="reporte-tranquilidad" role="radiogroup" aria-label="Tranquilidad del 1 al 5">
+                        <button type="button" class="reporte-pill" data-valor="1" role="radio" aria-checked="false">1</button>
+                        <button type="button" class="reporte-pill" data-valor="2" role="radio" aria-checked="false">2</button>
+                        <button type="button" class="reporte-pill" data-valor="3" role="radio" aria-checked="false">3</button>
+                        <button type="button" class="reporte-pill" data-valor="4" role="radio" aria-checked="false">4</button>
+                        <button type="button" class="reporte-pill" data-valor="5" role="radio" aria-checked="false">5</button>
+                    </div>
+                </div>
+
+                <div class="reporte-field">
+                    <label class="reporte-label" for="reporte-nota">Nota (opcional)</label>
+                    <textarea id="reporte-nota" rows="3" maxlength="2000" placeholder="Algo que quieras contarle al adiestrador sobre cómo fue."></textarea>
+                </div>
+
+                <p class="error-message" id="reporte-error" hidden></p>
+            </div>
+
+            <div class="modal-pdli__actions">
+                <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="reporte-guardar">Guardar</button>
             </div>
         </div>
     </div>
@@ -687,6 +749,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=42"></script>
+    <script type="module" src="./js/app.js?v=43"></script>
 </body>
 </html>

@@ -2681,6 +2681,7 @@ function iniciarModificarCita(cita) {
 // ───────────────────────────────────────────────────────────
 
 let _ejercicioModalActualId = null;
+let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccionado)
 
 // Helpers de fecha
 function formatearFechaRelativa(dateStr) {
@@ -2939,4 +2940,164 @@ function bindNotasEjercicio() {
         });
     }
     if (btnConfirm) btnConfirm.addEventListener('click', guardarNotaEjercicio);
+
+    // Bloque B — reporte de entreno por ejercicio.
+    document.getElementById('btn-reportar-entreno')
+        ?.addEventListener('click', abrirModalReporte);
+    document.getElementById('reporte-guardar')
+        ?.addEventListener('click', guardarReporteEjercicio);
+
+    // Pills de tranquilidad (1..5). Toque sobre el mismo número deselecciona.
+    document.querySelectorAll('#reporte-tranquilidad .reporte-pill').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const valor = Number(btn.dataset.valor);
+            _reporteTranquilidad = (_reporteTranquilidad === valor) ? null : valor;
+            document.querySelectorAll('#reporte-tranquilidad .reporte-pill').forEach((p) => {
+                const activa = Number(p.dataset.valor) === _reporteTranquilidad;
+                p.classList.toggle('is-active', activa);
+                p.setAttribute('aria-checked', activa ? 'true' : 'false');
+            });
+        });
+    });
+}
+
+// ───────────────────────────────────────────────────────────
+// Reporte de entreno por ejercicio (Bloque B)
+// ───────────────────────────────────────────────────────────
+
+function abrirModalReporte() {
+    if (!_ejercicioModalActualId) {
+        toast('Cerrá y reabrí la ficha del ejercicio', 'error');
+        return;
+    }
+
+    const nombreEl = document.getElementById('modal-reporte-ejercicio-nombre');
+    const tituloOrigen = document.getElementById('modal-ejercicio-titulo');
+    if (nombreEl && tituloOrigen) nombreEl.textContent = tituloOrigen.textContent;
+
+    // Reset form
+    ['reporte-min', 'reporte-seg', 'reporte-reps', 'reporte-nota'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const err = document.getElementById('reporte-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+
+    _reporteTranquilidad = null;
+    document.querySelectorAll('#reporte-tranquilidad .reporte-pill').forEach((p) => {
+        p.classList.remove('is-active');
+        p.setAttribute('aria-checked', 'false');
+    });
+
+    abrirModal('modal-reporte-ejercicio');
+}
+
+// Busca la práctica abierta de hoy (LOCAL del cliente) y la devuelve;
+// si no existe, la crea. Sin cierre formal — solo necesitamos su id
+// para agrupar registros.
+async function obtenerOCrearPracticaHoy(perroId) {
+    const ahora = new Date();
+    const inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0);
+    const today_start_iso = inicio.toISOString();
+
+    const { data: existentes, error: errSel } = await supabase
+        .from('practicas_rutina')
+        .select('id')
+        .eq('perro_id', perroId)
+        .gte('iniciada_en', today_start_iso)
+        .is('cerrada_en', null)
+        .order('iniciada_en', { ascending: false })
+        .limit(1);
+    if (errSel) throw errSel;
+    if (existentes && existentes.length > 0) return existentes[0].id;
+
+    const { data: creada, error: errIns } = await supabase
+        .from('practicas_rutina')
+        .insert({
+            perro_id: perroId,
+            usuario_cliente_id: state.usuarioCliente?.id ?? null,
+        })
+        .select('id')
+        .single();
+    if (errIns) throw errIns;
+    return creada.id;
+}
+
+async function guardarReporteEjercicio() {
+    const errBox = document.getElementById('reporte-error');
+    const showErr = (msg) => {
+        if (errBox) { errBox.textContent = msg; errBox.hidden = false; }
+    };
+    if (errBox) { errBox.textContent = ''; errBox.hidden = true; }
+
+    const minRaw = document.getElementById('reporte-min').value.trim();
+    const segRaw = document.getElementById('reporte-seg').value.trim();
+    const repsRaw = document.getElementById('reporte-reps').value.trim();
+    const nota = document.getElementById('reporte-nota').value.trim() || null;
+    const trq = _reporteTranquilidad;
+
+    const parseEnteroNoNeg = (raw) => {
+        if (raw === '') return 0;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) return NaN;
+        return n;
+    };
+
+    const min = parseEnteroNoNeg(minRaw);
+    const seg = parseEnteroNoNeg(segRaw);
+    if (Number.isNaN(min) || Number.isNaN(seg) || seg > 59) {
+        showErr('Revisá el tiempo (minutos y segundos enteros, segundos hasta 59).');
+        return;
+    }
+
+    let reps = null;
+    if (repsRaw !== '') {
+        const n = Number(repsRaw);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+            showErr('Las repeticiones deben ser un número entero.');
+            return;
+        }
+        reps = n;
+    }
+
+    const tiempoTotalSeg = min * 60 + seg;
+    if (!(tiempoTotalSeg > 0) && reps == null && trq == null) {
+        showErr('Cargá al menos uno de los datos para reportar el entreno.');
+        return;
+    }
+
+    const datos_registro = {};
+    if (tiempoTotalSeg > 0) datos_registro.tiempo_total_seg = tiempoTotalSeg;
+    if (reps != null) datos_registro.repeticiones = reps;
+
+    const perroId = state.perroSeleccionadoId;
+    if (!perroId) {
+        showErr('No hay perro seleccionado.');
+        return;
+    }
+
+    const btn = document.getElementById('reporte-guardar');
+    if (btn) btn.disabled = true;
+    try {
+        const practica_id = await obtenerOCrearPracticaHoy(perroId);
+        const { error } = await supabase
+            .from('registros_ejercicio')
+            .insert({
+                practica_id,
+                ejercicio_asignado_id: _ejercicioModalActualId,
+                datos_registro,
+                tranquilidad: trq,
+                nota,
+            });
+        if (error) throw error;
+        cerrarModal('modal-reporte-ejercicio');
+        toast('Entreno registrado');
+    } catch (e) {
+        console.error('[reporte] error:', e);
+        const msg = 'No pudimos guardar el reporte. Inténtalo de nuevo.';
+        toast(msg, 'error');
+        showErr(msg);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }

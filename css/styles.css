@@ -3024,3 +3024,129 @@ body {
 .admin-entry.is-pinned .admin-entry__pin {
     color: var(--pdli-oliva);
 }
+
+/* ===================== Reporte de entreno (Bloque B) ===================== */
+
+.modal-ejercicio__reportar {
+    display: block;
+    width: 100%;
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.reporte-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    margin-top: 0.5rem;
+}
+
+.reporte-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.reporte-label {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    letter-spacing: 0.01em;
+}
+
+.reporte-tiempo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reporte-tiempo input[type="number"] {
+    width: 5rem;
+    min-height: var(--tap);
+    padding: 0 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+}
+
+.reporte-tiempo input[type="number"]::-webkit-outer-spin-button,
+.reporte-tiempo input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.reporte-tiempo__sep {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin-right: 0.25rem;
+}
+
+.reporte-field input[type="number"]#reporte-reps,
+.reporte-field textarea#reporte-nota {
+    width: 100%;
+    min-height: var(--tap);
+    padding: 0.6rem 0.85rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    -webkit-appearance: none;
+}
+
+.reporte-field textarea#reporte-nota {
+    resize: vertical;
+    line-height: 1.4;
+    min-height: 5rem;
+}
+
+.reporte-field input[type="number"]#reporte-reps::placeholder,
+.reporte-field textarea#reporte-nota::placeholder {
+    color: var(--color-muted);
+}
+
+.reporte-pills {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+}
+
+.reporte-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.reporte-pill:hover,
+.reporte-pill:focus-visible {
+    border-color: var(--pdli-rojo);
+    color: var(--color-text);
+    outline: none;
+}
+
+.reporte-pill.is-active {
+    background: var(--pdli-rojo);
+    border-color: var(--pdli-rojo);
+    color: var(--pdli-crema);
+    font-weight: 700;
+}
