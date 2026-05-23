@@ -2774,6 +2774,7 @@ const _voz = {
 const _vozBtnConfirmar = {
     'notas-textarea': 'notas-confirm',
     'reporte-nota': 'reporte-guardar',
+    'mensaje-textarea': 'mensaje-enviar',
 };
 
 function vozSoportada() {

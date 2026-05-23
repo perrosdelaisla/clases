@@ -380,11 +380,25 @@
 
                     <div class="composer">
                         <div class="composer__field">
-                            <textarea class="composer__textarea"
-                                      id="mensaje-textarea"
-                                      placeholder="Escríbele al adiestrador…"
-                                      rows="1"
-                                      maxlength="5000"></textarea>
+                            <div class="textarea-voz">
+                                <textarea class="composer__textarea textarea-voz__textarea"
+                                          id="mensaje-textarea"
+                                          placeholder="Escríbele al adiestrador…"
+                                          rows="1"
+                                          maxlength="5000"></textarea>
+                                <button type="button"
+                                        class="textarea-voz__btn"
+                                        data-voz-target="mensaje-textarea"
+                                        aria-label="Dictar mensaje por voz"
+                                        hidden>
+                                    <svg class="textarea-voz__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <rect x="9" y="3" width="6" height="12" rx="3"/>
+                                        <path d="M5 11a7 7 0 0 0 14 0"/>
+                                        <line x1="12" y1="18" x2="12" y2="22"/>
+                                        <line x1="8" y1="22" x2="16" y2="22"/>
+                                    </svg>
+                                </button>
+                            </div>
                             <button type="button" class="composer__send" id="mensaje-enviar" disabled>Enviar</button>
                         </div>
                         <p class="composer__status" id="mensaje-status"></p>
@@ -879,6 +893,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=52"></script>
+    <script type="module" src="./js/app.js?v=53"></script>
 </body>
 </html>
