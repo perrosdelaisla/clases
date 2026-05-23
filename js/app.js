@@ -3106,6 +3106,7 @@ function iniciarModificarCita(cita) {
 let _ejercicioModalActualId = null;
 let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccionado)
 let _reporteRepes = [];                // [{ minStr, segStr }, ...] — filas dinámicas de repeticiones
+let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquilidad, nota, registrado_en }
 
 // Helpers de fecha
 function formatearFechaRelativa(dateStr) {
@@ -3488,7 +3489,16 @@ function abrirModalReporte() {
     _reporteRepes = [];
     renderRepesLista();
 
+    // Reset del banner "registro previo del día" — se va a setear async.
+    _reporteRegistroPrevio = null;
+    const banner = document.getElementById('reporte-banner-previo');
+    if (banner) banner.hidden = true;
+    const radioNuevo = document.getElementById('reporte-modo-nuevo');
+    if (radioNuevo) radioNuevo.checked = true;
+
     abrirModal('modal-reporte-ejercicio');
+    // Disparar la búsqueda en background; no bloqueamos la apertura.
+    cargarRegistroPrevioDelDia();
 }
 
 // Busca la práctica abierta de hoy (LOCAL del cliente) y la devuelve;
@@ -3520,6 +3530,48 @@ async function obtenerOCrearPracticaHoy(perroId) {
         .single();
     if (errIns) throw errIns;
     return creada.id;
+}
+
+// Busca el último registro del ejercicio del día (LOCAL) para ofrecer
+// "sumar al entreno anterior". Si encuentra, popula el banner.
+async function cargarRegistroPrevioDelDia() {
+    if (!_ejercicioModalActualId) return;
+    const banner = document.getElementById('reporte-banner-previo');
+    const resumen = document.getElementById('reporte-banner-previo-resumen');
+    const radioNuevo = document.getElementById('reporte-modo-nuevo');
+    const radioSumar = document.getElementById('reporte-modo-sumar');
+    if (!banner || !resumen) return;
+
+    const asignadoIdAlAbrir = _ejercicioModalActualId;
+    try {
+        const { data, error } = await supabase
+            .from('registros_ejercicio')
+            .select('id, datos_registro, tranquilidad, nota, registrado_en')
+            .eq('ejercicio_asignado_id', asignadoIdAlAbrir)
+            .gte('registrado_en', inicioDiaLocalIso())
+            .order('registrado_en', { ascending: false })
+            .limit(1);
+        if (error) throw error;
+
+        // Defensivo: si el cliente cerró el modal o cambió de ejercicio
+        // mientras corría la query, no tocamos nada.
+        const modal = document.getElementById('modal-reporte-ejercicio');
+        if (!modal || modal.hasAttribute('hidden')) return;
+        if (_ejercicioModalActualId !== asignadoIdAlAbrir) return;
+
+        if (!data || data.length === 0) return;
+
+        _reporteRegistroPrevio = data[0];
+        const hora = fmtHoraCliente(data[0].registrado_en);
+        const repesTxt = fmtRepesCliente(data[0].datos_registro);
+        resumen.textContent = repesTxt ? `${hora} · ${repesTxt}` : hora;
+        if (radioNuevo) radioNuevo.checked = true;
+        if (radioSumar) radioSumar.checked = false;
+        banner.hidden = false;
+    } catch (e) {
+        console.error('[reporte] previo del día:', e);
+        // Silencioso: comportamiento como hoy (sin banner).
+    }
 }
 
 async function guardarReporteEjercicio() {
@@ -3576,18 +3628,56 @@ async function guardarReporteEjercicio() {
     const btn = document.getElementById('reporte-guardar');
     if (btn) btn.disabled = true;
     const asignadoId = _ejercicioModalActualId;
+    const modoSumar = !!(_reporteRegistroPrevio
+        && document.getElementById('reporte-modo-sumar')?.checked);
     try {
-        const practica_id = await obtenerOCrearPracticaHoy(perroId);
-        const { error } = await supabase
-            .from('registros_ejercicio')
-            .insert({
-                practica_id,
-                ejercicio_asignado_id: asignadoId,
-                datos_registro,
-                tranquilidad: trq,
-                nota,
-            });
-        if (error) throw error;
+        if (modoSumar) {
+            // UPDATE: concat reps, suma tiempo, sobreescribe tranquilidad
+            // sólo si vino una nueva, concat nota con timestamp.
+            const prev = _reporteRegistroPrevio;
+            const prevRepes = Array.isArray(prev.datos_registro?.repeticiones)
+                ? prev.datos_registro.repeticiones : [];
+            const repesCombinadas = prevRepes.concat(repeticionesData);
+
+            const prevSeg = Number(prev.datos_registro?.tiempo_total_seg) || 0;
+            const totalSeg = prevSeg + tiempoTotalSeg;
+
+            const nuevoDatosRegistro = { repeticiones: repesCombinadas };
+            if (totalSeg > 0) nuevoDatosRegistro.tiempo_total_seg = totalSeg;
+
+            const tqFinal = (trq != null) ? trq : prev.tranquilidad;
+
+            let notaFinal = prev.nota || null;
+            if (nota) {
+                const ahora = new Date();
+                const hh = String(ahora.getHours()).padStart(2, '0');
+                const mm = String(ahora.getMinutes()).padStart(2, '0');
+                const append = `[${hh}:${mm}] ${nota}`;
+                notaFinal = prev.nota ? `${prev.nota}\n${append}` : append;
+            }
+
+            const { error } = await supabase
+                .from('registros_ejercicio')
+                .update({
+                    datos_registro: nuevoDatosRegistro,
+                    tranquilidad: tqFinal,
+                    nota: notaFinal,
+                })
+                .eq('id', prev.id);
+            if (error) throw error;
+        } else {
+            const practica_id = await obtenerOCrearPracticaHoy(perroId);
+            const { error } = await supabase
+                .from('registros_ejercicio')
+                .insert({
+                    practica_id,
+                    ejercicio_asignado_id: asignadoId,
+                    datos_registro,
+                    tranquilidad: trq,
+                    nota,
+                });
+            if (error) throw error;
+        }
 
         // Comparación de estados para detectar el "pulso de logro": pasamos
         // de 'debajo' (no llegabamos al mínimo) a 'en_zona' (justo cumplido).

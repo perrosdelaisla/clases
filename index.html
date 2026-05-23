@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=32">
+    <link rel="stylesheet" href="./css/styles.css?v=33">
 </head>
 <body class="app-cliente">
 
@@ -611,6 +611,23 @@
             <h2 id="modal-reporte-titulo">Reportar entreno</h2>
             <p class="modal-pdli__lead">¿Cómo fue esta práctica de <strong id="modal-reporte-ejercicio-nombre">este ejercicio</strong>?</p>
 
+            <div class="reporte-banner-previo" id="reporte-banner-previo" hidden>
+                <p class="reporte-banner-previo__texto">
+                    Ya reportaste este ejercicio hoy:
+                    <strong id="reporte-banner-previo-resumen">—</strong>
+                </p>
+                <div class="reporte-banner-previo__opciones" role="radiogroup" aria-label="¿Sumar al entreno anterior o empezar uno nuevo?">
+                    <label class="reporte-banner-previo__op">
+                        <input type="radio" name="reporte-modo" value="sumar" id="reporte-modo-sumar">
+                        <span>Sumar al entreno anterior</span>
+                    </label>
+                    <label class="reporte-banner-previo__op">
+                        <input type="radio" name="reporte-modo" value="nuevo" id="reporte-modo-nuevo" checked>
+                        <span>Empezar entreno nuevo</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="reporte-form">
 
                 <div class="reporte-field">
@@ -829,6 +846,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=49"></script>
+    <script type="module" src="./js/app.js?v=50"></script>
 </body>
 </html>

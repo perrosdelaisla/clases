@@ -3151,6 +3151,56 @@ body {
     font-weight: 700;
 }
 
+/* ─── Banner "ya reportaste hoy" en el modal de reporte ─── */
+.reporte-banner-previo {
+    margin: 0.5rem 0 1rem;
+    padding: 0.7rem 0.85rem;
+    background: rgba(245, 239, 224, 0.05);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--pdli-oliva);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.reporte-banner-previo[hidden] { display: none; }
+
+.reporte-banner-previo__texto {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--color-text);
+    line-height: 1.35;
+    margin: 0;
+}
+
+.reporte-banner-previo__texto strong {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.reporte-banner-previo__opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.reporte-banner-previo__op {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+}
+
+.reporte-banner-previo__op span {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+
+.reporte-banner-previo__op input[type="radio"] {
+    accent-color: var(--pdli-oliva);
+}
+
 /* ─── Repeticiones dinámicas: hint, lista, fila, total ─── */
 .reporte-hint {
     font-family: var(--font-body);
