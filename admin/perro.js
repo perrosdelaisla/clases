@@ -17,7 +17,7 @@ const SCREENS = {
     perro: document.getElementById('screen-perro'),
 };
 
-const TABS = ['plan', 'ejercicios', 'herramientas', 'salud', 'historico', 'notas'];
+const TABS = ['plan', 'ejercicios', 'progreso', 'herramientas', 'salud', 'historico', 'notas'];
 const DEFAULT_TAB = 'ejercicios';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -41,6 +41,7 @@ const state = {
     reordenInicial: null,            // orden de vigente-ids al entrar al modo reordenar (para detectar cambios)
     frecuenciaContext: null,         // { asignadoId, ejercicioNombre } cuando #modal-frecuencia está abierto
     historicoCargado: false,         // true tras cargar el histórico al menos una vez para este perro
+    progresoAdminCargado: false,     // idem para el tab Progreso
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);
@@ -278,10 +279,10 @@ function bindTabs() {
     });
 
     // Swipe horizontal entre tabs principales de la ficha perro.
-    // Orden HTML: plan, ejercicios, herramientas, salud, historico, notas.
+    // Orden HTML: plan, ejercicios, progreso, herramientas, salud, historico, notas.
     initSwipeTabs({
         container: document.querySelector('.tab-content'),
-        tabs: ['plan', 'ejercicios', 'herramientas', 'salud', 'historico', 'notas'],
+        tabs: ['plan', 'ejercicios', 'progreso', 'herramientas', 'salud', 'historico', 'notas'],
         getCurrent: () => document.querySelector('.tab-panel:not([hidden])')?.dataset.panel,
         onChange: (tab) => activarTab(tab, { updateUrl: true }),
     });
@@ -314,6 +315,7 @@ function activarTab(tabRaw, { updateUrl } = {}) {
     if (tab === 'salud') renderSaludPerro();
     if (tab === 'herramientas') renderHerramientas();
     if (tab === 'historico' && !state.historicoCargado) cargarHistorico();
+    if (tab === 'progreso' && !state.progresoAdminCargado) cargarProgresoAdmin();
 }
 
 // ===================== Sub-pestañas (Ejercicios / Cambios / Tareas) =====================
@@ -1434,6 +1436,9 @@ async function persistirFrecuencia(asignadoId, valores) {
         if (error) throw error;
 
         cerrarModalFrecuencia();
+        // Forzar refresh de la tab Progreso la próxima vez que se abra:
+        // los targets cambiaron y eso afecta resumen + chips + racha.
+        state.progresoAdminCargado = false;
         await renderEjerciciosActivos();
     } catch (e) {
         console.error('[perro] error guardando frecuencia:', e);
@@ -1936,6 +1941,162 @@ function renderHistoricoRegistro(reg) {
             </div>
             ${datosHtml}
             ${notaHtml}
+        </li>
+    `;
+}
+
+// ===================== Tab Progreso — cumplimiento + racha =====================
+//
+// Vista operativa para el adiestrador. Reusa get_progreso_perro y
+// get_racha_perro. Sin anillo, sin animación: info densa y rápida.
+
+function inicioSemanaLocalIsoAdmin() {
+    const d = new Date();
+    const dia = d.getDay();                  // 0=domingo
+    const offset = (dia === 0) ? 6 : (dia - 1);
+    const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset, 0, 0, 0, 0);
+    return lunes.toISOString();
+}
+
+function inicioDiaLocalIsoAdmin() {
+    const d = new Date();
+    const inicio = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    return inicio.toISOString();
+}
+
+// Estado de cumplimiento por dimensión (semana/día) y combinado.
+function _estadoDimAdmin(count, min, max) {
+    if (min == null && max == null) return 'sin';
+    const c = count ?? 0;
+    if (min != null && c < min) return 'debajo';
+    if (max != null && c > max) return 'encima';
+    return 'en_zona';
+}
+
+const _PRIORIDAD_ADMIN = { debajo: 3, encima: 2, en_zona: 1, sin: 0 };
+function _peorEstadoAdmin(a, b) {
+    return (_PRIORIDAD_ADMIN[a] >= _PRIORIDAD_ADMIN[b]) ? a : b;
+}
+
+function evaluarEstadoAdmin(row) {
+    const estadoSem = _estadoDimAdmin(row.count_semana, row.min_semanal, row.max_semanal);
+    const estadoDia = _estadoDimAdmin(row.count_dia,    row.min_diario,  row.max_diario);
+    return {
+        estado: _peorEstadoAdmin(estadoSem, estadoDia),
+        estadoSem,
+        estadoDia,
+    };
+}
+
+const _COLOR_CHIP_ADMIN = { debajo: 'rojo', en_zona: 'verde', encima: 'azul' };
+
+function _textoChipAdmin(count, min, max, sufijo) {
+    if (min == null && max == null) return '';
+    const den = min != null ? min : max;
+    return `${count ?? 0}/${den} · ${sufijo}`;
+}
+
+async function cargarProgresoAdmin() {
+    const loading = document.getElementById('progreso-admin-loading');
+    const empty = document.getElementById('progreso-admin-empty');
+    const contenido = document.getElementById('progreso-admin-contenido');
+    if (!loading || !empty || !contenido) return;
+
+    loading.removeAttribute('hidden');
+    empty.setAttribute('hidden', '');
+    contenido.setAttribute('hidden', '');
+
+    try {
+        const [progResp, rachaResp] = await Promise.all([
+            supabase.rpc('get_progreso_perro', {
+                p_perro_id: state.perroId,
+                p_inicio_semana: inicioSemanaLocalIsoAdmin(),
+                p_inicio_dia: inicioDiaLocalIsoAdmin(),
+            }),
+            supabase.rpc('get_racha_perro', {
+                p_perro_id: state.perroId,
+                p_inicio_semana_actual: inicioSemanaLocalIsoAdmin(),
+            }),
+        ]);
+        if (progResp.error) throw progResp.error;
+        if (rachaResp.error) throw rachaResp.error;
+
+        const filas = (progResp.data || []).filter(
+            (r) => r.min_semanal != null || r.max_semanal != null
+                || r.min_diario != null  || r.max_diario != null,
+        );
+
+        if (filas.length === 0) {
+            loading.setAttribute('hidden', '');
+            empty.removeAttribute('hidden');
+            state.progresoAdminCargado = true;
+            return;
+        }
+
+        const rachaMap = new Map();
+        (rachaResp.data || []).forEach((r) =>
+            rachaMap.set(r.ejercicio_asignado_id, r.racha_semanas));
+
+        // Resumen: solo cuentan los ejercicios con min_semanal definido.
+        const conTargetSem = filas.filter((r) => r.min_semanal != null);
+        const cumplidosSem = conTargetSem.filter((r) =>
+            Number(r.count_semana ?? 0) >= r.min_semanal).length;
+        document.getElementById('prog-admin-cumplidos').textContent = String(cumplidosSem);
+        document.getElementById('prog-admin-total').textContent = `/${conTargetSem.length}`;
+
+        // Orden: incumplidos → racha desc → nombre asc.
+        filas.sort((a, b) => {
+            const ea = evaluarEstadoAdmin(a);
+            const eb = evaluarEstadoAdmin(b);
+            const cumpleA = ea.estado === 'en_zona' ? 1 : 0;
+            const cumpleB = eb.estado === 'en_zona' ? 1 : 0;
+            if (cumpleA !== cumpleB) return cumpleA - cumpleB;
+            const rA = rachaMap.get(a.ejercicio_asignado_id) || 0;
+            const rB = rachaMap.get(b.ejercicio_asignado_id) || 0;
+            if (rA !== rB) return rB - rA;
+            return (a.nombre || '').localeCompare(b.nombre || '');
+        });
+
+        document.getElementById('prog-admin-lista').innerHTML =
+            filas.map((f) => renderProgresoAdminItem(f, rachaMap)).join('');
+
+        loading.setAttribute('hidden', '');
+        empty.setAttribute('hidden', '');
+        contenido.removeAttribute('hidden');
+        state.progresoAdminCargado = true;
+    } catch (err) {
+        console.error('[progreso-admin]', err);
+        loading.setAttribute('hidden', '');
+        empty.removeAttribute('hidden');
+        const p = empty.querySelector('p');
+        if (p) p.textContent = 'No se pudo cargar el progreso. Volvé a entrar a la tab.';
+    }
+}
+
+function renderProgresoAdminItem(row, rachaMap) {
+    const ev = evaluarEstadoAdmin(row);
+
+    const colorSem = _COLOR_CHIP_ADMIN[ev.estadoSem];
+    const colorDia = _COLOR_CHIP_ADMIN[ev.estadoDia];
+    const textoSem = _textoChipAdmin(row.count_semana, row.min_semanal, row.max_semanal, 'sem');
+    const textoDia = _textoChipAdmin(row.count_dia,    row.min_diario,  row.max_diario,  'hoy');
+
+    const chipSem = textoSem
+        ? `<span class="prog-admin-chip prog-admin-chip--${colorSem}">${escapeHTML(textoSem)}</span>`
+        : '';
+    const chipDia = textoDia
+        ? `<span class="prog-admin-chip prog-admin-chip--${colorDia}">${escapeHTML(textoDia)}</span>`
+        : '';
+
+    const racha = rachaMap.get(row.ejercicio_asignado_id) || 0;
+    const rachaHTML = racha >= 2
+        ? `<span class="prog-admin-racha"><strong>${racha}</strong> semanas seguidas</span>`
+        : '';
+
+    return `
+        <li class="prog-admin-item">
+            <div class="prog-admin-item__nombre">${escapeHTML(row.nombre || 'Ejercicio')}</div>
+            <div class="prog-admin-item__meta">${chipSem}${chipDia}${rachaHTML}</div>
         </li>
     `;
 }
