@@ -553,6 +553,43 @@ export async function eliminarCita(citaId) {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// DISPONIBILIDAD DE SLOTS — para el dropdown de horas en cita manual
+// ────────────────────────────────────────────────────────────────────
+
+/**
+ * Devuelve las horas disponibles para una fecha concreta, ya cruzadas
+ * con citas existentes y bloqueos por la RPC get_available_slots
+ * (single source of truth compartida con Victoria y la app cliente).
+ *
+ * Patrón espejo de cargarSlotsDisponibles en js/app.js:817, pero
+ * acotado a una sola fecha (p_desde = p_hasta = fechaIso) y
+ * p_min_dias_antelacion = 0 — la regla de antelación entre clases
+ * vive en puede_cliente_reservar() y no aplica al admin.
+ *
+ * @param {string} fechaIso - 'YYYY-MM-DD'.
+ * @returns {Promise<string[]>} Horas únicas 'HH:MM' ordenadas
+ *   ascendente. Vacío si no hay slots disponibles o si la RPC falla.
+ *
+ * @throws Nunca. Loguea y devuelve [] ante error, igual que el cliente.
+ */
+export async function obtenerSlotsDisponiblesPorFecha(fechaIso) {
+    if (!fechaIso) return [];
+    const { data, error } = await supabase.rpc('get_available_slots', {
+        p_desde: fechaIso,
+        p_hasta: fechaIso,
+        p_min_dias_antelacion: 0,
+    });
+    if (error) {
+        console.error('[admin] error cargando slots disponibles:', error);
+        return [];
+    }
+    const horas = (data || [])
+        .map((s) => (typeof s.hora === 'string' ? s.hora.substring(0, 5) : s.hora))
+        .filter(Boolean);
+    return [...new Set(horas)].sort();
+}
+
+// ────────────────────────────────────────────────────────────────────
 // CITA MANUAL — CADENA CLIENTE → PERRO → CITA → BLOQUEO
 // ────────────────────────────────────────────────────────────────────
 

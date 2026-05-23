@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=9';
+import * as agenda from './agenda/api.js?v=10';
 import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js?v=1';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -390,10 +390,22 @@ function bindAgendaModals() {
     const btnCitaManual = document.getElementById('btn-abrir-cita-manual');
     if (btnCitaManual) {
         btnCitaManual.addEventListener('click', async () => {
-            await Promise.all([poblarDropdownHorasCita(), cargarClientesCache()]);
+            // Dropdown arranca vacío con hint: se llena al elegir fecha.
+            actualizarHorasSegunFecha('');
+            await cargarClientesCache();
             setupAutocompleteCmCliente();
             openModal('modal-cita-manual');
         });
+    }
+
+    // Listener idempotente: el dropdown de horas se repuebla cada vez
+    // que cambia la fecha, cruzando con citas+bloqueos vía RPC.
+    const cmFecha = document.getElementById('cm-fecha');
+    if (cmFecha && !cmFecha.dataset.horasListenerBound) {
+        cmFecha.addEventListener('change', (e) => {
+            actualizarHorasSegunFecha(e.target.value || '');
+        });
+        cmFecha.dataset.horasListenerBound = '1';
     }
 
     document.querySelectorAll('[data-modal-close]').forEach((el) => {
@@ -659,16 +671,39 @@ function closeModal(id) {
     }
 }
 
-async function poblarDropdownHorasCita() {
+// Repuebla el dropdown de horas del modal cita manual según la fecha
+// elegida, cruzando con citas+bloqueos vía RPC get_available_slots
+// (misma fuente que Victoria y la app cliente). Estados:
+//   · sin fecha           → hint "Elegí fecha primero…"
+//   · con fecha sin slots → "No hay horas disponibles"
+//   · con slots           → opciones HH:MM; preserva valor previo si sigue disponible.
+async function actualizarHorasSegunFecha(fechaIso) {
     const select = document.getElementById('cm-hora');
     if (!select) return;
+
+    if (!fechaIso) {
+        select.innerHTML = '<option value="">Elegí fecha primero…</option>';
+        select.value = '';
+        return;
+    }
+
+    const valorPrevio = select.value;
     try {
-        const slots = await agenda.obtenerPlantilla();
-        const horasUnicas = [...new Set(slots.map((s) => s.hora))].sort();
+        const horasUnicas = await agenda.obtenerSlotsDisponiblesPorFecha(fechaIso);
+        if (horasUnicas.length === 0) {
+            select.innerHTML = '<option value="">No hay horas disponibles</option>';
+            select.value = '';
+            return;
+        }
         select.innerHTML = '<option value="">Elegí una hora…</option>' +
-            horasUnicas.map((h) => `<option value="${escapeHTML(h.substring(0, 5))}">${escapeHTML(h.substring(0, 5))}</option>`).join('');
+            horasUnicas.map((h) => `<option value="${escapeHTML(h)}">${escapeHTML(h)}</option>`).join('');
+        if (valorPrevio && horasUnicas.includes(valorPrevio)) {
+            select.value = valorPrevio;
+        }
     } catch (err) {
         console.error('Error cargando horas para dropdown cita:', err);
+        select.innerHTML = '<option value="">No hay horas disponibles</option>';
+        select.value = '';
     }
 }
 
