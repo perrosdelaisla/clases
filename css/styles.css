@@ -3725,3 +3725,160 @@ body {
     line-height: 1.4;
     white-space: pre-wrap;
 }
+
+/* ===================== Toggle Rutina / Mi progreso ===================== */
+
+.rutina-modo {
+    display: flex;
+    gap: 0.4rem;
+    margin: 0.5rem 0 1rem;
+    justify-content: center;
+}
+
+.rutina-modo__btn {
+    flex: 1;
+    max-width: 12rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(245, 239, 224, 0.18);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.rutina-modo__btn:hover,
+.rutina-modo__btn:focus-visible {
+    color: var(--color-text);
+    outline: none;
+}
+
+.rutina-modo__btn.is-active {
+    background: var(--pdli-oliva);
+    color: var(--pdli-crema);
+    border-color: var(--pdli-oliva);
+}
+
+.rutina-modo-panel[hidden] { display: none; }
+
+/* ===================== Vista "Mi progreso" ===================== */
+
+.anillo-semana--grande {
+    width: 180px;
+    height: 180px;
+    margin: 1.5rem auto 1.75rem;
+}
+
+.anillo-semana--grande .anillo-semana__num {
+    font-size: 3rem;
+}
+
+.anillo-semana--grande .anillo-semana__den {
+    font-size: 1rem;
+}
+
+.anillo-semana--grande .anillo-semana__label {
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+}
+
+.progreso-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.progreso-lista[hidden] { display: none; }
+
+.progreso-item {
+    padding: 0.75rem 0.9rem;
+    border-radius: var(--radius);
+    border: 1px solid rgba(245, 239, 224, 0.12);
+    background: rgba(245, 239, 224, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.progreso-item__nombre {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.progreso-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.progreso-item__chip {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--pdli-crema);
+    white-space: nowrap;
+}
+
+.progreso-item__chip--rojo  { background: var(--pdli-rojo); }
+.progreso-item__chip--verde { background: var(--pdli-oliva); }
+.progreso-item__chip--azul  { background: #1F4FA8; }
+.progreso-item__chip--sin {
+    background: rgba(245, 239, 224, 0.08);
+    color: var(--color-muted);
+}
+
+.progreso-item__racha {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    margin-left: auto;
+}
+
+.progreso-item__racha strong {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--pdli-oliva);
+    letter-spacing: 0.03em;
+    font-weight: 400;
+}
+
+/* ===================== Ambientales del anillo cerrado ===================== */
+
+/* Glow respiratorio del trazo cuando el anillo cierra al 100%. */
+.anillo-semana--completo .anillo-semana__fill {
+    filter: drop-shadow(0 0 4px rgba(107, 122, 58, 0.55));
+    animation: anillo-respira 5s ease-in-out infinite;
+}
+
+@keyframes anillo-respira {
+    0%, 100% { filter: drop-shadow(0 0 4px  rgba(107, 122, 58, 0.55)); }
+    50%      { filter: drop-shadow(0 0 12px rgba(107, 122, 58, 0.85)); }
+}
+
+/* Degradé radial ambiental: solo en la vista Rutina con anillo cerrado. */
+#tab-rutina.ambiental-cerrado {
+    background-image: radial-gradient(
+        circle at 50% 18%,
+        rgba(107, 122, 58, 0.08) 0%,
+        rgba(107, 122, 58, 0) 50%
+    );
+    transition: background-image 2s ease-in-out;
+}

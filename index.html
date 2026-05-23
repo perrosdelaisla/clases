@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=33">
+    <link rel="stylesheet" href="./css/styles.css?v=34">
 </head>
 <body class="app-cliente">
 
@@ -190,6 +190,12 @@
                     </div>
                 </article>
 
+                <nav class="rutina-modo" role="tablist" aria-label="Vista">
+                    <button type="button" class="rutina-modo__btn is-active" data-modo="rutina" role="tab" aria-selected="true">Rutina</button>
+                    <button type="button" class="rutina-modo__btn" data-modo="progreso" role="tab" aria-selected="false">Mi progreso</button>
+                </nav>
+
+                <div class="rutina-modo-panel" id="rutina-vista">
                 <section class="card-salud" id="card-salud" hidden>
                     <img class="card-salud__logo" src="https://i.ibb.co/3YNrs9tM/Dise-o-con-cambio-de-negro-a-blanco.png" alt="" loading="lazy" width="56" height="56">
                     <div class="card-salud__content">
@@ -235,6 +241,33 @@
 
                 <div id="rutina-sin-perro" class="rutina-empty" hidden>
                     <p>Todavía no tienes perros registrados. Avisa al adiestrador y te los carga.</p>
+                </div>
+                </div>
+
+                <div class="rutina-modo-panel" id="progreso-vista" hidden>
+                    <div class="anillo-semana anillo-semana--grande" id="anillo-progreso" hidden aria-label="Cumplimiento de la semana">
+                        <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true">
+                            <circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/>
+                            <circle class="anillo-semana__fill" id="anillo-progreso-fill" cx="50" cy="50" r="44" fill="none" stroke-width="8"
+                                    stroke-dasharray="276.46" stroke-dashoffset="276.46"
+                                    transform="rotate(-90 50 50)" stroke-linecap="round"/>
+                        </svg>
+                        <div class="anillo-semana__center">
+                            <span class="anillo-semana__num" id="anillo-progreso-num">0</span>
+                            <span class="anillo-semana__den" id="anillo-progreso-den">/0</span>
+                            <span class="anillo-semana__label">cumplidos</span>
+                        </div>
+                    </div>
+
+                    <div id="progreso-loading" class="placeholder placeholder--soft">
+                        <p>Cargando…</p>
+                    </div>
+
+                    <div id="progreso-empty" class="placeholder" hidden>
+                        <p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p>
+                    </div>
+
+                    <ul id="progreso-lista" class="progreso-lista" hidden></ul>
                 </div>
             </section>
 
@@ -846,6 +879,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=50"></script>
+    <script type="module" src="./js/app.js?v=51"></script>
 </body>
 </html>

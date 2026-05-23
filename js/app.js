@@ -59,6 +59,7 @@ const state = {
     },
     sugerenciaActiva: null,  // sugerencia activa en el modo sugerencia del modal
     modificando: null,       // cita en proceso de modificación: { id, fecha_vieja, hora_vieja, numero_clase }
+    rutinaModo: 'rutina',    // 'rutina' | 'progreso' — toggle dentro del tab Rutina
 };
 
 // Token incremental para detectar renders concurrentes de la rutina.
@@ -318,6 +319,9 @@ function bindEventos() {
 
     // Dictado por voz en notas y reporte (Web Speech API).
     bindBotonesDictado();
+
+    // Toggle Rutina / Mi progreso dentro del tab Rutina.
+    bindRutinaModo();
 
     // Modales: cierres genéricos por data-close
     document.querySelectorAll('.modal-pdli').forEach((modal) => {
@@ -796,6 +800,9 @@ async function cargarRutinaDelPerro(perroId) {
 // Cache de la RPC get_progreso_perro: { ejercicio_asignado_id → row }
 const _progresoCache = new Map();
 
+// Cache de la RPC get_racha_perro: { ejercicio_asignado_id → racha_semanas }
+const _rachaCache = new Map();
+
 // Lunes 00:00:00 local en ISO (UTC). Si hoy es domingo, retrocede 6 días.
 function inicioSemanaLocalIso() {
     const d = new Date();
@@ -1255,6 +1262,11 @@ async function renderRutinaPerroSeleccionado() {
         }
 
         renderAnilloSemana();
+        // Si el usuario está mirando "Mi progreso", refrescar también su vista.
+        if (state.rutinaModo === 'progreso') {
+            renderAnilloProgreso();
+            renderListaProgreso();
+        }
     } catch (err) {
         if (myToken !== _renderRutinaToken) return;
         loading.setAttribute('hidden', '');
@@ -1343,6 +1355,8 @@ function renderAnilloSemana() {
     const total = rows.length;
     if (total === 0) {
         anillo.setAttribute('hidden', '');
+        anillo.classList.remove('anillo-semana--completo');
+        aplicarAmbientalAnillo();
         return;
     }
 
@@ -1358,6 +1372,187 @@ function renderAnilloSemana() {
         fill.setAttribute('stroke-dashoffset', String(PERIMETRO * (1 - pct)));
         fill.classList.toggle('anillo-semana__fill--completo', pct >= 1);
     }
+    anillo.classList.toggle('anillo-semana--completo', pct >= 1);
+    aplicarAmbientalAnillo();
+}
+
+// ───────────────────────────────────────────────────────────
+// Vista "Mi progreso" — toggle Rutina/Progreso, anillo grande,
+// lista con chips + racha por ejercicio.
+// ───────────────────────────────────────────────────────────
+
+function bindRutinaModo() {
+    document.querySelectorAll('.rutina-modo__btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const modo = btn.dataset.modo;
+            if (!modo || state.rutinaModo === modo) return;
+            cambiarRutinaModo(modo);
+        });
+    });
+}
+
+function cambiarRutinaModo(modo) {
+    state.rutinaModo = modo;
+
+    document.querySelectorAll('.rutina-modo__btn').forEach((b) => {
+        const activo = b.dataset.modo === modo;
+        b.classList.toggle('is-active', activo);
+        b.setAttribute('aria-selected', activo ? 'true' : 'false');
+    });
+
+    const rutinaPanel = document.getElementById('rutina-vista');
+    const progresoPanel = document.getElementById('progreso-vista');
+    if (rutinaPanel) rutinaPanel.hidden = (modo !== 'rutina');
+    if (progresoPanel) progresoPanel.hidden = (modo !== 'progreso');
+
+    if (modo === 'progreso') cargarVistaProgreso();
+
+    aplicarAmbientalAnillo();
+}
+
+async function cargarVistaProgreso() {
+    const loading = document.getElementById('progreso-loading');
+    const empty   = document.getElementById('progreso-empty');
+    const lista   = document.getElementById('progreso-lista');
+    const anillo  = document.getElementById('anillo-progreso');
+    if (!loading || !empty || !lista) return;
+
+    loading.hidden = false;
+    empty.hidden = true;
+    lista.hidden = true;
+    if (anillo) anillo.hidden = true;
+
+    const perroId = state.perroSeleccionadoId;
+    if (!perroId) {
+        loading.hidden = true;
+        return;
+    }
+
+    try {
+        // _progresoCache lo llena la vista Rutina al cargar el perro;
+        // si está vacío (entró directo a Mi progreso) lo cargamos ahora.
+        if (_progresoCache.size === 0) {
+            await cargarProgresoPerro(perroId);
+        }
+
+        // Rachas: RPC dedicada. Si falla, seguimos sin rachas.
+        try {
+            const { data: rachas, error: errR } = await supabase.rpc('get_racha_perro', {
+                p_perro_id: perroId,
+                p_inicio_semana_actual: inicioSemanaLocalIso(),
+            });
+            if (errR) throw errR;
+            _rachaCache.clear();
+            (rachas || []).forEach((r) =>
+                _rachaCache.set(r.ejercicio_asignado_id, r.racha_semanas));
+        } catch (e) {
+            console.error('[progreso] error racha:', e);
+            _rachaCache.clear();
+        }
+
+        renderAnilloProgreso();
+        renderListaProgreso();
+        loading.hidden = true;
+    } catch (e) {
+        console.error('[progreso]', e);
+        loading.hidden = true;
+        empty.hidden = false;
+    }
+
+    aplicarAmbientalAnillo();
+}
+
+function renderAnilloProgreso() {
+    const anillo = document.getElementById('anillo-progreso');
+    const fill   = document.getElementById('anillo-progreso-fill');
+    const numEl  = document.getElementById('anillo-progreso-num');
+    const denEl  = document.getElementById('anillo-progreso-den');
+    if (!anillo || !fill || !numEl || !denEl) return;
+
+    const rows = [..._progresoCache.values()].filter((r) => r.min_semanal != null);
+    const total = rows.length;
+    if (total === 0) {
+        anillo.hidden = true;
+        anillo.classList.remove('anillo-semana--completo');
+        return;
+    }
+    const cumplidos = rows.filter((r) => (r.count_semana ?? 0) >= r.min_semanal).length;
+    const pct = cumplidos / total;
+
+    anillo.hidden = false;
+    numEl.textContent = String(cumplidos);
+    denEl.textContent = `/${total}`;
+    const PERIMETRO = 276.46;
+    fill.setAttribute('stroke-dashoffset', String(PERIMETRO * (1 - pct)));
+    anillo.classList.toggle('anillo-semana--completo', pct >= 1);
+}
+
+function renderListaProgreso() {
+    const lista = document.getElementById('progreso-lista');
+    const empty = document.getElementById('progreso-empty');
+    if (!lista || !empty) return;
+
+    const items = [..._progresoCache.values()].filter((r) =>
+        r.min_semanal != null || r.max_semanal != null
+        || r.min_diario != null || r.max_diario != null);
+
+    if (items.length === 0) {
+        lista.hidden = true;
+        empty.hidden = false;
+        return;
+    }
+    empty.hidden = true;
+
+    // Orden: incumplidos primero, después por racha desc, después por nombre.
+    items.sort((a, b) => {
+        const ea = evaluarProgresoEjercicio(a);
+        const eb = evaluarProgresoEjercicio(b);
+        const cumpleA = ea.estadoGlobal === 'en_zona' ? 1 : 0;
+        const cumpleB = eb.estadoGlobal === 'en_zona' ? 1 : 0;
+        if (cumpleA !== cumpleB) return cumpleA - cumpleB;
+        const rA = _rachaCache.get(a.ejercicio_asignado_id) || 0;
+        const rB = _rachaCache.get(b.ejercicio_asignado_id) || 0;
+        if (rA !== rB) return rB - rA;
+        return (a.nombre || '').localeCompare(b.nombre || '');
+    });
+
+    lista.innerHTML = items.map(renderProgresoItem).join('');
+    lista.hidden = false;
+}
+
+function renderProgresoItem(row) {
+    const ev = evaluarProgresoEjercicio(row);
+    const color = ev.estadoGlobal === 'debajo'  ? 'rojo'
+                : ev.estadoGlobal === 'encima'  ? 'azul'
+                : ev.estadoGlobal === 'en_zona' ? 'verde'
+                : 'sin';
+    const chipHTML = ev.tieneTarget
+        ? `<span class="progreso-item__chip progreso-item__chip--${color}">${escapeHTML(ev.chipTexto)}</span>`
+        : '';
+    const racha = _rachaCache.get(row.ejercicio_asignado_id) || 0;
+    const rachaHTML = racha >= 2
+        ? `<span class="progreso-item__racha"><strong>${racha}</strong> semanas seguidas</span>`
+        : '';
+    return `
+        <li class="progreso-item">
+            <div class="progreso-item__nombre">${escapeHTML(row.nombre || 'Ejercicio')}</div>
+            <div class="progreso-item__meta">
+                ${chipHTML}
+                ${rachaHTML}
+            </div>
+        </li>
+    `;
+}
+
+// Ambiental editorial: degradé radial sutil sobre #tab-rutina solo cuando
+// el cliente está en la vista Rutina y el anillo cerró al 100%.
+function aplicarAmbientalAnillo() {
+    const tab = document.getElementById('tab-rutina');
+    const anillo = document.getElementById('anillo-semana');
+    if (!tab) return;
+    const cerrado = anillo?.classList.contains('anillo-semana--completo');
+    const aplicar = (state.rutinaModo === 'rutina' && !!cerrado);
+    tab.classList.toggle('ambiental-cerrado', aplicar);
 }
 
 // Mini-progreso dentro del modal de detalle del ejercicio.
@@ -3698,6 +3893,12 @@ async function guardarReporteEjercicio() {
             await cargarMisEntrenos(asignadoId);
         } catch (e) {
             console.error('[reporte] no se pudo refrescar mis entrenos:', e);
+        }
+
+        // Si el cliente está en "Mi progreso", refrescar la racha + lista
+        // ahora (la rutina no se ve, pero la vista debajo sí).
+        if (state.rutinaModo === 'progreso') {
+            cargarVistaProgreso();
         }
 
         cerrarModal('modal-reporte-ejercicio');
