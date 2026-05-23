@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=29">
+    <link rel="stylesheet" href="./css/styles.css?v=30">
 </head>
 <body class="app-cliente">
 
@@ -561,11 +561,25 @@
                 </button>
 
                 <div class="notas-expand" id="notas-expand">
-                    <textarea class="notas-expand__textarea"
-                              id="notas-textarea"
-                              placeholder="Cuéntale al adiestrador cómo fue hoy con este ejercicio…"
-                              rows="3"
-                              maxlength="5000"></textarea>
+                    <div class="textarea-voz">
+                        <textarea class="notas-expand__textarea textarea-voz__textarea"
+                                  id="notas-textarea"
+                                  placeholder="Cuéntale al adiestrador cómo fue hoy con este ejercicio…"
+                                  rows="3"
+                                  maxlength="5000"></textarea>
+                        <button type="button"
+                                class="textarea-voz__btn"
+                                data-voz-target="notas-textarea"
+                                aria-label="Dictar nota por voz"
+                                hidden>
+                            <svg class="textarea-voz__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="9" y="3" width="6" height="12" rx="3"/>
+                                <path d="M5 11a7 7 0 0 0 14 0"/>
+                                <line x1="12" y1="18" x2="12" y2="22"/>
+                                <line x1="8" y1="22" x2="16" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div class="notas-expand__actions">
                         <button type="button" class="notas-expand__btn cancel" id="notas-cancel">Cancelar</button>
                         <button type="button" class="notas-expand__btn confirm" id="notas-confirm">Añadir nota</button>
@@ -619,7 +633,25 @@
 
                 <div class="reporte-field">
                     <label class="reporte-label" for="reporte-nota">Nota (opcional)</label>
-                    <textarea id="reporte-nota" rows="3" maxlength="2000" placeholder="Algo que quieras contarle al adiestrador sobre cómo fue."></textarea>
+                    <div class="textarea-voz">
+                        <textarea class="textarea-voz__textarea"
+                                  id="reporte-nota"
+                                  rows="3"
+                                  maxlength="2000"
+                                  placeholder="Algo que quieras contarle al adiestrador sobre cómo fue."></textarea>
+                        <button type="button"
+                                class="textarea-voz__btn"
+                                data-voz-target="reporte-nota"
+                                aria-label="Dictar nota por voz"
+                                hidden>
+                            <svg class="textarea-voz__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="9" y="3" width="6" height="12" rx="3"/>
+                                <path d="M5 11a7 7 0 0 0 14 0"/>
+                                <line x1="12" y1="18" x2="12" y2="22"/>
+                                <line x1="8" y1="22" x2="16" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <p class="error-message" id="reporte-error" hidden></p>
@@ -788,6 +820,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=46"></script>
+    <script type="module" src="./js/app.js?v=47"></script>
 </body>
 </html>

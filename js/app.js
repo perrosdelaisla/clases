@@ -316,6 +316,9 @@ function bindEventos() {
     bindComposerMensaje();
     bindNotasEjercicio();
 
+    // Dictado por voz en notas y reporte (Web Speech API).
+    bindBotonesDictado();
+
     // Modales: cierres genéricos por data-close
     document.querySelectorAll('.modal-pdli').forEach((modal) => {
         modal.addEventListener('click', (e) => {
@@ -2394,6 +2397,14 @@ function abrirModal(id) {
 function cerrarModal(id) {
     const modal = document.getElementById(id);
     if (!modal || modal.hasAttribute('hidden')) return;
+
+    // Si el dictado está activo sobre un textarea contenido en este modal,
+    // cortar el micro para no dejarlo abierto en background.
+    if (_voz.activoBtn && _voz.activoTextareaId) {
+        const ta = document.getElementById(_voz.activoTextareaId);
+        if (ta && modal.contains(ta)) detenerDictado();
+    }
+
     modal.classList.remove('is-open');
     document.body.style.overflow = '';
     if (id === 'modal-ejercicio-detalle') {
@@ -2523,6 +2534,120 @@ function _datetimeCita(cita) {
 function _compararCitasAsc(a, b) {
     if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
     return (a.hora || '') < (b.hora || '') ? -1 : 1;
+}
+
+// ===================== Notas de voz =====================
+//
+// Web Speech API. Soporta Chrome y Safari (iOS >= 14.5, macOS recientes),
+// no Firefox. Estrategia: un único reconocedor compartido entre los
+// botones. Si se activa un botón mientras otro está grabando, se
+// detiene el primero antes de iniciar el segundo. Si el mismo botón
+// se vuelve a tocar, hace toggle off.
+
+const _voz = {
+    SR: window.SpeechRecognition || window.webkitSpeechRecognition,
+    recognition: null,
+    activoBtn: null,
+    activoTextareaId: null,
+    baseline: '',         // texto que ya había en el textarea al iniciar
+    finalAcumulado: '',   // segmentos finales acumulados en esta sesión
+};
+
+function vozSoportada() {
+    return !!_voz.SR;
+}
+
+function iniciarDictado(textareaId, btn) {
+    if (!vozSoportada()) return;
+
+    // Si ya hay otro botón grabando, detenerlo primero.
+    if (_voz.activoBtn && _voz.activoBtn !== btn) {
+        detenerDictado();
+    }
+    if (_voz.activoBtn === btn) {
+        // Mismo botón = toggle off.
+        detenerDictado();
+        return;
+    }
+
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
+
+    _voz.recognition = new _voz.SR();
+    _voz.recognition.lang = 'es-ES';
+    _voz.recognition.continuous = true;
+    _voz.recognition.interimResults = true;
+
+    _voz.activoBtn = btn;
+    _voz.activoTextareaId = textareaId;
+    _voz.baseline = ta.value;
+    _voz.finalAcumulado = '';
+
+    _voz.recognition.onresult = (e) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const res = e.results[i];
+            if (res.isFinal) {
+                _voz.finalAcumulado += (_voz.finalAcumulado ? ' ' : '') + res[0].transcript.trim();
+            } else {
+                interim += res[0].transcript;
+            }
+        }
+        const sepBase = _voz.baseline && (_voz.finalAcumulado || interim) ? ' ' : '';
+        const sepInterim = interim ? (_voz.finalAcumulado ? ' ' : '') : '';
+        ta.value = _voz.baseline + sepBase + _voz.finalAcumulado + sepInterim + interim;
+        // Disparar 'input' para que auto-grow/contadores reaccionen.
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    _voz.recognition.onerror = (e) => {
+        console.warn('[voz] error:', e.error);
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            if (typeof toast === 'function') toast('Permiso de micrófono denegado', 'error');
+        }
+        limpiarDictado();
+    };
+
+    _voz.recognition.onend = () => {
+        limpiarDictado();
+    };
+
+    try {
+        _voz.recognition.start();
+        btn.classList.add('is-grabando');
+        btn.setAttribute('aria-label', 'Detener dictado');
+    } catch (err) {
+        console.error('[voz] start:', err);
+        limpiarDictado();
+    }
+}
+
+function detenerDictado() {
+    if (!_voz.recognition) return;
+    try { _voz.recognition.stop(); } catch (_) {}
+    // onend dispara limpiarDictado.
+}
+
+function limpiarDictado() {
+    if (_voz.activoBtn) {
+        _voz.activoBtn.classList.remove('is-grabando');
+        _voz.activoBtn.setAttribute('aria-label', 'Dictar nota por voz');
+    }
+    _voz.activoBtn = null;
+    _voz.activoTextareaId = null;
+    _voz.baseline = '';
+    _voz.finalAcumulado = '';
+    _voz.recognition = null;
+}
+
+function bindBotonesDictado() {
+    if (!vozSoportada()) return; // sin soporte → todos quedan hidden
+    document.querySelectorAll('.textarea-voz__btn[data-voz-target]').forEach((btn) => {
+        btn.hidden = false;
+        btn.addEventListener('click', () => {
+            iniciarDictado(btn.dataset.vozTarget, btn);
+        });
+    });
 }
 
 // ===================== Service Worker =====================
