@@ -2274,6 +2274,21 @@ function _compararCitasAsc(a, b) {
 
 function registrarServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
+
+    // Snapshot ANTES del register: si ya había un SW controlando,
+    // entonces un futuro controllerchange = "se activó una versión nueva".
+    // Si NO había (primera visita), controllerchange es la activación
+    // inicial → NO hay que reloadear.
+    const habiaSwAntes = !!navigator.serviceWorker.controller;
+    let recargandoPorSw = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!habiaSwAntes) return;
+        if (recargandoPorSw) return;
+        recargandoPorSw = true;
+        window.location.reload();
+    });
+
     window.addEventListener('load', () => {
         navigator.serviceWorker
             .register('/clases/service-worker.js', { scope: '/clases/' })
