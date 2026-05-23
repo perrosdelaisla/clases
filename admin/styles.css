@@ -3681,3 +3681,168 @@ body {
 }
 
 .btn-tertiary[hidden] { display: none; }
+
+/* ===================== Tab Histórico — entrenos reportados ===================== */
+
+.hist-dia {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.hist-dia:last-child { margin-bottom: 0; }
+
+.hist-dia__head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.hist-dia__fecha {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+    margin: 0;
+    text-transform: capitalize;
+}
+
+.hist-dia__hora {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-muted);
+}
+
+.hist-dia__count {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    margin-left: auto;
+}
+
+.hist-dia__cerrada {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    font-style: italic;
+    margin: 0;
+}
+
+.hist-dia__nota-cierre {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--color-text);
+    margin: 0;
+    padding: 0.3rem 0 0.3rem 0.7rem;
+    border-left: 2px solid var(--color-green);
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+.hist-dia__vacia {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin: 0;
+}
+
+.hist-registros {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.hist-registro {
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.hist-registro__cab {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.hist-registro__hora {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    min-width: 3rem;
+}
+
+.hist-registro__nombre {
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.92rem;
+}
+
+.hist-tq {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin-left: auto;
+    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--color-border);
+}
+
+/* Paleta de tranquilidad: 1-2 rojo suave, 3 neutro/oliva muted, 4-5 oliva. */
+.hist-tq--1,
+.hist-tq--2 {
+    background: rgba(200, 16, 46, 0.18);
+    border-color: rgba(200, 16, 46, 0.45);
+    color: var(--color-text);
+}
+
+.hist-tq--3 {
+    background: rgba(107, 122, 58, 0.14);
+    border-color: rgba(107, 122, 58, 0.35);
+    color: var(--color-muted);
+}
+
+.hist-tq--4,
+.hist-tq--5 {
+    background: rgba(107, 122, 58, 0.32);
+    border-color: rgba(107, 122, 58, 0.6);
+    color: var(--color-text);
+}
+
+.hist-registro__datos {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin: 0.15rem 0 0;
+}
+
+.hist-registro__nota {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--color-text);
+    margin: 0.2rem 0 0;
+    padding-left: 0.7rem;
+    border-left: 2px solid var(--color-border);
+    line-height: 1.4;
+    white-space: pre-wrap;
+}

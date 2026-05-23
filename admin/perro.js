@@ -40,6 +40,7 @@ const state = {
     modoReordenar: false,            // true mientras se reordenan los renglones de la sub-pestaña
     reordenInicial: null,            // orden de vigente-ids al entrar al modo reordenar (para detectar cambios)
     frecuenciaContext: null,         // { asignadoId, ejercicioNombre } cuando #modal-frecuencia está abierto
+    historicoCargado: false,         // true tras cargar el histórico al menos una vez para este perro
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);
@@ -312,6 +313,7 @@ function activarTab(tabRaw, { updateUrl } = {}) {
 
     if (tab === 'salud') renderSaludPerro();
     if (tab === 'herramientas') renderHerramientas();
+    if (tab === 'historico' && !state.historicoCargado) cargarHistorico();
 }
 
 // ===================== Sub-pestañas (Ejercicios / Cambios / Tareas) =====================
@@ -1777,4 +1779,163 @@ async function renderSaludPerro() {
     `).join('');
 
     contentEl.removeAttribute('hidden');
+}
+
+// ===================== Tab Histórico — entrenos reportados =====================
+
+async function cargarHistorico() {
+    const loadingEl = document.getElementById('historico-loading');
+    const emptyEl   = document.getElementById('historico-empty');
+    const listaEl   = document.getElementById('historico-lista');
+    if (!loadingEl || !emptyEl || !listaEl) return;
+
+    loadingEl.removeAttribute('hidden');
+    emptyEl.setAttribute('hidden', '');
+    listaEl.setAttribute('hidden', '');
+    listaEl.innerHTML = '';
+
+    try {
+        const { data, error } = await supabase
+            .from('practicas_rutina')
+            .select(`
+                id, iniciada_en, cerrada_en, estado_emocional_final, nota_cierre,
+                registros_ejercicio (
+                    id, registrado_en, datos_registro, tranquilidad, nota,
+                    ejercicios_asignados (
+                        id,
+                        ejercicios ( id, nombre, categoria )
+                    )
+                )
+            `)
+            .eq('perro_id', state.perroId)
+            .order('iniciada_en', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+
+        loadingEl.setAttribute('hidden', '');
+
+        if (!data || data.length === 0) {
+            emptyEl.removeAttribute('hidden');
+            state.historicoCargado = true;
+            return;
+        }
+
+        listaEl.innerHTML = data.map(renderHistoricoDia).join('');
+        listaEl.removeAttribute('hidden');
+        state.historicoCargado = true;
+    } catch (err) {
+        console.error('[perro] error cargando histórico:', err);
+        loadingEl.setAttribute('hidden', '');
+        listaEl.innerHTML = '<div class="placeholder"><p>No se pudo cargar el histórico.</p></div>';
+        listaEl.removeAttribute('hidden');
+    }
+}
+
+// ── Formato y render ──
+
+function fmtFechaDia(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const hoy = new Date();
+    const ayer = new Date();
+    ayer.setDate(hoy.getDate() - 1);
+
+    const sameDay = (a, b) =>
+        a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
+
+    if (sameDay(d, hoy))  return 'Hoy';
+    if (sameDay(d, ayer)) return 'Ayer';
+    // "Sáb 23 may"
+    return d.toLocaleDateString('es-ES', {
+        weekday: 'short', day: 'numeric', month: 'short',
+    }).replace('.', '');
+}
+
+function fmtHora(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+// Resumen compacto de las repeticiones del registro.
+function fmtRepes(datos) {
+    if (!datos || !Array.isArray(datos.repeticiones)) return '';
+    const n = datos.repeticiones.length;
+    if (n === 0) return '';
+    const totalSeg = Number(datos.tiempo_total_seg) || 0;
+    const palabra = n === 1 ? 'rep' : 'reps';
+    if (totalSeg > 0) {
+        const min = Math.floor(totalSeg / 60);
+        const sec = totalSeg % 60;
+        const dur = sec === 0 ? `${min} min` : `${min} min ${sec}s`;
+        return `${n} ${palabra} · ${dur}`;
+    }
+    return `${n} ${palabra} · sin duración`;
+}
+
+function renderHistoricoDia(practica) {
+    const registros = Array.isArray(practica.registros_ejercicio)
+        ? practica.registros_ejercicio.slice().sort((a, b) =>
+            (a.registrado_en || '').localeCompare(b.registrado_en || ''))
+        : [];
+
+    const fecha = fmtFechaDia(practica.iniciada_en);
+    const horaIni = fmtHora(practica.iniciada_en);
+    const count = registros.length;
+    const countLabel = count === 1 ? '1 ejercicio' : `${count} ejercicios`;
+
+    const cerradaHtml = practica.cerrada_en
+        ? `<p class="hist-dia__cerrada">Cerrada · ${escapeHTML(fmtHora(practica.cerrada_en))}</p>`
+        : '';
+    const notaCierreHtml = practica.nota_cierre
+        ? `<p class="hist-dia__nota-cierre">${escapeHTML(practica.nota_cierre)}</p>`
+        : '';
+
+    const registrosHtml = count === 0
+        ? '<p class="hist-dia__vacia">Sin registros.</p>'
+        : `<ul class="hist-registros">${registros.map(renderHistoricoRegistro).join('')}</ul>`;
+
+    return `
+        <article class="hist-dia">
+            <header class="hist-dia__head">
+                <h3 class="hist-dia__fecha">${escapeHTML(fecha)}</h3>
+                <span class="hist-dia__hora">${escapeHTML(horaIni)}</span>
+                <span class="hist-dia__count">${escapeHTML(countLabel)}</span>
+            </header>
+            ${cerradaHtml}
+            ${notaCierreHtml}
+            ${registrosHtml}
+        </article>
+    `;
+}
+
+function renderHistoricoRegistro(reg) {
+    const ej = reg.ejercicios_asignados?.ejercicios;
+    const nombre = ej?.nombre || 'Ejercicio eliminado';
+    const datosTxt = fmtRepes(reg.datos_registro);
+    const tq = (reg.tranquilidad != null) ? Number(reg.tranquilidad) : null;
+
+    const tqHtml = (tq != null)
+        ? `<span class="hist-tq hist-tq--${tq}">Tq ${tq}</span>`
+        : '';
+    const datosHtml = datosTxt
+        ? `<p class="hist-registro__datos">${escapeHTML(datosTxt)}</p>`
+        : '';
+    const notaHtml = reg.nota
+        ? `<p class="hist-registro__nota">${escapeHTML(reg.nota)}</p>`
+        : '';
+
+    return `
+        <li class="hist-registro">
+            <div class="hist-registro__cab">
+                <span class="hist-registro__hora">${escapeHTML(fmtHora(reg.registrado_en))}</span>
+                <span class="hist-registro__nombre">${escapeHTML(nombre)}</span>
+                ${tqHtml}
+            </div>
+            ${datosHtml}
+            ${notaHtml}
+        </li>
+    `;
 }
