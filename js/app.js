@@ -1394,16 +1394,27 @@ function bindRutinaModo() {
 function cambiarRutinaModo(modo) {
     state.rutinaModo = modo;
 
+    // 1) Pre-render SYNC del panel destino desde caches existentes.
+    //    Si no hay cache, cargarVistaProgreso se encarga del loading.
+    if (modo === 'progreso' && _progresoCache.size > 0) {
+        renderAnilloProgreso();
+        renderListaProgreso();
+        const loading = document.getElementById('progreso-loading');
+        if (loading) loading.hidden = true;
+    }
+
+    // 2) Toggle visibilidad de paneles (panel destino ya pintado).
+    const rutinaPanel = document.getElementById('rutina-vista');
+    const progresoPanel = document.getElementById('progreso-vista');
+    if (rutinaPanel) rutinaPanel.hidden = (modo !== 'rutina');
+    if (progresoPanel) progresoPanel.hidden = (modo !== 'progreso');
+
+    // 3) Toggle de pills al final, en el mismo frame que el contenido.
     document.querySelectorAll('.rutina-modo__btn').forEach((b) => {
         const activo = b.dataset.modo === modo;
         b.classList.toggle('is-active', activo);
         b.setAttribute('aria-selected', activo ? 'true' : 'false');
     });
-
-    const rutinaPanel = document.getElementById('rutina-vista');
-    const progresoPanel = document.getElementById('progreso-vista');
-    if (rutinaPanel) rutinaPanel.hidden = (modo !== 'rutina');
-    if (progresoPanel) progresoPanel.hidden = (modo !== 'progreso');
 
     if (modo === 'progreso') cargarVistaProgreso();
 
@@ -1414,13 +1425,7 @@ async function cargarVistaProgreso() {
     const loading = document.getElementById('progreso-loading');
     const empty   = document.getElementById('progreso-empty');
     const lista   = document.getElementById('progreso-lista');
-    const anillo  = document.getElementById('anillo-progreso');
     if (!loading || !empty || !lista) return;
-
-    loading.hidden = false;
-    empty.hidden = true;
-    lista.hidden = true;
-    if (anillo) anillo.hidden = true;
 
     const perroId = state.perroSeleccionadoId;
     if (!perroId) {
@@ -1428,9 +1433,17 @@ async function cargarVistaProgreso() {
         return;
     }
 
+    // Si no hay nada en cache, mostramos loading. Si ya hay (entraste
+    // desde Rutina), no tocamos la UI: cambiarRutinaModo ya pintó el
+    // estado con el cache, y al volver de la query refrescamos en sitio.
+    const teniaCache = _progresoCache.size > 0;
+    if (!teniaCache) {
+        loading.hidden = false;
+        empty.hidden = true;
+        lista.hidden = true;
+    }
+
     try {
-        // _progresoCache lo llena la vista Rutina al cargar el perro;
-        // si está vacío (entró directo a Mi progreso) lo cargamos ahora.
         if (_progresoCache.size === 0) {
             await cargarProgresoPerro(perroId);
         }
@@ -1455,8 +1468,11 @@ async function cargarVistaProgreso() {
         loading.hidden = true;
     } catch (e) {
         console.error('[progreso]', e);
-        loading.hidden = true;
-        empty.hidden = false;
+        if (!teniaCache) {
+            loading.hidden = true;
+            empty.hidden = false;
+        }
+        // Con cache previo: dejamos el pre-render visible y silenciamos.
     }
 
     aplicarAmbientalAnillo();
@@ -1544,15 +1560,15 @@ function renderProgresoItem(row) {
     `;
 }
 
-// Ambiental editorial: degradé radial sutil sobre #tab-rutina solo cuando
-// el cliente está en la vista Rutina y el anillo cerró al 100%.
+// Ambiental editorial: degradé radial sutil sobre #tab-rutina cuando
+// el anillo cerró al 100%. Es estado del logro de la semana — aplica en
+// ambas sub-vistas (Rutina / Mi progreso) para no parpadear al cambiar.
 function aplicarAmbientalAnillo() {
     const tab = document.getElementById('tab-rutina');
     const anillo = document.getElementById('anillo-semana');
-    if (!tab) return;
-    const cerrado = anillo?.classList.contains('anillo-semana--completo');
-    const aplicar = (state.rutinaModo === 'rutina' && !!cerrado);
-    tab.classList.toggle('ambiental-cerrado', aplicar);
+    if (!tab || !anillo) return;
+    const cerrado = anillo.classList.contains('anillo-semana--completo');
+    tab.classList.toggle('ambiental-cerrado', cerrado);
 }
 
 // Mini-progreso dentro del modal de detalle del ejercicio.
