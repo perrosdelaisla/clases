@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=27">
+    <link rel="stylesheet" href="./css/styles.css?v=28">
 </head>
 <body class="app-cliente">
 
@@ -208,6 +208,20 @@
                     <button type="button" class="rutina-subtab" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
                     <button type="button" class="rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
                 </nav>
+
+                <div class="anillo-semana" id="anillo-semana" hidden aria-label="Cumplimiento de la semana">
+                    <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true">
+                        <circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/>
+                        <circle class="anillo-semana__fill"  cx="50" cy="50" r="44" fill="none" stroke-width="8"
+                                stroke-dasharray="276.46" stroke-dashoffset="276.46"
+                                transform="rotate(-90 50 50)" stroke-linecap="round"/>
+                    </svg>
+                    <div class="anillo-semana__center">
+                        <span class="anillo-semana__num" id="anillo-semana-num">0</span>
+                        <span class="anillo-semana__den" id="anillo-semana-den">/0</span>
+                        <span class="anillo-semana__label">cumplidos</span>
+                    </div>
+                </div>
 
                 <div id="rutina-loading" class="placeholder placeholder--soft">
                     <p>Cargando…</p>
@@ -502,6 +516,30 @@
             <div class="modal-ejercicio__video" id="modal-ejercicio-video" hidden></div>
             <div class="modal-ejercicio__instrucciones" id="modal-ejercicio-instrucciones"></div>
 
+            <div class="ejercicio-progreso" id="ejercicio-progreso" hidden>
+                <h3 class="ejercicio-progreso__titulo">Progreso</h3>
+                <div class="ejercicio-progreso__linea" id="ejercicio-progreso-semana" hidden>
+                    <div class="ejercicio-progreso__head">
+                        <span class="ejercicio-progreso__label">Esta semana</span>
+                        <span class="ejercicio-progreso__valor" id="ej-prog-semana-valor"></span>
+                    </div>
+                    <div class="ejercicio-progreso__bar">
+                        <div class="ejercicio-progreso__bar-fill" id="ej-prog-semana-fill"></div>
+                        <div class="ejercicio-progreso__bar-marks" id="ej-prog-semana-marks"></div>
+                    </div>
+                </div>
+                <div class="ejercicio-progreso__linea" id="ejercicio-progreso-dia" hidden>
+                    <div class="ejercicio-progreso__head">
+                        <span class="ejercicio-progreso__label">Hoy</span>
+                        <span class="ejercicio-progreso__valor" id="ej-prog-dia-valor"></span>
+                    </div>
+                    <div class="ejercicio-progreso__bar">
+                        <div class="ejercicio-progreso__bar-fill" id="ej-prog-dia-fill"></div>
+                        <div class="ejercicio-progreso__bar-marks" id="ej-prog-dia-marks"></div>
+                    </div>
+                </div>
+            </div>
+
             <button type="button"
                     class="btn btn-primary btn-block modal-ejercicio__reportar"
                     id="btn-reportar-entreno">
@@ -569,12 +607,16 @@
 
                 <div class="reporte-field">
                     <label class="reporte-label">Tranquilidad del perro</label>
-                    <div class="reporte-pills" id="reporte-tranquilidad" role="radiogroup" aria-label="Tranquilidad del 1 al 5">
-                        <button type="button" class="reporte-pill" data-valor="1" role="radio" aria-checked="false">1</button>
-                        <button type="button" class="reporte-pill" data-valor="2" role="radio" aria-checked="false">2</button>
-                        <button type="button" class="reporte-pill" data-valor="3" role="radio" aria-checked="false">3</button>
-                        <button type="button" class="reporte-pill" data-valor="4" role="radio" aria-checked="false">4</button>
-                        <button type="button" class="reporte-pill" data-valor="5" role="radio" aria-checked="false">5</button>
+                    <div class="reporte-pills-wrap">
+                        <span class="reporte-pills-label reporte-pills-label--min">Nada</span>
+                        <div class="reporte-pills" id="reporte-tranquilidad" role="radiogroup" aria-label="Tranquilidad del 1 al 5">
+                            <button type="button" class="reporte-pill" data-valor="1" role="radio" aria-checked="false">1</button>
+                            <button type="button" class="reporte-pill" data-valor="2" role="radio" aria-checked="false">2</button>
+                            <button type="button" class="reporte-pill" data-valor="3" role="radio" aria-checked="false">3</button>
+                            <button type="button" class="reporte-pill" data-valor="4" role="radio" aria-checked="false">4</button>
+                            <button type="button" class="reporte-pill" data-valor="5" role="radio" aria-checked="false">5</button>
+                        </div>
+                        <span class="reporte-pills-label reporte-pills-label--max">Mucha</span>
                     </div>
                 </div>
 
@@ -749,6 +791,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=44"></script>
+    <script type="module" src="./js/app.js?v=45"></script>
 </body>
 </html>

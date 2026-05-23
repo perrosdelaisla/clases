@@ -786,6 +786,103 @@ async function cargarRutinaDelPerro(perroId) {
     return data || [];
 }
 
+// ───────────────────────────────────────────────────────────
+// Cumplimiento de targets (Paso 6 — parte 1)
+// ───────────────────────────────────────────────────────────
+
+// Cache de la RPC get_progreso_perro: { ejercicio_asignado_id → row }
+const _progresoCache = new Map();
+
+// Lunes 00:00:00 local en ISO (UTC). Si hoy es domingo, retrocede 6 días.
+function inicioSemanaLocalIso() {
+    const d = new Date();
+    const dia = d.getDay();                  // 0=domingo, 1=lunes, ..., 6=sábado
+    const offset = (dia === 0) ? 6 : (dia - 1);
+    const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset, 0, 0, 0, 0);
+    return lunes.toISOString();
+}
+
+// 00:00:00 local de hoy en ISO (UTC).
+function inicioDiaLocalIso() {
+    const d = new Date();
+    const inicio = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    return inicio.toISOString();
+}
+
+// Convierte counts vs targets en un estado por bloque (semana/día):
+//   'sin'      → no hay target
+//   'debajo'   → count < min
+//   'en_zona'  → en rango aceptable (cumple min y no excede max)
+//   'encima'   → count > max
+function estadoBloque(count, min, max) {
+    if (min == null && max == null) return 'sin';
+    const c = count ?? 0;
+    if (min != null && c < min) return 'debajo';
+    if (max != null && c > max) return 'encima';
+    return 'en_zona';
+}
+
+// Prioridad para combinar semanal+diario en un único estado global:
+//   debajo > encima > en_zona > sin
+const _PRIORIDAD = { debajo: 3, encima: 2, en_zona: 1, sin: 0 };
+function peorEstado(a, b) {
+    return (_PRIORIDAD[a] >= _PRIORIDAD[b]) ? a : b;
+}
+
+// Texto compacto para el chip. Convención: el denominador es el `min` cuando
+// existe (la zona objetivo); si solo hay `max`, se usa `max`.
+function _formatoBloque(count, min, max, sufijoHoy) {
+    if (min == null && max == null) return '';
+    const den = min != null ? min : max;
+    return sufijoHoy ? `${count ?? 0}/${den} hoy` : `${count ?? 0}/${den}`;
+}
+
+// Dado el row de la RPC, devuelve resumen visual para chip y para mini-progreso.
+function evaluarProgresoEjercicio(row) {
+    const out = {
+        tieneTarget: false,
+        estadoSemana: 'sin',
+        estadoDia: 'sin',
+        estadoGlobal: 'sin',
+        chipTexto: '',
+    };
+    if (!row) return out;
+
+    const hayTargetSem = (row.min_semanal != null || row.max_semanal != null);
+    const hayTargetDia = (row.min_diario != null || row.max_diario != null);
+    out.tieneTarget = hayTargetSem || hayTargetDia;
+    if (!out.tieneTarget) return out;
+
+    out.estadoSemana = estadoBloque(row.count_semana, row.min_semanal, row.max_semanal);
+    out.estadoDia    = estadoBloque(row.count_dia, row.min_diario, row.max_diario);
+    out.estadoGlobal = peorEstado(out.estadoSemana, out.estadoDia);
+
+    const partes = [];
+    if (hayTargetSem) partes.push(_formatoBloque(row.count_semana, row.min_semanal, row.max_semanal, false));
+    if (hayTargetDia) partes.push(_formatoBloque(row.count_dia, row.min_diario, row.max_diario, true));
+    out.chipTexto = partes.filter(Boolean).join(' · ');
+    return out;
+}
+
+async function cargarProgresoPerro(perroId) {
+    if (!perroId) {
+        _progresoCache.clear();
+        return [];
+    }
+    const { data, error } = await supabase.rpc('get_progreso_perro', {
+        p_perro_id: perroId,
+        p_inicio_semana: inicioSemanaLocalIso(),
+        p_inicio_dia: inicioDiaLocalIso(),
+    });
+    if (error) {
+        console.error('[progreso] error RPC:', error);
+        throw error;
+    }
+    _progresoCache.clear();
+    (data || []).forEach((row) => _progresoCache.set(row.ejercicio_asignado_id, row));
+    return data || [];
+}
+
 // Arma las cadenas de progresión a partir de las filas activas (copiada de
 // admin/perro.js). vigente = fila cuyo id no aparece en progresa_de de ninguna
 // otra fila. history = filas superadas, del paso más reciente al más viejo.
@@ -1106,11 +1203,20 @@ async function renderRutinaPerroSeleccionado() {
         const filas = await cargarRutinaDelPerro(perro.id);
         state.rutinaFilas = filas;
 
+        // Progreso (targets vs counts). Defensivo: si la RPC falla, la app
+        // sigue funcionando sin chips ni anillo — solo log a consola.
+        try {
+            await cargarProgresoPerro(perro.id);
+        } catch (e) {
+            console.error('[progreso] continuando sin chips:', e);
+        }
+
         if (filas.length === 0) {
             // Si otra llamada ya tomó el control, dejamos que esa pinte.
             if (myToken !== _renderRutinaToken) return;
             loading.setAttribute('hidden', '');
             empty.removeAttribute('hidden');
+            renderAnilloSemana();
             return;
         }
 
@@ -1144,6 +1250,8 @@ async function renderRutinaPerroSeleccionado() {
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
         }
+
+        renderAnilloSemana();
     } catch (err) {
         if (myToken !== _renderRutinaToken) return;
         loading.setAttribute('hidden', '');
@@ -1195,15 +1303,161 @@ function rutinaCardHTML(row, { tag, superado }) {
         ? `<p class="rutina-card__desc">${escapeHTML(ej.descripcion)}</p>`
         : '';
     const claseSuperado = superado ? ' rutina-card--superado' : '';
+    // Chip de progreso solo en el vigente; las cards superadas no muestran nada.
+    const chip = superado ? '' : renderChipProgreso(row.id);
     return `
-        <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" role="button" tabindex="0">
+        <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
                 <h3 class="rutina-card__nombre">${nombre}</h3>
                 <svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             ${desc}
+            ${chip}
         </${tag}>
     `;
+}
+
+// Mapeo estadoGlobal → modificador de color del chip.
+const _COLOR_CHIP = { debajo: 'rojo', en_zona: 'verde', encima: 'azul' };
+
+function renderChipProgreso(asignadoId) {
+    const row = _progresoCache.get(asignadoId);
+    if (!row) return '';
+    const ev = evaluarProgresoEjercicio(row);
+    if (!ev.tieneTarget) return '';
+    const color = _COLOR_CHIP[ev.estadoGlobal] || 'verde';
+    return `<span class="rutina-card__progreso rutina-card__progreso--${color}">${escapeHTML(ev.chipTexto)}</span>`;
+}
+
+// Anillo de cumplimiento de la semana, calculado solo sobre ejercicios con
+// min_semanal definido (los que tienen target semanal "mínimo a cumplir").
+function renderAnilloSemana() {
+    const anillo = document.getElementById('anillo-semana');
+    if (!anillo) return;
+    const fill = anillo.querySelector('.anillo-semana__fill');
+
+    const rows = [..._progresoCache.values()].filter((r) => r.min_semanal != null);
+    const total = rows.length;
+    if (total === 0) {
+        anillo.setAttribute('hidden', '');
+        return;
+    }
+
+    const cumplidos = rows.filter((r) => (r.count_semana ?? 0) >= r.min_semanal).length;
+    const pct = cumplidos / total;
+
+    anillo.removeAttribute('hidden');
+    setText('anillo-semana-num', String(cumplidos));
+    setText('anillo-semana-den', `/${total}`);
+
+    const PERIMETRO = 276.46;
+    if (fill) {
+        fill.setAttribute('stroke-dashoffset', String(PERIMETRO * (1 - pct)));
+        fill.classList.toggle('anillo-semana__fill--completo', pct >= 1);
+    }
+}
+
+// Mini-progreso dentro del modal de detalle del ejercicio.
+function renderProgresoEnModal(asignadoId) {
+    const cont = document.getElementById('ejercicio-progreso');
+    if (!cont) return;
+    const lineaSem = document.getElementById('ejercicio-progreso-semana');
+    const lineaDia = document.getElementById('ejercicio-progreso-dia');
+    const row = _progresoCache.get(asignadoId);
+    const ev = evaluarProgresoEjercicio(row);
+
+    if (!row || !ev.tieneTarget) {
+        cont.setAttribute('hidden', '');
+        return;
+    }
+    cont.removeAttribute('hidden');
+
+    // --- línea semanal ---
+    if (row.min_semanal != null || row.max_semanal != null) {
+        lineaSem.removeAttribute('hidden');
+        pintarLineaProgreso({
+            count: row.count_semana ?? 0,
+            min: row.min_semanal,
+            max: row.max_semanal,
+            estado: ev.estadoSemana,
+            valorId: 'ej-prog-semana-valor',
+            fillId: 'ej-prog-semana-fill',
+            marksId: 'ej-prog-semana-marks',
+        });
+    } else {
+        lineaSem.setAttribute('hidden', '');
+    }
+
+    // --- línea diaria ---
+    if (row.min_diario != null || row.max_diario != null) {
+        lineaDia.removeAttribute('hidden');
+        pintarLineaProgreso({
+            count: row.count_dia ?? 0,
+            min: row.min_diario,
+            max: row.max_diario,
+            estado: ev.estadoDia,
+            valorId: 'ej-prog-dia-valor',
+            fillId: 'ej-prog-dia-fill',
+            marksId: 'ej-prog-dia-marks',
+        });
+    } else {
+        lineaDia.setAttribute('hidden', '');
+    }
+}
+
+function pintarLineaProgreso({ count, min, max, estado, valorId, fillId, marksId }) {
+    const valor = document.getElementById(valorId);
+    const fill = document.getElementById(fillId);
+    const marks = document.getElementById(marksId);
+
+    // Texto valor según qué targets existan.
+    let textoValor = '';
+    if (min != null && max != null) textoValor = `${count} de target ${min}–${max}`;
+    else if (min != null)           textoValor = `${count} · sin tope (target ≥${min})`;
+    else                            textoValor = `${count} · sin mínimo (tope ${max})`;
+    if (valor) valor.textContent = textoValor;
+
+    // Rango de la barra: tope >= max o min*2 o count*1.2, lo que sea mayor.
+    const candidatos = [];
+    if (max != null) candidatos.push(max * 1.2);
+    if (min != null) candidatos.push(min * 2);
+    candidatos.push(count * 1.2);
+    const rango = Math.max(...candidatos, 1);
+
+    if (fill) {
+        const pct = Math.min(100, Math.max(0, (count / rango) * 100));
+        fill.style.width = `${pct}%`;
+        fill.classList.remove(
+            'ejercicio-progreso__bar-fill--rojo',
+            'ejercicio-progreso__bar-fill--verde',
+            'ejercicio-progreso__bar-fill--azul',
+        );
+        const color = _COLOR_CHIP[estado];
+        if (color) fill.classList.add(`ejercicio-progreso__bar-fill--${color}`);
+    }
+
+    if (marks) {
+        const positions = [];
+        if (min != null) positions.push(min);
+        if (max != null) positions.push(max);
+        marks.innerHTML = positions
+            .map((p) => {
+                const left = Math.min(100, (p / rango) * 100);
+                return `<span class="mark" style="left:${left}%"></span>`;
+            })
+            .join('');
+    }
+}
+
+// Marca una card con la animación de pulso oliva tras alcanzar el mínimo.
+// Espera dos rAF para que el re-render de la rutina ya haya pintado el DOM.
+function marcarPulsoLogro(asignadoId) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const card = document.querySelector(`.rutina-card[data-asignado-id="${CSS.escape(asignadoId)}"]`);
+        if (!card) return;
+        card.classList.add('is-pulse');
+        setTimeout(() => card.classList.remove('is-pulse'), 3500);
+    }));
 }
 
 // ===================== Pack y protocolo (hero) =====================
@@ -1853,6 +2107,7 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
         inst.textContent = 'Tu adiestrador todavía no ha añadido una explicación detallada para este ejercicio.';
         inst.classList.add('modal-ejercicio__instrucciones--vacio');
     }
+    renderProgresoEnModal(ejercicioAsignadoId);
     abrirModal('modal-ejercicio-detalle');
     renderNotasEjercicio(ejercicioAsignadoId);
 }
@@ -3093,20 +3348,39 @@ async function guardarReporteEjercicio() {
 
     const btn = document.getElementById('reporte-guardar');
     if (btn) btn.disabled = true;
+    const asignadoId = _ejercicioModalActualId;
     try {
         const practica_id = await obtenerOCrearPracticaHoy(perroId);
         const { error } = await supabase
             .from('registros_ejercicio')
             .insert({
                 practica_id,
-                ejercicio_asignado_id: _ejercicioModalActualId,
+                ejercicio_asignado_id: asignadoId,
                 datos_registro,
                 tranquilidad: trq,
                 nota,
             });
         if (error) throw error;
+
+        // Comparación de estados para detectar el "pulso de logro": pasamos
+        // de 'debajo' (no llegabamos al mínimo) a 'en_zona' (justo cumplido).
+        const estadoAntes = evaluarProgresoEjercicio(_progresoCache.get(asignadoId));
+        try {
+            await cargarProgresoPerro(perroId);
+        } catch (e) {
+            // No bloquea el flujo: solo dejamos sin refrescar.
+            console.error('[reporte] no se pudo refrescar progreso:', e);
+        }
+        const estadoDespues = evaluarProgresoEjercicio(_progresoCache.get(asignadoId));
+        const justoCumplido = (estadoAntes.estadoGlobal === 'debajo'
+                              && estadoDespues.estadoGlobal === 'en_zona');
+
         cerrarModal('modal-reporte-ejercicio');
         toast('Entreno registrado');
+
+        // Re-render de la rutina (chips + anillo) y, si corresponde, pulso.
+        await renderRutinaPerroSeleccionado();
+        if (justoCumplido) marcarPulsoLogro(asignadoId);
     } catch (e) {
         console.error('[reporte] error:', e);
         const msg = 'No pudimos guardar el reporte. Inténtalo de nuevo.';
