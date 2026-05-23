@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=35">
+    <link rel="stylesheet" href="./styles.css?v=36">
 </head>
 <body>
 
@@ -410,11 +410,23 @@
 
                 <fieldset class="form-fieldset">
                     <legend>Cita</legend>
+
+                    <!-- Fecha: input oculto (preserva el resto del flujo) +
+                         calendario visual portado del cliente. -->
+                    <input type="hidden" id="cm-fecha" required>
+                    <div id="cm-cal-mes" class="cal-mes">
+                        <div class="cal-mes__header">
+                            <button type="button" class="cal-mes__nav" id="cm-cal-mes-prev" aria-label="Mes anterior">‹</button>
+                            <h3 class="cal-mes__titulo" id="cm-cal-mes-titulo">—</h3>
+                            <button type="button" class="cal-mes__nav" id="cm-cal-mes-next" aria-label="Mes siguiente">›</button>
+                        </div>
+                        <div class="cal-mes__dias-semana">
+                            <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+                        </div>
+                        <div class="cal-mes__grid" id="cm-cal-mes-grid"></div>
+                    </div>
+
                     <div class="form-row">
-                        <label class="form-field">
-                            <span>Fecha <span class="req">*</span></span>
-                            <input type="date" id="cm-fecha" required>
-                        </label>
                         <label class="form-field">
                             <span>Hora <span class="req">*</span></span>
                             <select id="cm-hora" required>
@@ -619,6 +631,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=44"></script>
+    <script type="module" src="./admin.js?v=45"></script>
 </body>
 </html>

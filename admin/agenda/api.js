@@ -589,6 +589,44 @@ export async function obtenerSlotsDisponiblesPorFecha(fechaIso) {
     return [...new Set(horas)].sort();
 }
 
+/**
+ * Variante de rango: devuelve un mapa { 'YYYY-MM-DD': ['HH:MM', ...] }
+ * con horas únicas ordenadas por fecha, en una sola llamada a la RPC.
+ * Pensada para precachear la disponibilidad de un mes/ventana para el
+ * calendario visual del modal de cita manual, evitando un round-trip
+ * por cada día del calendario.
+ *
+ * Misma RPC y misma convención (p_min_dias_antelacion=0) que
+ * obtenerSlotsDisponiblesPorFecha; sólo cambia el shape de salida.
+ *
+ * @param {string} desdeIso - 'YYYY-MM-DD' inclusive.
+ * @param {string} hastaIso - 'YYYY-MM-DD' inclusive.
+ * @returns {Promise<Object<string,string[]>>} Mapa fecha → horas 'HH:MM'.
+ *   {} si no hay slots disponibles o si la RPC falla (loguea y vuelve {}).
+ */
+export async function obtenerSlotsDisponiblesEnRango(desdeIso, hastaIso) {
+    if (!desdeIso || !hastaIso) return {};
+    const { data, error } = await supabase.rpc('get_available_slots', {
+        p_desde: desdeIso,
+        p_hasta: hastaIso,
+        p_min_dias_antelacion: 0,
+    });
+    if (error) {
+        console.error('[admin] error cargando slots en rango:', error);
+        return {};
+    }
+    const mapa = {};
+    (data || []).forEach((s) => {
+        const fecha = s.fecha;
+        const hora = typeof s.hora === 'string' ? s.hora.substring(0, 5) : s.hora;
+        if (!fecha || !hora) return;
+        if (!mapa[fecha]) mapa[fecha] = [];
+        if (!mapa[fecha].includes(hora)) mapa[fecha].push(hora);
+    });
+    Object.keys(mapa).forEach((f) => mapa[f].sort());
+    return mapa;
+}
+
 // ────────────────────────────────────────────────────────────────────
 // CITA MANUAL — CADENA CLIENTE → PERRO → CITA → BLOQUEO
 // ────────────────────────────────────────────────────────────────────

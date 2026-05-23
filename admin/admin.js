@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=10';
+import * as agenda from './agenda/api.js?v=11';
 import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js?v=1';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -390,22 +390,16 @@ function bindAgendaModals() {
     const btnCitaManual = document.getElementById('btn-abrir-cita-manual');
     if (btnCitaManual) {
         btnCitaManual.addEventListener('click', async () => {
-            // Dropdown arranca vacío con hint: se llena al elegir fecha.
+            // Dropdown de horas arranca vacío con hint: se llena al elegir
+            // fecha vía click en el calendario visual.
             actualizarHorasSegunFecha('');
-            await cargarClientesCache();
+            await Promise.all([
+                inicializarCalendarioCitaManual(),
+                cargarClientesCache(),
+            ]);
             setupAutocompleteCmCliente();
             openModal('modal-cita-manual');
         });
-    }
-
-    // Listener idempotente: el dropdown de horas se repuebla cada vez
-    // que cambia la fecha, cruzando con citas+bloqueos vía RPC.
-    const cmFecha = document.getElementById('cm-fecha');
-    if (cmFecha && !cmFecha.dataset.horasListenerBound) {
-        cmFecha.addEventListener('change', (e) => {
-            actualizarHorasSegunFecha(e.target.value || '');
-        });
-        cmFecha.dataset.horasListenerBound = '1';
     }
 
     document.querySelectorAll('[data-modal-close]').forEach((el) => {
@@ -671,6 +665,183 @@ function closeModal(id) {
     }
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Calendario visual del modal cita manual
+// Port del calendario del cliente (js/app.js → renderCalMes). Estado
+// local del módulo, no toca state global. Rango cacheado: hoy → primer
+// día de mes +2 (mismas 8 semanas que ve el cliente).
+// ────────────────────────────────────────────────────────────────────
+
+const cmCal = {
+    slotsPorFecha: {},   // { 'YYYY-MM-DD': ['HH:MM', ...] }
+    mesAnchor: null,     // 'YYYY-MM-01'
+    diaSeleccionado: null,
+    desdeIso: null,      // límite inferior (hoy)
+    hastaIso: null,      // límite superior (último día del mes +2)
+};
+
+function _hoyIso() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function _primerDiaMesIso(fechaIso) {
+    return `${fechaIso.slice(0, 7)}-01`;
+}
+
+function _sumarMesesIso(fechaIso, n) {
+    const [y, m] = fechaIso.split('-').map(Number);
+    const total = (y * 12 + (m - 1)) + n;
+    const ny = Math.floor(total / 12);
+    const nm = (total % 12) + 1;
+    return `${ny}-${String(nm).padStart(2, '0')}-01`;
+}
+
+function _ultimoDiaMesIso(fechaIso) {
+    const [y, m] = fechaIso.split('-').map(Number);
+    const ultimo = new Date(y, m, 0).getDate();
+    return `${y}-${String(m).padStart(2, '0')}-${String(ultimo).padStart(2, '0')}`;
+}
+
+function _nombreMesAnio(fechaIso) {
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const [y, m] = fechaIso.split('-');
+    return `${meses[parseInt(m, 10) - 1]} ${y}`;
+}
+
+async function inicializarCalendarioCitaManual() {
+    const hoy = _hoyIso();
+    const mesHoy = _primerDiaMesIso(hoy);
+    const limiteSup = _sumarMesesIso(mesHoy, 2);
+    const hastaIso = _ultimoDiaMesIso(limiteSup);
+
+    cmCal.desdeIso = hoy;
+    cmCal.hastaIso = hastaIso;
+    cmCal.mesAnchor = mesHoy;
+    cmCal.diaSeleccionado = null;
+    cmCal.slotsPorFecha = {};
+
+    // Hidden input vuelve a vacío y dropdown queda con hint inicial.
+    const hidden = document.getElementById('cm-fecha');
+    if (hidden) hidden.value = '';
+
+    try {
+        cmCal.slotsPorFecha = await agenda.obtenerSlotsDisponiblesEnRango(hoy, hastaIso);
+    } catch (err) {
+        console.error('Error precargando slots del calendario cita manual:', err);
+        cmCal.slotsPorFecha = {};
+    }
+
+    // Anchor inicial: mes del primer día con disponibilidad si existe,
+    // si no, el mes actual.
+    const fechasDisp = Object.keys(cmCal.slotsPorFecha).sort();
+    if (fechasDisp.length > 0) {
+        cmCal.mesAnchor = _primerDiaMesIso(fechasDisp[0]);
+    }
+
+    wireCalendarioCitaManualNav();
+    renderCalendarioCitaManual();
+}
+
+function wireCalendarioCitaManualNav() {
+    const prev = document.getElementById('cm-cal-mes-prev');
+    const next = document.getElementById('cm-cal-mes-next');
+    if (prev && !prev.dataset.navBound) {
+        prev.addEventListener('click', () => {
+            cmCal.mesAnchor = _sumarMesesIso(cmCal.mesAnchor, -1);
+            renderCalendarioCitaManual();
+        });
+        prev.dataset.navBound = '1';
+    }
+    if (next && !next.dataset.navBound) {
+        next.addEventListener('click', () => {
+            cmCal.mesAnchor = _sumarMesesIso(cmCal.mesAnchor, 1);
+            renderCalendarioCitaManual();
+        });
+        next.dataset.navBound = '1';
+    }
+}
+
+function renderCalendarioCitaManual() {
+    const grid = document.getElementById('cm-cal-mes-grid');
+    const titulo = document.getElementById('cm-cal-mes-titulo');
+    const prev = document.getElementById('cm-cal-mes-prev');
+    const next = document.getElementById('cm-cal-mes-next');
+    const anchor = cmCal.mesAnchor;
+    if (!grid || !anchor) return;
+
+    titulo.textContent = _nombreMesAnio(anchor).toUpperCase();
+
+    // Mismo límite que el cliente: hoy → +2 meses (cubre el fetch).
+    const hoyMes = _primerDiaMesIso(_hoyIso());
+    const limiteSup = _sumarMesesIso(hoyMes, 2);
+
+    if (prev) prev.disabled = anchor <= hoyMes;
+    if (next) next.disabled = anchor >= limiteSup;
+
+    const [y, m] = anchor.split('-').map(Number);
+    const primero = new Date(y, m - 1, 1);
+    const ultimoDia = new Date(y, m, 0).getDate();
+    const diaSemanaInicio = (primero.getDay() + 6) % 7;
+
+    const hoyIso = _hoyIso();
+    const cells = [];
+
+    for (let i = 0; i < diaSemanaInicio; i++) {
+        cells.push('<button type="button" class="cal-dia is-fuera-mes" disabled></button>');
+    }
+
+    for (let d = 1; d <= ultimoDia; d++) {
+        const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const tieneDispo = !!cmCal.slotsPorFecha[iso];
+        const esSeleccionado = iso === cmCal.diaSeleccionado;
+        const esPasado = iso < hoyIso;
+
+        const clases = ['cal-dia'];
+        if (esPasado || !tieneDispo) clases.push('is-deshabilitado');
+        if (tieneDispo) clases.push('is-disponible');
+        if (esSeleccionado) clases.push('is-seleccionado');
+
+        const punto = tieneDispo ? '<span class="cal-dia__punto" aria-hidden="true"></span>' : '';
+        const disabled = (esPasado || !tieneDispo) ? 'disabled' : '';
+        cells.push(`
+            <button type="button" class="${clases.join(' ')}" data-fecha="${iso}" ${disabled}>
+                <span>${d}</span>
+                ${punto}
+            </button>
+        `);
+    }
+
+    grid.innerHTML = cells.join('');
+
+    grid.querySelectorAll('.cal-dia.is-disponible').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const fecha = btn.dataset.fecha;
+            cmCal.diaSeleccionado = fecha;
+            const hidden = document.getElementById('cm-fecha');
+            if (hidden) hidden.value = fecha;
+            renderCalendarioCitaManual();
+            actualizarHorasSegunFecha(fecha);
+        });
+    });
+}
+
+function resetCalendarioCitaManual() {
+    cmCal.slotsPorFecha = {};
+    cmCal.mesAnchor = null;
+    cmCal.diaSeleccionado = null;
+    cmCal.desdeIso = null;
+    cmCal.hastaIso = null;
+    const grid = document.getElementById('cm-cal-mes-grid');
+    if (grid) grid.innerHTML = '';
+    const titulo = document.getElementById('cm-cal-mes-titulo');
+    if (titulo) titulo.textContent = '—';
+    const prev = document.getElementById('cm-cal-mes-prev');
+    if (prev) prev.disabled = true;
+    const next = document.getElementById('cm-cal-mes-next');
+    if (next) next.disabled = true;
+}
+
 // Repuebla el dropdown de horas del modal cita manual según la fecha
 // elegida, cruzando con citas+bloqueos vía RPC get_available_slots
 // (misma fuente que Victoria y la app cliente). Estados:
@@ -839,6 +1010,8 @@ function resetCmForm() {
     // Selector de perros: ocultar y vaciar opciones
     configurarSelectorPerro([]);
     state.perrosClienteCache = [];
+    // Calendario visual: limpiar estado y grid hasta la próxima apertura.
+    resetCalendarioCitaManual();
 }
 
 // Aplica los datos de un perro (o null para limpiar) a los inputs del
