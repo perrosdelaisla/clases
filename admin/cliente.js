@@ -530,6 +530,8 @@ function _adminFormatearHora(dateStr) {
 }
 
 async function cargarMensajesCliente(clienteId) {
+    // Solo mensajes generales (no notas por ejercicio). Las notas por
+    // ejercicio se gestionan desde admin/perro, cerca del ejercicio.
     const { data, error } = await supabase
         .from('mensajes')
         .select(`
@@ -541,6 +543,7 @@ async function cargarMensajesCliente(clienteId) {
             )
         `)
         .eq('cliente_id', clienteId)
+        .is('ejercicio_asignado_id', null)
         .order('created_at', { ascending: false });
     if (error) {
         console.error('[admin-mensajes] error:', error);
@@ -550,11 +553,15 @@ async function cargarMensajesCliente(clienteId) {
 }
 
 async function marcarMensajesLeidos(clienteId) {
+    // Mismo filtro: al entrar a la pantalla del cliente solo marcamos
+    // como leídos los mensajes generales. Las notas por ejercicio se
+    // marcan al abrir su bottom-sheet en admin/perro.
     const { error } = await supabase
         .from('mensajes')
         .update({ leido_por_admin: true, leido_en: new Date().toISOString() })
         .eq('cliente_id', clienteId)
-        .eq('leido_por_admin', false);
+        .eq('leido_por_admin', false)
+        .is('ejercicio_asignado_id', null);
     if (error) console.error('[admin-marcar-leido] error:', error);
 }
 

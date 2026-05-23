@@ -40,6 +40,7 @@ const state = {
     modoReordenar: false,            // true mientras se reordenan los renglones de la sub-pestaña
     reordenInicial: null,            // orden de vigente-ids al entrar al modo reordenar (para detectar cambios)
     frecuenciaContext: null,         // { asignadoId, ejercicioNombre } cuando #modal-frecuencia está abierto
+    notasEjContext: null,            // { asignadoId, ejercicioNombre } cuando #modal-notas-ejercicio está abierto
     historicoCargado: false,         // true tras cargar el histórico al menos una vez para este perro
     progresoAdminCargado: false,     // idem para el tab Progreso
 };
@@ -54,6 +55,7 @@ async function bootstrap() {
     bindReordenar();
     bindPausados();
     bindFrecuencia();
+    bindNotasEjercicio();
     bindHerramientas();
     bindCasoComplejo();
     bindProtocolo();
@@ -360,6 +362,10 @@ function activarSubtab(subtab) {
 // a la vez" que pasaba cuando dos renders se pisaban.
 let _renderEjerciciosToken = 0;
 
+// Conteo de notas del cliente sin leer por ejercicio asignado, para el chip
+// de "N notas nuevas" en cada card. Se llena en paralelo con la rutina.
+const _notasNoLeidasPorEjercicio = new Map();
+
 async function renderEjerciciosActivos() {
     const myToken = ++_renderEjerciciosToken;
 
@@ -374,12 +380,15 @@ async function renderEjerciciosActivos() {
     // El botón "Reordenar" se vuelve a mostrar al final si corresponde.
     document.getElementById('abrir-reordenar')?.setAttribute('hidden', '');
 
-    const { data, error } = await supabase
-        .from('ejercicios_asignados')
-        .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_semanal, min_diario, max_diario, ejercicios (id, codigo, nombre, categoria)')
-        .eq('perro_id', state.perroId)
-        .eq('activo', true)
-        .order('posicion_rutina', { ascending: true });
+    const [{ data, error }] = await Promise.all([
+        supabase
+            .from('ejercicios_asignados')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_semanal, min_diario, max_diario, ejercicios (id, codigo, nombre, categoria)')
+            .eq('perro_id', state.perroId)
+            .eq('activo', true)
+            .order('posicion_rutina', { ascending: true }),
+        cargarNotasNoLeidasPorEjercicio(),
+    ]);
 
     // Si otra llamada ya tomó el control, dejamos que esa pinte.
     if (myToken !== _renderEjerciciosToken) return;
@@ -440,6 +449,16 @@ async function renderEjerciciosActivos() {
                 maxSem: btn.dataset.maxSem ? Number(btn.dataset.maxSem) : null,
                 minDia: btn.dataset.minDia ? Number(btn.dataset.minDia) : null,
                 maxDia: btn.dataset.maxDia ? Number(btn.dataset.maxDia) : null,
+            });
+        });
+    });
+    listaEl.querySelectorAll('[data-accion="notas"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.ejercicio-activo-card');
+            const nombre = card?.querySelector('.ejercicio-activo-nombre')?.textContent || '';
+            abrirNotasEjercicio({
+                asignadoId: btn.dataset.asignadoId,
+                ejercicioNombre: nombre,
             });
         });
     });
@@ -526,6 +545,18 @@ function renderEjercicioActivoCard(row, history = []) {
             ${freqLabel}
         </button>`;
 
+    const nNotas = _notasNoLeidasPorEjercicio.get(row.id) || 0;
+    const notasChip = nNotas > 0
+        ? `<button type="button"
+                   class="notas-chip"
+                   data-accion="notas"
+                   data-asignado-id="${escapeHTML(row.id)}"
+                   aria-label="Ver notas del cliente">
+               <span class="notas-chip__num">${nNotas}</span>
+               <span class="notas-chip__txt">${nNotas === 1 ? 'nota nueva' : 'notas nuevas'}</span>
+           </button>`
+        : '';
+
     // El toggle de pausa solo va en renglones simples (sin historia). Los
     // renglones con progresiones se retroceden con "Borrar último paso".
     const toggle = tieneHistoria ? '' : `
@@ -557,6 +588,7 @@ function renderEjercicioActivoCard(row, history = []) {
                     <div class="ejercicio-activo-chips">
                         ${catChip}
                         ${freqChip}
+                        ${notasChip}
                     </div>
                 </div>${toggle}
             </div>
@@ -792,9 +824,11 @@ function hayUiAbierta() {
     const cat = document.getElementById('modal-ejercicios');
     const pau = document.getElementById('modal-pausados');
     const fre = document.getElementById('modal-frecuencia');
+    const not = document.getElementById('modal-notas-ejercicio');
     return (cat && !cat.hasAttribute('hidden'))
         || (pau && !pau.hasAttribute('hidden'))
         || (fre && !fre.hasAttribute('hidden'))
+        || (not && !not.hasAttribute('hidden'))
         || state.modoReordenar === true;
 }
 
@@ -803,9 +837,11 @@ function cerrarUiAbierta() {
     const cat = document.getElementById('modal-ejercicios');
     const pau = document.getElementById('modal-pausados');
     const fre = document.getElementById('modal-frecuencia');
+    const not = document.getElementById('modal-notas-ejercicio');
     if (cat && !cat.hasAttribute('hidden')) { cerrarModal(); return; }
     if (pau && !pau.hasAttribute('hidden')) { cerrarSheetPausados(); return; }
     if (fre && !fre.hasAttribute('hidden')) { cerrarModalFrecuencia(); return; }
+    if (not && !not.hasAttribute('hidden')) { cerrarNotasEjercicio(); return; }
     if (state.modoReordenar) { salirModoReordenar(); return; }
 }
 
@@ -1447,6 +1483,151 @@ async function persistirFrecuencia(asignadoId, valores) {
         if (btnGuardar) btnGuardar.disabled = false;
         if (btnQuitar) btnQuitar.disabled = false;
     }
+}
+
+// ===================== Notas por ejercicio del cliente =====================
+
+// Conteo de notas no leídas por ejercicio asignado activo del perro actual.
+// El join inner por perro_id garantiza que solo traemos notas de este perro.
+async function cargarNotasNoLeidasPorEjercicio() {
+    _notasNoLeidasPorEjercicio.clear();
+    try {
+        const { data, error } = await supabase
+            .from('mensajes')
+            .select('ejercicio_asignado_id, ejercicios_asignados!inner(perro_id)')
+            .eq('ejercicios_asignados.perro_id', state.perroId)
+            .eq('leido_por_admin', false)
+            .not('ejercicio_asignado_id', 'is', null);
+        if (error) throw error;
+        (data || []).forEach((m) => {
+            const k = m.ejercicio_asignado_id;
+            _notasNoLeidasPorEjercicio.set(k, (_notasNoLeidasPorEjercicio.get(k) || 0) + 1);
+        });
+    } catch (err) {
+        console.error('[perro] notas no leídas:', err);
+        // Defensivo: dejamos el mapa vacío para no romper el render.
+    }
+}
+
+function bindNotasEjercicio() {
+    const modal = document.getElementById('modal-notas-ejercicio');
+    if (!modal) return;
+
+    modal.addEventListener('click', (e) => {
+        if (e.target.closest('[data-close]')) cerrarNotasEjercicio();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hasAttribute('hidden')) cerrarNotasEjercicio();
+    });
+
+    bindSwipeClose('notas-ej-handle', 'modal-notas-ejercicio', cerrarNotasEjercicio);
+}
+
+async function abrirNotasEjercicio({ asignadoId, ejercicioNombre }) {
+    const modal = document.getElementById('modal-notas-ejercicio');
+    if (!modal || !asignadoId) return;
+
+    state.notasEjContext = { asignadoId, ejercicioNombre };
+
+    const subt = document.getElementById('notas-ej-subtitulo');
+    if (subt) subt.textContent = ejercicioNombre || '';
+
+    const loading = document.getElementById('notas-ej-loading');
+    const empty = document.getElementById('notas-ej-empty');
+    const lista = document.getElementById('notas-ej-lista');
+    if (loading) loading.removeAttribute('hidden');
+    if (empty) empty.setAttribute('hidden', '');
+    if (lista) { lista.setAttribute('hidden', ''); lista.innerHTML = ''; }
+
+    modal.removeAttribute('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => modal.classList.add('is-open'));
+    document.body.style.overflow = 'hidden';
+    pushHistoriaUI();
+
+    try {
+        const { data, error } = await supabase
+            .from('mensajes')
+            .select('id, contenido, leido_por_admin, created_at')
+            .eq('ejercicio_asignado_id', asignadoId)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+
+        if (loading) loading.setAttribute('hidden', '');
+
+        if (!data || data.length === 0) {
+            if (empty) empty.removeAttribute('hidden');
+            return;
+        }
+
+        if (lista) {
+            lista.innerHTML = data.map(renderNotaEjItem).join('');
+            lista.removeAttribute('hidden');
+        }
+
+        // Auto-marcar como leídas las no leídas.
+        const idsNoLeidas = data.filter((m) => !m.leido_por_admin).map((m) => m.id);
+        if (idsNoLeidas.length > 0) {
+            const { error: errUpd } = await supabase
+                .from('mensajes')
+                .update({ leido_por_admin: true, leido_en: new Date().toISOString() })
+                .in('id', idsNoLeidas);
+            if (errUpd) {
+                console.error('[perro] marcar notas leídas:', errUpd);
+            } else {
+                _notasNoLeidasPorEjercicio.set(asignadoId, 0);
+                // Re-render para que el chip "N notas nuevas" desaparezca.
+                await renderEjerciciosActivos();
+            }
+        }
+    } catch (e) {
+        console.error('[perro] notas ejercicio:', e);
+        if (loading) loading.setAttribute('hidden', '');
+        if (empty) {
+            empty.removeAttribute('hidden');
+            const p = empty.querySelector('p');
+            if (p) p.textContent = 'No se pudieron cargar las notas. Cerrá y reintentá.';
+        }
+    }
+}
+
+function cerrarNotasEjercicio() {
+    const modal = document.getElementById('modal-notas-ejercicio');
+    if (!modal || modal.hasAttribute('hidden')) return;
+    consumirHistoriaUI();
+    const panel = modal.querySelector('.bottom-sheet__panel');
+    panel.style.transform = '';
+    panel.style.transition = '';
+
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    state.notasEjContext = null;
+
+    setTimeout(() => {
+        modal.setAttribute('hidden', '');
+        modal.setAttribute('aria-hidden', 'true');
+    }, 300);
+}
+
+function renderNotaEjItem(m) {
+    // fmtFechaDia y fmtHora viven en el bloque de Histórico (mismo archivo).
+    const fecha = fmtFechaDia(m.created_at);
+    const hora = fmtHora(m.created_at);
+    const claseNueva = m.leido_por_admin ? '' : ' is-nueva';
+    const nuevoChip = m.leido_por_admin
+        ? ''
+        : '<span class="notas-ej-item__nuevo">Nueva</span>';
+    return `
+        <li class="notas-ej-item${claseNueva}">
+            <div class="notas-ej-item__cab">
+                <span class="notas-ej-item__fecha">${escapeHTML(fecha)}</span>
+                <span class="notas-ej-item__hora">${escapeHTML(hora)}</span>
+                ${nuevoChip}
+            </div>
+            <p class="notas-ej-item__contenido">${escapeHTML(m.contenido || '')}</p>
+        </li>
+    `;
 }
 
 async function cargarYRenderPausados() {

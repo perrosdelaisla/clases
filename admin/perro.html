@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=45">
+    <link rel="stylesheet" href="./styles.css?v=46">
 </head>
 <body>
 
@@ -344,9 +344,35 @@
         </div>
     </div>
 
+    <div class="bottom-sheet" id="modal-notas-ejercicio" hidden aria-hidden="true">
+        <div class="bottom-sheet__overlay" data-close></div>
+        <div class="bottom-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="notas-ej-titulo">
+            <div class="bottom-sheet__handle" id="notas-ej-handle" aria-hidden="true"></div>
+            <header class="bottom-sheet__header">
+                <h2 id="notas-ej-titulo">Notas del cliente</h2>
+                <button type="button" class="bottom-sheet__close" data-close aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                    </svg>
+                </button>
+            </header>
+            <p class="notas-ej-subtitulo" id="notas-ej-subtitulo">—</p>
+            <div class="bottom-sheet__body" id="notas-ej-body">
+                <div id="notas-ej-loading" class="placeholder placeholder--soft">
+                    <p>Cargando…</p>
+                </div>
+                <div id="notas-ej-empty" class="placeholder" hidden>
+                    <p>Este cliente todavía no dejó notas sobre este ejercicio.</p>
+                </div>
+                <ul id="notas-ej-lista" class="notas-ej-lista" hidden></ul>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=23"></script>
+    <script type="module" src="./perro.js?v=24"></script>
 </body>
 </html>
