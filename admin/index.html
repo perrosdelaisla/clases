@@ -89,7 +89,8 @@
             </section>
 
             <section class="admin-panel" data-panel="agenda" hidden>
-                <header class="agenda-header">
+                <header class="agenda-header" style="position:relative">
+                    <button id="btn-push-toggle" type="button" title="Activar notificaciones" aria-label="Activar o desactivar notificaciones" style="position:absolute;top:0;right:0;background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:4px;opacity:.5;transition:opacity .15s">🔔</button>
                     <h1 class="admin-panel-title">Agenda</h1>
                     <nav class="agenda-subtabs" aria-label="Sub-secciones de agenda">
                         <button class="agenda-subtab active" data-subtab="citas" type="button">Citas</button>
@@ -689,5 +690,26 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
     <script type="module" src="./admin.js?v=46"></script>
+    <script type="module">
+      import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
+      const b = document.getElementById('btn-push-toggle');
+      if (b) {
+        async function refresh() {
+          const e = await estadoNotificaciones();
+          if (e === 'activo') { b.textContent = '🔕'; b.title = 'Notificaciones activadas — tocá para desactivar'; b.dataset.on = '1'; b.style.opacity = '1'; }
+          else { b.textContent = '🔔'; b.dataset.on = ''; b.style.opacity = '.5'; b.title = (e === 'bloqueado') ? 'Notificaciones bloqueadas en el navegador' : 'Activar notificaciones'; }
+        }
+        b.addEventListener('click', async () => {
+          b.disabled = true;
+          try {
+            if (b.dataset.on) { await desactivarNotificaciones(); }
+            else { await activarNotificaciones(); await probarPush(); }
+            await refresh();
+          } catch (err) { b.title = err.message || 'Error con las notificaciones'; }
+          b.disabled = false;
+        });
+        refresh();
+      }
+    </script>
 </body>
 </html>
