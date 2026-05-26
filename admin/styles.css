@@ -4080,3 +4080,254 @@ body {
     margin: 0.15rem 0 0;
     white-space: pre-wrap;
 }
+
+/* ============================================================
+   Tab Avisos — listado + filtros + bloques copiables.
+   Paleta: rojo marca para acentos, oliva para confirmaciones,
+   crema para texto, sobre superficie oscura del admin.
+   ============================================================ */
+
+/* Badge numérico en la pestaña del nav */
+.admin-tab-badge {
+    margin-left: auto;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--color-red);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 0 0 2px var(--color-bg);
+}
+.admin-tab-badge[hidden] { display: none; }
+.admin-tab.active .admin-tab-badge {
+    background: var(--color-text);
+    color: var(--color-red);
+}
+
+.avisos-header {
+    margin-bottom: 16px;
+}
+
+.avisos-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.avisos-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.avisos-filtro {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-height: 34px;
+}
+.avisos-filtro:hover {
+    border-color: var(--color-red);
+    color: var(--color-text);
+}
+.avisos-filtro.active {
+    background: var(--color-red);
+    border-color: var(--color-red);
+    color: var(--color-text);
+}
+
+.avisos-empty {
+    color: var(--color-muted);
+    font-size: 14px;
+    padding: 24px 4px;
+    text-align: center;
+}
+
+.avisos-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.aviso-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.aviso-item--unread {
+    border-left: 3px solid var(--color-red);
+    background: linear-gradient(90deg, rgba(200, 16, 46, 0.06) 0%, var(--color-surface) 40%);
+}
+
+.aviso-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.aviso-icon {
+    font-size: 22px;
+    line-height: 1;
+    padding-top: 2px;
+}
+
+.aviso-body { min-width: 0; }
+
+.aviso-titulo {
+    color: var(--color-text);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.aviso-cuerpo {
+    color: var(--color-muted);
+    font-size: 13px;
+    margin-top: 3px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.aviso-meta {
+    color: var(--color-muted);
+    font-size: 11px;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.aviso-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.aviso-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+.aviso-btn:hover {
+    border-color: var(--color-red);
+    color: var(--color-text);
+}
+.aviso-btn--primary {
+    background: var(--color-red);
+    border-color: var(--color-red);
+    color: var(--color-text);
+}
+.aviso-btn--primary:hover {
+    background: var(--color-red-dk);
+    border-color: var(--color-red-dk);
+    color: var(--color-text);
+}
+.aviso-btn--ghost {
+    /* hereda lo de .aviso-btn base */
+}
+
+.aviso-copiables {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--color-border);
+}
+
+.aviso-copy {
+    background: var(--color-surface-2);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.aviso-copy-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.aviso-copy-label {
+    color: var(--color-green);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex: 1;
+    min-width: 0;
+}
+
+.aviso-copy-text {
+    margin: 0;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: transparent;
+    padding: 0;
+}
+
+/* Mobile: nav inferior, acciones a ancho completo */
+@media (max-width: 767px) {
+    .aviso-row {
+        grid-template-columns: auto 1fr;
+    }
+    .aviso-acciones {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-top: 6px;
+    }
+    .avisos-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .avisos-filtros {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+    }
+}

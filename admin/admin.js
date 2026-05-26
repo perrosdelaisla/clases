@@ -13,6 +13,7 @@ import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js?v=2';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
+import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=1';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
 
@@ -172,7 +173,7 @@ async function afterLogin(session) {
     // 'inicio' está oculto (decisión 08/05) — solo navegamos entre los 4 visibles.
     initSwipeTabs({
         container: document.querySelector('.admin-main'),
-        tabs: ['agenda', 'clientes', 'stats', 'catalogo'],
+        tabs: ['agenda', 'avisos', 'clientes', 'stats', 'catalogo'],
         getCurrent: () => document.querySelector('.admin-panel:not([hidden])')?.dataset.panel,
         onChange: (tab) => activarTab(tab),
     });
@@ -181,6 +182,10 @@ async function afterLogin(session) {
     let tabGuardada = localStorage.getItem('pdli_admin_tab') || 'agenda';
     if (tabGuardada === 'inicio') tabGuardada = 'agenda';
     activarTab(tabGuardada);
+
+    // Precarga del badge "Avisos" sin pintar el panel (corre en background,
+    // tolera fallos para no romper el bootstrap del admin).
+    precargarBadgeAvisos().catch((e) => console.warn('[admin] precarga avisos badge:', e));
 }
 
 // ---------- Pestañas (SPA) ----------
@@ -201,6 +206,11 @@ function activarTab(tab) {
     try { localStorage.setItem('pdli_admin_tab', tab); } catch (e) {}
     if (tab === 'agenda' && !window.__agendaBound) {
         initAgenda();
+    }
+    if (tab === 'avisos') {
+        // initAvisos es idempotente: la primera vez bindea y arranca el polling,
+        // las siguientes solo recargan los avisos.
+        initAvisos().catch((e) => console.error('[admin] initAvisos:', e));
     }
     if (tab === 'clientes' && !window.__clientesLoaded) {
         cargarClientes();

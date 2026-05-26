@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=37">
+    <link rel="stylesheet" href="./styles.css?v=38">
 </head>
 <body>
 
@@ -63,6 +63,11 @@
                 <button class="admin-tab" data-tab="agenda" type="button">
                     <span class="admin-tab-icon" aria-hidden="true">📅</span>
                     <span class="admin-tab-label">Agenda</span>
+                </button>
+                <button class="admin-tab" data-tab="avisos" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">🔔</span>
+                    <span class="admin-tab-label">Avisos</span>
+                    <span class="admin-tab-badge" id="avisos-badge" hidden aria-label="Avisos sin leer"></span>
                 </button>
                 <button class="admin-tab" data-tab="clientes" type="button">
                     <span class="admin-tab-icon" aria-hidden="true">👥</span>
@@ -152,6 +157,25 @@
                         <p class="agenda-empty">Cargando plantilla…</p>
                     </div>
                 </section>
+            </section>
+
+            <section class="admin-panel" data-panel="avisos" hidden>
+                <header class="avisos-header">
+                    <h1 class="admin-panel-title">Avisos</h1>
+                    <p class="admin-panel-subtitle">Mensajes, entrenos reportados y novedades de citas. Polling cada 25s + actualización al volver al foco.</p>
+                </header>
+                <div class="avisos-toolbar">
+                    <nav class="avisos-filtros" aria-label="Filtros de avisos">
+                        <button type="button" class="avisos-filtro active" data-filtro="todos">Todos</button>
+                        <button type="button" class="avisos-filtro" data-filtro="no_leidos">No leídos</button>
+                        <button type="button" class="avisos-filtro" data-filtro="cita">Citas</button>
+                        <button type="button" class="avisos-filtro" data-filtro="mensaje">Mensajes</button>
+                        <button type="button" class="avisos-filtro" data-filtro="ejercicio">Entrenos</button>
+                    </nav>
+                    <button type="button" id="btn-avisos-marcar-todos" class="btn-secondary" hidden>Marcar todos leídos</button>
+                </div>
+                <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
+                <ul id="avisos-list" class="avisos-list" role="list"></ul>
             </section>
 
             <section class="admin-panel" data-panel="clientes" hidden>
@@ -689,7 +713,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=46"></script>
+    <script type="module" src="./admin.js?v=47"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
       function toast(msg) {
