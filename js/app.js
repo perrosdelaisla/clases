@@ -322,6 +322,7 @@ function bindEventos() {
     // Mensajes y notas (Bloque A.2)
     bindComposerMensaje();
     bindNotasEjercicio();
+    bindTareaLista();
 
     // Dictado por voz en notas y reporte (Web Speech API).
     bindBotonesDictado();
@@ -1295,10 +1296,11 @@ function rutinaCardHTML(row, { tag, superado }) {
         ? `<p class="rutina-card__desc">${escapeHTML(ej.descripcion)}</p>`
         : '';
     const claseSuperado = superado ? ' rutina-card--superado' : '';
-    // Chip de progreso solo en el vigente; las cards superadas no muestran nada.
-    const chip = superado ? '' : renderChipProgreso(row.id);
-    // Texto del objetivo debajo del nombre ("X / semana (máx Y por día)" o variantes).
-    const objetivo = superado ? '' : renderObjetivoBajoNombre(row.id);
+    const esTarea = (categoria === 'tarea');
+    // Chip de progreso y texto de objetivo: no aplican a tareas (semánticamente
+    // las tareas-lista no tienen "frecuencia"). Tampoco en cards superadas.
+    const chip = (superado || esTarea) ? '' : renderChipProgreso(row.id);
+    const objetivo = (superado || esTarea) ? '' : renderObjetivoBajoNombre(row.id);
     return `
         <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
@@ -2291,6 +2293,228 @@ function extraerYouTubeId(url) {
     return m ? m[1] : null;
 }
 
+// ────────────────────────────────────────────────────────────
+// Tarea-lista: el cliente escribe entre 3 y 6 ítems libres para
+// tareas de categoría 'tarea'. Guarda en ejercicios_asignados.parametros
+// como { items: [...] }. Autoguardado con debounce 800ms; flush al
+// cerrar el modal para no perder lo escrito.
+// ────────────────────────────────────────────────────────────
+
+const TAREA_LISTA_MIN = 3;
+const TAREA_LISTA_MAX = 6;
+const TAREA_LISTA_DEBOUNCE_MS = 800;
+const TAREA_LISTA_MAX_CHARS = 200;
+
+const _tareaListaCtx = {
+    asignadoId: null,
+    items: [],
+    saveTimer: null,
+    saving: false,
+};
+
+function abrirTareaLista(asignadoId, parametros) {
+    _tareaListaCtx.asignadoId = asignadoId;
+    // Tomamos items del jsonb si vienen como array de strings.
+    const raw = (parametros && Array.isArray(parametros.items)) ? parametros.items : [];
+    _tareaListaCtx.items = raw.filter((x) => typeof x === 'string').slice(0, TAREA_LISTA_MAX);
+    if (_tareaListaCtx.items.length === 0) {
+        // Pre-llenar con 3 ítems vacíos para guiar al usuario.
+        _tareaListaCtx.items = ['', '', ''];
+    }
+    document.getElementById('tarea-lista').hidden = false;
+    renderTareaLista();
+}
+
+function cerrarTareaLista() {
+    flushGuardarTareaLista();
+    document.getElementById('tarea-lista').hidden = true;
+    _tareaListaCtx.asignadoId = null;
+    _tareaListaCtx.items = [];
+}
+
+function renderTareaLista() {
+    const cont = document.getElementById('tarea-lista-items');
+    const btnAdd = document.getElementById('tarea-lista-add');
+    const estado = document.getElementById('tarea-lista-estado');
+    if (!cont || !btnAdd || !estado) return;
+
+    const items = _tareaListaCtx.items;
+    const n = items.length;
+
+    cont.innerHTML = items.map((texto, i) => {
+        const esPrimero = i === 0;
+        const esUltimo  = i === n - 1;
+        return `
+            <li class="tarea-item" data-index="${i}">
+                <span class="tarea-item__num">${i + 1}</span>
+                <input
+                    class="tarea-item__input"
+                    type="text"
+                    maxlength="${TAREA_LISTA_MAX_CHARS}"
+                    placeholder="Ej: ponerme el abrigo"
+                    value="${escapeAttr(texto)}"
+                    data-action="edit">
+                <button type="button" class="tarea-item__btn" data-action="up" aria-label="Subir ítem" ${esPrimero ? 'disabled' : ''}>↑</button>
+                <button type="button" class="tarea-item__btn" data-action="down" aria-label="Bajar ítem" ${esUltimo ? 'disabled' : ''}>↓</button>
+                <button type="button" class="tarea-item__btn tarea-item__btn--del" data-action="del" aria-label="Borrar ítem">✕</button>
+            </li>
+        `;
+    }).join('');
+
+    btnAdd.disabled = (n >= TAREA_LISTA_MAX);
+    btnAdd.textContent = (n >= TAREA_LISTA_MAX) ? `Máximo ${TAREA_LISTA_MAX} ítems` : '+ Agregar ítem';
+
+    const completados = items.filter((s) => s && s.trim().length > 0).length;
+    estado.classList.remove('tarea-lista__estado--pendiente', 'tarea-lista__estado--lista', 'tarea-lista__estado--saving');
+    if (_tareaListaCtx.saving) {
+        estado.textContent = 'Guardando…';
+        estado.classList.add('tarea-lista__estado--saving');
+    } else if (completados >= TAREA_LISTA_MIN) {
+        estado.textContent = `Lista lista (${completados} ítems guardados).`;
+        estado.classList.add('tarea-lista__estado--lista');
+    } else {
+        const faltan = TAREA_LISTA_MIN - completados;
+        estado.textContent = `Te faltan ${faltan} ${faltan === 1 ? 'ítem' : 'ítems'} para que la lista quede lista.`;
+        estado.classList.add('tarea-lista__estado--pendiente');
+    }
+}
+
+function escapeAttr(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function bindTareaLista() {
+    const sec = document.getElementById('tarea-lista');
+    const btnAdd = document.getElementById('tarea-lista-add');
+    if (!sec || !btnAdd) return;
+
+    btnAdd.addEventListener('click', () => {
+        if (_tareaListaCtx.items.length >= TAREA_LISTA_MAX) return;
+        _tareaListaCtx.items.push('');
+        renderTareaLista();
+        // foco al input recién creado
+        const last = sec.querySelector('.tarea-item:last-child .tarea-item__input');
+        if (last) last.focus();
+        // No guardamos todavía: un ítem vacío no se persiste.
+    });
+
+    // Event delegation: editar, subir, bajar, borrar.
+    sec.addEventListener('input', (ev) => {
+        const inp = ev.target.closest('input[data-action="edit"]');
+        if (!inp) return;
+        const i = Number(inp.closest('.tarea-item')?.dataset.index);
+        if (!Number.isInteger(i)) return;
+        _tareaListaCtx.items[i] = inp.value.slice(0, TAREA_LISTA_MAX_CHARS);
+        // No re-renderizar acá (perdemos foco del usuario). Solo programar save.
+        programarGuardarTareaLista();
+    });
+
+    sec.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-action]');
+        if (!btn) return;
+        const li = btn.closest('.tarea-item');
+        if (!li) return;
+        const i = Number(li.dataset.index);
+        if (!Number.isInteger(i)) return;
+        const act = btn.dataset.action;
+
+        if (act === 'up' && i > 0) {
+            [_tareaListaCtx.items[i - 1], _tareaListaCtx.items[i]] =
+                [_tareaListaCtx.items[i], _tareaListaCtx.items[i - 1]];
+            renderTareaLista();
+            programarGuardarTareaLista();
+        } else if (act === 'down' && i < _tareaListaCtx.items.length - 1) {
+            [_tareaListaCtx.items[i + 1], _tareaListaCtx.items[i]] =
+                [_tareaListaCtx.items[i], _tareaListaCtx.items[i + 1]];
+            renderTareaLista();
+            programarGuardarTareaLista();
+        } else if (act === 'del') {
+            _tareaListaCtx.items.splice(i, 1);
+            renderTareaLista();
+            programarGuardarTareaLista();
+        }
+    });
+}
+
+function programarGuardarTareaLista() {
+    if (_tareaListaCtx.saveTimer) clearTimeout(_tareaListaCtx.saveTimer);
+    _tareaListaCtx.saveTimer = setTimeout(guardarTareaLista, TAREA_LISTA_DEBOUNCE_MS);
+}
+
+function flushGuardarTareaLista() {
+    if (_tareaListaCtx.saveTimer) {
+        clearTimeout(_tareaListaCtx.saveTimer);
+        _tareaListaCtx.saveTimer = null;
+        // Disparar el guardado inmediato (best-effort, sin await aquí porque
+        // el cierre del modal no debe bloquear).
+        guardarTareaLista().catch((e) => console.error('[tarea-lista] flush err:', e));
+    }
+}
+
+async function guardarTareaLista() {
+    _tareaListaCtx.saveTimer = null;
+    const id = _tareaListaCtx.asignadoId;
+    if (!id) return;
+
+    // Items normalizados: trimear + filtrar vacíos para la persistencia.
+    // En memoria conservamos los vacíos para no perder filas mientras el
+    // usuario está editando.
+    const limpios = _tareaListaCtx.items
+        .map((s) => (typeof s === 'string' ? s.trim() : ''))
+        .filter((s) => s.length > 0)
+        .slice(0, TAREA_LISTA_MAX);
+
+    const nuevoParametros = (limpios.length === 0)
+        ? null
+        : { items: limpios };
+
+    _tareaListaCtx.saving = true;
+    renderTareaLista();
+
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({ parametros: nuevoParametros })
+            .eq('id', id);
+        if (error) throw error;
+    } catch (e) {
+        console.error('[tarea-lista] error guardando:', e);
+        toast('No pudimos guardar la lista. Reintentá.', 'error');
+    } finally {
+        _tareaListaCtx.saving = false;
+        // re-render para actualizar el estado visual (sin re-pintar inputs)
+        const estado = document.getElementById('tarea-lista-estado');
+        if (estado && !estado.classList.contains('tarea-lista__estado--saving')) {
+            // pisa "Guardando…" con el texto definitivo
+            renderTareaLista();
+        }
+    }
+}
+
+// Trae el row de ejercicios_asignados con su jsonb parametros. Lo usa
+// abrirModalEjercicio para inicializar la lista cuando es una tarea.
+async function fetchAsignadoParametros(asignadoId) {
+    try {
+        const { data, error } = await supabase
+            .from('ejercicios_asignados')
+            .select('parametros')
+            .eq('id', asignadoId)
+            .maybeSingle();
+        if (error) {
+            console.error('[tarea-lista] error fetch parametros:', error);
+            return null;
+        }
+        return data?.parametros || null;
+    } catch (e) {
+        console.error('[tarea-lista] crash fetch parametros:', e);
+        return null;
+    }
+}
+
 function abrirModalEjercicio(ej, ejercicioAsignadoId) {
     setText('modal-ejercicio-titulo', ej.nombre || 'Ejercicio');
     const desc = document.getElementById('modal-ejercicio-desc');
@@ -2317,8 +2541,36 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
         inst.textContent = 'Tu adiestrador todavía no ha añadido una explicación detallada para este ejercicio.';
         inst.classList.add('modal-ejercicio__instrucciones--vacio');
     }
-    renderProgresoEnModal(ejercicioAsignadoId);
-    cargarMisEntrenos(ejercicioAsignadoId);
+
+    const esTarea = (ej.categoria === 'tarea');
+    const seccionProgreso = document.getElementById('ejercicio-progreso');
+    const seccionMisEntrenos = document.getElementById('mientreno');
+    const btnReportar = document.getElementById('btn-reportar-entreno');
+    const seccionTarea = document.getElementById('tarea-lista');
+
+    if (esTarea) {
+        // Ocultamos progreso / mis entrenos / reportar. Mostramos tarea-lista.
+        if (seccionProgreso) seccionProgreso.hidden = true;
+        if (seccionMisEntrenos) seccionMisEntrenos.hidden = true;
+        if (btnReportar) btnReportar.hidden = true;
+        // Cargamos parametros de la DB (no usamos cache de progreso porque
+        // ese cache no incluye parametros).
+        if (seccionTarea) {
+            // Mostramos en estado "cargando" mínimo (placeholder con 3 vacíos)
+            // hasta que llegue el fetch.
+            abrirTareaLista(ejercicioAsignadoId, null);
+            fetchAsignadoParametros(ejercicioAsignadoId).then((params) => {
+                if (_tareaListaCtx.asignadoId !== ejercicioAsignadoId) return; // cambió modal
+                abrirTareaLista(ejercicioAsignadoId, params);
+            });
+        }
+    } else {
+        if (seccionTarea) seccionTarea.hidden = true;
+        if (btnReportar) btnReportar.hidden = false;
+        renderProgresoEnModal(ejercicioAsignadoId);
+        cargarMisEntrenos(ejercicioAsignadoId);
+    }
+
     abrirModal('modal-ejercicio-detalle');
     renderNotasEjercicio(ejercicioAsignadoId);
 }
@@ -2620,6 +2872,8 @@ function cerrarModal(id) {
         if (videoBox) videoBox.innerHTML = '';
         const mientreno = document.getElementById('mientreno');
         if (mientreno) mientreno.hidden = true;
+        // Flush + reset de la tarea-lista si estaba abierta.
+        if (_tareaListaCtx.asignadoId) cerrarTareaLista();
     }
     setTimeout(() => {
         modal.setAttribute('hidden', '');

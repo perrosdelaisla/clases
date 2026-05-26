@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=35">
+    <link rel="stylesheet" href="./css/styles.css?v=36">
 </head>
 <body class="app-cliente">
 
@@ -563,6 +563,19 @@
             <div class="modal-ejercicio__video" id="modal-ejercicio-video" hidden></div>
             <div class="modal-ejercicio__instrucciones" id="modal-ejercicio-instrucciones"></div>
 
+            <!-- Lista editable del cliente para ejercicios de categoría 'tarea'.
+                 Visible solo cuando se abre una tarea-lista. Items 3-6,
+                 reordenables con ↑/↓, autoguardado con debounce. -->
+            <section class="tarea-lista" id="tarea-lista" hidden>
+                <h3 class="tarea-lista__titulo">Tu lista</h3>
+                <p class="tarea-lista__sub">Anotá entre 3 y 6 ítems en el orden que te resulte natural.</p>
+                <ol class="tarea-lista__items" id="tarea-lista-items"></ol>
+                <button type="button" class="tarea-lista__add" id="tarea-lista-add">
+                    <span class="plus">+</span> Agregar ítem
+                </button>
+                <p class="tarea-lista__estado" id="tarea-lista-estado" aria-live="polite"></p>
+            </section>
+
             <div class="ejercicio-progreso" id="ejercicio-progreso" hidden>
                 <h3 class="ejercicio-progreso__titulo">Progreso</h3>
                 <div class="ejercicio-progreso__linea" id="ejercicio-progreso-semana" hidden>
@@ -893,6 +906,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=54"></script>
+    <script type="module" src="./js/app.js?v=55"></script>
 </body>
 </html>

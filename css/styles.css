@@ -3889,6 +3889,144 @@ body {
     50%      { filter: drop-shadow(0 0 12px rgba(107, 122, 58, 0.85)); }
 }
 
+/* ===================== Tarea-lista (cliente escribe ítems) ===================== */
+
+.tarea-lista {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--color-border);
+}
+.tarea-lista[hidden] { display: none; }
+
+.tarea-lista__titulo {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--color-text);
+    letter-spacing: 0.04em;
+    margin: 0 0 0.25rem;
+    font-weight: 400;
+}
+
+.tarea-lista__sub {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin: 0 0 0.85rem;
+    line-height: 1.45;
+}
+
+.tarea-lista__items {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tarea-item {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr auto auto auto;
+    gap: 0.4rem;
+    align-items: center;
+    background: var(--color-surface, rgba(255,255,255,0.04));
+    border: 1px solid var(--color-border, rgba(255,255,255,0.08));
+    border-radius: 10px;
+    padding: 0.5rem 0.55rem;
+}
+
+.tarea-item__num {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    color: var(--pdli-oliva);
+    text-align: center;
+    font-weight: 400;
+}
+
+.tarea-item__input {
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.3;
+    padding: 0.35rem 0.25rem;
+    min-width: 0;
+    outline: none;
+}
+.tarea-item__input::placeholder { color: var(--color-muted); opacity: 0.55; }
+.tarea-item__input:focus {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+}
+
+.tarea-item__btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.tarea-item__btn:hover:not([disabled]) {
+    color: var(--color-text);
+    border-color: var(--color-border);
+    background: rgba(255, 255, 255, 0.05);
+}
+.tarea-item__btn[disabled] {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+.tarea-item__btn--del:hover:not([disabled]) {
+    color: var(--pdli-rojo);
+    border-color: var(--pdli-rojo);
+}
+
+.tarea-lista__add {
+    background: transparent;
+    border: 1px dashed var(--color-border);
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+.tarea-lista__add:hover:not([disabled]) {
+    border-color: var(--pdli-oliva);
+    color: var(--color-text);
+}
+.tarea-lista__add[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.tarea-lista__add .plus {
+    margin-right: 0.3rem;
+    font-weight: 700;
+    color: var(--pdli-oliva);
+}
+
+.tarea-lista__estado {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    margin: 0.7rem 0 0;
+    line-height: 1.4;
+}
+.tarea-lista__estado--pendiente { color: var(--color-muted); }
+.tarea-lista__estado--lista     { color: var(--pdli-oliva); font-weight: 600; }
+.tarea-lista__estado--saving    { color: var(--color-muted); font-style: italic; }
+
 /* Degradé radial ambiental: solo en la vista Rutina con anillo cerrado. */
 #tab-rutina.ambiental-cerrado {
     background-image: radial-gradient(

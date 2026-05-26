@@ -389,7 +389,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, ejercicios (id, codigo, nombre, categoria)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, parametros, ejercicios (id, codigo, nombre, categoria)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -523,7 +523,10 @@ function renderEjercicioActivoCard(row, history = []) {
     const maxDia = row.max_diario ?? null;
     const vacio = (minSem == null && maxDia == null);
     const freqLabel = escapeHTML(labelFrecuencia(minSem, maxDia));
-    const freqChip = `
+    // Las tareas-lista no usan frecuencia (no se "entrenan" semanalmente).
+    // Ocultamos el chip para mantener la UI coherente con el cliente.
+    const esTarea = (categoria === 'tarea');
+    const freqChip = esTarea ? '' : `
         <button type="button"
                 class="frecuencia-chip${vacio ? ' frecuencia-chip--vacio' : ''}"
                 data-accion="frecuencia"
@@ -569,6 +572,31 @@ function renderEjercicioActivoCard(row, history = []) {
         ? `<button type="button" class="progresion-link progresion-link--danger" data-accion="borrar">Borrar último paso</button>`
         : '';
 
+    // Para tareas: mostramos la lista que escribió el cliente (read-only).
+    // El cliente la edita desde su app, acá solo la leemos.
+    let listaClienteHtml = '';
+    if (esTarea) {
+        const items = (row.parametros && Array.isArray(row.parametros.items))
+            ? row.parametros.items.filter((s) => typeof s === 'string' && s.trim().length > 0)
+            : [];
+        if (items.length > 0) {
+            const lis = items
+                .map((s) => `<li class="tarea-lista-admin__item">${escapeHTML(s)}</li>`)
+                .join('');
+            listaClienteHtml = `
+                <div class="tarea-lista-admin">
+                    <div class="tarea-lista-admin__head">Lista del cliente</div>
+                    <ol class="tarea-lista-admin__items">${lis}</ol>
+                </div>`;
+        } else {
+            listaClienteHtml = `
+                <div class="tarea-lista-admin tarea-lista-admin--vacia">
+                    <div class="tarea-lista-admin__head">Lista del cliente</div>
+                    <p class="tarea-lista-admin__empty">El cliente todavía no escribió su lista.</p>
+                </div>`;
+        }
+    }
+
     return `
         <li class="ejercicio-activo-card" data-vigente-id="${escapeHTML(row.id)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-posicion="${escapeHTML(String(row.posicion_rutina ?? ''))}">
             <div class="ejercicio-activo-top">
@@ -581,6 +609,7 @@ function renderEjercicioActivoCard(row, history = []) {
                     </div>
                 </div>${toggle}
             </div>
+            ${listaClienteHtml}
             ${historiaHtml}
             <div class="ejercicio-activo-acciones">
                 ${accVer}

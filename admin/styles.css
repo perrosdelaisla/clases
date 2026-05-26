@@ -4072,6 +4072,53 @@ body {
     text-transform: capitalize;
 }
 
+/* ===================== Tarea-lista admin (read-only) ===================== */
+
+.tarea-lista-admin {
+    margin: 0.65rem 0 0.4rem;
+    padding: 0.6rem 0.75rem;
+    background: rgba(107, 122, 58, 0.06);
+    border: 1px solid rgba(107, 122, 58, 0.18);
+    border-radius: 8px;
+}
+
+.tarea-lista-admin__head {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-green);
+    margin-bottom: 0.35rem;
+}
+
+.tarea-lista-admin__items {
+    margin: 0;
+    padding-left: 1.3rem;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.tarea-lista-admin__item {
+    margin: 0.1rem 0;
+}
+
+.tarea-lista-admin--vacia {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--color-border);
+}
+
+.tarea-lista-admin__empty {
+    margin: 0;
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
 .notas-ej-item__hora {
     font-family: var(--font-body);
     font-size: 0.78rem;
