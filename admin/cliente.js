@@ -34,6 +34,7 @@ async function bootstrap() {
     bindInvitarUI();
     bindWidgetPack();
     bindEstadoSelector();
+    bindBackNavigation();
 
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) {
@@ -349,6 +350,8 @@ function abrirModalInvitar() {
     const input = document.getElementById('invitar-email');
     const errorEl = document.getElementById('invitar-error');
 
+    const yaAbierto = !modal.hasAttribute('hidden');
+
     input.value = state.cliente.email || '';
     errorEl.hidden = true;
     errorEl.textContent = '';
@@ -360,6 +363,11 @@ function abrirModalInvitar() {
     requestAnimationFrame(() => modal.classList.add('is-open'));
     document.body.style.overflow = 'hidden';
     setTimeout(() => input.focus(), 80);
+
+    // Back navigation: pushear entrada al abrir, así el back físico la cierra.
+    if (!yaAbierto && !navegandoPorPopstate) {
+        history.pushState({ pdli: 'modal-invitar' }, '');
+    }
 }
 
 function cerrarModalInvitar() {
@@ -371,6 +379,51 @@ function cerrarModalInvitar() {
         modal.setAttribute('hidden', '');
         modal.setAttribute('aria-hidden', 'true');
     }, 250);
+    // Consumir la entrada que pusheamos al abrir, si el cierre vino de UI.
+    if (!navegandoPorPopstate) {
+        cierreUiPendiente = true;
+        history.back();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// BACK NAVIGATION — captura del botón atrás Android.
+// Cliente.html tiene una sola UI modal (invitar). El handler la cierra
+// si está abierta; si no, deja pasar el back natural → vuelve a la
+// lista de clientes del admin (index.html). No hay doble-tap aquí
+// porque cliente.html es pantalla intermedia, no home.
+// ═══════════════════════════════════════════════════════════
+
+let navegandoPorPopstate = false;
+let cierreUiPendiente = false;
+
+function bindBackNavigation() {
+    if (window.__backNavBoundClienteAdmin) return;
+    window.__backNavBoundClienteAdmin = true;
+
+    // Anchor inicial: garantiza que el primer back físico dispare popstate.
+    history.pushState({ pdli: 'anchor' }, '');
+
+    window.addEventListener('popstate', () => {
+        // Caso especial: cierre desde UI (X/Esc/backdrop). Solo consumir.
+        if (cierreUiPendiente) {
+            cierreUiPendiente = false;
+            history.pushState({ pdli: 'anchor' }, '');
+            return;
+        }
+
+        // Prioridad 1: modal abierto → cerrar.
+        const m = document.getElementById('modal-invitar');
+        if (m && !m.hasAttribute('hidden')) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { cerrarModalInvitar(); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Sin modal: dejar pasar el back natural → vuelve a admin/index.html.
+        history.back();
+    });
 }
 
 function mostrarPasoModal(step) {

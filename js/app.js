@@ -324,6 +324,10 @@ function bindEventos() {
     bindNotasEjercicio();
     bindTareaLista();
 
+    // Back navigation Android — atrapar el botón atrás físico para cerrar
+    // modales / volver a Rutina antes de salir. Idempotente.
+    bindBackNavigation();
+
     // Dictado por voz en notas y reporte (Web Speech API).
     bindBotonesDictado();
 
@@ -2848,10 +2852,17 @@ async function guardarFotoPerro() {
 function abrirModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
+    const yaAbierto = !modal.hasAttribute('hidden');
     modal.removeAttribute('hidden');
     modal.setAttribute('aria-hidden', 'false');
     requestAnimationFrame(() => modal.classList.add('is-open'));
     document.body.style.overflow = 'hidden';
+    // Back navigation: pusheamos una entrada al historial para que el botón
+    // atrás físico cierre el modal en lugar de salir de la PWA. Solo cuando
+    // recién se abre y no estamos navegando por popstate (re-entrada).
+    if (!yaAbierto && !navegandoPorPopstate) {
+        history.pushState({ pdli: 'modal', id }, '');
+    }
 }
 
 function cerrarModal(id) {
@@ -2875,11 +2886,106 @@ function cerrarModal(id) {
         // Flush + reset de la tarea-lista si estaba abierta.
         if (_tareaListaCtx.asignadoId) cerrarTareaLista();
     }
+    // Si el cierre vino de la UI (X, backdrop, Esc, botón Cancelar/Guardar),
+    // consumimos la entrada del history que se pusheó al abrir. El handler
+    // de popstate detecta cierreUiPendiente y no dispara la lógica de toast.
+    if (!navegandoPorPopstate) {
+        cierreUiPendiente = true;
+        history.back();
+    }
     setTimeout(() => {
         modal.setAttribute('hidden', '');
         modal.setAttribute('aria-hidden', 'true');
     }, 200);
 }
+
+// ═══════════════════════════════════════════════════════════
+// BACK NAVIGATION — botón atrás Android estilo Instagram.
+// Patrón: history.pushState + popstate. Mantenemos un "anchor" siempre
+// en la historia; abrir un modal suma otra entrada. El handler de
+// popstate decide qué hacer según la UI visible.
+// Prioridades (descendentes):
+//   1) Modal abierto                  → cerrar
+//   2) Tab Rutina + Mi progreso       → volver a Rutina principal
+//   3) Tab ≠ Rutina                   → volver a Rutina
+//   4) Home (Rutina, vista Rutina)    → toast + 2s para confirmar salida
+// Flags:
+//   · navegandoPorPopstate: evita doble pushState cuando el handler
+//     llama a closeModal/cambiarTab durante el procesamiento.
+//   · cierreUiPendiente: marca que el back vino de la UI (X/Esc/botón).
+//     El handler lo detecta y solo consume + re-ancla, sin toast.
+//   · readyToExit + exitTimer: ventana de 2s para confirmar la salida.
+//   · bloquearSalida: cuando ya estamos saliendo, el handler deja pasar.
+// ═══════════════════════════════════════════════════════════
+
+let navegandoPorPopstate = false;
+let cierreUiPendiente = false;
+let readyToExit = false;
+let exitTimer = null;
+let bloquearSalida = true;
+
+function bindBackNavigation() {
+    if (window.__backNavBoundCliente) return;
+    window.__backNavBoundCliente = true;
+
+    // Anchor inicial: garantiza que el primer back físico dispare popstate
+    // en vez de cerrar la PWA directamente. Solo se monta una vez por sesión
+    // (la app cliente nunca recarga durante uso normal).
+    history.pushState({ pdli: 'anchor' }, '');
+
+    window.addEventListener('popstate', () => {
+        if (!bloquearSalida) return; // ya estamos saliendo, dejar pasar
+
+        // Caso especial: el back lo originó cerrarModal() desde UI.
+        // Solo consumimos la entrada y re-armamos el guard.
+        if (cierreUiPendiente) {
+            cierreUiPendiente = false;
+            history.pushState({ pdli: 'anchor' }, '');
+            return;
+        }
+
+        // Prioridad 1: modal abierto → cerrar
+        const modal = document.querySelector('.modal-pdli:not([hidden])');
+        if (modal) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { cerrarModal(modal.id); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 2: sub-vista "Mi progreso" dentro de Rutina → volver a Rutina principal
+        const tabActual = document.querySelector('.tab-panel.is-active')?.dataset.tab;
+        if (tabActual === 'rutina' && state.rutinaModo === 'progreso') {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { cambiarRutinaModo('rutina'); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 3: tab ≠ Rutina → volver a Rutina (siempre arranca en vista 'rutina')
+        if (tabActual && tabActual !== 'rutina') {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { showTab('rutina'); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 4: Home (Rutina + vista Rutina) → doble-tap para salir
+        if (readyToExit) {
+            // Segundo back dentro de los 2s: dejar salir. No re-pushear.
+            clearTimeout(exitTimer);
+            readyToExit = false;
+            bloquearSalida = false;
+            history.back(); // si era la última entrada del PWA, el SO la cierra
+            return;
+        }
+        history.pushState({ pdli: 'anchor' }, '');
+        toast('Pulsá atrás otra vez para salir');
+        readyToExit = true;
+        exitTimer = setTimeout(() => { readyToExit = false; }, 2000);
+    });
+}
+
 
 // ===================== Helpers =====================
 
