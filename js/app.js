@@ -296,9 +296,8 @@ function bindEventos() {
         btn.addEventListener('click', () => showTab(btn.dataset.tabTarget));
     });
 
-    // CTA "Reservar próxima clase" en tab Rutina
-    const ctaReservar = document.getElementById('btn-ir-reservar');
-    if (ctaReservar) ctaReservar.addEventListener('click', () => showTab('reservar'));
+    // (El CTA "Reservar próxima clase" se eliminó porque ya está la tab
+    // "Reservar" en el bottom-nav — quitado en este PR.)
 
     // CTA "Empezar →" de la card de evaluación de salud comportamental.
     // Abre La Isla en pestaña nueva con perro_id, cliente_id y origen.
@@ -318,6 +317,8 @@ function bindEventos() {
 
     // Form "añadir perro" (Bloque 4: solo UI)
     bindFormAgregarPerro();
+    bindFormEditarMisDatos();
+    bindFormEditarPerro();
 
     // Mensajes y notas (Bloque A.2)
     bindComposerMensaje();
@@ -763,9 +764,10 @@ async function cargarPerros() {
 
 async function cargarCliente(clienteId) {
     if (!clienteId) return null;
+    // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, pack_actual')
+        .select('id, nombre, telefono, email, direccion, zona, pack_actual')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -2762,6 +2764,282 @@ function bindFormAgregarPerro() {
             }
         });
     form.addEventListener('submit', onSubmitAgregarPerro);
+}
+
+// ────────────────────────────────────────────────────────────
+// Edición de "mis datos" (cliente) y "datos del perro"
+// Dos modales independientes con patrón Guardar/Cancelar +
+// botón disabled hasta detectar cambios reales (comparación contra
+// snapshot inicial). Re-render del saludo o del hero al guardar.
+// ────────────────────────────────────────────────────────────
+
+// Snapshots de los valores iniciales para detectar cambios.
+let _editCliCtx = { snapshot: null };
+let _editPerroCtx = { snapshot: null, perroId: null };
+
+// Campos editables del cliente y sus IDs de input.
+const EDIT_CLI_FIELDS = [
+    { col: 'nombre',    id: 'edit-cli-nombre',    tipo: 'text' },
+    { col: 'telefono',  id: 'edit-cli-telefono',  tipo: 'text' },
+    { col: 'email',     id: 'edit-cli-email',     tipo: 'text' },
+    { col: 'direccion', id: 'edit-cli-direccion', tipo: 'text' },
+    { col: 'zona',      id: 'edit-cli-zona',      tipo: 'text' },
+];
+
+// Campos editables del perro.
+const EDIT_PERRO_FIELDS = [
+    { col: 'nombre',        id: 'edit-perro-nombre',        tipo: 'text' },
+    { col: 'raza',          id: 'edit-perro-raza',          tipo: 'text' },
+    { col: 'edad_meses',    id: 'edit-perro-edad-meses',    tipo: 'int' },
+    { col: 'peso_kg',       id: 'edit-perro-peso',          tipo: 'num' },
+    { col: 'es_ppp',        id: 'edit-perro-ppp',           tipo: 'bool' },
+    { col: 'problematica',  id: 'edit-perro-problematica',  tipo: 'text' },
+    { col: 'descripcion',   id: 'edit-perro-descripcion',   tipo: 'text' },
+    { col: 'metodo_previo', id: 'edit-perro-metodo-previo', tipo: 'text' },
+];
+
+// Lee un campo del input según su tipo, devuelve valor normalizado
+// listo para comparar/persistir. Strings vacíos → null.
+function leerCampo(field) {
+    const el = document.getElementById(field.id);
+    if (!el) return null;
+    if (field.tipo === 'bool') return Boolean(el.checked);
+    const raw = (el.value || '').trim();
+    if (raw === '') return null;
+    if (field.tipo === 'int') {
+        const n = Number(raw);
+        return (Number.isFinite(n) && Number.isInteger(n)) ? n : null;
+    }
+    if (field.tipo === 'num') {
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+    }
+    return raw;
+}
+
+// Normaliza un valor del row (DB) al formato que devolvería leerCampo,
+// para comparar de forma consistente. null/'' → null. booleanos quedan.
+function normalizarValor(val, tipo) {
+    if (tipo === 'bool') return Boolean(val);
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed === '' ? null : trimmed;
+    }
+    if (tipo === 'int') return Number.isInteger(val) ? val : null;
+    if (tipo === 'num') return Number.isFinite(Number(val)) ? Number(val) : null;
+    return val;
+}
+
+// Pre-rellena los inputs del modal con los valores actuales y guarda
+// el snapshot para detectar cambios.
+function cargarFormulario(fields, fuente, snapshot) {
+    fields.forEach((f) => {
+        const el = document.getElementById(f.id);
+        if (!el) return;
+        const val = fuente?.[f.col];
+        snapshot[f.col] = normalizarValor(val, f.tipo);
+        if (f.tipo === 'bool') {
+            el.checked = Boolean(val);
+        } else if (val == null) {
+            el.value = '';
+        } else {
+            el.value = String(val);
+        }
+    });
+}
+
+// Compara estado actual del formulario contra snapshot. Devuelve
+// objeto con los cambios (solo las claves modificadas) o null si nada.
+function detectarCambios(fields, snapshot) {
+    const cambios = {};
+    let hayCambios = false;
+    fields.forEach((f) => {
+        const actual = leerCampo(f);
+        const previo = snapshot[f.col];
+        if (actual !== previo) {
+            cambios[f.col] = actual;
+            hayCambios = true;
+        }
+    });
+    return hayCambios ? cambios : null;
+}
+
+// Habilita/deshabilita el botón Guardar según haya cambios reales.
+function refrescarBotonGuardar(fields, snapshot, btnId, nombreObligatorio) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const cambios = detectarCambios(fields, snapshot);
+    let valido = !!cambios;
+    if (valido && nombreObligatorio) {
+        const nombreVal = leerCampo(fields.find((f) => f.col === 'nombre'));
+        if (!nombreVal) valido = false;
+    }
+    btn.disabled = !valido;
+}
+
+// ---------- Modal "Mis datos" ----------
+
+function abrirModalEditarMisDatos() {
+    if (!state.cliente) return;
+    _editCliCtx.snapshot = {};
+    cargarFormulario(EDIT_CLI_FIELDS, state.cliente, _editCliCtx.snapshot);
+    const err = document.getElementById('edit-cli-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+    refrescarBotonGuardar(EDIT_CLI_FIELDS, _editCliCtx.snapshot, 'edit-cli-guardar', true);
+    abrirModal('modal-editar-mis-datos');
+}
+
+async function onSubmitEditarMisDatos(ev) {
+    ev.preventDefault();
+    const err = document.getElementById('edit-cli-error');
+    const btn = document.getElementById('edit-cli-guardar');
+    if (err) { err.textContent = ''; err.hidden = true; }
+
+    const cambios = detectarCambios(EDIT_CLI_FIELDS, _editCliCtx.snapshot);
+    if (!cambios) { cerrarModal('modal-editar-mis-datos'); return; }
+
+    // Validaciones blandas
+    if (cambios.nombre !== undefined && (!cambios.nombre || cambios.nombre.length < 2)) {
+        if (err) { err.textContent = 'El nombre no puede quedar vacío.'; err.hidden = false; }
+        return;
+    }
+    if (cambios.email !== undefined && cambios.email !== null && !EMAIL_RE.test(cambios.email)) {
+        if (err) { err.textContent = 'El email no parece válido.'; err.hidden = false; }
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update(cambios)
+            .eq('id', state.cliente.id);
+        if (error) throw error;
+
+        // Sincronizar state.cliente con los cambios persistidos.
+        Object.assign(state.cliente, cambios);
+
+        // Re-render del saludo (el nombre puede haber cambiado).
+        renderHeader();
+
+        toast('Datos guardados');
+        cerrarModal('modal-editar-mis-datos');
+    } catch (e) {
+        console.error('[edit-cli] error guardando:', e);
+        if (err) { err.textContent = 'No pudimos guardar. Intentalo de nuevo.'; err.hidden = false; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    }
+}
+
+function bindFormEditarMisDatos() {
+    const form = document.getElementById('form-editar-mis-datos');
+    if (!form) return;
+    EDIT_CLI_FIELDS.forEach((f) => {
+        const el = document.getElementById(f.id);
+        if (!el) return;
+        const handler = () => refrescarBotonGuardar(
+            EDIT_CLI_FIELDS, _editCliCtx.snapshot, 'edit-cli-guardar', true,
+        );
+        el.addEventListener('input', handler);
+        el.addEventListener('change', handler);
+    });
+    form.addEventListener('submit', onSubmitEditarMisDatos);
+
+    document.getElementById('btn-editar-mis-datos')
+        ?.addEventListener('click', abrirModalEditarMisDatos);
+}
+
+// ---------- Modal "Datos del perro" ----------
+
+function abrirModalEditarPerro() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    if (!perro) return;
+    _editPerroCtx.perroId = perro.id;
+    _editPerroCtx.snapshot = {};
+    cargarFormulario(EDIT_PERRO_FIELDS, perro, _editPerroCtx.snapshot);
+    const err = document.getElementById('edit-perro-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+    refrescarBotonGuardar(EDIT_PERRO_FIELDS, _editPerroCtx.snapshot, 'edit-perro-guardar', true);
+    abrirModal('modal-editar-perro');
+}
+
+async function onSubmitEditarPerro(ev) {
+    ev.preventDefault();
+    const err = document.getElementById('edit-perro-error');
+    const btn = document.getElementById('edit-perro-guardar');
+    if (err) { err.textContent = ''; err.hidden = true; }
+
+    const cambios = detectarCambios(EDIT_PERRO_FIELDS, _editPerroCtx.snapshot);
+    if (!cambios) { cerrarModal('modal-editar-perro'); return; }
+
+    if (cambios.nombre !== undefined && (!cambios.nombre || cambios.nombre.length < 2)) {
+        if (err) { err.textContent = 'El nombre no puede quedar vacío.'; err.hidden = false; }
+        return;
+    }
+    if (cambios.edad_meses !== undefined && cambios.edad_meses !== null
+        && (cambios.edad_meses < 0 || cambios.edad_meses > 360)) {
+        if (err) { err.textContent = 'La edad en meses debe estar entre 0 y 360.'; err.hidden = false; }
+        return;
+    }
+    if (cambios.peso_kg !== undefined && cambios.peso_kg !== null
+        && (cambios.peso_kg <= 0 || cambios.peso_kg > 120)) {
+        if (err) { err.textContent = 'El peso debe estar entre 0 y 120 kg.'; err.hidden = false; }
+        return;
+    }
+
+    // Si se edita edad_meses, también nulleamos el campo legacy `edad` (text)
+    // para que las dos representaciones no diverjan.
+    if (cambios.edad_meses !== undefined) {
+        cambios.edad = null;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    try {
+        const { error } = await supabase
+            .from('perros')
+            .update(cambios)
+            .eq('id', _editPerroCtx.perroId);
+        if (error) throw error;
+
+        // Sincronizar el row local en state.perros.
+        const idx = state.perros.findIndex((p) => p.id === _editPerroCtx.perroId);
+        if (idx >= 0) {
+            Object.assign(state.perros[idx], cambios);
+        }
+
+        // Re-render del hero del perro.
+        await renderRutinaPerroSeleccionado();
+
+        toast('Datos del perro guardados');
+        cerrarModal('modal-editar-perro');
+    } catch (e) {
+        console.error('[edit-perro] error guardando:', e);
+        if (err) { err.textContent = 'No pudimos guardar. Intentalo de nuevo.'; err.hidden = false; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    }
+}
+
+function bindFormEditarPerro() {
+    const form = document.getElementById('form-editar-perro');
+    if (!form) return;
+    EDIT_PERRO_FIELDS.forEach((f) => {
+        const el = document.getElementById(f.id);
+        if (!el) return;
+        const handler = () => refrescarBotonGuardar(
+            EDIT_PERRO_FIELDS, _editPerroCtx.snapshot, 'edit-perro-guardar', true,
+        );
+        el.addEventListener('input', handler);
+        el.addEventListener('change', handler);
+    });
+    form.addEventListener('submit', onSubmitEditarPerro);
+
+    document.getElementById('btn-editar-perro')
+        ?.addEventListener('click', abrirModalEditarPerro);
 }
 
 function onFotoSeleccionada(e) {
