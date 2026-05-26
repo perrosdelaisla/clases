@@ -692,24 +692,29 @@
     <script type="module" src="./admin.js?v=46"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
-      const b = document.getElementById('btn-push-toggle');
-      if (b) {
-        async function refresh() {
-          const e = await estadoNotificaciones();
-          if (e === 'activo') { b.textContent = '🔕'; b.title = 'Notificaciones activadas — tocá para desactivar'; b.dataset.on = '1'; b.style.opacity = '1'; }
-          else { b.textContent = '🔔'; b.dataset.on = ''; b.style.opacity = '.5'; b.title = (e === 'bloqueado') ? 'Notificaciones bloqueadas en el navegador' : 'Activar notificaciones'; }
-        }
-        b.addEventListener('click', async () => {
+      async function pintar() {
+        const b = document.getElementById('btn-push-toggle');
+        if (!b) return;
+        const e = await estadoNotificaciones();
+        if (e === 'activo') { b.textContent = '🔕'; b.dataset.on = '1'; b.style.opacity = '1'; b.title = 'Notificaciones activadas — tocá para desactivar'; }
+        else { b.textContent = '🔔'; b.dataset.on = ''; b.style.opacity = '.5'; b.title = (e === 'bloqueado') ? 'Notificaciones bloqueadas en el navegador' : 'Activar notificaciones'; }
+      }
+      document.addEventListener('click', async (ev) => {
+        const b = ev.target.closest && ev.target.closest('#btn-push-toggle');
+        if (b) {
+          ev.preventDefault();
           b.disabled = true;
           try {
-            if (b.dataset.on) { await desactivarNotificaciones(); }
+            if (b.dataset.on) await desactivarNotificaciones();
             else { await activarNotificaciones(); await probarPush(); }
-            await refresh();
-          } catch (err) { b.title = err.message || 'Error con las notificaciones'; }
+            await pintar();
+          } catch (err) { b.title = (err && err.message) || 'Error con las notificaciones'; }
           b.disabled = false;
-        });
-        refresh();
-      }
+          return;
+        }
+        if (ev.target.closest && ev.target.closest('[data-tab="agenda"]')) setTimeout(pintar, 150);
+      });
+      pintar();
     </script>
 </body>
 </html>
