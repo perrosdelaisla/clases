@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=46">
+    <link rel="stylesheet" href="./styles.css?v=47">
 </head>
 <body>
 
@@ -305,33 +305,18 @@
             </header>
             <div class="bottom-sheet__body frecuencia-body">
                 <p class="frecuencia-ejercicio" id="frecuencia-ejercicio"></p>
-                <p class="muted">Define cuántas veces querés que el perro practique este ejercicio. Podés combinar objetivos por semana y por día, o dejar vacío lo que no aplique.</p>
-                <section class="frecuencia-bloque">
-                    <h3 class="frecuencia-bloque__titulo">Por semana</h3>
-                    <div class="frecuencia-pareja">
-                        <label class="form-field">
-                            <span>Mínimo</span>
-                            <input type="number" id="frecuencia-min-sem" inputmode="numeric" min="0" step="1" placeholder="—">
-                        </label>
-                        <label class="form-field">
-                            <span>Máximo</span>
-                            <input type="number" id="frecuencia-max-sem" inputmode="numeric" min="0" step="1" placeholder="—">
-                        </label>
-                    </div>
-                </section>
-                <section class="frecuencia-bloque">
-                    <h3 class="frecuencia-bloque__titulo">Por día</h3>
-                    <div class="frecuencia-pareja">
-                        <label class="form-field">
-                            <span>Mínimo</span>
-                            <input type="number" id="frecuencia-min-dia" inputmode="numeric" min="0" step="1" placeholder="—">
-                        </label>
-                        <label class="form-field">
-                            <span>Máximo</span>
-                            <input type="number" id="frecuencia-max-dia" inputmode="numeric" min="0" step="1" placeholder="—">
-                        </label>
-                    </div>
-                </section>
+                <p class="muted">Definí el objetivo semanal y el tope diario para este ejercicio. Dejá vacío lo que no aplique.</p>
+                <div class="frecuencia-pareja">
+                    <label class="form-field">
+                        <span>Mínimo por semana</span>
+                        <input type="number" id="frecuencia-min-sem" inputmode="numeric" min="0" step="1" placeholder="—">
+                    </label>
+                    <label class="form-field">
+                        <span>Máximo por día</span>
+                        <input type="number" id="frecuencia-max-dia" inputmode="numeric" min="0" step="1" placeholder="—">
+                    </label>
+                </div>
+                <p class="frecuencia-warning" id="frecuencia-warning" hidden></p>
                 <p class="error-message" id="frecuencia-error" hidden></p>
             </div>
             <footer class="bottom-sheet__footer frecuencia-footer">
@@ -373,6 +358,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=24"></script>
+    <script type="module" src="./perro.js?v=25"></script>
 </body>
 </html>

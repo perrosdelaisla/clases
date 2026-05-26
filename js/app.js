@@ -17,6 +17,12 @@
 
 import { supabase, getSessionConTimeout, recuperarSesionDeStorage } from './supabase.js';
 import { initSwipeTabs } from './swipe-tabs.js';
+import {
+    estadoChipFrecuencia,
+    COLOR_CHIP_FRECUENCIA,
+    textoChipFrecuencia,
+    textoObjetivoBajoNombre,
+} from './frecuencia.js?v=1';
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -819,58 +825,29 @@ function inicioDiaLocalIso() {
     return inicio.toISOString();
 }
 
-// Convierte counts vs targets en un estado por bloque (semana/día):
-//   'sin'      → no hay target
-//   'debajo'   → count < min
-//   'en_zona'  → en rango aceptable (cumple min y no excede max)
-//   'encima'   → count > max
-function estadoBloque(count, min, max) {
-    if (min == null && max == null) return 'sin';
-    const c = count ?? 0;
-    if (min != null && c < min) return 'debajo';
-    if (max != null && c > max) return 'encima';
-    return 'en_zona';
-}
-
-// Prioridad para combinar semanal+diario en un único estado global:
-//   debajo > encima > en_zona > sin
-const _PRIORIDAD = { debajo: 3, encima: 2, en_zona: 1, sin: 0 };
-function peorEstado(a, b) {
-    return (_PRIORIDAD[a] >= _PRIORIDAD[b]) ? a : b;
-}
-
-// Texto compacto para el chip. Convención: el denominador es el `min` cuando
-// existe (la zona objetivo); si solo hay `max`, se usa `max`.
-function _formatoBloque(count, min, max, sufijoHoy) {
-    if (min == null && max == null) return '';
-    const den = min != null ? min : max;
-    return sufijoHoy ? `${count ?? 0}/${den} hoy` : `${count ?? 0}/${den}`;
-}
-
-// Dado el row de la RPC, devuelve resumen visual para chip y para mini-progreso.
+// Evalúa el progreso de un ejercicio asignado usando el helper compartido
+// frecuencia.js (mismo lugar que el admin). Devuelve un objeto con la
+// forma legacy para no romper consumidores:
+//   { tieneTarget, estado, chipTexto, superoTopeDiario }
 function evaluarProgresoEjercicio(row) {
     const out = {
         tieneTarget: false,
-        estadoSemana: 'sin',
-        estadoDia: 'sin',
-        estadoGlobal: 'sin',
+        estado: 'sin',
         chipTexto: '',
+        superoTopeDiario: false,
     };
     if (!row) return out;
 
-    const hayTargetSem = (row.min_semanal != null || row.max_semanal != null);
-    const hayTargetDia = (row.min_diario != null || row.max_diario != null);
-    out.tieneTarget = hayTargetSem || hayTargetDia;
-    if (!out.tieneTarget) return out;
+    const estado = estadoChipFrecuencia(row.min_semanal, row.max_diario, row.count_7d);
+    if (estado === 'sin') return out;
 
-    out.estadoSemana = estadoBloque(row.count_semana, row.min_semanal, row.max_semanal);
-    out.estadoDia    = estadoBloque(row.count_dia, row.min_diario, row.max_diario);
-    out.estadoGlobal = peorEstado(out.estadoSemana, out.estadoDia);
-
-    const partes = [];
-    if (hayTargetSem) partes.push(_formatoBloque(row.count_semana, row.min_semanal, row.max_semanal, false));
-    if (hayTargetDia) partes.push(_formatoBloque(row.count_dia, row.min_diario, row.max_diario, true));
-    out.chipTexto = partes.filter(Boolean).join(' · ');
+    out.tieneTarget = true;
+    out.estado = estado;
+    out.chipTexto = textoChipFrecuencia(row.min_semanal, row.max_diario, row.count_7d);
+    // Útil para el cartel post-guardar cuando el cliente reporta y pasa
+    // el tope diario.
+    out.superoTopeDiario = (row.max_diario != null && row.max_diario > 0
+                            && Number(row.count_dia ?? 0) > row.max_diario);
     return out;
 }
 
@@ -1320,10 +1297,15 @@ function rutinaCardHTML(row, { tag, superado }) {
     const claseSuperado = superado ? ' rutina-card--superado' : '';
     // Chip de progreso solo en el vigente; las cards superadas no muestran nada.
     const chip = superado ? '' : renderChipProgreso(row.id);
+    // Texto del objetivo debajo del nombre ("X / semana (máx Y por día)" o variantes).
+    const objetivo = superado ? '' : renderObjetivoBajoNombre(row.id);
     return `
         <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
-                <h3 class="rutina-card__nombre">${nombre}</h3>
+                <div class="rutina-card__nombre-wrap">
+                    <h3 class="rutina-card__nombre">${nombre}</h3>
+                    ${objetivo}
+                </div>
                 <svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             ${desc}
@@ -1332,15 +1314,21 @@ function rutinaCardHTML(row, { tag, superado }) {
     `;
 }
 
-// Mapeo estadoGlobal → modificador de color del chip.
-const _COLOR_CHIP = { debajo: 'rojo', en_zona: 'verde', encima: 'azul' };
+// Texto del objetivo bajo el nombre del ejercicio.
+function renderObjetivoBajoNombre(asignadoId) {
+    const row = _progresoCache.get(asignadoId);
+    if (!row) return '';
+    const t = textoObjetivoBajoNombre(row.min_semanal, row.max_diario);
+    if (!t) return '';
+    return `<p class="rutina-card__objetivo">${escapeHTML(t)}</p>`;
+}
 
 function renderChipProgreso(asignadoId) {
     const row = _progresoCache.get(asignadoId);
     if (!row) return '';
     const ev = evaluarProgresoEjercicio(row);
     if (!ev.tieneTarget) return '';
-    const color = _COLOR_CHIP[ev.estadoGlobal] || 'verde';
+    const color = COLOR_CHIP_FRECUENCIA[ev.estado] || 'verde';
     return `<span class="rutina-card__progreso rutina-card__progreso--${color}">${escapeHTML(ev.chipTexto)}</span>`;
 }
 
@@ -1509,8 +1497,7 @@ function renderListaProgreso() {
     if (!lista || !empty) return;
 
     const items = [..._progresoCache.values()].filter((r) =>
-        r.min_semanal != null || r.max_semanal != null
-        || r.min_diario != null || r.max_diario != null);
+        r.min_semanal != null || r.max_diario != null);
 
     if (items.length === 0) {
         lista.hidden = true;
@@ -1523,8 +1510,8 @@ function renderListaProgreso() {
     items.sort((a, b) => {
         const ea = evaluarProgresoEjercicio(a);
         const eb = evaluarProgresoEjercicio(b);
-        const cumpleA = ea.estadoGlobal === 'en_zona' ? 1 : 0;
-        const cumpleB = eb.estadoGlobal === 'en_zona' ? 1 : 0;
+        const cumpleA = ea.estado === 'en_zona' ? 1 : 0;
+        const cumpleB = eb.estado === 'en_zona' ? 1 : 0;
         if (cumpleA !== cumpleB) return cumpleA - cumpleB;
         const rA = _rachaCache.get(a.ejercicio_asignado_id) || 0;
         const rB = _rachaCache.get(b.ejercicio_asignado_id) || 0;
@@ -1538,10 +1525,7 @@ function renderListaProgreso() {
 
 function renderProgresoItem(row) {
     const ev = evaluarProgresoEjercicio(row);
-    const color = ev.estadoGlobal === 'debajo'  ? 'rojo'
-                : ev.estadoGlobal === 'encima'  ? 'azul'
-                : ev.estadoGlobal === 'en_zona' ? 'verde'
-                : 'sin';
+    const color = COLOR_CHIP_FRECUENCIA[ev.estado] || 'sin';
     const chipHTML = ev.tieneTarget
         ? `<span class="progreso-item__chip progreso-item__chip--${color}">${escapeHTML(ev.chipTexto)}</span>`
         : '';
@@ -1572,6 +1556,10 @@ function aplicarAmbientalAnillo() {
 }
 
 // Mini-progreso dentro del modal de detalle del ejercicio.
+//   · Línea "Esta semana": visible si hay min_semanal. Compara count_semana
+//     contra el mínimo (no hay tope semanal).
+//   · Línea "Hoy":         visible si hay max_diario. Compara count_dia
+//     contra el tope diario (no hay mínimo diario).
 function renderProgresoEnModal(asignadoId) {
     const cont = document.getElementById('ejercicio-progreso');
     if (!cont) return;
@@ -1586,14 +1574,20 @@ function renderProgresoEnModal(asignadoId) {
     }
     cont.removeAttribute('hidden');
 
-    // --- línea semanal ---
-    if (row.min_semanal != null || row.max_semanal != null) {
+    // --- línea semanal (sólo mínimo) ---
+    if (row.min_semanal != null && row.min_semanal > 0) {
         lineaSem.removeAttribute('hidden');
+        const c = Number(row.count_semana ?? 0);
+        // Estado de la barra semanal: si todavía no llegó al mínimo, rojo;
+        // si llegó o superó, verde. La barra no se pone azul (el tope es
+        // diario, no semanal).
+        const estadoSem = (c < row.min_semanal) ? 'debajo' : 'en_zona';
         pintarLineaProgreso({
-            count: row.count_semana ?? 0,
+            count: c,
             min: row.min_semanal,
-            max: row.max_semanal,
-            estado: ev.estadoSemana,
+            max: null,
+            estado: estadoSem,
+            modo: 'semana',
             valorId: 'ej-prog-semana-valor',
             fillId: 'ej-prog-semana-fill',
             marksId: 'ej-prog-semana-marks',
@@ -1602,14 +1596,18 @@ function renderProgresoEnModal(asignadoId) {
         lineaSem.setAttribute('hidden', '');
     }
 
-    // --- línea diaria ---
-    if (row.min_diario != null || row.max_diario != null) {
+    // --- línea diaria (sólo tope) ---
+    if (row.max_diario != null && row.max_diario > 0) {
         lineaDia.removeAttribute('hidden');
+        const c = Number(row.count_dia ?? 0);
+        // Estado: verde si está dentro del tope, azul si lo superó.
+        const estadoDia = (c > row.max_diario) ? 'encima' : 'en_zona';
         pintarLineaProgreso({
-            count: row.count_dia ?? 0,
-            min: row.min_diario,
+            count: c,
+            min: null,
             max: row.max_diario,
-            estado: ev.estadoDia,
+            estado: estadoDia,
+            modo: 'dia',
             valorId: 'ej-prog-dia-valor',
             fillId: 'ej-prog-dia-fill',
             marksId: 'ej-prog-dia-marks',
@@ -1619,24 +1617,22 @@ function renderProgresoEnModal(asignadoId) {
     }
 }
 
-function pintarLineaProgreso({ count, min, max, estado, valorId, fillId, marksId }) {
+function pintarLineaProgreso({ count, min, max, estado, modo, valorId, fillId, marksId }) {
     const valor = document.getElementById(valorId);
     const fill = document.getElementById(fillId);
     const marks = document.getElementById(marksId);
 
-    // Texto valor según qué targets existan.
+    // Texto: la línea semanal muestra "X / Y" contra el mínimo; la diaria
+    // muestra "X / Y (tope)" contra el tope.
     let textoValor = '';
-    if (min != null && max != null) textoValor = `${count} de target ${min}–${max}`;
-    else if (min != null)           textoValor = `${count} · sin tope (target ≥${min})`;
-    else                            textoValor = `${count} · sin mínimo (tope ${max})`;
+    if (modo === 'semana' && min != null)      textoValor = `${count} / ${min}`;
+    else if (modo === 'dia' && max != null)    textoValor = `${count} / ${max} (tope)`;
+    else                                       textoValor = `${count}`;
     if (valor) valor.textContent = textoValor;
 
-    // Rango de la barra: tope >= max o min*2 o count*1.2, lo que sea mayor.
-    const candidatos = [];
-    if (max != null) candidatos.push(max * 1.2);
-    if (min != null) candidatos.push(min * 2);
-    candidatos.push(count * 1.2);
-    const rango = Math.max(...candidatos, 1);
+    // Rango de la barra: usamos como referencia el target visible.
+    const referencia = (min != null) ? min : (max != null ? max : 1);
+    const rango = Math.max(referencia * 1.5, count * 1.2, 1);
 
     if (fill) {
         const pct = Math.min(100, Math.max(0, (count / rango) * 100));
@@ -1646,8 +1642,8 @@ function pintarLineaProgreso({ count, min, max, estado, valorId, fillId, marksId
             'ejercicio-progreso__bar-fill--verde',
             'ejercicio-progreso__bar-fill--azul',
         );
-        const color = _COLOR_CHIP[estado];
-        if (color) fill.classList.add(`ejercicio-progreso__bar-fill--${color}`);
+        const color = COLOR_CHIP_FRECUENCIA[estado];
+        if (color && color !== 'sin') fill.classList.add(`ejercicio-progreso__bar-fill--${color}`);
     }
 
     if (marks) {
@@ -2667,7 +2663,7 @@ function esErrorSlotTomado(error) {
 }
 
 let toastTimer = null;
-function toast(msg, kind = 'info') {
+function toast(msg, kind = 'info', duracionMs = 2400) {
     const el = document.getElementById('toast');
     if (!el) return;
     el.textContent = msg;
@@ -2675,7 +2671,7 @@ function toast(msg, kind = 'info') {
     el.classList.add(kind === 'error' ? 'toast--error' : 'toast--info');
     el.removeAttribute('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.setAttribute('hidden', ''), 2400);
+    toastTimer = setTimeout(() => el.setAttribute('hidden', ''), duracionMs);
 }
 
 function colorParaPerro(perroId) {
@@ -3901,8 +3897,11 @@ async function guardarReporteEjercicio() {
             console.error('[reporte] no se pudo refrescar progreso:', e);
         }
         const estadoDespues = evaluarProgresoEjercicio(_progresoCache.get(asignadoId));
-        const justoCumplido = (estadoAntes.estadoGlobal === 'debajo'
-                              && estadoDespues.estadoGlobal === 'en_zona');
+        const justoCumplido = (estadoAntes.estado === 'debajo'
+                              && estadoDespues.estado === 'en_zona');
+        // Cartel informativo si con este registro el cliente superó el tope
+        // diario del ejercicio. NO bloquea el guardado, sólo avisa.
+        const superoTopeDiario = estadoDespues.superoTopeDiario;
 
         // Refrescar la lista "Mis entrenos" del modal de detalle que
         // queda debajo, así el cliente ve el registro nuevo al cerrar.
@@ -3919,7 +3918,12 @@ async function guardarReporteEjercicio() {
         }
 
         cerrarModal('modal-reporte-ejercicio');
-        toast('Entreno registrado');
+        if (superoTopeDiario) {
+            // Cartel informativo, sin tono reprochador. 5s para que se lea.
+            toast('Ya superaste el máximo diario de este ejercicio.', 'info', 5000);
+        } else {
+            toast('Entreno registrado');
+        }
 
         // Re-render de la rutina (chips + anillo) y, si corresponde, pulso.
         await renderRutinaPerroSeleccionado();

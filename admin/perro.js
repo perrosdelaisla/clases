@@ -10,6 +10,12 @@
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
+import {
+    estadoChipFrecuencia,
+    COLOR_CHIP_FRECUENCIA,
+    textoChipFrecuencia,
+    warningMinSupeaTope,
+} from '../js/frecuencia.js?v=1';
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -383,7 +389,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_semanal, min_diario, max_diario, ejercicios (id, codigo, nombre, categoria)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, ejercicios (id, codigo, nombre, categoria)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -446,8 +452,6 @@ async function renderEjerciciosActivos() {
                 asignadoId: btn.dataset.asignadoId,
                 ejercicioNombre: nombre,
                 minSem: btn.dataset.minSem ? Number(btn.dataset.minSem) : null,
-                maxSem: btn.dataset.maxSem ? Number(btn.dataset.maxSem) : null,
-                minDia: btn.dataset.minDia ? Number(btn.dataset.minDia) : null,
                 maxDia: btn.dataset.maxDia ? Number(btn.dataset.maxDia) : null,
             });
         });
@@ -497,24 +501,13 @@ function construirCadenas(rows) {
         });
 }
 
-// Sub-resumen reutilizable para semanal/diario. Devuelve null si min y
-// max son ambos NULL para que el llamador pueda combinar partes.
-function formatRango(min, max, sufijo) {
-    if (min == null && max == null) return null;
-    if (min != null && max != null && min === max) return `${min} / ${sufijo}`;
-    if (min != null && max != null) return `${min}–${max} / ${sufijo}`;
-    if (min != null) return `≥${min} / ${sufijo}`;
-    return `≤${max} / ${sufijo}`;
-}
-
-// Label compacto para el chip de frecuencia. Combina los dos
-// sub-resúmenes (semanal · diario) cuando ambos están definidos.
-function labelFrecuencia(minSem, maxSem, minDia, maxDia) {
+// Label compacto para el chip de frecuencia del admin. Refleja la
+// nueva semántica: min_semanal (objetivo semanal) + max_diario (tope
+// diario). Vacío → CTA "+ Frecuencia".
+function labelFrecuencia(minSem, maxDia) {
     const partes = [];
-    const sem = formatRango(minSem, maxSem, 'sem');
-    const dia = formatRango(minDia, maxDia, 'día');
-    if (sem) partes.push(sem);
-    if (dia) partes.push(dia);
+    if (minSem != null) partes.push(`mín ${minSem}/sem`);
+    if (maxDia != null) partes.push(`máx ${maxDia}/día`);
     return partes.length === 0 ? '+ Frecuencia' : partes.join(' · ');
 }
 
@@ -527,19 +520,15 @@ function renderEjercicioActivoCard(row, history = []) {
     const catChip = `<span class="cat-chip cat-chip--${escapeHTML(categoria)}">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>`;
 
     const minSem = row.min_semanal ?? null;
-    const maxSem = row.max_semanal ?? null;
-    const minDia = row.min_diario ?? null;
     const maxDia = row.max_diario ?? null;
-    const vacio = (minSem == null && maxSem == null && minDia == null && maxDia == null);
-    const freqLabel = escapeHTML(labelFrecuencia(minSem, maxSem, minDia, maxDia));
+    const vacio = (minSem == null && maxDia == null);
+    const freqLabel = escapeHTML(labelFrecuencia(minSem, maxDia));
     const freqChip = `
         <button type="button"
                 class="frecuencia-chip${vacio ? ' frecuencia-chip--vacio' : ''}"
                 data-accion="frecuencia"
                 data-asignado-id="${escapeHTML(row.id)}"
                 data-min-sem="${escapeHTML(minSem == null ? '' : String(minSem))}"
-                data-max-sem="${escapeHTML(maxSem == null ? '' : String(maxSem))}"
-                data-min-dia="${escapeHTML(minDia == null ? '' : String(minDia))}"
                 data-max-dia="${escapeHTML(maxDia == null ? '' : String(maxDia))}"
                 aria-label="Configurar frecuencia">
             ${freqLabel}
@@ -1337,7 +1326,7 @@ function bindFrecuencia() {
     bindSwipeClose('frecuencia-handle', 'modal-frecuencia', cerrarModalFrecuencia);
 }
 
-function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxSem, minDia, maxDia }) {
+function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia }) {
     const modal = document.getElementById('modal-frecuencia');
     if (!modal || !asignadoId) return;
 
@@ -1351,16 +1340,33 @@ function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxSem, min
         if (el) el.value = (val == null ? '' : String(val));
     };
     setInput('frecuencia-min-sem', minSem);
-    setInput('frecuencia-max-sem', maxSem);
-    setInput('frecuencia-min-dia', minDia);
     setInput('frecuencia-max-dia', maxDia);
 
     const err = document.getElementById('frecuencia-error');
     if (err) { err.textContent = ''; err.hidden = true; }
+    const warn = document.getElementById('frecuencia-warning');
+    if (warn) { warn.textContent = ''; warn.hidden = true; }
+
+    // Warning blando reactivo al tipear: si min > max*7, avisamos sin
+    // bloquear. Lo bindeamos cada vez que se abre el modal porque los
+    // inputs viven dentro del bottom-sheet.
+    const inMin = document.getElementById('frecuencia-min-sem');
+    const inMax = document.getElementById('frecuencia-max-dia');
+    const recalc = () => {
+        if (!warn) return;
+        const minVal = inMin.value === '' ? null : Number(inMin.value);
+        const maxVal = inMax.value === '' ? null : Number(inMax.value);
+        const w = warningMinSupeaTope(minVal, maxVal);
+        if (w) { warn.textContent = w; warn.hidden = false; }
+        else   { warn.textContent = ''; warn.hidden = true; }
+    };
+    inMin?.addEventListener('input', recalc);
+    inMax?.addEventListener('input', recalc);
+    recalc();
 
     const btnQuitar = document.getElementById('frecuencia-quitar');
     if (btnQuitar) {
-        const hayAlguno = (minSem != null || maxSem != null || minDia != null || maxDia != null);
+        const hayAlguno = (minSem != null || maxDia != null);
         if (hayAlguno) btnQuitar.removeAttribute('hidden');
         else btnQuitar.setAttribute('hidden', '');
     }
@@ -1401,29 +1407,20 @@ function parseInputFrecuencia(raw) {
     return { ok: true, value: n };
 }
 
-// Lee y valida los 4 inputs del modal. Devuelve { ok, valores, error }
-// donde valores = { minSem, maxSem, minDia, maxDia }.
+// Lee y valida los 2 inputs del modal. Devuelve { ok, valores, error }
+// donde valores = { minSem, maxDia }. La advertencia "min > max*7" es
+// blanda y se muestra inline durante el tipeo (no bloquea el guardado).
 function leerYValidarFrecuencia() {
-    const ids = ['frecuencia-min-sem', 'frecuencia-max-sem', 'frecuencia-min-dia', 'frecuencia-max-dia'];
-    const [pMinSem, pMaxSem, pMinDia, pMaxDia] = ids.map((id) =>
-        parseInputFrecuencia(document.getElementById(id).value.trim()),
-    );
+    const pMinSem = parseInputFrecuencia(document.getElementById('frecuencia-min-sem').value.trim());
+    const pMaxDia = parseInputFrecuencia(document.getElementById('frecuencia-max-dia').value.trim());
 
-    if (!pMinSem.ok || !pMaxSem.ok || !pMinDia.ok || !pMaxDia.ok) {
+    if (!pMinSem.ok || !pMaxDia.ok) {
         return { ok: false, error: 'Los valores deben ser números enteros.' };
-    }
-    if (pMinSem.value != null && pMaxSem.value != null && pMaxSem.value < pMinSem.value) {
-        return { ok: false, error: 'El máximo por semana no puede ser menor que el mínimo.' };
-    }
-    if (pMinDia.value != null && pMaxDia.value != null && pMaxDia.value < pMinDia.value) {
-        return { ok: false, error: 'El máximo por día no puede ser menor que el mínimo.' };
     }
     return {
         ok: true,
         valores: {
             minSem: pMinSem.value,
-            maxSem: pMaxSem.value,
-            minDia: pMinDia.value,
             maxDia: pMaxDia.value,
         },
     };
@@ -1446,9 +1443,7 @@ async function guardarFrecuencia() {
 async function quitarFrecuencia() {
     const ctx = state.frecuenciaContext;
     if (!ctx?.asignadoId) return;
-    await persistirFrecuencia(ctx.asignadoId, {
-        minSem: null, maxSem: null, minDia: null, maxDia: null,
-    });
+    await persistirFrecuencia(ctx.asignadoId, { minSem: null, maxDia: null });
 }
 
 async function persistirFrecuencia(asignadoId, valores) {
@@ -1463,8 +1458,6 @@ async function persistirFrecuencia(asignadoId, valores) {
             .from('ejercicios_asignados')
             .update({
                 min_semanal: valores.minSem,
-                max_semanal: valores.maxSem,
-                min_diario: valores.minDia,
                 max_diario: valores.maxDia,
                 actualizado_en: new Date().toISOString(),
             })
@@ -2145,37 +2138,9 @@ function inicioDiaLocalIsoAdmin() {
     return inicio.toISOString();
 }
 
-// Estado de cumplimiento por dimensión (semana/día) y combinado.
-function _estadoDimAdmin(count, min, max) {
-    if (min == null && max == null) return 'sin';
-    const c = count ?? 0;
-    if (min != null && c < min) return 'debajo';
-    if (max != null && c > max) return 'encima';
-    return 'en_zona';
-}
-
-const _PRIORIDAD_ADMIN = { debajo: 3, encima: 2, en_zona: 1, sin: 0 };
-function _peorEstadoAdmin(a, b) {
-    return (_PRIORIDAD_ADMIN[a] >= _PRIORIDAD_ADMIN[b]) ? a : b;
-}
-
-function evaluarEstadoAdmin(row) {
-    const estadoSem = _estadoDimAdmin(row.count_semana, row.min_semanal, row.max_semanal);
-    const estadoDia = _estadoDimAdmin(row.count_dia,    row.min_diario,  row.max_diario);
-    return {
-        estado: _peorEstadoAdmin(estadoSem, estadoDia),
-        estadoSem,
-        estadoDia,
-    };
-}
-
-const _COLOR_CHIP_ADMIN = { debajo: 'rojo', en_zona: 'verde', encima: 'azul' };
-
-function _textoChipAdmin(count, min, max, sufijo) {
-    if (min == null && max == null) return '';
-    const den = min != null ? min : max;
-    return `${count ?? 0}/${den} · ${sufijo}`;
-}
+// La lógica de cumplimiento ahora vive en clases/js/frecuencia.js
+// (helper compartido entre admin y cliente). Esto deja un único punto
+// de verdad para el color del chip y la fórmula tope_semanal = max_diario * 7.
 
 async function cargarProgresoAdmin() {
     const loading = document.getElementById('progreso-admin-loading');
@@ -2203,8 +2168,7 @@ async function cargarProgresoAdmin() {
         if (rachaResp.error) throw rachaResp.error;
 
         const filas = (progResp.data || []).filter(
-            (r) => r.min_semanal != null || r.max_semanal != null
-                || r.min_diario != null  || r.max_diario != null,
+            (r) => r.min_semanal != null || r.max_diario != null,
         );
 
         if (filas.length === 0) {
@@ -2227,10 +2191,10 @@ async function cargarProgresoAdmin() {
 
         // Orden: incumplidos → racha desc → nombre asc.
         filas.sort((a, b) => {
-            const ea = evaluarEstadoAdmin(a);
-            const eb = evaluarEstadoAdmin(b);
-            const cumpleA = ea.estado === 'en_zona' ? 1 : 0;
-            const cumpleB = eb.estado === 'en_zona' ? 1 : 0;
+            const ea = estadoChipFrecuencia(a.min_semanal, a.max_diario, a.count_7d);
+            const eb = estadoChipFrecuencia(b.min_semanal, b.max_diario, b.count_7d);
+            const cumpleA = ea === 'en_zona' ? 1 : 0;
+            const cumpleB = eb === 'en_zona' ? 1 : 0;
             if (cumpleA !== cumpleB) return cumpleA - cumpleB;
             const rA = rachaMap.get(a.ejercicio_asignado_id) || 0;
             const rB = rachaMap.get(b.ejercicio_asignado_id) || 0;
@@ -2255,19 +2219,23 @@ async function cargarProgresoAdmin() {
 }
 
 function renderProgresoAdminItem(row, rachaMap) {
-    const ev = evaluarEstadoAdmin(row);
-
-    const colorSem = _COLOR_CHIP_ADMIN[ev.estadoSem];
-    const colorDia = _COLOR_CHIP_ADMIN[ev.estadoDia];
-    const textoSem = _textoChipAdmin(row.count_semana, row.min_semanal, row.max_semanal, 'sem');
-    const textoDia = _textoChipAdmin(row.count_dia,    row.min_diario,  row.max_diario,  'hoy');
-
-    const chipSem = textoSem
-        ? `<span class="prog-admin-chip prog-admin-chip--${colorSem}">${escapeHTML(textoSem)}</span>`
+    // Chip principal: paridad visual con el cliente. Color por
+    // estadoChipFrecuencia (rojo/verde/azul/sin). Texto del helper.
+    const estado = estadoChipFrecuencia(row.min_semanal, row.max_diario, row.count_7d);
+    const color  = COLOR_CHIP_FRECUENCIA[estado];
+    const texto  = textoChipFrecuencia(row.min_semanal, row.max_diario, row.count_7d);
+    const chipPrincipal = (texto && estado !== 'sin')
+        ? `<span class="prog-admin-chip prog-admin-chip--${color}">${escapeHTML(texto)}</span>`
         : '';
-    const chipDia = textoDia
-        ? `<span class="prog-admin-chip prog-admin-chip--${colorDia}">${escapeHTML(textoDia)}</span>`
-        : '';
+
+    // Sub-info opcional: cuántas veces se registró hoy (sólo informativa,
+    // sin lógica de color). Útil para que el admin vea si el cliente
+    // se está acercando o pasando del tope diario.
+    let chipHoy = '';
+    if (row.max_diario != null && row.max_diario > 0) {
+        const hoy = Number(row.count_dia ?? 0);
+        chipHoy = `<span class="prog-admin-chip prog-admin-chip--hoy">${hoy} hoy</span>`;
+    }
 
     const racha = rachaMap.get(row.ejercicio_asignado_id) || 0;
     const rachaHTML = racha >= 2
@@ -2277,7 +2245,7 @@ function renderProgresoAdminItem(row, rachaMap) {
     return `
         <li class="prog-admin-item">
             <div class="prog-admin-item__nombre">${escapeHTML(row.nombre || 'Ejercicio')}</div>
-            <div class="prog-admin-item__meta">${chipSem}${chipDia}${rachaHTML}</div>
+            <div class="prog-admin-item__meta">${chipPrincipal}${chipHoy}${rachaHTML}</div>
         </li>
     `;
 }

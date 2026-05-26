@@ -3946,6 +3946,25 @@ body {
 .prog-admin-chip--rojo  { background: var(--color-red); }
 .prog-admin-chip--verde { background: var(--color-green); }
 .prog-admin-chip--azul  { background: #1F4FA8; }
+.prog-admin-chip--hoy   {
+    background: transparent;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    font-weight: 500;
+}
+
+/* Warning blando del modal de Frecuencia (mín > tope semanal alcanzable). */
+.frecuencia-warning {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--color-warning);
+    background: rgba(212, 160, 23, 0.08);
+    border: 1px solid rgba(212, 160, 23, 0.25);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 8px 0 0;
+    line-height: 1.4;
+}
 
 .prog-admin-racha {
     display: inline-flex;
