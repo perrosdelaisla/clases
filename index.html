@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=37">
+    <link rel="stylesheet" href="./css/styles.css?v=38">
 </head>
 <body class="app-cliente">
 
@@ -1021,6 +1021,11 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="./js/vendor/supabase.umd.js?v=1"></script>
+    <!-- Tutorial / tour de bienvenida. Cargamos los pasos antes del motor
+         para que `window.PDLI_TUTORIAL_PASOS` exista cuando el motor se
+         inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
+    <script src="./js/tutorial-pasos.js?v=1"></script>
+    <script src="./js/tutorial.js?v=1"></script>
     <script type="module" src="./js/app.js?v=57"></script>
 </body>
 </html>

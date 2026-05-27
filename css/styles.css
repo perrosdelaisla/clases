@@ -4110,3 +4110,144 @@ textarea.input-pdli {
     );
     transition: background-image 2s ease-in-out;
 }
+
+/* =====================================================================
+   Tutorial (tour) — botón discreto del header + overlay con tooltips
+   y narración por TTS. Ver js/tutorial.js + js/tutorial-pasos.js.
+   ===================================================================== */
+
+.tutorial-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--color-on-dark-muted);
+    background: var(--color-dark-2);
+    color: var(--color-on-dark);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+    padding: 0;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.tutorial-btn svg { width: 20px; height: 20px; }
+.tutorial-btn:hover,
+.tutorial-btn:focus-visible {
+    background: #2f2f2f;
+    border-color: var(--color-on-dark);
+    outline: none;
+}
+.tutorial-btn:active { transform: scale(0.96); }
+
+html.pdli-tour-open,
+html.pdli-tour-open body { overflow: hidden; }
+
+.pdli-tour { position: fixed; inset: 0; z-index: 9000; pointer-events: auto; }
+.pdli-tour[hidden] { display: none; }
+
+.pdli-tour__overlay {
+    position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto;
+}
+
+.pdli-tour__tooltip {
+    position: absolute;
+    width: min(360px, calc(100vw - 24px));
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-radius: 14px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+    padding: 18px 18px 14px;
+    font-family: var(--font-body);
+    pointer-events: auto;
+    z-index: 1;
+}
+.pdli-tour__tooltip--center {
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+
+.pdli-tour__arrow {
+    position: absolute;
+    width: 14px; height: 14px;
+    background: var(--color-bg);
+    transform: rotate(45deg);
+}
+.pdli-tour__arrow[data-pos="top"]    { top: -7px; box-shadow: -2px -2px 4px rgba(0,0,0,0.05); }
+.pdli-tour__arrow[data-pos="bottom"] { bottom: -7px; box-shadow: 2px 2px 4px rgba(0,0,0,0.05); }
+
+.pdli-tour__contador {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-red);
+    margin-bottom: 6px;
+}
+.pdli-tour__titulo {
+    font-family: var(--font-display);
+    font-size: 1.55rem;
+    line-height: 1.05;
+    letter-spacing: 0.02em;
+    color: var(--color-text);
+    margin: 0 0 6px;
+    text-transform: uppercase;
+}
+.pdli-tour__texto {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: var(--color-text);
+    margin: 0 0 14px;
+}
+
+.pdli-tour__actions {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap;
+}
+.pdli-tour__nav { display: flex; align-items: center; gap: 6px; }
+
+.pdli-tour__btn {
+    font-family: var(--font-body);
+    font-size: 0.9rem; font-weight: 600;
+    border: 0; border-radius: 999px;
+    padding: 8px 14px; cursor: pointer;
+    background: var(--color-red); color: #fff;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+.pdli-tour__btn:hover, .pdli-tour__btn:focus-visible {
+    background: var(--color-red-dk); outline: none;
+}
+.pdli-tour__btn:disabled { opacity: 0.4; cursor: default; }
+.pdli-tour__btn--ghost {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid rgba(0,0,0,0.12);
+}
+.pdli-tour__btn--ghost:hover, .pdli-tour__btn--ghost:focus-visible {
+    background: rgba(0,0,0,0.05); color: var(--color-text);
+}
+
+.pdli-tour__play {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-body);
+    font-size: 0.85rem; font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 999px;
+    padding: 6px 12px 6px 10px;
+    background: rgba(0,0,0,0.04);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.pdli-tour__play svg { width: 16px; height: 16px; }
+.pdli-tour__play:hover, .pdli-tour__play:focus-visible {
+    background: rgba(0,0,0,0.08); outline: none;
+}
+.pdli-tour__play[data-estado="on"] {
+    background: var(--color-red); color: #fff; border-color: var(--color-red);
+}
+
+@media (max-width: 380px) {
+    .pdli-tour__actions { flex-direction: column; align-items: stretch; }
+    .pdli-tour__nav { justify-content: space-between; }
+}
