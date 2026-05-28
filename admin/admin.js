@@ -178,10 +178,27 @@ async function afterLogin(session) {
         onChange: (tab) => activarTab(tab),
     });
 
-    // Default 'agenda'. Guard: si tab guardada es 'inicio' (oculto), fallback al default.
-    let tabGuardada = localStorage.getItem('pdli_admin_tab') || 'agenda';
-    if (tabGuardada === 'inicio') tabGuardada = 'agenda';
-    activarTab(tabGuardada);
+    // Tab inicial: prioridad al #hash de la URL (viene de tocar una
+    // notificación, ej. #avisos), luego la guardada, luego 'agenda'.
+    const TABS_VALIDOS = ['agenda', 'avisos', 'clientes', 'stats', 'catalogo'];
+    const hashTab = (location.hash || '').replace('#', '');
+    let tabInicial = TABS_VALIDOS.includes(hashTab)
+        ? hashTab
+        : (localStorage.getItem('pdli_admin_tab') || 'agenda');
+    if (tabInicial === 'inicio') tabInicial = 'agenda';
+    activarTab(tabInicial);
+
+    // Navegación desde notificación push (ventana ya abierta):
+    // el SW manda {tipo:'pdli_navegar', url}; abrimos el tab del #hash.
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', (ev) => {
+            const d = ev.data || {};
+            if (d.tipo === 'pdli_navegar' && typeof d.url === 'string') {
+                const t = (d.url.split('#')[1] || '').trim();
+                if (TABS_VALIDOS.includes(t)) activarTab(t);
+            }
+        });
+    }
 
     // Precarga del badge "Avisos" sin pintar el panel (corre en background,
     // tolera fallos para no romper el bootstrap del admin).

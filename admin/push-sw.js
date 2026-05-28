@@ -23,7 +23,14 @@ self.addEventListener('notificationclick', (event) => {
   const url = (event.notification.data && event.notification.data.url) || '/clases/admin/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const c of list) { if (c.url.includes('/admin') && 'focus' in c) return c.focus(); }
+      for (const c of list) {
+        if (c.url.includes('/admin') && 'focus' in c) {
+          // Ventana ya abierta: enfocar Y decirle a dónde navegar
+          c.postMessage({ tipo: 'pdli_navegar', url });
+          return c.focus();
+        }
+      }
+      // Sin ventana: abrir con la URL (el #hash lo lee admin.js al cargar)
       if (clients.openWindow) return clients.openWindow(url);
     })
   );
