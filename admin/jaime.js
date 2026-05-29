@@ -1,18 +1,7 @@
+import { supabase } from '../js/supabase.js';
+
 const MALLORCA_D = 'M3,47 L13,30 L34,19 L60,16 L77,19 L88,9 L83,23 L91,38 L83,53 L71,63 L60,65 L52,57 L43,65 L27,63 L15,55 Z';
 const LOAD_STEPS = ['Leyendo evaluación SC', 'Revisando ejercicios asignados', 'Eligiendo del catálogo'];
-
-// MOCK Bloque A — en Bloque B esto viene de la edge function asistente-admin.
-const MOCK = {
-  intro: 'Kira viene con lo emocional muy abajo. Te tiro tres del catálogo para arrancar por ahí.',
-  estado: ['Malinois, 7 meses · cliente activa.', 'Rutina activa: Déjalo estar · Aguanta y gana.', 'Todavía sin reportes del cliente.'],
-  sc: { tiene: true, fecha: '21/05', total: 68, bandera: true,
-        dims: [{ k: 'Emocional', v: 39, low: true }, { k: 'Física', v: 89, low: false }, { k: 'Cognitiva', v: 89, low: false }] },
-  sugerencias: [
-    { nombre: 'Espacio de calma', why: 'Apoya la autorregulación; encaja con lo emocional bajo en un perro de alta energía.' },
-    { nombre: 'Intercambios afectivos calmantes', why: 'Trabaja el vínculo y la calma con el tutor.' },
-    { nombre: 'Lista jerárquica de situaciones de ansiedad', why: 'Mapea disparadores antes de exponer.' },
-  ],
-};
 
 let ctx = { perroId: null, clienteId: null, nombre: '' };
 let fabEl = null;
@@ -59,8 +48,38 @@ function abrir() {
   overlay.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', cerrar));
   document.body.appendChild(overlay);
   renderLoader();
-  // En Bloque B, acá va la llamada real; por ahora simula la lectura.
-  setTimeout(() => renderContenido(MOCK), 1980);
+  cargarYrender();
+}
+
+async function cargarYrender() {
+  const MIN_LOADER = 1860;
+  const t0 = Date.now();
+  let payload = null, errMsg = null;
+  try {
+    const { data, error } = await supabase.functions.invoke('asistente-admin', {
+      body: { perro_id: ctx.perroId, cliente_id: ctx.clienteId },
+    });
+    let res = data;
+    if (error?.context && typeof error.context.json === 'function') {
+      res = await error.context.json().catch(() => null);
+    }
+    if (res?.ok) payload = res;
+    else errMsg = res?.error || error?.message || 'No pude leer el caso.';
+  } catch (e) {
+    errMsg = 'No pude leer el caso.';
+  }
+  const espera = Math.max(0, MIN_LOADER - (Date.now() - t0));
+  setTimeout(() => {
+    if (!document.getElementById('jm-body')) return; // el panel se cerró
+    if (payload) renderContenido(payload);
+    else renderError(errMsg);
+  }, espera);
+}
+
+function renderError(msg) {
+  const body = document.getElementById('jm-body');
+  if (!body) return;
+  body.innerHTML = `<div class="jm-pad jm-fade"><div class="jm-noeval"><div class="t">No pude leer el caso.</div><div class="d">${msg || 'Probá de nuevo en un momento.'}</div></div></div>`;
 }
 
 function renderLoader() {
@@ -131,11 +150,13 @@ function renderContenido(data) {
 function cardSugerencia(s) {
   const card = document.createElement('div');
   card.className = 'jm-card';
+  card.dataset.ejercicioId = s.id || '';
+  card.dataset.codigo = s.codigo || '';
   const pintarOpen = () => {
     card.className = 'jm-card';
     card.innerHTML = `
       <div class="top"><div class="ej">${s.nombre}</div></div>
-      <div class="why">${s.why}</div>
+      <div class="why">${s.por_que}</div>
       <div class="jm-actions"><button class="jm-assign">Asignar</button><button class="jm-discard">Descartar</button></div>`;
     card.querySelector('.jm-assign').addEventListener('click', pintarAssigned);
     card.querySelector('.jm-discard').addEventListener('click', pintarDismissed);
