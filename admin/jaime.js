@@ -1,13 +1,13 @@
 import { supabase } from '../js/supabase.js';
 
-const MALLORCA_D = 'M3,47 L13,30 L34,19 L60,16 L77,19 L88,9 L83,23 L91,38 L83,53 L71,63 L60,65 L52,57 L43,65 L27,63 L15,55 Z';
+const MALLORCA_D = 'M59.5,77.3 L51.9,65.9 L35.6,63.3 L32.6,58.7 L34.1,46.6 L28.4,40.9 L24.6,40.2 L16.3,43.9 L12.5,50.8 L9.8,48.1 L9.1,42.0 L3.4,41.7 L0.0,37.5 L0.0,34.5 L15.5,24.2 L21.6,22.7 L40.5,8.3 L54.9,3.0 L68.6,2.3 L73.9,0.0 L73.1,2.3 L67.4,4.9 L69.3,9.8 L76.5,8.7 L74.6,12.9 L69.7,13.3 L70.5,18.6 L78.4,25.8 L83.7,25.0 L89.8,20.5 L100.0,28.4 L97.7,35.2 L92.4,39.0 L91.7,44.3 L82.6,52.7 L76.5,66.3 L59.5,77.3 Z';
 const LOAD_STEPS = ['Leyendo evaluación SC', 'Revisando ejercicios asignados', 'Eligiendo del catálogo'];
 
 let ctx = { perroId: null, clienteId: null, nombre: '' };
 let fabEl = null;
 
 function svgMallorca(size, color) {
-  return `<svg width="${size}" height="${size * 72 / 95}" viewBox="0 0 95 72" fill="${color}" aria-hidden="true" style="display:block"><path d="${MALLORCA_D}"/></svg>`;
+  return `<svg width="${size}" height="${size * 77.3 / 100}" viewBox="0 0 100 77.3" fill="${color}" aria-hidden="true" style="display:block"><path d="${MALLORCA_D}"/></svg>`;
 }
 
 export function initJaime(context) {
