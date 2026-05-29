@@ -6,6 +6,11 @@ const LOAD_STEPS = ['Leyendo evaluación SC', 'Revisando ejercicios asignados', 
 let ctx = { perroId: null, clienteId: null, nombre: '' };
 let fabEl = null;
 
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let casoActual = null;
+let notasCargadas = null;
+let recog = null, dictando = false;
+
 function svgMallorca(size, color) {
   return `<svg width="${size}" height="${size * 77.3 / 100}" viewBox="0 0 100 77.3" fill="${color}" aria-hidden="true" style="display:block"><path d="${MALLORCA_D}"/></svg>`;
 }
@@ -43,9 +48,14 @@ function abrir() {
         </div>
         <button class="jm-x" data-close aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3 L11 11 M11 3 L3 11"/></svg></button>
       </div>
+      <div class="jm-tabs" id="jm-tabs" hidden>
+        <button class="jm-tab active" data-tab="sugerencias">Sugerencias</button>
+        <button class="jm-tab" data-tab="notas">Notas</button>
+      </div>
       <div class="jm-body" id="jm-body"></div>
     </div>`;
   overlay.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', cerrar));
+  overlay.querySelectorAll('.jm-tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
   document.body.appendChild(overlay);
   renderLoader();
   cargarYrender();
@@ -71,8 +81,14 @@ async function cargarYrender() {
   const espera = Math.max(0, MIN_LOADER - (Date.now() - t0));
   setTimeout(() => {
     if (!document.getElementById('jm-body')) return; // el panel se cerró
-    if (payload) renderContenido(payload);
-    else renderError(errMsg);
+    if (payload) {
+      casoActual = payload;
+      const tabs = document.getElementById('jm-tabs');
+      if (tabs) tabs.hidden = false;
+      setTab('sugerencias');
+    } else {
+      renderError(errMsg);
+    }
   }, espera);
 }
 
@@ -217,4 +233,109 @@ function cardSugerencia(s) {
 
   pintarOpen();
   return card;
+}
+
+function setTab(tab) {
+  document.querySelectorAll('.jm-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+  if (tab === 'notas') renderNotas();
+  else if (casoActual) renderContenido(casoActual);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+const MIC_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+
+async function renderNotas() {
+  const body = document.getElementById('jm-body');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="jm-pad jm-fade">
+      <div class="jm-notas-lista" id="jm-notas-lista"><div class="jm-notas-cargando">Cargando notas…</div></div>
+      <div class="jm-nota-input">
+        <textarea id="jm-nota-texto" class="jm-nota-textarea" placeholder="Dejá una nota de este perro…" rows="3"></textarea>
+        <div class="jm-nota-acciones">
+          ${SR ? `<button class="jm-mic" id="jm-mic" aria-label="Dictar" title="Dictar">${MIC_SVG}</button>` : ''}
+          <button class="jm-nota-guardar" id="jm-nota-guardar">Guardar</button>
+        </div>
+      </div>
+    </div>`;
+  try {
+    const { data, error } = await supabase.from('eventos')
+      .select('id, payload, created_at')
+      .eq('perro_id', ctx.perroId).eq('tipo', 'nota_caso')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    notasCargadas = data || [];
+  } catch (e) {
+    console.warn('[jaime] no se pudieron cargar notas:', e);
+    notasCargadas = [];
+  }
+  pintarListaNotas();
+  document.getElementById('jm-nota-guardar')?.addEventListener('click', onGuardarNota);
+  if (SR) bindDictado();
+}
+
+function pintarListaNotas() {
+  const cont = document.getElementById('jm-notas-lista');
+  if (!cont) return;
+  if (!notasCargadas || notasCargadas.length === 0) {
+    cont.innerHTML = '<div class="jm-notas-vacio">Todavía no dejaste notas de este perro.</div>';
+    return;
+  }
+  cont.innerHTML = notasCargadas.map((n) => {
+    const f = new Date(n.created_at);
+    const fecha = f.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+      ' · ' + f.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const texto = (n.payload && n.payload.texto) ? n.payload.texto : '';
+    return `<div class="jm-nota-item"><div class="jm-nota-fecha">${fecha}</div><div class="jm-nota-cuerpo">${escapeHtml(texto)}</div></div>`;
+  }).join('');
+}
+
+async function onGuardarNota() {
+  const ta = document.getElementById('jm-nota-texto');
+  const btn = document.getElementById('jm-nota-guardar');
+  const texto = (ta?.value || '').trim();
+  if (!texto) return;
+  if (dictando && recog) { try { recog.stop(); } catch (e) {} }
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const { error } = await supabase.from('eventos').insert({
+      perro_id: ctx.perroId,
+      cliente_id: ctx.clienteId,
+      tipo: 'nota_caso',
+      payload: { texto },
+      creado_por: 'charly',
+    });
+    if (error) throw error;
+    notasCargadas = null;
+    await renderNotas();
+  } catch (e) {
+    console.error('[jaime] error guardando nota:', e);
+    btn.disabled = false; btn.textContent = 'Guardar';
+    if (ctx.toast) ctx.toast('No se pudo guardar la nota', 'error');
+  }
+}
+
+function bindDictado() {
+  const mic = document.getElementById('jm-mic');
+  if (!mic) return;
+  mic.addEventListener('click', () => {
+    if (dictando) { try { recog && recog.stop(); } catch (e) {} return; }
+    const ta = document.getElementById('jm-nota-texto');
+    const base = ta.value;
+    recog = new SR();
+    recog.lang = 'es-ES';
+    recog.interimResults = true;
+    recog.continuous = true;
+    recog.onresult = (ev) => {
+      let txt = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+      ta.value = (base ? base + ' ' : '') + txt;
+    };
+    recog.onend = () => { dictando = false; mic.classList.remove('on'); };
+    recog.onerror = () => { dictando = false; mic.classList.remove('on'); };
+    try { recog.start(); dictando = true; mic.classList.add('on'); } catch (e) {}
+  });
 }

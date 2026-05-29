@@ -105,3 +105,21 @@
 .jm-step .t{font-family:var(--font-body);font-size:14.5px;font-weight:500;color:var(--jm-txt3)}
 .jm-step.on .t{color:var(--jm-txt);font-weight:600}
 .jm-step.done .t{color:var(--jm-txt2)}
+
+/* ---- Pestañas + vista Notas ---- */
+.jm-tabs{display:flex;gap:24px;padding:12px 22px 0;border-bottom:1px solid var(--jm-line-soft);flex-shrink:0}
+.jm-tab{background:none;border:none;cursor:pointer;font-family:var(--font-display);font-size:18px;letter-spacing:.5px;color:var(--jm-txt2);padding-bottom:10px;border-bottom:2px solid transparent}
+.jm-tab.active{color:var(--jm-txt);border-bottom-color:var(--jm-rojo)}
+.jm-notas-lista{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.jm-notas-cargando,.jm-notas-vacio{font-family:var(--font-body);font-size:13.5px;color:var(--jm-txt3);padding:8px 0}
+.jm-nota-item{padding:12px 14px;border-radius:10px;background:var(--jm-surface);border:1px solid var(--jm-line)}
+.jm-nota-fecha{font-family:var(--font-body);font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--jm-txt3);margin-bottom:5px}
+.jm-nota-cuerpo{font-family:var(--font-body);font-size:14px;line-height:1.5;color:var(--jm-txt);white-space:pre-wrap}
+.jm-nota-input{display:flex;flex-direction:column;gap:10px}
+.jm-nota-textarea{width:100%;resize:vertical;min-height:64px;padding:12px 14px;border-radius:10px;border:1px solid var(--jm-line);background:var(--jm-surface);color:var(--jm-txt);font-family:var(--font-body);font-size:14px;line-height:1.5;box-sizing:border-box}
+.jm-nota-textarea:focus{outline:none;border-color:var(--jm-rojo)}
+.jm-nota-acciones{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.jm-mic{width:40px;height:40px;border-radius:50%;border:1px solid var(--jm-line);background:transparent;cursor:pointer;color:var(--jm-txt2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.jm-mic.on{background:var(--jm-rojo);border-color:var(--jm-rojo);color:var(--jm-crema);animation:jmDot 1.1s ease-in-out infinite}
+.jm-nota-guardar{background:var(--jm-rojo);color:var(--jm-crema);border:none;cursor:pointer;padding:10px 22px;border-radius:9px;font-family:var(--font-display);font-size:17px;letter-spacing:1px;text-transform:uppercase}
+.jm-nota-guardar:disabled{opacity:.6}
