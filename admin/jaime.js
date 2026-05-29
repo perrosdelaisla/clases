@@ -9,7 +9,7 @@ let fabEl = null;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let casoActual = null;
 let notasCargadas = null;
-let recog = null, dictando = false;
+let recog = null, dictando = false, stopManual = false;
 
 function svgMallorca(size, color) {
   return `<svg width="${size}" height="${size * 77.3 / 100}" viewBox="0 0 100 77.3" fill="${color}" aria-hidden="true" style="display:block"><path d="${MALLORCA_D}"/></svg>`;
@@ -298,7 +298,7 @@ async function onGuardarNota() {
   const btn = document.getElementById('jm-nota-guardar');
   const texto = (ta?.value || '').trim();
   if (!texto) return;
-  if (dictando && recog) { try { recog.stop(); } catch (e) {} }
+  if (dictando && recog) { stopManual = true; dictando = false; try { recog.stop(); } catch (e) {} }
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     const { error } = await supabase.from('eventos').insert({
@@ -322,20 +322,54 @@ function bindDictado() {
   const mic = document.getElementById('jm-mic');
   if (!mic) return;
   mic.addEventListener('click', () => {
-    if (dictando) { try { recog && recog.stop(); } catch (e) {} return; }
-    const ta = document.getElementById('jm-nota-texto');
-    const base = ta.value;
-    recog = new SR();
-    recog.lang = 'es-ES';
-    recog.interimResults = true;
-    recog.continuous = true;
-    recog.onresult = (ev) => {
-      let txt = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
-      ta.value = (base ? base + ' ' : '') + txt;
-    };
-    recog.onend = () => { dictando = false; mic.classList.remove('on'); };
-    recog.onerror = () => { dictando = false; mic.classList.remove('on'); };
-    try { recog.start(); dictando = true; mic.classList.add('on'); } catch (e) {}
+    // Si ya está dictando, el usuario quiere PARAR de verdad.
+    if (dictando) {
+      stopManual = true;
+      try { recog && recog.stop(); } catch (e) {}
+      dictando = false;
+      mic.classList.remove('on');
+      return;
+    }
+    // Arranca el dictado.
+    stopManual = false;
+    dictando = true;
+    mic.classList.add('on');
+    arrancarRecog();
   });
+}
+
+function arrancarRecog() {
+  const ta = document.getElementById('jm-nota-texto');
+  const mic = document.getElementById('jm-mic');
+  if (!ta) return;
+  recog = new SR();
+  recog.lang = 'es-ES';
+  recog.interimResults = true;
+  recog.continuous = true;
+  let finalAcum = ta.value;
+  recog.onresult = (ev) => {
+    let interim = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const t = ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) finalAcum = (finalAcum ? finalAcum + ' ' : '') + t.trim();
+      else interim += t;
+    }
+    ta.value = finalAcum + (interim ? ' ' + interim : '');
+  };
+  recog.onend = () => {
+    // Si el navegador cortó por silencio y NO fue Stop manual, reanudamos.
+    if (dictando && !stopManual) {
+      try { recog.start(); } catch (e) { dictando = false; mic && mic.classList.remove('on'); }
+    } else {
+      dictando = false;
+      mic && mic.classList.remove('on');
+    }
+  };
+  recog.onerror = (e) => {
+    // 'no-speech' o 'aborted' por silencio: dejamos que onend decida reanudar.
+    if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')) {
+      stopManual = true; dictando = false; mic && mic.classList.remove('on');
+    }
+  };
+  try { recog.start(); } catch (e) {}
 }
