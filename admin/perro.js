@@ -10,7 +10,7 @@
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initJaime } from './jaime.js?v=2';
+import { initJaime } from './jaime.js?v=3';
 import {
     estadoChipFrecuencia,
     COLOR_CHIP_FRECUENCIA,
@@ -140,7 +140,20 @@ async function cargarYRenderPerro(perroId) {
     state.perro = data;
     renderPerro(data);
     showScreen('perro');
-    initJaime({ perroId: state.perroId, clienteId: data.clientes?.id ?? data.cliente_id ?? null, nombre: data.nombre || '' });
+    initJaime({
+        perroId: state.perroId,
+        clienteId: data.clientes?.id ?? data.cliente_id ?? null,
+        nombre: data.nombre || '',
+        onAsignar: async (ejercicioId) => {
+            await toggleOn(state.perroId, ejercicioId);
+            await renderEjerciciosActivos();
+        },
+        onDeshacer: async (ejercicioId) => {
+            await toggleOff(state.perroId, ejercicioId);
+            await renderEjerciciosActivos();
+        },
+        toast: (msg, tipo) => toast(msg, tipo),
+    });
 }
 
 function renderPerro(p) {

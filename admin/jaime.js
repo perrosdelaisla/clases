@@ -147,33 +147,74 @@ function renderContenido(data) {
   data.sugerencias.forEach((s) => cont.appendChild(cardSugerencia(s)));
 }
 
+function registrarEvento(tipo, ejercicioId, codigo) {
+  supabase.from('eventos').insert({
+    perro_id: ctx.perroId,
+    cliente_id: ctx.clienteId,
+    tipo,
+    payload: { ejercicio_id: ejercicioId, codigo, origen: 'jaime' },
+    creado_por: 'asistente',
+  }).then(({ error }) => { if (error) console.warn('[jaime] no se pudo registrar evento:', error); });
+}
+
 function cardSugerencia(s) {
   const card = document.createElement('div');
   card.className = 'jm-card';
   card.dataset.ejercicioId = s.id || '';
   card.dataset.codigo = s.codigo || '';
+
   const pintarOpen = () => {
     card.className = 'jm-card';
     card.innerHTML = `
       <div class="top"><div class="ej">${s.nombre}</div></div>
       <div class="why">${s.por_que}</div>
       <div class="jm-actions"><button class="jm-assign">Asignar</button><button class="jm-discard">Descartar</button></div>`;
-    card.querySelector('.jm-assign').addEventListener('click', pintarAssigned);
+    card.querySelector('.jm-assign').addEventListener('click', onAsignarClick);
     card.querySelector('.jm-discard').addEventListener('click', pintarDismissed);
   };
+
+  const onAsignarClick = async (e) => {
+    const btn = e.currentTarget;
+    if (!card.dataset.ejercicioId) { if (ctx.toast) ctx.toast('No se pudo identificar el ejercicio', 'error'); return; }
+    btn.disabled = true; btn.textContent = 'Asignando…';
+    try {
+      if (ctx.onAsignar) await ctx.onAsignar(card.dataset.ejercicioId);
+      registrarEvento('ejercicio_asignado', card.dataset.ejercicioId, card.dataset.codigo);
+      pintarAssigned();
+    } catch (err) {
+      console.error('[jaime] error asignando:', err);
+      btn.disabled = false; btn.textContent = 'Asignar';
+      if (ctx.toast) ctx.toast('No se pudo asignar', 'error');
+    }
+  };
+
   const pintarAssigned = () => {
     card.className = 'jm-card assigned';
     card.innerHTML = `
       <div class="top"><div class="jm-check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 L5 9 L9.5 3.5"/></svg></div><div class="ej">${s.nombre}</div></div>
       <div class="jm-assigned-row"><span class="ok">Asignado a la rutina</span><button class="jm-undo">Deshacer</button></div>`;
-    card.querySelector('.jm-undo').addEventListener('click', pintarOpen);
-    // En Bloque C: acá se llama a toggleOn(...) y se registra en eventos.
+    card.querySelector('.jm-undo').addEventListener('click', onDeshacerClick);
   };
+
+  const onDeshacerClick = async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      if (ctx.onDeshacer) await ctx.onDeshacer(card.dataset.ejercicioId);
+      pintarOpen();
+    } catch (err) {
+      console.error('[jaime] error deshaciendo:', err);
+      btn.disabled = false;
+      if (ctx.toast) ctx.toast('No se pudo deshacer', 'error');
+    }
+  };
+
   const pintarDismissed = () => {
     card.className = 'jm-card dismissed';
     card.innerHTML = `<span class="ej">${s.nombre}</span><button class="jm-undo">Deshacer</button>`;
     card.querySelector('.jm-undo').addEventListener('click', pintarOpen);
   };
+
   pintarOpen();
   return card;
 }
