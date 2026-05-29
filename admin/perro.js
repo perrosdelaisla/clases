@@ -10,6 +10,7 @@
 import { supabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
+import { initJaime } from './jaime.js';
 import {
     estadoChipFrecuencia,
     COLOR_CHIP_FRECUENCIA,
@@ -139,6 +140,7 @@ async function cargarYRenderPerro(perroId) {
     state.perro = data;
     renderPerro(data);
     showScreen('perro');
+    initJaime({ perroId: state.perroId, clienteId: data.clientes?.id ?? data.cliente_id ?? null, nombre: data.nombre || '' });
 }
 
 function renderPerro(p) {
