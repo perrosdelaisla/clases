@@ -1,11 +1,11 @@
 // =====================================================================
 // asistente-admin — edge function (proyecto sydzfwwiruxqaxojymdz).
 // Cerebro del asistente interno "Jaime" del admin de Clases.
-// Verifica admin (patrón de invitar-cliente), lee el contexto del perro
-// (datos, histórico SC, asignados, cumplimiento) y el catálogo, y arma un
-// payload de presentación: números EXACTOS de la base + texto de la IA +
-// sugerencias VALIDADAS contra el catálogo (código inexistente se descarta).
-// NO escribe nada: solo lee y sugiere. El "Asignar" lo hace el admin.
+// v3: suma al contexto las NOTAS de caso de Charly (eventos tipo nota_caso)
+// y los MENSAJES del cliente (tabla mensajes), además del histórico SC, los
+// asignados y el cumplimiento. Arma un payload de presentación: números
+// EXACTOS de la base + texto de la IA + sugerencias VALIDADAS contra el
+// catálogo. NO escribe nada: solo lee y sugiere.
 // =====================================================================
 
 import { createClient } from '@supabase/supabase-js';
@@ -22,12 +22,14 @@ En cada consulta recibís el contexto de UN perro:
 - Su HISTÓRICO de evaluaciones de Salud Comportamental, ordenado de la más antigua a la más reciente. Cada una tiene scores de 0 a 100 en cuatro dimensiones (física, emocional, social, cognitiva), score total y si tiene bandera roja.
 - Los ejercicios que ya tiene asignados.
 - Su cumplimiento reciente (sesiones de práctica registradas por el cliente).
+- TUS NOTAS de caso anteriores sobre este perro (tu propia mirada profesional de clases pasadas). Son la fuente más valiosa: tenélas muy en cuenta.
+- MENSAJES del cliente sobre este perro (lo que el tutor reportó por su cuenta). Es la voz del dueño; úsala como contexto, con criterio.
 - El CATÁLOGO COMPLETO de ejercicios disponibles, cada uno con código, nombre, categoría y descripción.
 
 Tu trabajo, cruzando TODOS esos datos antes de responder:
-1. Escribir una intro breve (1-2 frases) que abra el caso: con qué viene el perro y por dónde proponés arrancar. Si hay 2 o más evaluaciones, mencioná la evolución (mejoró/empeoró/se mantuvo). Si hay una sola, no inventes evolución.
+1. Escribir una intro breve (1-2 frases) que abra el caso: con qué viene el perro y por dónde proponés arrancar. Si hay 2 o más evaluaciones, mencioná la evolución. Si tus notas previas o lo que dijo el cliente aportan algo clave, reflejálo.
 2. Resumir el estado del caso en EXACTAMENTE 3 líneas cortas.
-3. Sugerir 2 o 3 ejercicios para trabajar, priorizando la dimensión SC más baja, teniendo en cuenta lo que ya tiene asignado y si viene cumpliendo.
+3. Sugerir 2 o 3 ejercicios para trabajar, priorizando la dimensión SC más baja, teniendo en cuenta lo que ya tiene asignado, si viene cumpliendo, tus notas y lo que reportó el cliente.
 
 REGLAS QUE NUNCA ROMPÉS:
 - Solo sugerís ejercicios que estén en el CATÁLOGO que te paso, referenciados por su código EXACTO. JAMÁS inventás un ejercicio que no esté en la lista.
@@ -132,6 +134,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .select('iniciada_en, cerrada_en, estado_emocional_final, nota_cierre')
       .eq('perro_id', perroId).order('iniciada_en', { ascending: false }).limit(10);
 
+    const { data: notas } = await admin
+      .from('eventos')
+      .select('payload, created_at')
+      .eq('perro_id', perroId).eq('tipo', 'nota_caso')
+      .order('created_at', { ascending: false }).limit(20);
+
+    const { data: mensajes } = await admin
+      .from('mensajes')
+      .select('contenido, created_at')
+      .eq('perro_id', perroId).not('autor_usuario_cliente_id', 'is', null)
+      .order('created_at', { ascending: false }).limit(30);
+
     const { data: catalogo } = await admin
       .from('ejercicios')
       .select('id, codigo, nombre, categoria, descripcion')
@@ -143,6 +157,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       'HISTÓRICO SC (antigua → reciente):', JSON.stringify(evals ?? []),
       'YA ASIGNADOS:', JSON.stringify((asignados ?? []).map((a: any) => a.ejercicios)),
       'CUMPLIMIENTO (últimas prácticas):', JSON.stringify(practicas ?? []),
+      'TUS NOTAS DE CASO (reciente primero):', JSON.stringify((notas ?? []).map((n: any) => ({ fecha: n.created_at, texto: n.payload?.texto ?? '' }))),
+      'MENSAJES DEL CLIENTE (reciente primero):', JSON.stringify((mensajes ?? []).map((m: any) => ({ fecha: m.created_at, texto: m.contenido ?? '' }))),
       'CATÁLOGO DISPONIBLE:', JSON.stringify((catalogo ?? []).map((e: any) => ({ codigo: e.codigo, nombre: e.nombre, categoria: e.categoria, descripcion: e.descripcion }))),
     ].join('\n');
 
