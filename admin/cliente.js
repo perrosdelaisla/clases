@@ -89,10 +89,11 @@ async function cargarYRender(clienteId) {
     // SELECT * para no asumir nombres de columna más allá de los necesarios.
     // El count de usuarios_cliente decide el texto del botón de invitar:
     // "ya invitado" = el cliente tiene al menos un usuario vinculado.
-    const [clienteRes, perrosRes, usuariosRes] = await Promise.all([
+    const [clienteRes, perrosRes, usuariosRes, realizadasRes] = await Promise.all([
         supabase.from('clientes').select('*').eq('id', clienteId).maybeSingle(),
         supabase.from('perros').select('*').eq('cliente_id', clienteId).order('created_at', { ascending: true }),
         supabase.from('usuarios_cliente').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId),
+        supabase.from('citas').select('id', { count: 'exact', head: true }).eq('cliente_id', clienteId).eq('estado', 'realizada'),
     ]);
 
     if (clienteRes.error) {
@@ -119,6 +120,8 @@ async function cargarYRender(clienteId) {
     const tieneUsuario = (usuariosRes.count || 0) >= 1;
 
     renderCliente(clienteRes.data, tieneUsuario);
+    const elRealizadas = document.getElementById('cliente-clases-realizadas');
+    if (elRealizadas) elRealizadas.textContent = realizadasRes.error ? '—' : String(realizadasRes.count || 0);
     renderPerros(perrosRes.data || []);
     showScreen('cliente');
 }
