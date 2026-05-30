@@ -4397,3 +4397,10 @@ body {
         padding-bottom: 4px;
     }
 }
+
+.nota-feed__item{padding:14px 16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);margin-bottom:10px;}
+.nota-feed__head{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap;align-items:baseline;}
+.nota-feed__fecha{font-size:12px;font-weight:600;color:var(--color-muted);letter-spacing:.3px;}
+.nota-feed__ej{font-size:12px;font-weight:600;color:var(--color-red);}
+.nota-feed__texto{font-size:14px;line-height:1.5;color:var(--color-text);white-space:pre-wrap;margin:0;}
+.nota-feed__tranq{display:inline-block;margin-top:8px;font-size:11px;color:var(--color-muted);background:var(--color-surface-2);padding:3px 9px;border-radius:999px;}

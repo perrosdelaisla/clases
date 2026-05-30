@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=48">
+    <link rel="stylesheet" href="./styles.css?v=49">
     <link rel="stylesheet" href="./jaime.css?v=2">
 </head>
 <body>
@@ -235,13 +235,9 @@
                     <div id="historico-lista" hidden></div>
                 </section>
                 <section class="tab-panel" data-panel="notas" role="tabpanel" hidden>
-                    <div class="placeholder">
-                        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9"/>
-                            <path d="M12 7 V12 L15 14"/>
-                        </svg>
-                        <p>Próximamente</p>
-                    </div>
+                    <div id="notas-feed-loading" class="placeholder"><p>Cargando notas…</p></div>
+                    <div id="notas-feed-empty" class="placeholder" hidden><p>Todavía no hay notas de este perro.</p></div>
+                    <div id="notas-feed-lista" hidden></div>
                 </section>
             </div>
         </main>
@@ -359,6 +355,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=32"></script>
+    <script type="module" src="./perro.js?v=33"></script>
 </body>
 </html>

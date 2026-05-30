@@ -49,6 +49,7 @@ const state = {
     frecuenciaContext: null,         // { asignadoId, ejercicioNombre } cuando #modal-frecuencia está abierto
     notasEjContext: null,            // { asignadoId, ejercicioNombre } cuando #modal-notas-ejercicio está abierto
     historicoCargado: false,         // true tras cargar el histórico al menos una vez para este perro
+    notasCargado: false,             // idem para el tab Notas
     progresoAdminCargado: false,     // idem para el tab Progreso
 };
 
@@ -338,6 +339,7 @@ function activarTab(tabRaw, { updateUrl } = {}) {
     if (tab === 'salud') renderSaludPerro();
     if (tab === 'herramientas') renderHerramientas();
     if (tab === 'historico' && !state.historicoCargado) cargarHistorico();
+    if (tab === 'notas' && !state.notasCargado) cargarNotas();
     if (tab === 'progreso' && !state.progresoAdminCargado) cargarProgresoAdmin();
 }
 
@@ -2002,6 +2004,81 @@ async function renderSaludPerro() {
     `).join('');
 
     contentEl.removeAttribute('hidden');
+}
+
+async function cargarNotas() {
+    const loadingEl = document.getElementById('notas-feed-loading');
+    const emptyEl   = document.getElementById('notas-feed-empty');
+    const listaEl   = document.getElementById('notas-feed-lista');
+    if (!loadingEl || !emptyEl || !listaEl) return;
+
+    loadingEl.removeAttribute('hidden');
+    emptyEl.setAttribute('hidden', '');
+    listaEl.setAttribute('hidden', '');
+    listaEl.innerHTML = '';
+
+    try {
+        const [regs, msgs] = await Promise.all([
+            supabase.from('registros_ejercicio')
+                .select('nota, registrado_en, tranquilidad, ejercicios_asignados!inner(perro_id, ejercicios(nombre))')
+                .eq('ejercicios_asignados.perro_id', state.perroId)
+                .not('nota', 'is', null)
+                .order('registrado_en', { ascending: false }),
+            supabase.from('mensajes')
+                .select('contenido, created_at, ejercicios_asignados!inner(perro_id, ejercicios(nombre))')
+                .eq('ejercicios_asignados.perro_id', state.perroId)
+                .not('ejercicio_asignado_id', 'is', null)
+                .order('created_at', { ascending: false }),
+        ]);
+        if (regs.error) throw regs.error;
+        if (msgs.error) throw msgs.error;
+
+        const nombreEj = (row) => {
+            const ea = row.ejercicios_asignados;
+            const e = Array.isArray(ea) ? ea[0]?.ejercicios : ea?.ejercicios;
+            const ej = Array.isArray(e) ? e[0] : e;
+            return ej?.nombre || '—';
+        };
+        const A = (regs.data || [])
+            .filter((r) => (r.nota || '').trim())
+            .map((r) => ({ fecha: r.registrado_en, ejercicio: nombreEj(r), texto: r.nota, tranquilidad: r.tranquilidad, fuente: 'entreno' }));
+        const B = (msgs.data || [])
+            .filter((m) => (m.contenido || '').trim())
+            .map((m) => ({ fecha: m.created_at, ejercicio: nombreEj(m), texto: m.contenido, tranquilidad: null, fuente: 'comentario' }));
+        const todas = [...A, ...B].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+        loadingEl.setAttribute('hidden', '');
+        if (todas.length === 0) {
+            emptyEl.removeAttribute('hidden');
+            state.notasCargado = true;
+            return;
+        }
+        listaEl.innerHTML = todas.map(renderNotaFeedItem).join('');
+        listaEl.removeAttribute('hidden');
+        state.notasCargado = true;
+    } catch (err) {
+        console.error('[perro] error cargando notas:', err);
+        loadingEl.setAttribute('hidden', '');
+        listaEl.innerHTML = '<div class="placeholder"><p>No se pudieron cargar las notas.</p></div>';
+        listaEl.removeAttribute('hidden');
+    }
+}
+
+function renderNotaFeedItem(n) {
+    const fecha = fmtFechaDia(n.fecha);
+    const hora  = fmtHora(n.fecha);
+    const tranq = (n.fuente === 'entreno' && n.tranquilidad != null)
+        ? `<span class="nota-feed__tranq">Tranquilidad ${n.tranquilidad}/5</span>`
+        : '';
+    return `
+        <article class="nota-feed__item">
+            <header class="nota-feed__head">
+                <span class="nota-feed__fecha">${escapeHTML(fecha)} · ${escapeHTML(hora)}</span>
+                <span class="nota-feed__ej">${escapeHTML(n.ejercicio)}</span>
+            </header>
+            <p class="nota-feed__texto">${escapeHTML(n.texto)}</p>
+            ${tranq}
+        </article>`;
 }
 
 // ===================== Tab Histórico — entrenos reportados =====================
