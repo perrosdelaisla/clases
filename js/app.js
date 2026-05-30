@@ -4114,24 +4114,6 @@ function bindComposerMensaje() {
     if (btn) btn.addEventListener('click', enviarMensaje);
 }
 
-// === Notas en ejercicio (dentro del modal-ejercicio-detalle) ===
-
-async function cargarNotasEjercicio(ejercicioAsignadoId) {
-    const clienteId = state.usuarioCliente?.cliente_id;
-    if (!clienteId || !ejercicioAsignadoId) return [];
-    const { data, error } = await supabase
-        .from('mensajes')
-        .select('*')
-        .eq('cliente_id', clienteId)
-        .eq('ejercicio_asignado_id', ejercicioAsignadoId)
-        .order('created_at', { ascending: false });
-    if (error) {
-        console.error('[notas] error:', error);
-        return [];
-    }
-    return data || [];
-}
-
 function bindNotasEjercicio() {
     // Bloque B — reporte de entreno por ejercicio.
     document.getElementById('btn-reportar-entreno')
