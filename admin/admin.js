@@ -182,9 +182,7 @@ async function afterLogin(session) {
     // notificación, ej. #avisos), luego la guardada, luego 'agenda'.
     const TABS_VALIDOS = ['agenda', 'avisos', 'clientes', 'stats', 'catalogo'];
     const hashTab = (location.hash || '').replace('#', '');
-    let tabInicial = TABS_VALIDOS.includes(hashTab)
-        ? hashTab
-        : (localStorage.getItem('pdli_admin_tab') || 'agenda');
+    let tabInicial = TABS_VALIDOS.includes(hashTab) ? hashTab : 'agenda';
     if (tabInicial === 'inicio') tabInicial = 'agenda';
     activarTab(tabInicial);
 
