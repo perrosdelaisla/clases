@@ -1711,15 +1711,24 @@ function calcularEstadoPack(cliente, citasCliente) {
 
     const porReservar = Math.max(0, pack - realizadas - confirmadasFuturas);
 
-    // proximo_numero: max(numero_clase) sobre todas las citas confirmadas o
-    // realizadas (cualquier pack), + 1. Si no hay ninguna, 1.
-    let maxGlobal = 0;
+    // proximo_numero: si hay una clase CANCELADA cuyo número no fue repuesto,
+    // la próxima reserva REPONE el hueco más bajo (no salta adelante). Si no
+    // hay huecos, sigue en max(activos)+1. "Activo" = realizada o confirmada futura.
+    const activos = new Set();
+    let maxActivo = 0;
     (citasCliente || []).forEach((c) => {
         if (c.numero_clase == null) return;
-        if (c.estado !== 'confirmada' && c.estado !== 'realizada') return;
-        if (c.numero_clase > maxGlobal) maxGlobal = c.numero_clase;
+        const activo = c.estado === 'realizada' || (c.estado === 'confirmada' && c.fecha >= hoyIso);
+        if (!activo) return;
+        activos.add(c.numero_clase);
+        if (c.numero_clase > maxActivo) maxActivo = c.numero_clase;
     });
-    const proximoNumero = maxGlobal + 1;
+    const huecos = [];
+    (citasCliente || []).forEach((c) => {
+        if (c.numero_clase == null) return;
+        if (c.estado === 'cancelada' && !activos.has(c.numero_clase)) huecos.push(c.numero_clase);
+    });
+    const proximoNumero = huecos.length ? Math.min(...huecos) : (maxActivo + 1);
 
     return {
         pack_actual: pack,
