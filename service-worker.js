@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v102';
+const CACHE_VERSION = 'v103';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [

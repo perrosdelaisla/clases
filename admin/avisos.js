@@ -253,7 +253,7 @@ function renderItem(a) {
     const det = (cat === 'cita' && a.entidad_id) ? state.detallesCita[a.entidad_id] : null;
 
     const partes = [];
-    partes.push(`<li class="aviso-item${a.leido ? '' : ' aviso-item--unread'}" data-id="${esc(a.id)}" data-cat="${esc(cat)}">`);
+    partes.push(`<li class="aviso-item${a.leido ? '' : ' aviso-item--unread'}" data-id="${esc(a.id)}" data-cat="${esc(cat)}" data-url="${esc(a.url || '')}">`);
     partes.push(`<div class="aviso-row">`);
     partes.push(`<span class="aviso-icon" aria-hidden="true">${iconoPara(a.tipo)}</span>`);
     partes.push(`<div class="aviso-body">`);
@@ -262,9 +262,6 @@ function renderItem(a) {
     partes.push(`<div class="aviso-meta">${esc(fechaRelativa(a.creado_en))}</div>`);
     partes.push(`</div>`);
     partes.push(`<div class="aviso-acciones">`);
-    if (!a.leido) {
-        partes.push(`<button type="button" class="aviso-btn aviso-btn--ghost" data-action="leer">Marcar leído</button>`);
-    }
     if (cat === 'cita' && det && det.cliente) {
         partes.push(`<button type="button" class="aviso-btn aviso-btn--ghost" data-action="abrir-cliente" data-cli="${esc(det.cliente.id)}">Abrir cliente</button>`);
     }
@@ -415,15 +412,15 @@ function bindLista() {
 
         const accion = ev.target.closest('[data-action]')?.dataset.action;
 
-        if (accion === 'leer') {
-            ev.preventDefault();
-            const ok = await marcarLeido(id, true);
-            if (ok) {
-                const a = state.items.find((x) => x.id === id);
-                if (a) a.leido = true;
-                render();
+        if (!accion && !ev.target.closest('a') && !ev.target.closest('.aviso-copiables')) {
+            const url = item.dataset.url;
+            const a = state.items.find((x) => x.id === id);
+            if (a && !a.leido) {
+                await marcarLeido(id, true);
+                a.leido = true;
                 renderBadge();
             }
+            if (url) location.href = url;
             return;
         }
 

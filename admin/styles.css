@@ -4404,3 +4404,5 @@ body {
 .nota-feed__ej{font-size:12px;font-weight:600;color:var(--color-red);}
 .nota-feed__texto{font-size:14px;line-height:1.5;color:var(--color-text);white-space:pre-wrap;margin:0;}
 .nota-feed__tranq{display:inline-block;margin-top:8px;font-size:11px;color:var(--color-muted);background:var(--color-surface-2);padding:3px 9px;border-radius:999px;}
+
+.aviso-row{cursor:pointer;}

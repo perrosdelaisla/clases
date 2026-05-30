@@ -13,7 +13,7 @@ import * as stats from './stats/api.js?v=3';
 import * as catalogo from './catalogo/api.js?v=2';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=1';
+import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=2';
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
 
