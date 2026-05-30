@@ -2587,7 +2587,10 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
     }
 
     abrirModal('modal-ejercicio-detalle');
-    renderNotasEjercicio(ejercicioAsignadoId);
+    // Las notas del canal "+ Añadir nota" se quitaron; el cliente deja notas
+    // solo al reportar el entreno. Pero el flujo de reporte necesita saber qué
+    // ejercicio está abierto, así que conservamos la asignación.
+    _ejercicioModalActualId = ejercicioAsignadoId;
 }
 
 async function confirmarCancelacion() {
@@ -3415,7 +3418,6 @@ const _voz = {
 // para evitar que el cliente cierre el modal pensando que ya guardó
 // (patrón WhatsApp: soltás el mic y se manda; acá no — falta tocar).
 const _vozBtnConfirmar = {
-    'notas-textarea': 'notas-confirm',
     'reporte-nota': 'reporte-guardar',
     'mensaje-textarea': 'mensaje-enviar',
 };
@@ -4130,97 +4132,7 @@ async function cargarNotasEjercicio(ejercicioAsignadoId) {
     return data || [];
 }
 
-async function renderNotasEjercicio(ejercicioAsignadoId) {
-    _ejercicioModalActualId = ejercicioAsignadoId;
-    const lista = document.getElementById('notas-ejercicio-lista');
-    const count = document.getElementById('notas-ejercicio-count');
-    if (!lista) return;
-
-    if (!ejercicioAsignadoId) {
-        lista.innerHTML = '';
-        if (count) count.textContent = '0 notas';
-        return;
-    }
-
-    const notas = await cargarNotasEjercicio(ejercicioAsignadoId);
-
-    if (count) {
-        count.textContent = notas.length === 0
-            ? 'Sin notas'
-            : (notas.length === 1 ? '1 nota' : `${notas.length} notas`);
-    }
-
-    if (notas.length === 0) {
-        lista.innerHTML = '';
-        return;
-    }
-
-    lista.innerHTML = notas.map((n) => `
-        <div class="feed-entry${n.leido_por_admin ? '' : ' is-unread'}" style="padding-left:0;">
-            <div class="feed-entry__head">
-                <span class="feed-entry__time">
-                    <span class="feed-date-label" style="margin-right:8px;">${escapeHTML(formatearFechaRelativa(n.created_at))}</span>
-                    ${formatearHora(n.created_at)}
-                </span>
-                ${n.leido_por_admin ? '<span class="feed-entry__seen">Visto</span>' : ''}
-            </div>
-            <div class="feed-entry__body">${escapeHTML(n.contenido)}</div>
-        </div>
-    `).join('');
-}
-
-async function guardarNotaEjercicio() {
-    const ta = document.getElementById('notas-textarea');
-    const expand = document.getElementById('notas-expand');
-    if (!ta || !_ejercicioModalActualId) return;
-    const contenido = ta.value.trim();
-    if (!contenido) return;
-
-    const clienteId = state.usuarioCliente?.cliente_id;
-    const autorId = state.usuarioCliente?.id;
-    if (!clienteId) return;
-
-    try {
-        const { error } = await supabase
-            .from('mensajes')
-            .insert({
-                cliente_id: clienteId,
-                autor_usuario_cliente_id: autorId,
-                ejercicio_asignado_id: _ejercicioModalActualId,
-                contenido,
-            });
-        if (error) throw error;
-        ta.value = '';
-        if (expand) expand.classList.remove('is-open');
-        await renderNotasEjercicio(_ejercicioModalActualId);
-        if (typeof toast === 'function') toast('Nota añadida');
-    } catch (e) {
-        console.error('[guardar-nota] error:', e);
-        if (typeof toast === 'function') toast('No hemos podido guardar la nota', 'error');
-    }
-}
-
 function bindNotasEjercicio() {
-    const btnAdd = document.getElementById('notas-add-btn');
-    const btnCancel = document.getElementById('notas-cancel');
-    const btnConfirm = document.getElementById('notas-confirm');
-    const expand = document.getElementById('notas-expand');
-    const ta = document.getElementById('notas-textarea');
-
-    if (btnAdd && expand && ta) {
-        btnAdd.addEventListener('click', () => {
-            expand.classList.add('is-open');
-            setTimeout(() => ta.focus(), 50);
-        });
-    }
-    if (btnCancel && expand && ta) {
-        btnCancel.addEventListener('click', () => {
-            ta.value = '';
-            expand.classList.remove('is-open');
-        });
-    }
-    if (btnConfirm) btnConfirm.addEventListener('click', guardarNotaEjercicio);
-
     // Bloque B — reporte de entreno por ejercicio.
     document.getElementById('btn-reportar-entreno')
         ?.addEventListener('click', abrirModalReporte);
