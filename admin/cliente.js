@@ -592,7 +592,7 @@ async function cargarMensajesCliente(clienteId) {
         .from('mensajes')
         .select(`
             id, cliente_id, perro_id, ejercicio_asignado_id,
-            contenido, guardar, leido_por_admin, leido_en, created_at,
+            contenido, guardar, leido_por_admin, leido_en, created_at, autor_admin, leido_por_cliente,
             ejercicios_asignados (
                 id,
                 ejercicios ( nombre )
@@ -617,6 +617,7 @@ async function marcarMensajesLeidos(clienteId) {
         .update({ leido_por_admin: true, leido_en: new Date().toISOString() })
         .eq('cliente_id', clienteId)
         .eq('leido_por_admin', false)
+        .eq('autor_admin', false)
         .is('ejercicio_asignado_id', null);
     if (error) console.error('[admin-marcar-leido] error:', error);
 }
@@ -633,6 +634,18 @@ async function toggleGuardarMensaje(mensajeId, valor) {
     return true;
 }
 
+async function responderMensaje(clienteId, texto) {
+    const { error } = await supabase.from('mensajes').insert({
+        cliente_id: clienteId,
+        contenido: texto,
+        autor_admin: true,
+        leido_por_admin: true,
+        leido_por_cliente: false,
+    });
+    if (error) { console.error('[admin-responder] error:', error); return false; }
+    return true;
+}
+
 async function renderAdminMensajes(clienteId) {
     if (!clienteId) return;
     const seccion = document.getElementById('admin-mensajes');
@@ -643,7 +656,7 @@ async function renderAdminMensajes(clienteId) {
     seccion.removeAttribute('hidden');
 
     const mensajes = await cargarMensajesCliente(clienteId);
-    const noLeidos = mensajes.filter((m) => !m.leido_por_admin).length;
+    const noLeidos = mensajes.filter((m) => !m.leido_por_admin && !m.autor_admin).length;
 
     if (count) {
         const num = count.querySelector('.num');
@@ -677,6 +690,7 @@ async function renderAdminMensajes(clienteId) {
             const esNota = !!m.ejercicio_asignado_id;
             const nombreEjercicio = m.ejercicios_asignados?.ejercicios?.nombre || 'ejercicio';
             const classes = ['admin-entry'];
+            if (m.autor_admin) classes.push('admin-entry--mio');
             if (!m.leido_por_admin) classes.push('is-unread');
             else classes.push('is-read');
             if (m.guardar) classes.push('is-pinned');
@@ -685,14 +699,14 @@ async function renderAdminMensajes(clienteId) {
                     <div class="admin-entry__head">
                         <span class="admin-entry__time">${_adminFormatearHora(m.created_at)}</span>
                         <span class="admin-entry__tag">
-                            ${esNota ? `Nota en <span class="ex-name">${_adminEscapeHTML(nombreEjercicio)}</span>` : 'Mensaje general'}
+                            ${m.autor_admin ? 'Tu respuesta' : (esNota ? `Nota en <span class="ex-name">${_adminEscapeHTML(nombreEjercicio)}</span>` : 'Mensaje general')}
                         </span>
                     </div>
                     <div class="admin-entry__body">${_adminEscapeHTML(m.contenido)}</div>
-                    <button type="button" class="admin-entry__pin" data-action="toggle-pin" data-id="${_adminEscapeHTML(m.id)}">
+                    ${m.autor_admin ? '' : `<button type="button" class="admin-entry__pin" data-action="toggle-pin" data-id="${_adminEscapeHTML(m.id)}">
                         <span class="pin-ico">📌</span>
                         ${m.guardar ? 'Guardado' : 'Guardar'}
-                    </button>
+                    </button>`}
                 </div>
             `;
         }).join('')}
@@ -723,5 +737,21 @@ async function renderAdminMensajes(clienteId) {
             el.classList.remove('is-unread');
             el.classList.add('is-read');
         });
+    }
+
+    const respBtn = document.getElementById('admin-responder-btn');
+    const respTxt = document.getElementById('admin-responder-texto');
+    if (respBtn && respTxt) {
+        respBtn.onclick = async () => {
+            const texto = respTxt.value.trim();
+            if (!texto) return;
+            respBtn.disabled = true;
+            const ok = await responderMensaje(clienteId, texto);
+            respBtn.disabled = false;
+            if (ok) {
+                respTxt.value = '';
+                renderAdminMensajes(clienteId);
+            }
+        };
     }
 }

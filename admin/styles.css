@@ -4406,3 +4406,8 @@ body {
 .nota-feed__tranq{display:inline-block;margin-top:8px;font-size:11px;color:var(--color-muted);background:var(--color-surface-2);padding:3px 9px;border-radius:999px;}
 
 .aviso-row{cursor:pointer;}
+
+.admin-responder{display:flex;gap:8px;margin-top:14px;align-items:flex-end;}
+.admin-responder__texto{flex:1;resize:vertical;min-height:42px;padding:10px 12px;border:1px solid var(--color-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--color-surface-2,#2c2c2c);color:var(--color-text,#F5EFE0);font:inherit;}
+.admin-responder__btn{white-space:nowrap;}
+.admin-entry--mio{margin-left:24px;border-left:3px solid var(--color-red,#C8102E);background:rgba(200,16,46,0.06);}
