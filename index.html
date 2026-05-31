@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=38">
+    <link rel="stylesheet" href="./css/styles.css?v=39">
 </head>
 <body class="app-cliente">
 
@@ -201,6 +201,7 @@
                         <p class="perro-protocolo__nombre" id="perro-protocolo-nombre"></p>
                         <p class="perro-protocolo__comp" id="perro-protocolo-comp" hidden></p>
                         <p class="perro-protocolo__duracion" id="perro-protocolo-duracion"></p>
+                        <button type="button" class="perro-protocolo__vermas" id="perro-protocolo-vermas">Saber más</button>
                     </div>
                     <div class="perro-saldo" id="perro-saldo" hidden>
                         <p class="perro-saldo__kpi"><strong id="perro-saldo-pack">—</strong> clases</p>
@@ -498,6 +499,24 @@
                 <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
                 <button type="button" class="btn btn-primary" id="foto-guardar" disabled>Guardar foto</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: ficha del protocolo ── -->
+    <div class="modal-pdli" id="modal-ficha-protocolo" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-ficha-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-ficha-titulo">Tu plan de trabajo</h2>
+            <div class="modal-ficha__seccion"><h3>Qué trabajamos</h3><div id="modal-ficha-trabajo"></div></div>
+            <div class="modal-ficha__seccion"><h3>Cómo reconocerlo</h3><div id="modal-ficha-reconocer"></div></div>
+            <div class="modal-ficha__seccion"><h3>Cuántas clases puede llevar</h3><div id="modal-ficha-clases"></div></div>
+            <div class="modal-ficha__seccion"><h3>Consejos para el día a día</h3><div id="modal-ficha-consejos"></div></div>
         </div>
     </div>
 
@@ -985,6 +1004,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=1"></script>
     <script src="./js/tutorial.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=60"></script>
+    <script type="module" src="./js/app.js?v=61"></script>
 </body>
 </html>

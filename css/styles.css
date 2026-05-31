@@ -4251,3 +4251,9 @@ html.pdli-tour-open body { overflow: hidden; }
     .pdli-tour__actions { flex-direction: column; align-items: stretch; }
     .pdli-tour__nav { justify-content: space-between; }
 }
+
+.perro-protocolo__vermas{margin-top:8px;background:none;border:none;padding:0;font:inherit;font-weight:600;font-size:13px;color:var(--pdli-rojo,#b3261e);cursor:pointer;}
+.perro-protocolo__vermas::after{content:' ›';}
+.modal-ficha__seccion{margin-top:18px;}
+.modal-ficha__seccion h3{font-size:14px;font-weight:700;margin:0 0 6px;}
+.modal-ficha__seccion p{font-size:14px;line-height:1.55;margin:0 0 8px;}

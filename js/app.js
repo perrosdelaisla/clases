@@ -309,6 +309,9 @@ function bindEventos() {
     const fotoBtn = document.getElementById('perro-foto-btn');
     if (fotoBtn) fotoBtn.addEventListener('click', abrirModalFoto);
 
+    const vermasBtn = document.getElementById('perro-protocolo-vermas');
+    if (vermasBtn) vermasBtn.addEventListener('click', abrirModalFichaProtocolo);
+
     const fotoInput = document.getElementById('foto-input');
     if (fotoInput) fotoInput.addEventListener('change', onFotoSeleccionada);
 
@@ -2653,6 +2656,51 @@ function abrirModalFoto() {
     err.textContent = '';
     input.value = '';
     abrirModal('modal-foto');
+}
+
+function pintarParrafosFicha(contenedorId, texto) {
+    const el = document.getElementById(contenedorId);
+    if (!el) return;
+    el.innerHTML = '';
+    (texto || '').split(/\n\n+/).forEach((par) => {
+        const t = par.trim();
+        if (!t) return;
+        const p = document.createElement('p');
+        p.textContent = t;
+        el.appendChild(p);
+    });
+}
+
+async function abrirModalFichaProtocolo() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    if (!perro || !perro.protocolo_principal) return;
+    const tituloEl = document.getElementById('modal-ficha-titulo');
+    tituloEl.textContent = 'Cargando…';
+    ['modal-ficha-trabajo','modal-ficha-reconocer','modal-ficha-clases','modal-ficha-consejos']
+        .forEach((id) => pintarParrafosFicha(id, ''));
+    abrirModal('modal-ficha-protocolo');
+    try {
+        const { data, error } = await supabase
+            .from('protocolos_fichas')
+            .select('titulo, que_trabajamos, como_reconocerlo, clases_estimadas, consejos')
+            .eq('clave', perro.protocolo_principal)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data) {
+            tituloEl.textContent = (PROTOCOLOS_LABEL[perro.protocolo_principal] || 'Tu plan de trabajo');
+            pintarParrafosFicha('modal-ficha-trabajo', 'Pronto vas a encontrar acá más información sobre este trabajo.');
+            return;
+        }
+        tituloEl.textContent = data.titulo || 'Tu plan de trabajo';
+        pintarParrafosFicha('modal-ficha-trabajo', data.que_trabajamos);
+        pintarParrafosFicha('modal-ficha-reconocer', data.como_reconocerlo);
+        pintarParrafosFicha('modal-ficha-clases', data.clases_estimadas);
+        pintarParrafosFicha('modal-ficha-consejos', data.consejos);
+    } catch (e) {
+        console.error('[ficha protocolo]', e);
+        tituloEl.textContent = (PROTOCOLOS_LABEL[perro.protocolo_principal] || 'Tu plan de trabajo');
+        pintarParrafosFicha('modal-ficha-trabajo', 'No se pudo cargar la información ahora. Probá de nuevo en un rato.');
+    }
 }
 
 // ───────────────────────────────────────────────────────────
