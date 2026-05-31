@@ -1114,7 +1114,6 @@ async function renderRutinaPerroSeleccionado() {
     const heroMeta = document.getElementById('perro-hero-meta');
     const protoBox = document.getElementById('perro-protocolo');
     const protoNombre = document.getElementById('perro-protocolo-nombre');
-    const protoDuracion = document.getElementById('perro-protocolo-duracion');
     const saldoBox = document.getElementById('perro-saldo');
     const saldoPack = document.getElementById('perro-saldo-pack');
     const saldoDetalle = document.getElementById('perro-saldo-detalle');
@@ -1176,7 +1175,6 @@ async function renderRutinaPerroSeleccionado() {
     const proto = formatearProtocolo(perro);
     if (proto && proto.nombre) {
         protoNombre.textContent = proto.nombre;
-        protoDuracion.textContent = proto.duracion;
         const protoComp = document.getElementById('perro-protocolo-comp');
         if (proto.comp.length > 0) {
             protoComp.textContent = 'También: ' + proto.comp.join(', ');
