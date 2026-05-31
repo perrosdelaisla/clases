@@ -188,6 +188,7 @@ async function onSesionLista(session) {
         renderHeader();
         renderSelectorPerros();
         await renderRutinaPerroSeleccionado();
+        actualizarBadgeMensajes();
 
         // Primer login: si el cliente nunca vio el welcome, mostrarlo
         // antes de la app principal. UPDATE de welcome_visto_en al
@@ -964,7 +965,7 @@ function showTab(name) {
     if (name === 'reservar') renderTabReservar();
     if (name === 'mis-citas') renderTabMisCitas();
     if (name === 'salud') cargarTabSalud();
-    if (name === 'mensajes') renderFeedMensajes();
+    if (name === 'mensajes') { renderFeedMensajes(); marcarRespuestasLeidasYActualizar(); }
 
     // Scroll al inicio del panel para que la transición se sienta limpia
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -4055,6 +4056,33 @@ async function cargarMensajes() {
     return data || [];
 }
 
+async function contarRespuestasSinLeer() {
+    const clienteId = state.usuarioCliente?.cliente_id;
+    if (!clienteId) return 0;
+    const { count, error } = await supabase
+        .from('mensajes')
+        .select('id', { count: 'exact', head: true })
+        .eq('cliente_id', clienteId)
+        .eq('autor_admin', true)
+        .eq('leido_por_cliente', false)
+        .is('ejercicio_asignado_id', null);
+    if (error) { console.error('[badge-mensajes]', error); return 0; }
+    return count || 0;
+}
+
+async function actualizarBadgeMensajes() {
+    const badge = document.getElementById('nav-badge-mensajes');
+    if (!badge) return;
+    const n = await contarRespuestasSinLeer();
+    badge.hidden = (n === 0);
+}
+
+async function marcarRespuestasLeidasYActualizar() {
+    try { await supabase.rpc('marcar_respuestas_leidas'); }
+    catch (e) { console.error('[marcar-leidas]', e); }
+    actualizarBadgeMensajes();
+}
+
 async function renderFeedMensajes() {
     const feed = document.getElementById('feed-mensajes');
     if (!feed) return;
@@ -4084,15 +4112,21 @@ async function renderFeedMensajes() {
             <span class="feed-date-rule"></span>
         </div>
         <div class="feed-entries">
-            ${items.map((m) => `
-                <div class="feed-entry">
+            ${items.map((m) => {
+                const esAdmin = !!m.autor_admin;
+                const etiqueta = esAdmin
+                    ? '<span class="feed-entry__from">El adiestrador</span>'
+                    : (m.leido_por_admin ? '<span class="feed-entry__seen">Visto</span>' : '');
+                return `
+                <div class="feed-entry${esAdmin ? ' feed-entry--admin' : ''}">
                     <div class="feed-entry__head">
                         <span class="feed-entry__time">${formatearHora(m.created_at)}</span>
-                        ${m.leido_por_admin ? '<span class="feed-entry__seen">Visto</span>' : ''}
+                        ${etiqueta}
                     </div>
                     <div class="feed-entry__body">${escapeHTML(m.contenido)}</div>
                 </div>
-            `).join('')}
+                `;
+            }).join('')}
         </div>
     `).join('');
 

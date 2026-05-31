@@ -4257,3 +4257,8 @@ html.pdli-tour-open body { overflow: hidden; }
 .modal-ficha__seccion{margin-top:18px;}
 .modal-ficha__seccion h3{font-size:14px;font-weight:700;margin:0 0 6px;}
 .modal-ficha__seccion p{font-size:14px;line-height:1.55;margin:0 0 8px;}
+
+.bottom-nav__btn{position:relative;}
+.bottom-nav__badge{position:absolute;top:4px;left:50%;margin-left:6px;width:9px;height:9px;border-radius:50%;background:var(--pdli-rojo,#C8102E);box-shadow:0 0 0 2px var(--color-bg,#fff);}
+.feed-entry--admin{border-left:3px solid var(--pdli-rojo,#C8102E);padding-left:12px;background:rgba(200,16,46,0.05);}
+.feed-entry__from{font-size:12px;font-weight:600;color:var(--pdli-rojo,#C8102E);}
