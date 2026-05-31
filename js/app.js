@@ -4048,7 +4048,7 @@ async function cargarMensajes() {
         .select('*')
         .eq('cliente_id', clienteId)
         .is('ejercicio_asignado_id', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
     if (error) {
         console.error('[mensajes] error:', error);
         return [];
@@ -4131,6 +4131,9 @@ async function renderFeedMensajes() {
     `).join('');
 
     feed.innerHTML = html;
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+    });
 }
 
 async function enviarMensaje() {

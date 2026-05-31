@@ -600,7 +600,7 @@ async function cargarMensajesCliente(clienteId) {
         `)
         .eq('cliente_id', clienteId)
         .is('ejercicio_asignado_id', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
     if (error) {
         console.error('[admin-mensajes] error:', error);
         return [];
