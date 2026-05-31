@@ -4414,3 +4414,4 @@ body {
 .admin-responder__btn:hover{opacity:.9;}
 .admin-responder__btn:disabled{opacity:.5;cursor:default;}
 .admin-entry--mio{margin-left:24px;border-left:3px solid var(--color-red,#C8102E);background:rgba(200,16,46,0.06);}
+#admin-mensajes-feed{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;}

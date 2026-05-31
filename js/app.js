@@ -4132,7 +4132,7 @@ async function renderFeedMensajes() {
 
     feed.innerHTML = html;
     requestAnimationFrame(() => {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+        feed.scrollTop = feed.scrollHeight;
     });
 }
 

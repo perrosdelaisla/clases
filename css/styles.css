@@ -4262,3 +4262,4 @@ html.pdli-tour-open body { overflow: hidden; }
 .bottom-nav__badge{position:absolute;top:4px;left:50%;margin-left:6px;width:9px;height:9px;border-radius:50%;background:var(--pdli-rojo,#C8102E);box-shadow:0 0 0 2px var(--color-bg,#fff);}
 .feed-entry--admin{border-left:3px solid var(--pdli-rojo,#C8102E);padding-left:12px;background:rgba(200,16,46,0.05);}
 .feed-entry__from{font-size:12px;font-weight:600;color:var(--pdli-rojo,#C8102E);}
+.feed-timeline{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 6px 4px 2px;border:1px solid var(--color-border,rgba(0,0,0,0.08));border-radius:14px;}

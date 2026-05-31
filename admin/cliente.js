@@ -754,4 +754,9 @@ async function renderAdminMensajes(clienteId) {
             }
         };
     }
+
+    requestAnimationFrame(() => {
+        const fEl = document.getElementById('admin-mensajes-feed');
+        if (fEl) fEl.scrollTop = fEl.scrollHeight;
+    });
 }
