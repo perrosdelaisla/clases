@@ -190,9 +190,16 @@ function construirMensajeWhatsApp(aviso, det) {
     switch (aviso.tipo) {
         case 'cita_nueva':
             return `Hola ${nombrePila}! Recibimos tu solicitud para el ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. Te confirmo en cuanto la valide. ¡Gracias!`;
-        case 'cita_estado':
-            // El cuerpo ya describe el cambio
+        case 'cita_estado': {
+            const estadoCita = det ? (det.estado || '') : '';
+            if (estadoCita === 'cancelada') {
+                return `Hola ${nombrePila}! Queda cancelada la cita del ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. Cuando quieras la reagendamos, avisame.`;
+            }
+            if (estadoCita === 'realizada') {
+                return `Hola ${nombrePila}! Gracias por la clase de hoy. Cualquier duda con lo que trabajamos, escribime.`;
+            }
             return `Hola ${nombrePila}! Te confirmo la cita del ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. ¡Nos vemos!`;
+        }
         case 'cita_reagendada':
             return `Hola ${nombrePila}! Reagendamos la cita: ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. Cualquier cosa, avisame.`;
         case 'cita_pago':
