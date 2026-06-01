@@ -4267,3 +4267,5 @@ html.pdli-tour-open body { overflow: hidden; }
 .reporte-tarea__hoy{font-size:15px;font-weight:600;margin:0;}
 .reporte-tarea__btn{min-width:200px;}
 .reporte-tarea__hint{font-size:13px;opacity:.7;margin:0;}
+.reporte-form[hidden], .reporte-tarea[hidden] { display: none !important; }
+#reporte-guardar[hidden] { display: none !important; }
