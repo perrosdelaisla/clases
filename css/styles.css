@@ -4301,3 +4301,6 @@ html.pdli-tour-open body { overflow: hidden; }
 #modal-reporte-ejercicio .scale .seg-btn:last-child{border-right:0;}
 #modal-reporte-ejercicio .seg-btn:hover{background:rgba(107,122,58,0.08);color:#4A4A48;}
 #modal-reporte-ejercicio .seg-btn.is-sel{background:#6B7A3A;color:#F5EFE0;}
+#modal-reporte-ejercicio .field{width:100%;}
+#modal-reporte-ejercicio .scale{width:100%;}
+#modal-reporte-ejercicio .seg-btn{font-size:22px;padding:13px 0;}

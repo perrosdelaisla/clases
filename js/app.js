@@ -2584,6 +2584,8 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
     } else {
         if (seccionTarea) seccionTarea.hidden = true;
         if (btnReportar) btnReportar.hidden = false;
+        const _hoy = Number(_progresoCache.get(ejercicioAsignadoId)?.count_dia || 0);
+        if (btnReportar) btnReportar.textContent = _hoy > 0 ? 'Reportar otro entreno' : 'Reportar entreno';
         renderProgresoEnModal(ejercicioAsignadoId);
         cargarMisEntrenos(ejercicioAsignadoId);
     }
