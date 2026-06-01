@@ -4243,6 +4243,23 @@ function bindNotasEjercicio() {
     ulRepes?.addEventListener('input', onRepeChange);
     ulRepes?.addEventListener('change', onRepeChange);
     ulRepes?.addEventListener('click', (e) => {
+        // Selector 1-5 de botones (valor / dificultad).
+        const seg = e.target.closest('.seg-btn');
+        if (seg) {
+            const scale = seg.closest('.scale');
+            if (!scale) return;
+            const idx = Number(scale.dataset.idx);
+            const campo = scale.dataset.campo;
+            if (!_reporteRepes[idx]) return;
+            const val = seg.dataset.val;
+            // Toque sobre el mismo número deselecciona.
+            _reporteRepes[idx][campo] = (String(_reporteRepes[idx][campo]) === String(val)) ? '' : val;
+            scale.querySelectorAll('.seg-btn').forEach((b) => {
+                b.classList.toggle('is-sel', String(b.dataset.val) === String(_reporteRepes[idx][campo]));
+            });
+            return;
+        }
+        // Borrado de repetición.
         const btn = e.target.closest('.reporte-repe__del');
         if (!btn) return;
         const idx = Number(btn.dataset.idx);
@@ -4255,52 +4272,53 @@ function renderRepesLista() {
     const ul = document.getElementById('reporte-repes-lista');
     if (!ul) return;
     const campos = _reporteCampos || [];
-    const selOpts = (val) => [1, 2, 3, 4, 5]
-        .map((n) => `<option value="${n}"${String(val) === String(n) ? ' selected' : ''}>${n}</option>`)
-        .join('');
+    const escala = (campo, val, idx) => {
+        const btns = [1, 2, 3, 4, 5].map((n) =>
+            `<button type="button" class="seg-btn${String(val) === String(n) ? ' is-sel' : ''}" data-val="${n}">${n}</button>`
+        ).join('');
+        return `<div class="scale" data-idx="${idx}" data-campo="${campo}" role="radiogroup">${btns}</div>`;
+    };
     ul.innerHTML = _reporteRepes.map((rep, idx) => {
-        const controles = campos.map((campo) => {
+        const fields = campos.map((campo) => {
             if (campo === 'tiempo_total' || campo === 'tiempo_parcial') {
                 const label = campo === 'tiempo_total' ? 'Tiempo' : 'Parcial';
                 return `
-                    <div class="reporte-campo">
-                        <label class="reporte-campo__lbl">${label}</label>
-                        <div class="reporte-campo__tiempo">
-                            <input type="number" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep[campo + '_min'] || '')}" data-idx="${idx}" data-campo="${campo}_min"><span class="reporte-tiempo__sep">min</span>
-                            <input type="number" inputmode="numeric" min="0" max="59" step="1" placeholder="—" value="${escapeHTML(rep[campo + '_seg'] || '')}" data-idx="${idx}" data-campo="${campo}_seg"><span class="reporte-tiempo__sep">seg</span>
+                    <div class="field">
+                        <label class="field-label">${label}</label>
+                        <div class="time-ctrl">
+                            <span class="seg"><input type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${escapeHTML(rep[campo + '_min'] || '')}" data-idx="${idx}" data-campo="${campo}_min"><span class="u">min</span></span>
+                            <span class="colon">:</span>
+                            <span class="seg"><input type="number" inputmode="numeric" min="0" max="59" step="1" placeholder="00" value="${escapeHTML(rep[campo + '_seg'] || '')}" data-idx="${idx}" data-campo="${campo}_seg"><span class="u">seg</span></span>
                         </div>
                     </div>`;
             }
             if (campo === 'distancia') {
                 return `
-                    <div class="reporte-campo">
-                        <label class="reporte-campo__lbl">Distancia</label>
-                        <input type="number" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep.distancia || '')}" data-idx="${idx}" data-campo="distancia">
+                    <div class="field">
+                        <label class="field-label">Distancia</label>
+                        <div class="num-ctrl">
+                            <input type="number" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep.distancia || '')}" data-idx="${idx}" data-campo="distancia">
+                            <span class="u">pasos</span>
+                        </div>
                     </div>`;
             }
-            if (campo === 'valor_estimulo') {
+            if (campo === 'valor_estimulo' || campo === 'dificultad') {
+                const label = campo === 'valor_estimulo' ? 'Valor' : 'Dificultad';
                 return `
-                    <div class="reporte-campo">
-                        <label class="reporte-campo__lbl">Valor (1-5)</label>
-                        <select class="reporte-campo__sel" data-idx="${idx}" data-campo="valor_estimulo"><option value="">—</option>${selOpts(rep.valor_estimulo)}</select>
-                    </div>`;
-            }
-            if (campo === 'dificultad') {
-                return `
-                    <div class="reporte-campo">
-                        <label class="reporte-campo__lbl">Dificultad (1-5)</label>
-                        <select class="reporte-campo__sel" data-idx="${idx}" data-campo="dificultad"><option value="">—</option>${selOpts(rep.dificultad)}</select>
+                    <div class="field">
+                        <label class="field-label">${label}</label>
+                        ${escala(campo, rep[campo], idx)}
                     </div>`;
             }
             return '';
         }).join('');
         return `
-            <li class="reporte-repe" data-idx="${idx}">
-                <div class="reporte-repe__top">
-                    <span class="reporte-repe__label">Rep ${idx + 1}</span>
-                    <button type="button" class="reporte-repe__del" data-idx="${idx}" aria-label="Eliminar repetición">✕</button>
+            <li class="reporte-repe rep" data-idx="${idx}">
+                <div class="rep-top">
+                    <span class="rep-num"><span class="hash">Rep</span> ${idx + 1}</span>
+                    <button type="button" class="rep-del reporte-repe__del" data-idx="${idx}" aria-label="Eliminar repetición">✕</button>
                 </div>
-                <div class="reporte-repe__campos">${controles}</div>
+                <div class="rep-fields">${fields}</div>
             </li>`;
     }).join('');
     actualizarTotalRepes();

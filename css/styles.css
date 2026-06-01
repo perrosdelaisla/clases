@@ -4273,3 +4273,31 @@ html.pdli-tour-open body { overflow: hidden; }
 .reporte-campo > input[data-campo]{width:96px;min-height:var(--tap);padding:0 8px;text-align:center;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);color:var(--color-text);font-size:1rem;-webkit-appearance:none;appearance:none;-moz-appearance:textfield;}
 .reporte-campo__sel{min-height:var(--tap);padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);font-size:1rem;width:auto;justify-self:start;}
 .reporte-campo__tiempo input::-webkit-outer-spin-button,.reporte-campo__tiempo input::-webkit-inner-spin-button,.reporte-campo > input[data-campo]::-webkit-outer-spin-button,.reporte-campo > input[data-campo]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+
+/* ─── Look Claude Design en las repeticiones (scopeado al modal de reporte) ─── */
+#modal-reporte-ejercicio .rep{background:#FBF7EC;border:1px solid rgba(26,26,26,0.10);border-radius:12px;padding:12px 14px 14px;margin-bottom:10px;}
+#modal-reporte-ejercicio .rep-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+#modal-reporte-ejercicio .rep-num{display:inline-flex;align-items:baseline;gap:6px;font-family:'Bebas Neue',Oswald,Impact,sans-serif;font-size:18px;letter-spacing:1.5px;text-transform:uppercase;color:#6B7A3A;}
+#modal-reporte-ejercicio .rep-num .hash{font-size:13px;color:#8A867E;}
+#modal-reporte-ejercicio .rep-del{width:28px;height:28px;border-radius:8px;border:1px solid transparent;background:transparent;color:#8A867E;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;transition:all .15s ease;}
+#modal-reporte-ejercicio .rep-del:hover{border-color:rgba(26,26,26,0.16);color:#C8102E;}
+#modal-reporte-ejercicio .rep-fields{display:flex;flex-direction:column;gap:14px;}
+#modal-reporte-ejercicio .field{min-width:0;}
+#modal-reporte-ejercicio .field-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8A867E;margin:0 0 6px;}
+#modal-reporte-ejercicio .time-ctrl{display:flex;align-items:center;gap:6px;background:#ECE4D2;border:1px solid rgba(26,26,26,0.10);border-radius:9px;padding:8px 10px;}
+#modal-reporte-ejercicio .time-ctrl:focus-within{border-color:#6B7A3A;}
+#modal-reporte-ejercicio .time-ctrl .seg{display:flex;align-items:baseline;gap:3px;min-width:0;}
+#modal-reporte-ejercicio .time-ctrl input{width:2.4ch;border:0;outline:0;background:transparent;font-family:'Bebas Neue',Oswald,Impact,sans-serif;font-size:24px;letter-spacing:1px;color:#1A1A1A;text-align:center;padding:0;-moz-appearance:textfield;}
+#modal-reporte-ejercicio .time-ctrl input::-webkit-outer-spin-button,#modal-reporte-ejercicio .time-ctrl input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+#modal-reporte-ejercicio .time-ctrl .u{font-size:10px;font-weight:600;color:#8A867E;text-transform:uppercase;}
+#modal-reporte-ejercicio .time-ctrl .colon{font-family:'Bebas Neue',Oswald,Impact,sans-serif;font-size:22px;color:#8A867E;padding:0 1px;}
+#modal-reporte-ejercicio .num-ctrl{display:flex;align-items:baseline;gap:6px;background:#ECE4D2;border:1px solid rgba(26,26,26,0.10);border-radius:9px;padding:8px 12px;}
+#modal-reporte-ejercicio .num-ctrl:focus-within{border-color:#6B7A3A;}
+#modal-reporte-ejercicio .num-ctrl input{width:100%;border:0;outline:0;background:transparent;font-family:'Bebas Neue',Oswald,Impact,sans-serif;font-size:24px;letter-spacing:1px;color:#1A1A1A;padding:0;min-width:0;-moz-appearance:textfield;}
+#modal-reporte-ejercicio .num-ctrl input::-webkit-outer-spin-button,#modal-reporte-ejercicio .num-ctrl input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+#modal-reporte-ejercicio .num-ctrl .u{font-size:11px;font-weight:600;color:#8A867E;text-transform:uppercase;flex-shrink:0;}
+#modal-reporte-ejercicio .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid rgba(26,26,26,0.16);border-radius:9px;overflow:hidden;background:#ECE4D2;}
+#modal-reporte-ejercicio .seg-btn{appearance:none;border:0;background:transparent;cursor:pointer;padding:11px 0;font-family:'Bebas Neue',Oswald,Impact,sans-serif;font-size:20px;letter-spacing:0.5px;color:#8A867E;border-right:1px solid rgba(26,26,26,0.10);transition:background .15s ease,color .15s ease;min-height:44px;}
+#modal-reporte-ejercicio .scale .seg-btn:last-child{border-right:0;}
+#modal-reporte-ejercicio .seg-btn:hover{background:rgba(107,122,58,0.08);color:#4A4A48;}
+#modal-reporte-ejercicio .seg-btn.is-sel{background:#6B7A3A;color:#F5EFE0;}
