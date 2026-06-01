@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=41">
+    <link rel="stylesheet" href="./css/styles.css?v=42">
 </head>
 <body class="app-cliente">
 
@@ -737,6 +737,12 @@
                 <p class="error-message" id="reporte-error" hidden></p>
             </div>
 
+            <div class="reporte-tarea" id="reporte-tarea" hidden>
+                <p class="reporte-tarea__hoy" id="reporte-tarea-hoy">Hoy: 0 veces</p>
+                <button type="button" class="btn btn-primary reporte-tarea__btn" id="reporte-tarea-hecho">Marcar como hecha</button>
+                <p class="reporte-tarea__hint">Tocá cada vez que la realices hoy.</p>
+            </div>
+
             <div class="modal-pdli__actions">
                 <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
                 <button type="button" class="btn btn-primary" id="reporte-guardar">Guardar</button>
@@ -1004,6 +1010,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=1"></script>
     <script src="./js/tutorial.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=65"></script>
+    <script type="module" src="./js/app.js?v=66"></script>
 </body>
 </html>

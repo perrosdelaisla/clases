@@ -4203,6 +4203,8 @@ function bindNotasEjercicio() {
         ?.addEventListener('click', abrirModalReporte);
     document.getElementById('reporte-guardar')
         ?.addEventListener('click', guardarReporteEjercicio);
+    document.getElementById('reporte-tarea-hecho')
+        ?.addEventListener('click', marcarTareaHecha);
 
     // Pills de tranquilidad (1..5). Toque sobre el mismo número deselecciona.
     document.querySelectorAll('#reporte-tranquilidad .reporte-pill').forEach((btn) => {
@@ -4328,8 +4330,29 @@ function abrirModalReporte() {
     const radioNuevo = document.getElementById('reporte-modo-nuevo');
     if (radioNuevo) radioNuevo.checked = true;
 
+    // Ramificar según categoría: tareas/cambios usan botón "Hecho", no repeticiones.
+    const _progActual = _progresoCache.get(_ejercicioModalActualId);
+    const _esTareaOCambio = ['tarea', 'cambio_rutina'].includes(_progActual?.categoria);
+    const _formEl = document.querySelector('#modal-reporte-ejercicio .reporte-form');
+    const _tareaEl = document.getElementById('reporte-tarea');
+    const _guardarBtn = document.getElementById('reporte-guardar');
+    if (_esTareaOCambio) {
+        if (_formEl) _formEl.hidden = true;
+        if (_guardarBtn) _guardarBtn.hidden = true;
+        if (_tareaEl) {
+            _tareaEl.hidden = false;
+            const hoy = Number(_progActual?.count_dia || 0);
+            const hoyEl = document.getElementById('reporte-tarea-hoy');
+            if (hoyEl) hoyEl.textContent = `Hoy: ${hoy} ${hoy === 1 ? 'vez' : 'veces'}`;
+        }
+        abrirModal('modal-reporte-ejercicio');
+        return;
+    }
+    // Ejercicio normal: aseguramos que se vea el form y no la sección tarea.
+    if (_formEl) _formEl.hidden = false;
+    if (_guardarBtn) _guardarBtn.hidden = false;
+    if (_tareaEl) _tareaEl.hidden = true;
     abrirModal('modal-reporte-ejercicio');
-    // Disparar la búsqueda en background; no bloqueamos la apertura.
     cargarRegistroPrevioDelDia();
 }
 
@@ -4557,6 +4580,46 @@ async function guardarReporteEjercicio() {
         const msg = 'No pudimos guardar el reporte. Inténtalo de nuevo.';
         toast(msg, 'error');
         showErr(msg);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function marcarTareaHecha() {
+    const asignadoId = _ejercicioModalActualId;
+    const perroId = state.perroSeleccionadoId;
+    if (!asignadoId || !perroId) return;
+    const btn = document.getElementById('reporte-tarea-hecho');
+    if (btn) btn.disabled = true;
+    try {
+        const practica_id = await obtenerOCrearPracticaHoy(perroId);
+        const { error } = await supabase
+            .from('registros_ejercicio')
+            .insert({
+                practica_id,
+                ejercicio_asignado_id: asignadoId,
+                datos_registro: {},
+                tranquilidad: null,
+                nota: null,
+            });
+        if (error) throw error;
+        await cargarProgresoPerro(perroId);
+        const prog = _progresoCache.get(asignadoId);
+        const hoy = Number(prog?.count_dia || 0);
+        const hoyEl = document.getElementById('reporte-tarea-hoy');
+        if (hoyEl) hoyEl.textContent = `Hoy: ${hoy} ${hoy === 1 ? 'vez' : 'veces'}`;
+        try { await cargarMisEntrenos(asignadoId); } catch (e) {}
+        if (state.rutinaModo === 'progreso') cargarVistaProgreso();
+        await renderRutinaPerroSeleccionado();
+        const estado = evaluarProgresoEjercicio(prog);
+        if (estado && estado.superoTopeDiario) {
+            toast('Ya superaste el máximo diario de esta tarea.', 'info', 4000);
+        } else {
+            toast('¡Hecho!');
+        }
+    } catch (e) {
+        console.error('[tarea-hecha] error:', e);
+        toast('No pudimos guardarlo. Probá de nuevo.', 'error');
     } finally {
         if (btn) btn.disabled = false;
     }
