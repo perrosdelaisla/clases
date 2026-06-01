@@ -4010,6 +4010,7 @@ function iniciarModificarCita(cita) {
 let _ejercicioModalActualId = null;
 let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccionado)
 let _reporteRepes = [];                // [{ minStr, segStr }, ...] — filas dinámicas de repeticiones
+let _reporteCampos = [];               // campos activos del ejercicio actual (de la RPC)
 let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquilidad, nota, registrado_en }
 
 // Helpers de fecha
@@ -4221,7 +4222,7 @@ function bindNotasEjercicio() {
 
     // Lista dinámica de repeticiones: sumar / editar / eliminar.
     document.getElementById('reporte-repes-add')?.addEventListener('click', () => {
-        _reporteRepes.push({ minStr: '', segStr: '' });
+        _reporteRepes.push({});
         renderRepesLista();
         // Foco automático en el min de la nueva repe.
         const ul = document.getElementById('reporte-repes-lista');
@@ -4230,16 +4231,17 @@ function bindNotasEjercicio() {
     });
 
     const ulRepes = document.getElementById('reporte-repes-lista');
-    ulRepes?.addEventListener('input', (e) => {
-        const el = e.target.closest('input[data-idx]');
+    const onRepeChange = (e) => {
+        const el = e.target.closest('[data-idx][data-campo]');
         if (!el) return;
         const idx = Number(el.dataset.idx);
         const campo = el.dataset.campo;
         if (!_reporteRepes[idx]) return;
-        if (campo === 'min') _reporteRepes[idx].minStr = el.value;
-        if (campo === 'seg') _reporteRepes[idx].segStr = el.value;
-        actualizarTotalRepes();
-    });
+        _reporteRepes[idx][campo] = el.value;
+        if (campo.endsWith('_min') || campo.endsWith('_seg')) actualizarTotalRepes();
+    };
+    ulRepes?.addEventListener('input', onRepeChange);
+    ulRepes?.addEventListener('change', onRepeChange);
     ulRepes?.addEventListener('click', (e) => {
         const btn = e.target.closest('.reporte-repe__del');
         if (!btn) return;
@@ -4252,39 +4254,74 @@ function bindNotasEjercicio() {
 function renderRepesLista() {
     const ul = document.getElementById('reporte-repes-lista');
     if (!ul) return;
-    ul.innerHTML = _reporteRepes.map((rep, idx) => `
-        <li class="reporte-repe" data-idx="${idx}">
-            <span class="reporte-repe__label">Rep ${idx + 1}</span>
-            <div class="reporte-repe__inputs">
-                <input type="number" class="reporte-repe__min" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep.minStr || '')}" data-idx="${idx}" data-campo="min">
-                <span class="reporte-tiempo__sep">min</span>
-                <input type="number" class="reporte-repe__seg" inputmode="numeric" min="0" max="59" step="1" placeholder="—" value="${escapeHTML(rep.segStr || '')}" data-idx="${idx}" data-campo="seg">
-                <span class="reporte-tiempo__sep">seg</span>
-            </div>
-            <button type="button" class="reporte-repe__del" data-idx="${idx}" aria-label="Eliminar repetición">✕</button>
-        </li>
-    `).join('');
+    const campos = _reporteCampos || [];
+    const selOpts = (val) => [1, 2, 3, 4, 5]
+        .map((n) => `<option value="${n}"${String(val) === String(n) ? ' selected' : ''}>${n}</option>`)
+        .join('');
+    ul.innerHTML = _reporteRepes.map((rep, idx) => {
+        const controles = campos.map((campo) => {
+            if (campo === 'tiempo_total' || campo === 'tiempo_parcial') {
+                const label = campo === 'tiempo_total' ? 'Tiempo' : 'Parcial';
+                return `
+                    <div class="reporte-campo">
+                        <label class="reporte-campo__lbl">${label}</label>
+                        <div class="reporte-campo__tiempo">
+                            <input type="number" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep[campo + '_min'] || '')}" data-idx="${idx}" data-campo="${campo}_min"><span class="reporte-tiempo__sep">min</span>
+                            <input type="number" inputmode="numeric" min="0" max="59" step="1" placeholder="—" value="${escapeHTML(rep[campo + '_seg'] || '')}" data-idx="${idx}" data-campo="${campo}_seg"><span class="reporte-tiempo__sep">seg</span>
+                        </div>
+                    </div>`;
+            }
+            if (campo === 'distancia') {
+                return `
+                    <div class="reporte-campo">
+                        <label class="reporte-campo__lbl">Distancia</label>
+                        <input type="number" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep.distancia || '')}" data-idx="${idx}" data-campo="distancia">
+                    </div>`;
+            }
+            if (campo === 'valor_estimulo') {
+                return `
+                    <div class="reporte-campo">
+                        <label class="reporte-campo__lbl">Valor (1-5)</label>
+                        <select class="reporte-campo__sel" data-idx="${idx}" data-campo="valor_estimulo"><option value="">—</option>${selOpts(rep.valor_estimulo)}</select>
+                    </div>`;
+            }
+            if (campo === 'dificultad') {
+                return `
+                    <div class="reporte-campo">
+                        <label class="reporte-campo__lbl">Dificultad (1-5)</label>
+                        <select class="reporte-campo__sel" data-idx="${idx}" data-campo="dificultad"><option value="">—</option>${selOpts(rep.dificultad)}</select>
+                    </div>`;
+            }
+            return '';
+        }).join('');
+        return `
+            <li class="reporte-repe" data-idx="${idx}">
+                <div class="reporte-repe__top">
+                    <span class="reporte-repe__label">Rep ${idx + 1}</span>
+                    <button type="button" class="reporte-repe__del" data-idx="${idx}" aria-label="Eliminar repetición">✕</button>
+                </div>
+                <div class="reporte-repe__campos">${controles}</div>
+            </li>`;
+    }).join('');
     actualizarTotalRepes();
 }
 
 function actualizarTotalRepes() {
     const totalEl = document.getElementById('reporte-repes-total');
     if (!totalEl) return;
-    if (_reporteRepes.length === 0) {
-        totalEl.hidden = true;
-        return;
-    }
+    if (_reporteRepes.length === 0) { totalEl.hidden = true; return; }
+    const tieneTiempo = (_reporteCampos || []).includes('tiempo_total');
     let segs = 0;
-    _reporteRepes.forEach((r) => {
-        const m = parseInt(r.minStr || '0', 10);
-        const s = parseInt(r.segStr || '0', 10);
-        if (!isNaN(m) && !isNaN(s) && (m > 0 || s > 0)) {
-            segs += m * 60 + s;
-        }
-    });
+    if (tieneTiempo) {
+        _reporteRepes.forEach((r) => {
+            const m = parseInt(r.tiempo_total_min || '0', 10);
+            const s = parseInt(r.tiempo_total_seg || '0', 10);
+            if (!isNaN(m) && !isNaN(s) && (m > 0 || s > 0)) segs += m * 60 + s;
+        });
+    }
     const n = _reporteRepes.length;
-    if (segs === 0) {
-        totalEl.textContent = `${n} ${n === 1 ? 'repetición' : 'repeticiones'} · sin duración registrada`;
+    if (!tieneTiempo || segs === 0) {
+        totalEl.textContent = `${n} ${n === 1 ? 'repetición' : 'repeticiones'}`;
     } else {
         const min = Math.floor(segs / 60);
         const sec = segs % 60;
@@ -4303,6 +4340,7 @@ function abrirModalReporte() {
         toast('Cerrá y reabrí la ficha del ejercicio', 'error');
         return;
     }
+    _reporteCampos = _progresoCache.get(_ejercicioModalActualId)?.campos || [];
 
     const nombreEl = document.getElementById('modal-reporte-ejercicio-nombre');
     const tituloOrigen = document.getElementById('modal-ejercicio-titulo');
@@ -4444,21 +4482,42 @@ async function guardarReporteEjercicio() {
     // deben ser enteros >= 0 y los segundos <= 59.
     const repeticionesData = [];
     let tiempoTotalSeg = 0;
+    const _campos = _reporteCampos || [];
     for (const r of _reporteRepes) {
-        const minStr = (r.minStr || '').trim();
-        const segStr = (r.segStr || '').trim();
-        const ambosVacios = (minStr === '' && segStr === '');
-        const m = minStr === '' ? 0 : Number(minStr);
-        const s = segStr === '' ? 0 : Number(segStr);
-        const validoNum = Number.isFinite(m) && Number.isInteger(m) && m >= 0
-                       && Number.isFinite(s) && Number.isInteger(s) && s >= 0 && s <= 59;
-        if (!ambosVacios && !validoNum) {
-            showErr('Revisá la duración de las repeticiones (números enteros, segundos hasta 59).');
-            return;
+        const repObj = {};
+        const parseTiempo = (minV, segV) => {
+            const m = (minV || '').trim() === '' ? 0 : Number(minV);
+            const s = (segV || '').trim() === '' ? 0 : Number(segV);
+            const ok = Number.isInteger(m) && m >= 0 && Number.isInteger(s) && s >= 0 && s <= 59;
+            return ok ? { ok: true, seg: m * 60 + s } : { ok: false };
+        };
+        if (_campos.includes('tiempo_total')) {
+            const t = parseTiempo(r.tiempo_total_min, r.tiempo_total_seg);
+            if (!t.ok) { showErr('Revisá el tiempo (enteros, segundos hasta 59).'); return; }
+            if (t.seg > 0) { repObj.tiempo_total_seg = t.seg; tiempoTotalSeg += t.seg; }
         }
-        const dur = m * 60 + s;
-        if (dur > 0) tiempoTotalSeg += dur;
-        repeticionesData.push(dur > 0 ? { duracion_seg: dur } : {});
+        if (_campos.includes('tiempo_parcial')) {
+            const t = parseTiempo(r.tiempo_parcial_min, r.tiempo_parcial_seg);
+            if (!t.ok) { showErr('Revisá el tiempo parcial (enteros, segundos hasta 59).'); return; }
+            if (t.seg > 0) repObj.tiempo_parcial_seg = t.seg;
+        }
+        if (_campos.includes('distancia')) {
+            const d = (r.distancia || '').trim();
+            if (d !== '') {
+                const dn = Number(d);
+                if (!Number.isFinite(dn) || dn < 0) { showErr('Revisá la distancia.'); return; }
+                repObj.distancia = dn;
+            }
+        }
+        if (_campos.includes('valor_estimulo')) {
+            const v = Number(r.valor_estimulo);
+            if (v >= 1 && v <= 5) repObj.valor_estimulo = v;
+        }
+        if (_campos.includes('dificultad')) {
+            const dif = Number(r.dificultad);
+            if (dif >= 1 && dif <= 5) repObj.dificultad = dif;
+        }
+        repeticionesData.push(repObj);
     }
 
     const tieneRepes = _reporteRepes.length > 0;

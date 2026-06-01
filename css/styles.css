@@ -4269,3 +4269,10 @@ html.pdli-tour-open body { overflow: hidden; }
 .reporte-tarea__hint{font-size:13px;opacity:.7;margin:0;}
 .reporte-form[hidden], .reporte-tarea[hidden] { display: none !important; }
 #reporte-guardar[hidden] { display: none !important; }
+.reporte-repe__top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.reporte-repe__campos{display:flex;flex-direction:column;gap:8px;}
+.reporte-campo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.reporte-campo__lbl{font-size:13px;font-weight:600;min-width:84px;}
+.reporte-campo__tiempo{display:flex;align-items:center;gap:6px;}
+.reporte-campo__sel{padding:6px 10px;border-radius:8px;}
+.reporte-repe{padding:10px;border:1px solid var(--color-border,rgba(0,0,0,0.08));border-radius:12px;margin-bottom:8px;}
