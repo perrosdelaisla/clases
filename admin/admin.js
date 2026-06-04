@@ -178,12 +178,16 @@ async function afterLogin(session) {
         onChange: (tab) => activarTab(tab),
     });
 
-    // Tab inicial: prioridad al #hash de la URL (viene de tocar una
-    // notificación, ej. #avisos), luego la guardada, luego 'agenda'.
+    // Tab inicial: prioridad al #hash (notificación, ej. #avisos), si no Agenda.
     const TABS_VALIDOS = ['agenda', 'avisos', 'clientes', 'stats', 'catalogo'];
     const hashTab = (location.hash || '').replace('#', '');
     let tabInicial = TABS_VALIDOS.includes(hashTab) ? hashTab : 'agenda';
     if (tabInicial === 'inicio') tabInicial = 'agenda';
+    // Limpiar el #hash de la URL: viene de una notificación y, si no se
+    // borra, queda pegado y la PWA reabre en esa pestaña en vez de Agenda.
+    if (location.hash) {
+        history.replaceState(history.state, '', location.pathname + location.search);
+    }
     activarTab(tabInicial);
 
     // Navegación desde notificación push (ventana ya abierta):

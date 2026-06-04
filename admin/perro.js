@@ -367,7 +367,16 @@ function activarSubtab(subtab) {
     // Mientras se reordena, las sub-pestañas quedan bloqueadas (también las
     // que dispararía el swipe horizontal).
     if (state.modoReordenar) return;
+    // Back navigation: mientras estás en una subtab ≠ default hay UNA entrada
+    // extra en el historial, igual que con los modales. Cruzar hacia afuera de
+    // la default la suma; volver a la default la consume. pushHistoriaUI /
+    // consumirHistoriaUI ya respetan navegandoPorPopstate (no pushean cuando
+    // el cambio viene de un popstate).
+    const eraDefault = (state.subtabActiva === DEFAULT_SUBTAB);
+    const esDefault = (subtab === DEFAULT_SUBTAB);
     state.subtabActiva = subtab;
+    if (eraDefault && !esDefault) pushHistoriaUI();
+    else if (!eraDefault && esDefault) consumirHistoriaUI();
     document.querySelectorAll('.subtab').forEach((b) => {
         const active = b.dataset.subtab === subtab;
         b.classList.toggle('is-active', active);
@@ -839,7 +848,15 @@ function bindBackNavigation() {
             return;
         }
 
-        // Prioridad 2: pestaña ≠ default → volver a la default.
+        // Prioridad 2: subtab activa ≠ default → volver a la subtab default.
+        if (state.subtabActiva !== DEFAULT_SUBTAB) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try { activarSubtab(DEFAULT_SUBTAB); } finally { navegandoPorPopstate = false; }
+            return;
+        }
+
+        // Prioridad 3: pestaña principal ≠ default → volver a la default.
         const tabActual = document.querySelector('.tab.is-active')?.dataset.tab;
         if (tabActual && tabActual !== DEFAULT_TAB) {
             history.pushState({ pdli: 'anchor' }, '');
@@ -848,7 +865,7 @@ function bindBackNavigation() {
             return;
         }
 
-        // Prioridad 3: nada abierto, pestaña default → back natural al cliente.
+        // Prioridad 4: nada abierto, pestaña default → back natural al cliente.
         saliendoDePerro = true;
         history.back();
     });
