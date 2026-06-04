@@ -336,6 +336,13 @@ function activarTab(tabRaw, { updateUrl } = {}) {
         window.history.replaceState({}, '', url);
     }
 
+    // Si salimos de la pestaña Ejercicios con una subtab no-default activa,
+    // la devolvemos a su default para consumir su entrada de historial (si no,
+    // queda una entrada colgada que descuadra el back desde otras pestañas).
+    if (tab !== DEFAULT_TAB && state.subtabActiva !== DEFAULT_SUBTAB) {
+        activarSubtab(DEFAULT_SUBTAB);
+    }
+
     if (tab === 'salud') renderSaludPerro();
     if (tab === 'herramientas') renderHerramientas();
     if (tab === 'historico' && !state.historicoCargado) cargarHistorico();
@@ -848,8 +855,10 @@ function bindBackNavigation() {
             return;
         }
 
-        // Prioridad 2: subtab activa ≠ default → volver a la subtab default.
-        if (state.subtabActiva !== DEFAULT_SUBTAB) {
+        // Prioridad 2: en la pestaña Ejercicios con subtab ≠ default → volver a
+        // la subtab default. En otras pestañas la subtab no influye en el back.
+        const tabActivaAhora = document.querySelector('.tab.is-active')?.dataset.tab;
+        if (tabActivaAhora === DEFAULT_TAB && state.subtabActiva !== DEFAULT_SUBTAB) {
             history.pushState({ pdli: 'anchor' }, '');
             navegandoPorPopstate = true;
             try { activarSubtab(DEFAULT_SUBTAB); } finally { navegandoPorPopstate = false; }
