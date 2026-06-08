@@ -4304,3 +4304,12 @@ html.pdli-tour-open body { overflow: hidden; }
 #modal-reporte-ejercicio .field{width:100%;}
 #modal-reporte-ejercicio .scale{width:100%;}
 #modal-reporte-ejercicio .seg-btn{font-size:22px;padding:13px 0;}
+
+/* ─── Mi familia (modal del cliente principal) ─── */
+.familia-lista { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 22px; }
+.familia-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #F5EFE0; border: 1px solid #E2D8BF; border-radius: 10px; }
+.familia-fila__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.familia-fila__nombre { font-weight: 600; color: #1A1A1A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.familia-fila__rol { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #6B7A3A; }
+.familia-fila__quitar { flex: none; background: none; border: none; color: #C8102E; font-size: 14px; font-weight: 600; padding: 6px 8px; cursor: pointer; }
+.familia-invitar__titulo { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #1A1A1A; margin: 0 0 12px; }

@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=47">
+    <link rel="stylesheet" href="./css/styles.css?v=48">
 </head>
 <body class="app-cliente">
 
@@ -154,6 +154,7 @@
                     <span id="avatar-letter">U</span>
                 </button>
                 <div class="avatar-menu" id="avatar-menu" hidden role="menu">
+                    <button type="button" class="avatar-menu__item" id="familia-btn" role="menuitem" hidden>Mi familia</button>
                     <button type="button" class="avatar-menu__item" id="logout-btn" role="menuitem">Cerrar sesión</button>
                 </div>
             </div>
@@ -843,6 +844,39 @@
         </div>
     </div>
 
+    <!-- ── MODAL: mi familia (cliente principal) ── -->
+    <div class="modal-pdli" id="modal-familia" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel modal-pdli__panel--form" role="dialog" aria-modal="true" aria-labelledby="modal-familia-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                </svg>
+            </button>
+            <h2 id="modal-familia-titulo" class="modal-pdli__titulo-display">MI FAMILIA</h2>
+            <p class="modal-pdli__lead">Las personas que entrenan con tu perro. Pueden ver la rutina, registrar las prácticas y consultar las clases. Reservar y editar los datos del perro queda en tus manos.</p>
+
+            <div class="familia-lista" id="familia-lista"></div>
+
+            <div class="familia-invitar">
+                <h3 class="familia-invitar__titulo">Invitar a un familiar</h3>
+                <div class="form-field">
+                    <label class="form-field__label" for="familia-inv-nombre">Nombre *</label>
+                    <input type="text" class="input-pdli" id="familia-inv-nombre" maxlength="120" autocapitalize="words" placeholder="Nombre del familiar">
+                </div>
+                <div class="form-field">
+                    <label class="form-field__label" for="familia-inv-email">Email *</label>
+                    <input type="email" class="input-pdli" id="familia-inv-email" maxlength="120" inputmode="email" placeholder="su@email.com">
+                </div>
+                <p class="error-message" id="familia-inv-error" hidden></p>
+                <div class="modal-pdli__actions">
+                    <button type="button" class="btn btn-primary" id="familia-invitar">Invitar familiar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── MODAL: editar mis datos (cliente) ── -->
     <div class="modal-pdli" id="modal-editar-mis-datos" hidden aria-hidden="true">
         <div class="modal-pdli__overlay" data-close></div>
@@ -1010,6 +1044,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=1"></script>
     <script src="./js/tutorial.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=69"></script>
+    <script type="module" src="./js/app.js?v=70"></script>
 </body>
 </html>

@@ -283,6 +283,19 @@ function bindEventos() {
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.addEventListener('click', cerrarSesion);
 
+    // Mi familia (solo principal)
+    const familiaBtn = document.getElementById('familia-btn');
+    if (familiaBtn) familiaBtn.addEventListener('click', abrirModalFamilia);
+
+    const familiaInvitar = document.getElementById('familia-invitar');
+    if (familiaInvitar) familiaInvitar.addEventListener('click', enviarInvitacionFamiliar);
+
+    const familiaLista = document.getElementById('familia-lista');
+    if (familiaLista) familiaLista.addEventListener('click', (e) => {
+        const btn = e.target.closest('.familia-fila__quitar');
+        if (btn) quitarFamiliar(btn.dataset.id, btn.dataset.nombre);
+    });
+
     document.addEventListener('click', (e) => {
         const menu = document.getElementById('avatar-menu');
         const btn = document.getElementById('avatar-btn');
@@ -737,6 +750,106 @@ function cerrarMenuAvatar() {
     btn?.setAttribute('aria-expanded', 'false');
 }
 
+// ===================== Mi familia (cliente principal) =====================
+
+async function abrirModalFamilia() {
+    cerrarMenuAvatar();
+    await cargarYRenderMiembros();
+    abrirModal('modal-familia');
+}
+
+async function cargarYRenderMiembros() {
+    const cont = document.getElementById('familia-lista');
+    if (!cont) return;
+    const { data, error } = await supabase
+        .from('usuarios_cliente')
+        .select('id, nombre, rol')
+        .eq('cliente_id', state.usuarioCliente.cliente_id)
+        .order('rol', { ascending: true })   // 'principal' antes que 'secundario'
+        .order('creado_en', { ascending: true });
+    if (error) {
+        console.error('[familia] error cargando miembros:', error);
+        cont.innerHTML = '<p class="error-message">No se pudieron cargar los familiares.</p>';
+        return;
+    }
+    cont.innerHTML = (data || []).map((m) => {
+        const esPrincipal = m.rol === 'principal';
+        const etiqueta = esPrincipal ? 'Principal' : 'Familiar';
+        const quitar = esPrincipal ? '' :
+            `<button type="button" class="familia-fila__quitar" data-id="${escapeHTML(m.id)}" data-nombre="${escapeHTML(m.nombre)}">Quitar</button>`;
+        return `<div class="familia-fila">
+            <div class="familia-fila__info">
+                <span class="familia-fila__nombre">${escapeHTML(m.nombre)}</span>
+                <span class="familia-fila__rol">${etiqueta}</span>
+            </div>
+            ${quitar}
+        </div>`;
+    }).join('');
+}
+
+async function enviarInvitacionFamiliar() {
+    const nombreEl = document.getElementById('familia-inv-nombre');
+    const emailEl = document.getElementById('familia-inv-email');
+    const errEl = document.getElementById('familia-inv-error');
+    const btn = document.getElementById('familia-invitar');
+
+    const nombre = (nombreEl.value || '').trim();
+    const email = (emailEl.value || '').trim().toLowerCase();
+    errEl.hidden = true;
+    errEl.textContent = '';
+
+    if (!nombre) { errEl.textContent = 'Escribe el nombre del familiar.'; errEl.hidden = false; return; }
+    if (!EMAIL_RE.test(email)) { errEl.textContent = 'Email inválido.'; errEl.hidden = false; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    const { data, error } = await supabase.functions.invoke('invitar-familiar', {
+        body: { email, nombre },
+    });
+
+    // Mismo manejo que admin/cliente.js: si la función responde 4xx/5xx,
+    // el cuerpo { ok, error } viene en error.context.
+    let resultado = data;
+    if (error?.context && typeof error.context.json === 'function') {
+        resultado = await error.context.json().catch(() => null);
+    }
+
+    if (!resultado?.ok) {
+        const detalle = resultado?.error || error?.message || 'No se pudo enviar la invitación.';
+        console.error('[familia] invitar-familiar falló:', { detalle, error });
+        errEl.textContent = detalle;
+        errEl.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Invitar familiar';
+        return;
+    }
+
+    nombreEl.value = '';
+    emailEl.value = '';
+    toast(`Invitación enviada a ${nombre}`, 'info');
+    await cargarYRenderMiembros();
+
+    btn.disabled = false;
+    btn.textContent = 'Invitar familiar';
+}
+
+async function quitarFamiliar(id, nombre) {
+    if (!id) return;
+    if (!confirm(`¿Quitar a ${nombre} de tu familia? Perderá el acceso a la app.`)) return;
+    const { error } = await supabase
+        .from('usuarios_cliente')
+        .delete()
+        .eq('id', id);
+    if (error) {
+        console.error('[familia] error al quitar familiar:', error);
+        toast('No se pudo quitar al familiar', 'error');
+        return;
+    }
+    toast(`${nombre} ya no tiene acceso`, 'info');
+    await cargarYRenderMiembros();
+}
+
 // ===================== Datos =====================
 
 async function cargarUsuarioCliente(authUserId) {
@@ -1064,6 +1177,12 @@ function renderHeader() {
 
     setText('usuario-nombre', nombrePila);
     document.getElementById('avatar-letter').textContent = (nombrePila[0] || 'U').toUpperCase();
+
+    const familiaBtn = document.getElementById('familia-btn');
+    if (familiaBtn) {
+        if (state.usuarioCliente?.rol === 'principal') familiaBtn.removeAttribute('hidden');
+        else familiaBtn.setAttribute('hidden', '');
+    }
 }
 
 function renderSelectorPerros() {
