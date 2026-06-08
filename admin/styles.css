@@ -4415,3 +4415,9 @@ body {
 .admin-responder__btn:disabled{opacity:.5;cursor:default;}
 .admin-entry--mio{margin-left:24px;border-left:3px solid var(--color-red,#C8102E);background:rgba(200,16,46,0.06);}
 #admin-mensajes-feed{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;}
+
+/* Quién puede entrar a la app (miembros de la familia) — solo lectura */
+.miembros-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.miembro-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #fff; border: 1px solid #E2D8BF; border-radius: 10px; }
+.miembro-nombre { font-weight: 600; color: #1A1A1A; }
+.miembro-rol { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #6B7A3A; }

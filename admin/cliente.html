@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Cliente — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=36">
+    <link rel="stylesheet" href="./styles.css?v=37">
 </head>
 <body>
 
@@ -95,6 +95,12 @@
                 <p class="empty-state" id="perros-empty" hidden>Aún no hay perros registrados.</p>
             </section>
 
+            <section class="detalle-seccion" aria-labelledby="miembros-titulo">
+                <h2 id="miembros-titulo" class="seccion-titulo">Quién puede entrar a la app</h2>
+                <ul id="miembros-lista" class="miembros-lista"></ul>
+                <p class="empty-state" id="miembros-empty" hidden>Esta cuenta aún no tiene a nadie con acceso a la app.</p>
+            </section>
+
             <section class="admin-mensajes" id="admin-mensajes" hidden>
                 <div class="admin-mensajes__head">
                     <h2 class="admin-mensajes__titulo">Mensajes del cliente</h2>
@@ -151,6 +157,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./cliente.js?v=20"></script>
+    <script type="module" src="./cliente.js?v=21"></script>
 </body>
 </html>

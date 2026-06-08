@@ -146,6 +146,9 @@ function renderCliente(c, tieneUsuario) {
 
     // Feed de mensajes del cliente (Bloque A.3)
     renderAdminMensajes(c.id);
+
+    // Quién puede entrar a la app (principal + familiares) — solo lectura.
+    cargarMiembros(c.id);
 }
 
 // El texto del botón depende de si el cliente YA fue invitado, es decir,
@@ -183,6 +186,42 @@ function renderPerroCard(p) {
                 <span class="perro-nombre">${nombre}</span>
                 <span class="perro-meta">${meta}</span>
             </a>
+        </li>
+    `;
+}
+
+async function cargarMiembros(clienteId) {
+    const lista = document.getElementById('miembros-lista');
+    const empty = document.getElementById('miembros-empty');
+    if (!lista || !empty) return;
+    const { data, error } = await supabase
+        .from('usuarios_cliente')
+        .select('id, nombre, rol')
+        .eq('cliente_id', clienteId)
+        .order('rol', { ascending: true })       // principal antes que secundario
+        .order('creado_en', { ascending: true });
+    if (error) {
+        console.error('[cliente] error cargando miembros:', error);
+        lista.innerHTML = '';
+        empty.hidden = false;
+        return;
+    }
+    if (!data.length) {
+        lista.innerHTML = '';
+        empty.hidden = false;
+        return;
+    }
+    empty.hidden = true;
+    lista.innerHTML = data.map(renderMiembro).join('');
+}
+
+function renderMiembro(m) {
+    const nombre = escapeHTML(m.nombre || 'Sin nombre');
+    const etiqueta = m.rol === 'principal' ? 'Principal' : 'Familiar';
+    return `
+        <li class="miembro-fila">
+            <span class="miembro-nombre">${nombre}</span>
+            <span class="miembro-rol">${etiqueta}</span>
         </li>
     `;
 }
