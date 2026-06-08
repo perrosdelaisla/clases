@@ -752,6 +752,10 @@ function cerrarMenuAvatar() {
 
 // ===================== Mi familia (cliente principal) =====================
 
+function esPrincipal() {
+    return state.usuarioCliente?.rol === 'principal';
+}
+
 async function abrirModalFamilia() {
     cerrarMenuAvatar();
     await cargarYRenderMiembros();
@@ -1055,6 +1059,7 @@ async function llamarPuedeReservar() {
 
 function showTab(name) {
     if (!name) return;
+    if (name === 'reservar' && !esPrincipal()) name = 'rutina';
     state.currentTab = name;
 
     // Si el usuario sale de Reservar sin completar una modificación,
@@ -1183,6 +1188,8 @@ function renderHeader() {
         if (state.usuarioCliente?.rol === 'principal') familiaBtn.removeAttribute('hidden');
         else familiaBtn.setAttribute('hidden', '');
     }
+
+    document.body.classList.toggle('es-secundario', !esPrincipal());
 }
 
 function renderSelectorPerros() {

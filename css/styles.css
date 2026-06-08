@@ -4313,3 +4313,11 @@ html.pdli-tour-open body { overflow: hidden; }
 .familia-fila__rol { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #6B7A3A; }
 .familia-fila__quitar { flex: none; background: none; border: none; color: #C8102E; font-size: 14px; font-weight: 600; padding: 6px 8px; cursor: pointer; }
 .familia-invitar__titulo { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #1A1A1A; margin: 0 0 12px; }
+
+/* Permisos de rol: el familiar (secundario) no ve las acciones del titular. */
+body.es-secundario #btn-editar-mis-datos,
+body.es-secundario #btn-editar-perro,
+body.es-secundario #perro-foto-btn,
+body.es-secundario #perro-pill-add,
+body.es-secundario .bottom-nav__btn[data-tab-target="reservar"],
+body.es-secundario .cita-cancelar-btn { display: none !important; }
