@@ -252,6 +252,39 @@ async function confirmarWelcomeVisto() {
 
 // ===================== Bindings =====================
 
+const PDLI_THEME_KEY = 'pdli-home-theme';
+function aplicarTemaHome(t) {
+    const home = document.getElementById('screen-app');
+    if (!home) return;
+    home.setAttribute('data-theme', t);
+    const tg = document.getElementById('theme-toggle');
+    if (tg) {
+        const moon = tg.querySelector('.theme-toggle__moon');
+        const sun = tg.querySelector('.theme-toggle__sun');
+        if (moon) moon.hidden = (t === 'oscuro');
+        if (sun) sun.hidden = (t !== 'oscuro');
+    }
+    try { localStorage.setItem(PDLI_THEME_KEY, t); } catch (e) {}
+}
+function initTemaHome() {
+    let t = 'claro';
+    try { t = localStorage.getItem(PDLI_THEME_KEY) || 'claro'; } catch (e) {}
+    aplicarTemaHome(t);
+    const tg = document.getElementById('theme-toggle');
+    if (tg && !tg.dataset.bound) {
+        tg.dataset.bound = '1';
+        tg.addEventListener('click', () => {
+            const cur = document.getElementById('screen-app').getAttribute('data-theme');
+            aplicarTemaHome(cur === 'oscuro' ? 'claro' : 'oscuro');
+        });
+    }
+    const wd = document.getElementById('work-day');
+    if (wd) {
+        let s = new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+        wd.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+    }
+}
+
 function bindEventos() {
     // Login
     const form = document.getElementById('login-form');
@@ -443,6 +476,8 @@ function bindEventos() {
             renderRutinaPerroSeleccionado();
         },
     });
+
+    initTemaHome();
 }
 
 // ===================== Login =====================
@@ -1327,7 +1362,11 @@ async function renderRutinaPerroSeleccionado() {
     const pack = calcularEstadoPack(state.cliente, state.citas);
     if (pack.pack_actual != null) {
         saldoPack.textContent = pack.pack_actual;
-        saldoDetalle.textContent = formatearDetallePack(pack);
+        const _kR = document.getElementById('perro-saldo-realizadas');
+        const _kV = document.getElementById('perro-saldo-reservar');
+        if (_kR) _kR.textContent = pack.realizadas_del_pack ?? 0;
+        if (_kV) _kV.textContent = pack.por_reservar ?? 0;
+        if (saldoDetalle) saldoDetalle.textContent = formatearDetallePack(pack);
         saldoBox.removeAttribute('hidden');
     }
 

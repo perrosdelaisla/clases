@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
     <link rel="stylesheet" href="./css/styles.css?v=51">
-    <link rel="stylesheet" href="./css/home.css?v=1">
+    <link rel="stylesheet" href="./css/home.css?v=2">
 </head>
 <body class="app-cliente">
 
@@ -134,154 +134,130 @@
         </main>
     </section>
 
-    <section class="screen" id="screen-app" hidden>
-        <header class="header-cliente">
-            <div class="brand brand--header">
-                <div class="logo-circle">
-                    <img src="./img/logo.png" alt="" class="logo-circle__img">
-                </div>
-                <div class="brand__text">
-                    <span class="brand__name">PERROS DE LA ISLA</span>
-                    <span class="brand__tagline">Adiestramiento canino profesional</span>
-                </div>
-            </div>
-            <div class="header-cliente__menu">
-                <button type="button" class="avatar-btn" id="avatar-btn" aria-haspopup="menu" aria-expanded="false">
-                    <span id="avatar-letter">U</span>
-                </button>
-                <div class="avatar-menu" id="avatar-menu" hidden role="menu">
-                    <button type="button" class="avatar-menu__item" id="familia-btn" role="menuitem" hidden>Mi familia</button>
-                    <button type="button" class="avatar-menu__item" id="logout-btn" role="menuitem">Cerrar sesión</button>
-                </div>
-            </div>
-        </header>
-
+    <section class="screen home" id="screen-app" data-theme="claro" hidden>
         <main class="app-main">
 
             <!-- ── TAB RUTINA ── -->
-            <section class="tab-panel is-active" id="tab-rutina" data-tab="rutina">
-                <p class="saludo-main">
-                    Hola, <strong id="usuario-nombre">…</strong>
-                    <button type="button" class="lapiz-edit" id="btn-editar-mis-datos" aria-label="Editar mis datos">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/>
-                        </svg>
-                    </button>
-                </p>
+<section class="tab-panel is-active" id="tab-rutina" data-tab="rutina">
+            <article class="cover" id="perro-hero" hidden>
+                <button type="button" class="cover__foto" id="perro-foto-btn" aria-label="Cambiar foto del perro">
+                    <img class="cover__img" id="perro-foto-img" alt="" hidden>
+                    <span class="cover__fallback" id="perro-foto-fallback" aria-hidden="true">P</span>
+                    <span class="cover__cam" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </span>
+                </button>
+                <div class="cover__scrim" aria-hidden="true"></div>
 
-                <nav class="perro-selector" id="perro-selector" hidden aria-label="Elegir perro"></nav>
+                <div class="cover__top">
+                    <div class="cover__logo"><img src="./img/logo-ucm.png" alt="Perros de la Isla"></div>
+                    <div class="cover__controls">
+                        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Cambiar tema">
+                            <svg class="theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+                            <svg class="theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                        </button>
+                        <nav class="dogsel" id="perro-selector" hidden aria-label="Elegir perro"></nav>
+                        <div class="cover__avatar">
+                            <button type="button" class="avatar-btn" id="avatar-btn" aria-haspopup="menu" aria-expanded="false"><span id="avatar-letter">U</span></button>
+                            <div class="avatar-menu" id="avatar-menu" hidden role="menu">
+                                <button type="button" class="avatar-menu__item" id="familia-btn" role="menuitem" hidden>Mi familia</button>
+                                <button type="button" class="avatar-menu__item" id="logout-btn" role="menuitem">Cerrar sesión</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <article class="perro-hero" id="perro-hero" hidden>
-                    <button type="button" class="perro-foto" id="perro-foto-btn" aria-label="Cambiar foto del perro">
-                        <img class="perro-foto__img" id="perro-foto-img" alt="" hidden>
-                        <span class="perro-foto__fallback" id="perro-foto-fallback" aria-hidden="true">P</span>
-                        <span class="perro-foto__edit" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                <circle cx="12" cy="13" r="4"/>
-                            </svg>
-                        </span>
-                    </button>
-                    <h1 class="perro-hero__nombre">
+                <div class="cover__bot">
+                    <p class="cover__hi">Hola, <strong id="usuario-nombre">…</strong>
+                        <button type="button" class="cover__edit" id="btn-editar-mis-datos" aria-label="Editar mis datos">· Editar</button>
+                    </p>
+                    <h1 class="cover__name">
                         <span id="perro-hero-nombre">…</span>
-                        <button type="button" class="lapiz-edit lapiz-edit--hero" id="btn-editar-perro" aria-label="Editar datos del perro">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M12 20h9"/>
-                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/>
-                            </svg>
+                        <button type="button" class="cover__edit-dog" id="btn-editar-perro" aria-label="Editar datos del perro">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
                         </button>
                     </h1>
-                    <p class="perro-hero__meta" id="perro-hero-meta"></p>
-                    <div class="perro-protocolo" id="perro-protocolo" hidden>
-                        <p class="perro-protocolo__label">Lo que estamos trabajando</p>
-                        <p class="perro-protocolo__nombre" id="perro-protocolo-nombre"></p>
-                        <p class="perro-protocolo__comp" id="perro-protocolo-comp" hidden></p>
-                        <button type="button" class="perro-protocolo__vermas" id="perro-protocolo-vermas">Saber más</button>
-                    </div>
-                    <div class="perro-saldo" id="perro-saldo" hidden>
-                        <p class="perro-saldo__kpi"><strong id="perro-saldo-pack">—</strong> clases</p>
-                        <p class="perro-saldo__detalle" id="perro-saldo-detalle"></p>
-                    </div>
-                </article>
+                    <p class="cover__meta" id="perro-hero-meta"></p>
+                </div>
+            </article>
 
-                <nav class="rutina-modo" role="tablist" aria-label="Vista">
-                    <button type="button" class="rutina-modo__btn is-active" data-modo="rutina" role="tab" aria-selected="true">Rutina</button>
+            <!-- ══ BAND: protocolo + KPIs ══ -->
+            <div class="band">
+                <div class="protocol" id="perro-protocolo" hidden>
+                    <div class="protocol__txt">
+                        <p class="eyebrow">Lo que estamos trabajando</p>
+                        <p class="protocol__name" id="perro-protocolo-nombre"></p>
+                        <p class="protocol__comp" id="perro-protocolo-comp" hidden></p>
+                    </div>
+                    <button type="button" class="protocol__more" id="perro-protocolo-vermas">Saber más</button>
+                </div>
+                <div class="hair"></div>
+                <div class="clases" id="perro-saldo" hidden>
+                    <div class="clases__kpi"><strong id="perro-saldo-pack">—</strong><span>Clases</span></div>
+                    <div class="clases__kpi"><strong id="perro-saldo-realizadas" class="is-oliva">—</strong><span>Realizada</span></div>
+                    <div class="clases__kpi"><strong id="perro-saldo-reservar" class="is-rojo">—</strong><span>Por reservar</span></div>
+                    <p id="perro-saldo-detalle" hidden></p>
+                </div>
+            </div>
+
+            <!-- ══ WORK: Hoy + modo + subtabs + lista ══ -->
+            <div class="work">
+                <div class="work-head">
+                    <span class="eyebrow">Hoy</span>
+                    <span class="work-day" id="work-day"></span>
+                </div>
+
+                <nav class="work-switch rutina-modo" role="tablist" aria-label="Vista">
+                    <button type="button" class="rutina-modo__btn is-active is-on" data-modo="rutina" role="tab" aria-selected="true">Rutina</button>
                     <button type="button" class="rutina-modo__btn" data-modo="progreso" role="tab" aria-selected="false">Mi progreso</button>
                 </nav>
 
                 <div class="rutina-modo-panel" id="rutina-vista">
-                <section class="card-salud" id="card-salud" hidden>
-                    <img class="card-salud__logo" src="https://i.ibb.co/3YNrs9tM/Dise-o-con-cambio-de-negro-a-blanco.png" alt="" loading="lazy" width="56" height="56">
-                    <div class="card-salud__content">
-                        <h3 class="card-salud__title">Evalúa la salud comportamental de <span id="card-salud-perro">tu perro</span></h3>
-                        <p class="card-salud__desc">5 minutos. Te ayuda a entender mejor su estado, a ti y al adiestrador.</p>
+                    <nav class="subtabs rutina-subtabs" role="tablist" aria-label="Categoría de ejercicios">
+                        <button type="button" class="chip rutina-subtab is-active is-on" data-cat="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
+                        <button type="button" class="chip rutina-subtab" data-cat="cambio_rutina" role="tab" aria-selected="false">Cambios de rutina</button>
+                        <button type="button" class="chip rutina-subtab" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
+                        <button type="button" class="chip rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
+                    </nav>
+
+                    <div class="anillo-semana" id="anillo-semana" hidden aria-label="Cumplimiento de la semana">
+                        <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true"><circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/><circle class="anillo-semana__fill" cx="50" cy="50" r="44" fill="none" stroke-width="8" stroke-dasharray="276.46" stroke-dashoffset="276.46" transform="rotate(-90 50 50)" stroke-linecap="round"/></svg>
+                        <div class="anillo-semana__center"><span class="anillo-semana__num" id="anillo-semana-num">0</span><span class="anillo-semana__den" id="anillo-semana-den">/0</span><span class="anillo-semana__label">cumplidos</span></div>
                     </div>
-                    <button type="button" class="card-salud__btn" id="btn-iniciar-evaluacion">Empezar →</button>
-                </section>
 
-                <!-- Sub-pestañas dentro de Rutina -->
-                <nav class="rutina-subtabs" role="tablist" aria-label="Categoría de ejercicios">
-                    <button type="button" class="rutina-subtab is-active" data-cat="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
-                    <button type="button" class="rutina-subtab" data-cat="cambio_rutina" role="tab" aria-selected="false">Cambios de rutina</button>
-                    <button type="button" class="rutina-subtab" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
-                    <button type="button" class="rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
-                </nav>
+                    <div id="rutina-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
+                    <ul id="rutina-lista" class="routine rutina-lista" hidden></ul>
+                    <div id="rutina-empty" class="rutina-empty" hidden><p>Tu adiestrador todavía no ha activado ejercicios. Te avisamos cuando estén disponibles.</p></div>
+                    <div id="rutina-sin-perro" class="rutina-empty" hidden><p>Todavía no tienes perros registrados. Avisa al adiestrador y te los carga.</p></div>
 
-                <div class="anillo-semana" id="anillo-semana" hidden aria-label="Cumplimiento de la semana">
-                    <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true">
-                        <circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/>
-                        <circle class="anillo-semana__fill"  cx="50" cy="50" r="44" fill="none" stroke-width="8"
-                                stroke-dasharray="276.46" stroke-dashoffset="276.46"
-                                transform="rotate(-90 50 50)" stroke-linecap="round"/>
-                    </svg>
-                    <div class="anillo-semana__center">
-                        <span class="anillo-semana__num" id="anillo-semana-num">0</span>
-                        <span class="anillo-semana__den" id="anillo-semana-den">/0</span>
-                        <span class="anillo-semana__label">cumplidos</span>
-                    </div>
-                </div>
+                    <!-- Banner salud (acento, bajo de jerarquía) -->
+                    <section class="health" id="card-salud" hidden>
+                        <span class="health__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+                        <div class="health__txt">
+                            <h3 class="health__title">Evalúa la salud comportamental de <span id="card-salud-perro">tu perro</span></h3>
+                            <p class="health__desc">5 min · nos ayuda a ajustar la rutina</p>
+                        </div>
+                        <button type="button" class="health__btn" id="btn-iniciar-evaluacion" aria-label="Empezar evaluación">→</button>
+                    </section>
 
-                <div id="rutina-loading" class="placeholder placeholder--soft">
-                    <p>Cargando…</p>
-                </div>
-
-                <ul id="rutina-lista" class="rutina-lista" hidden></ul>
-
-                <div id="rutina-empty" class="rutina-empty" hidden>
-                    <p>Tu adiestrador todavía no ha activado ejercicios. Te avisamos cuando estén disponibles.</p>
-                </div>
-
-                <div id="rutina-sin-perro" class="rutina-empty" hidden>
-                    <p>Todavía no tienes perros registrados. Avisa al adiestrador y te los carga.</p>
-                </div>
+                    <!-- Nuestro enfoque (filosofía) -->
+                    <section class="philo">
+                        <p class="eyebrow">Nuestro enfoque</p>
+                        <p class="philo__text">Educar a tu perro es un proceso, no un truco. Muchos problemas de conducta no se resuelven con recetas mágicas ni dependen de la habilidad de una sola persona: detrás suele haber una emoción mal gestionada, una comunicación que falla entre el perro y su tutor, o una rutina que necesita cambios. El cambio real llega con constancia en el día a día, no en una tarde.</p>
+                        <p class="philo__sign">— El equipo de Perros de la Isla</p>
+                    </section>
                 </div>
 
                 <div class="rutina-modo-panel" id="progreso-vista" hidden>
                     <div class="anillo-semana anillo-semana--grande" id="anillo-progreso" hidden aria-label="Cumplimiento de la semana">
-                        <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true">
-                            <circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/>
-                            <circle class="anillo-semana__fill" id="anillo-progreso-fill" cx="50" cy="50" r="44" fill="none" stroke-width="8"
-                                    stroke-dasharray="276.46" stroke-dashoffset="276.46"
-                                    transform="rotate(-90 50 50)" stroke-linecap="round"/>
-                        </svg>
-                        <div class="anillo-semana__center">
-                            <span class="anillo-semana__num" id="anillo-progreso-num">0</span>
-                            <span class="anillo-semana__den" id="anillo-progreso-den">/0</span>
-                            <span class="anillo-semana__label">cumplidos</span>
-                        </div>
+                        <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true"><circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/><circle class="anillo-semana__fill" id="anillo-progreso-fill" cx="50" cy="50" r="44" fill="none" stroke-width="8" stroke-dasharray="276.46" stroke-dashoffset="276.46" transform="rotate(-90 50 50)" stroke-linecap="round"/></svg>
+                        <div class="anillo-semana__center"><span class="anillo-semana__num" id="anillo-progreso-num">0</span><span class="anillo-semana__den" id="anillo-progreso-den">/0</span><span class="anillo-semana__label">cumplidos</span></div>
                     </div>
-
-                    <div id="progreso-loading" class="placeholder placeholder--soft">
-                        <p>Cargando…</p>
-                    </div>
-
-                    <div id="progreso-empty" class="placeholder" hidden>
-                        <p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p>
-                    </div>
-
+                    <div id="progreso-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
+                    <div id="progreso-empty" class="placeholder" hidden><p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p></div>
                     <ul id="progreso-lista" class="progreso-lista" hidden></ul>
                 </div>
+            </div>
             </section>
 
             <!-- ── TAB RESERVAR ── -->

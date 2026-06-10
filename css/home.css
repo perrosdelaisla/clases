@@ -1,5 +1,5 @@
-/* PDLI · Home rediseñada — portada del prototipo de Design.
-   Todo scopeado bajo .home: no puede pisar el CSS existente.
+/* PDLI · Home rediseñada — portada fiel del prototipo de Design.
+   Todo scopeado bajo .home (no pisa el CSS existente).
    Tema claro/oscuro via .home[data-theme="oscuro"]. */
 
 :root{
@@ -7,23 +7,11 @@
   --body:'Inter',system-ui,-apple-system,sans-serif;
   --type-scale:1; --dens:1; --head-scale:1;
 }
+
 .home /* ============================================================
    PDLI · Home rediseñada — hoja base
    Tres direcciones, .home tema claro/oscuro, .home densidad por tweaks.
    ============================================================ */
-:root{
-  --pdli-rojo:#C8102E;
-  --pdli-oliva:#6B7A3A;
-  --pdli-negro:#1A1A1A;
-  --pdli-crema:#F5EFE0;
-  --display:'Bebas Neue','Oswald',Impact,sans-serif;
-  --body:'Inter',system-ui,-apple-system,sans-serif;
-
-  /* escalas controladas por tweaks (se sobreescriben en .stage) */
-  --type-scale:1;
-  --dens:1;            /* multiplicador de espaciado */
-  --head-scale:1;      /* tamaño de la cabecera del perro */
-}
 .home *, .home *::before, .home *::after{box-sizing:border-box;}
 .home html, .home body{margin:0;padding:0;}
 .home body{
@@ -44,17 +32,6 @@
   border-bottom:1px solid rgba(245,239,224,0.08);
   backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
 }
-.home .chrome-inner{
-  max-width:1480px; margin:0 auto;
-  display:flex; align-items:center; gap:26px; flex-wrap:wrap;
-  padding:14px 28px;
-}
-.home .toolbar-group{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
-.home .toolbar-label{
-  font-family:var(--body); font-size:10px; font-weight:700;
-  letter-spacing:1.5px; text-transform:uppercase;
-  color:rgba(245,239,224,0.45); margin-right:8px;
-}
 .home .chip{
   font-family:var(--body); font-size:12px; font-weight:500;
   background:transparent; color:rgba(245,239,224,0.7);
@@ -73,6 +50,18 @@
 }
 .home .stage.is-compare{justify-content:center;flex-wrap:nowrap;}
 .home .stage.is-focus{justify-content:center;}
+.home-wrap{position:relative;flex:0 0 auto;}
+.home-label{
+  position:absolute; top:-34px; left:4px; right:4px;
+  display:flex; align-items:baseline; gap:8px;
+  font-family:var(--body); font-size:10px; font-weight:700;
+  letter-spacing:2px; text-transform:uppercase; color:rgba(245,239,224,0.55);
+}
+.home-label .nm{
+  font-family:var(--display); font-size:15px; letter-spacing:1.2px;
+  color:var(--pdli-crema);
+}
+.home-label .tag{color:rgba(245,239,224,0.4);font-weight:600;}
 .home /* ============================================================
    FRAME / TEMA (tokens conmutables)
    ============================================================ */
@@ -91,11 +80,15 @@
   --c-oliva-soft:rgba(107,122,58,0.12);
   --c-oliva-line:rgba(107,122,58,0.30);
   --c-statusbar:#1A1A1A;
+
+  width:392px; height:838px;
+  border-radius:34px;
   background:var(--c-bg);
   color:var(--c-text);
   overflow:hidden;
   position:relative;
   display:flex; flex-direction:column;
+  box-shadow:0 0 0 1px rgba(245,239,224,0.06),0 36px 90px rgba(0,0,0,0.55),0 10px 30px rgba(0,0,0,0.35);
 }
 .home[data-theme="oscuro"]{
   --c-bg:#15130D;
@@ -588,3 +581,10 @@
 .home .dBp .subtabs{margin-bottom:14px;}
 .home .dBp .health{margin:18px 18px 0;}
 .home .dBp .philo-wrap{margin:22px 20px 4px;padding-top:18px;border-top:1px solid var(--c-hair);}
+
+/* ── Integración con la app real (home-bridge) ─────────────── */
+#screen-app.home{ background:var(--c-bg); color:var(--c-text); }
+.home #tab-rutina{ padding:0; }                 /* cover a sangrado */
+.home #tab-rutina.tab-panel{ display:block; }
+.home .band, .home .work{ padding-left:18px; padding-right:18px; }
+.home .philo{ padding-left:0; padding-right:0; }
