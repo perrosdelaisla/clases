@@ -58,3 +58,13 @@
 .home[data-theme="claro"] .dBp .band{ border-bottom-color:rgba(26,26,26,0.16); }
 .home[data-theme="claro"] .dBp .band .clases{ border-top-color:rgba(26,26,26,0.16); }
 .home[data-theme="claro"] .clases .c{ border-right-color:rgba(26,26,26,0.14); }
+
+/* ── "Mi progreso": tarjeta por ejercicio ────────────────────────────
+   styles.css le daba una tarjeta en crema-sobre-oscuro (invisible en
+   claro). La adaptamos a los dos temas para que no se sienta vacío.
+   (Las barritas por semana van adentro de esta tarjeta — pendiente del
+   backend.) ─────────────────────────────────────────────────────────── */
+.home .progreso-lista{ gap:10px; }
+.home .progreso-item{ background:var(--c-surface); border:1px solid var(--c-hair-2); border-radius:14px; padding:13px 14px; }
+.home .progreso-item__nombre{ color:var(--c-text); }
+.home[data-theme="claro"] .progreso-item{ border-color:rgba(26,26,26,0.12); box-shadow:0 1px 3px rgba(26,26,26,0.06); }
