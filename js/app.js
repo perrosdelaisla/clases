@@ -978,6 +978,12 @@ const _progresoCache = new Map();
 // Cache de la RPC get_racha_perro: { ejercicio_asignado_id → racha_semanas }
 const _rachaCache = new Map();
 
+// Cache del historial semanal por ejercicio, calculado 100% en el frontend
+// (sin RPC nueva): { ejercicio_asignado_id → [{ idx, count, estado, actual }] }.
+// Semana 0 = la de asignación; cada semana es una ventana de 7 días desde
+// asignado_en. El color de cada semana usa la MISMA lógica que el chip.
+const _historialCache = new Map();
+
 // Lunes 00:00:00 local en ISO (UTC). Si hoy es domingo, retrocede 6 días.
 function inicioSemanaLocalIso() {
     const d = new Date();
@@ -1037,6 +1043,65 @@ async function cargarProgresoPerro(perroId) {
     _progresoCache.clear();
     (data || []).forEach((row) => _progresoCache.set(row.ejercicio_asignado_id, row));
     return data || [];
+}
+
+// Historial semanal por ejercicio, 100% frontend. Lee los registros que el
+// RLS ya le permite al cliente (sus propios ejercicios_asignados + registros)
+// y los agrupa en ventanas de 7 días ancladas a asignado_en (la "primera
+// clase"). El color de cada semana sale de estadoChipFrecuencia, igual que el
+// chip — misma metodología, sin inventar nada ni tocar la base.
+async function cargarHistorialSemanal(perroId) {
+    _historialCache.clear();
+    if (!perroId) return;
+
+    const { data: asignados, error: errA } = await supabase
+        .from('ejercicios_asignados')
+        .select('id, asignado_en, min_semanal, max_diario')
+        .eq('perro_id', perroId)
+        .eq('activo', true);
+    if (errA) throw errA;
+    if (!asignados || asignados.length === 0) return;
+
+    const ids = asignados.map((a) => a.id);
+
+    const { data: registros, error: errR } = await supabase
+        .from('registros_ejercicio')
+        .select('ejercicio_asignado_id, registrado_en')
+        .in('ejercicio_asignado_id', ids);
+    if (errR) throw errR;
+
+    // Agrupo los timestamps de registro por ejercicio asignado.
+    const tsPorAsignado = new Map();
+    (registros || []).forEach((r) => {
+        const t = new Date(r.registrado_en).getTime();
+        if (!Number.isFinite(t)) return;
+        if (!tsPorAsignado.has(r.ejercicio_asignado_id)) tsPorAsignado.set(r.ejercicio_asignado_id, []);
+        tsPorAsignado.get(r.ejercicio_asignado_id).push(t);
+    });
+
+    const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+    const ahora = Date.now();
+
+    asignados.forEach((a) => {
+        const inicio = new Date(a.asignado_en).getTime();
+        if (!Number.isFinite(inicio)) return;
+        const totalSemanas = Math.max(1, Math.ceil((ahora - inicio) / SEMANA_MS));
+        const counts = new Array(totalSemanas).fill(0);
+
+        (tsPorAsignado.get(a.id) || []).forEach((t) => {
+            if (t < inicio) return;
+            const idx = Math.floor((t - inicio) / SEMANA_MS);
+            if (idx >= 0 && idx < totalSemanas) counts[idx] += 1;
+        });
+
+        const semanas = counts.map((count, idx) => ({
+            idx,
+            count,
+            estado: estadoChipFrecuencia(a.min_semanal, a.max_diario, count),
+            actual: (idx === totalSemanas - 1),
+        }));
+        _historialCache.set(a.id, semanas);
+    });
 }
 
 // Arma las cadenas de progresión a partir de las filas activas (copiada de
@@ -1635,6 +1700,14 @@ async function cargarVistaProgreso() {
             _rachaCache.clear();
         }
 
+        // Historial semanal (frontend puro). Si falla, seguimos sin barras.
+        try {
+            await cargarHistorialSemanal(perroId);
+        } catch (e) {
+            console.error('[progreso] error historial:', e);
+            _historialCache.clear();
+        }
+
         renderAnilloProgreso();
         renderListaProgreso();
         loading.hidden = true;
@@ -1704,7 +1777,26 @@ function renderListaProgreso() {
     });
 
     lista.innerHTML = items.map(renderProgresoItem).join('');
+    // Arrancar el historial mostrando la semana más reciente (a la derecha).
+    lista.querySelectorAll('.progreso-historial').forEach((el) => {
+        el.scrollLeft = el.scrollWidth;
+    });
     lista.hidden = false;
+}
+
+// Fila de barritas: una por semana desde la asignación, color por estado
+// (mismo criterio que el chip). Scrolleable si son muchas semanas.
+function renderHistorialSemanal(asignadoId) {
+    const semanas = _historialCache.get(asignadoId);
+    if (!semanas || semanas.length === 0) return '';
+    const barras = semanas.map((s) => {
+        const color = COLOR_CHIP_FRECUENCIA[s.estado] || 'sin';
+        const actual = s.actual ? ' progreso-semana--actual' : '';
+        const veces = s.count === 1 ? 'vez' : 'veces';
+        const titulo = `Semana ${s.idx + 1}: ${s.count} ${veces}${s.actual ? ' (en curso)' : ''}`;
+        return `<span class="progreso-semana progreso-semana--${color}${actual}" title="${escapeHTML(titulo)}">${s.count}</span>`;
+    }).join('');
+    return `<div class="progreso-historial" aria-label="Historial por semana">${barras}</div>`;
 }
 
 function renderProgresoItem(row) {
@@ -1717,6 +1809,7 @@ function renderProgresoItem(row) {
     const rachaHTML = racha >= 2
         ? `<span class="progreso-item__racha"><strong>${racha}</strong> semanas seguidas</span>`
         : '';
+    const historialHTML = renderHistorialSemanal(row.ejercicio_asignado_id);
     return `
         <li class="progreso-item">
             <div class="progreso-item__nombre">${escapeHTML(row.nombre || 'Ejercicio')}</div>
@@ -1724,6 +1817,7 @@ function renderProgresoItem(row) {
                 ${chipHTML}
                 ${rachaHTML}
             </div>
+            ${historialHTML}
         </li>
     `;
 }
