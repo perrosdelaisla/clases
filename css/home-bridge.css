@@ -45,3 +45,11 @@
 .home .subtabs .rutina-subtab{ flex:0 0 auto; border:1px solid var(--c-hair-2); background:transparent; border-radius:999px; color:var(--c-text-2); padding:8px 14px; }
 .home .subtabs .rutina-subtab:hover{ border-color:var(--c-text-3); color:var(--c-text); }
 .home .subtabs .rutina-subtab.is-active{ background:var(--c-text); color:var(--c-bg); border-color:var(--c-text); }
+
+/* ── Refuerzo SOLO en tema claro ──────────────────────────────────────
+   Sobre el crema, los bordes del prototipo (10-16% de negro) quedan casi
+   invisibles. Acá los marcamos más fuerte SOLO en claro; el oscuro, que
+   ya se ve bien, queda intacto. ──────────────────────────────────────── */
+.home[data-theme="claro"] .work-switch.rutina-modo{ border-color:rgba(26,26,26,0.20); background:#E7DECA; }
+.home[data-theme="claro"] .subtabs .rutina-subtab{ border-color:rgba(26,26,26,0.24); color:#3A362F; }
+.home[data-theme="claro"] .subtabs .rutina-subtab.is-active{ background:#1A1A1A; color:#F5EFE0; border-color:#1A1A1A; }
