@@ -35,11 +35,13 @@
    .is-active (lo que el JS realmente usa) y neutralizamos el toggle y
    las subtabs viejos de styles.css. NO se toca ninguna lógica. ─────── */
 
-/* Toggle Rutina / Mi progreso: caja segmentada a lo ancho */
-.home .work-switch.rutina-modo{ margin:0 0 13px; justify-content:stretch; gap:0; }
-.home .work-switch .rutina-modo__btn{ max-width:none; border:0; border-radius:8px; background:transparent; }
-.home .work-switch .rutina-modo__btn.is-active{ background:var(--c-surface); color:var(--c-text); box-shadow:0 1px 4px rgba(0,0,0,0.10); }
+/* Toggle Rutina / Mi progreso: caja segmentada, botones al 50% */
+.home .work-switch.rutina-modo{ display:flex; gap:0; margin:0 0 13px; padding:3px; background:var(--c-field); border:1px solid var(--c-hair-2); border-radius:11px; }
+.home .work-switch .rutina-modo__btn{ flex:1; min-width:0; max-width:none; border:0; border-radius:8px; background:transparent; color:var(--c-text-3); }
+.home .work-switch .rutina-modo__btn.is-active{ background:var(--c-surface); color:var(--c-text); box-shadow:0 1px 3px rgba(0,0,0,0.12); }
 .home[data-theme="oscuro"] .work-switch .rutina-modo__btn.is-active{ background:#39341f; color:var(--c-text); }
 
-/* Subtabs de categoría: pastilla activa oscura como en Design */
+/* Subtabs de categoría: pastillas con borde visible; la activa rellena */
+.home .subtabs .rutina-subtab{ flex:0 0 auto; border:1px solid var(--c-hair-2); background:transparent; border-radius:999px; color:var(--c-text-2); padding:8px 14px; }
+.home .subtabs .rutina-subtab:hover{ border-color:var(--c-text-3); color:var(--c-text); }
 .home .subtabs .rutina-subtab.is-active{ background:var(--c-text); color:var(--c-bg); border-color:var(--c-text); }
