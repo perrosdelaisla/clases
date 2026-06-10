@@ -586,5 +586,4 @@
 #screen-app.home{ background:var(--c-bg); color:var(--c-text); }
 .home #tab-rutina{ padding:0; }                 /* cover a sangrado */
 .home #tab-rutina.tab-panel{ display:block; }
-.home .band, .home .work{ padding-left:18px; padding-right:18px; }
 .home .philo{ padding-left:0; padding-right:0; }

@@ -9,6 +9,9 @@
 /* Foto real del perro como fondo del cover (reemplaza al image-slot) */
 .home .dBp .cover .cover-photo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; z-index:0; }
 .home .dBp .cover .cover-fallback{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:90px; color:#F5EFE0; background:var(--c-field); z-index:0; }
+/* El placeholder y la <img> respetan el [hidden] que togglea la app
+   (si no, display:flex/block le ganan a hidden y el placeholder tapa la foto). */
+.home .dBp .cover .cover-photo[hidden], .home .dBp .cover .cover-fallback[hidden]{ display:none; }
 .home .dBp .cover .cover-fotobtn{ position:absolute; right:12px; bottom:12px; z-index:4; width:34px; height:34px; border-radius:999px; border:1px solid rgba(245,239,224,0.30); background:rgba(20,18,12,0.40); color:#F5EFE0; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
 .home .dBp .cover .cover-fotobtn svg{ width:16px; height:16px; }
 
@@ -25,3 +28,18 @@
 
 /* Complemento del protocolo */
 .home .dBp .band .proto-row .protocol .pp .v-comp{ font-size:11px; color:var(--c-text); opacity:.7; margin-top:3px; }
+
+/* ── Estado activo de pestañas ───────────────────────────────────────
+   El JS de la app togglea la clase .is-active, pero el prototipo de
+   Design pinta el activo con .is-on. Acá mapeamos el look de Design a
+   .is-active (lo que el JS realmente usa) y neutralizamos el toggle y
+   las subtabs viejos de styles.css. NO se toca ninguna lógica. ─────── */
+
+/* Toggle Rutina / Mi progreso: caja segmentada a lo ancho */
+.home .work-switch.rutina-modo{ margin:0 0 13px; justify-content:stretch; gap:0; }
+.home .work-switch .rutina-modo__btn{ max-width:none; border:0; border-radius:8px; background:transparent; }
+.home .work-switch .rutina-modo__btn.is-active{ background:var(--c-surface); color:var(--c-text); box-shadow:0 1px 4px rgba(0,0,0,0.10); }
+.home[data-theme="oscuro"] .work-switch .rutina-modo__btn.is-active{ background:#39341f; color:var(--c-text); }
+
+/* Subtabs de categoría: pastilla activa oscura como en Design */
+.home .subtabs .rutina-subtab.is-active{ background:var(--c-text); color:var(--c-bg); border-color:var(--c-text); }
