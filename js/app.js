@@ -1240,24 +1240,27 @@ function renderSelectorPerros() {
 
     const pillsPerros = state.perros.map((p) => {
         const active = p.id === state.perroSeleccionadoId;
+        const nombre = p.nombre || 'Perro';
+        const ini = escapeHTML(nombre.trim().charAt(0).toUpperCase() || 'P');
         return `
-            <button type="button" class="perro-pill${active ? ' is-active' : ''}"
+            <button type="button" class="av${active ? ' is-active' : ''}"
                     data-perro-id="${escapeHTML(p.id)}"
-                    aria-pressed="${active ? 'true' : 'false'}">
-                ${escapeHTML(p.nombre || 'Perro')}
+                    aria-pressed="${active ? 'true' : 'false'}"
+                    aria-label="${escapeHTML(nombre)}" title="${escapeHTML(nombre)}">
+                <span class="ini" aria-hidden="true">${ini}</span>
             </button>
         `;
     }).join('');
 
     const pillAgregar = `
-        <button type="button" class="perro-pill perro-pill--add" id="perro-pill-add" aria-label="Añadir un perro">
-            <span aria-hidden="true">+</span> Añadir perro
+        <button type="button" class="add" id="perro-pill-add" aria-label="Añadir un perro" title="Añadir un perro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
     `;
 
     sel.innerHTML = pillsPerros + pillAgregar;
 
-    sel.querySelectorAll('.perro-pill:not(.perro-pill--add)').forEach((btn) => {
+    sel.querySelectorAll('.av').forEach((btn) => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.perroId;
             if (!id || id === state.perroSeleccionadoId) return;
