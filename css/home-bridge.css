@@ -72,12 +72,14 @@
 /* Historial: mini-gráfico de barras verticales, una por semana desde la
    asignación. Altura = cumplimiento; color = estado (rojo/verde/azul).
    Scroll horizontal si son muchas semanas. */
-.home .progreso-historial{ display:flex; align-items:flex-end; gap:5px; height:44px; overflow-x:auto; padding:2px 0; margin-top:5px; scrollbar-width:none; -ms-overflow-style:none; }
+.home .progreso-historial{ display:flex; align-items:flex-end; gap:5px; overflow-x:auto; padding:2px 0; margin-top:6px; scrollbar-width:none; -ms-overflow-style:none; }
 .home .progreso-historial::-webkit-scrollbar{ height:0; display:none; }
-.home .progreso-semana{ position:relative; flex:0 0 auto; width:10px; height:100%; border-radius:5px; background:var(--c-hair); overflow:hidden; }
+/* Riel visible: cada semana es una ranura, llena o vacía. */
+.home .progreso-semana{ position:relative; flex:0 0 auto; width:11px; height:40px; border-radius:5px; background:var(--c-field); overflow:hidden; }
+.home[data-theme="claro"] .progreso-semana{ background:#E3DAC6; }
 .home .progreso-semana__fill{ position:absolute; left:0; right:0; bottom:0; border-radius:5px; transition:height .25s ease; }
 .home .progreso-semana--rojo  .progreso-semana__fill{ background:var(--pdli-rojo,#C8102E); }
 .home .progreso-semana--verde .progreso-semana__fill{ background:var(--pdli-oliva,#6B7A3A); }
 .home .progreso-semana--azul  .progreso-semana__fill{ background:#1F4FA8; }
-.home .progreso-semana--sin   .progreso-semana__fill{ background:var(--c-hair-2); }
+.home .progreso-semana--sin   .progreso-semana__fill{ background:var(--c-text-3); }
 .home .progreso-semana--actual{ box-shadow:0 0 0 1.5px var(--c-text-3); }
