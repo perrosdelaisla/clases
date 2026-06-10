@@ -1094,12 +1094,22 @@ async function cargarHistorialSemanal(perroId) {
             if (idx >= 0 && idx < totalSemanas) counts[idx] += 1;
         });
 
-        const semanas = counts.map((count, idx) => ({
-            idx,
-            count,
-            estado: estadoChipFrecuencia(a.min_semanal, a.max_diario, count),
-            actual: (idx === totalSemanas - 1),
-        }));
+        // Referencia para la altura de la barra: el objetivo de la semana.
+        const referencia = (a.min_semanal && a.min_semanal > 0) ? a.min_semanal
+                         : (a.max_diario && a.max_diario > 0) ? a.max_diario * 7
+                         : 1;
+        const semanas = counts.map((count, idx) => {
+            // Altura 0 si no hizo nada; si hizo algo, mínimo 14% para que se vea.
+            const pct = count === 0 ? 0
+                      : Math.max(14, Math.min(100, Math.round((count / referencia) * 100)));
+            return {
+                idx,
+                count,
+                estado: estadoChipFrecuencia(a.min_semanal, a.max_diario, count),
+                actual: (idx === totalSemanas - 1),
+                pct,
+            };
+        });
         _historialCache.set(a.id, semanas);
     });
 }
@@ -1794,7 +1804,7 @@ function renderHistorialSemanal(asignadoId) {
         const actual = s.actual ? ' progreso-semana--actual' : '';
         const veces = s.count === 1 ? 'vez' : 'veces';
         const titulo = `Semana ${s.idx + 1}: ${s.count} ${veces}${s.actual ? ' (en curso)' : ''}`;
-        return `<span class="progreso-semana progreso-semana--${color}${actual}" title="${escapeHTML(titulo)}">${s.count}</span>`;
+        return `<span class="progreso-semana progreso-semana--${color}${actual}" title="${escapeHTML(titulo)}"><span class="progreso-semana__fill" style="height:${s.pct}%"></span></span>`;
     }).join('');
     return `<div class="progreso-historial" aria-label="Historial por semana">${barras}</div>`;
 }
