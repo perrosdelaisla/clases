@@ -200,15 +200,10 @@ async function onSesionLista(session) {
         await renderRutinaPerroSeleccionado();
         actualizarBadgeMensajes();
 
-        // Primer login: si el cliente nunca vio el welcome, mostrarlo
-        // antes de la app principal. UPDATE de welcome_visto_en al
-        // confirmar con el botón "Empezar".
+        // Tras la intro, el cliente entra directo al perfil. El mensaje
+        // editorial ("No buscamos trucos") ya vive dentro del perfil, en
+        // la sección "Nuestro enfoque", así que ya no desviamos al welcome.
         await esperarIntro();
-        if (!state.usuarioCliente.welcome_visto_en) {
-            mostrarWelcomeEditorial();
-            return;
-        }
-
         showScreen('app');
         showTab(state.currentTab);
     } catch (err) {
