@@ -53,3 +53,8 @@
 .home[data-theme="claro"] .work-switch.rutina-modo{ border-color:rgba(26,26,26,0.20); background:#E7DECA; }
 .home[data-theme="claro"] .subtabs .rutina-subtab{ border-color:rgba(26,26,26,0.24); color:#3A362F; }
 .home[data-theme="claro"] .subtabs .rutina-subtab.is-active{ background:#1A1A1A; color:#F5EFE0; border-color:#1A1A1A; }
+/* Banda de KPI (Clases / Realizada / Por reservar): que se vean las
+   líneas separadoras y el marco, invisibles en claro al 10% de negro. */
+.home[data-theme="claro"] .dBp .band{ border-bottom-color:rgba(26,26,26,0.16); }
+.home[data-theme="claro"] .dBp .band .clases{ border-top-color:rgba(26,26,26,0.16); }
+.home[data-theme="claro"] .clases .c{ border-right-color:rgba(26,26,26,0.14); }
