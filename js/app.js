@@ -24,6 +24,15 @@ import {
     textoObjetivoBajoNombre,
 } from './frecuencia.js?v=1';
 
+// Intro UCM: duración mínima del telón de arranque para que la animación se
+// vea entera aunque los datos carguen rápido.
+const APP_ARRANQUE = Date.now();
+const INTRO_MIN_MS = 4500;
+function esperarIntro() {
+    const falta = INTRO_MIN_MS - (Date.now() - APP_ARRANQUE);
+    return falta > 0 ? new Promise((r) => setTimeout(r, falta)) : Promise.resolve();
+}
+
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
     login: document.getElementById('screen-login'),
@@ -147,6 +156,7 @@ async function bootstrap() {
         if (inviteEmail) {
             mostrarPantallaCodigoInvitacion(inviteEmail);
         } else {
+            await esperarIntro();
             showScreen('login');
         }
         return;
@@ -193,6 +203,7 @@ async function onSesionLista(session) {
         // Primer login: si el cliente nunca vio el welcome, mostrarlo
         // antes de la app principal. UPDATE de welcome_visto_en al
         // confirmar con el botón "Empezar".
+        await esperarIntro();
         if (!state.usuarioCliente.welcome_visto_en) {
             mostrarWelcomeEditorial();
             return;
