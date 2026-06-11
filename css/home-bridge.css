@@ -84,3 +84,24 @@
 .home .progreso-semana--azul  .progreso-semana__fill{ background:#1F4FA8; }
 .home .progreso-semana--sin   .progreso-semana__fill{ background:var(--c-text-3); }
 .home .progreso-semana--actual{ box-shadow:0 0 0 1.5px var(--c-text-3); }
+
+/* ── Lista de ejercicios real con el estilo del prototipo ────────── */
+.home #rutina-lista, .home .rutina-lista{ display:flex; flex-direction:column; gap:9px; list-style:none; margin:0; padding:0; }
+.home .rutina-renglon{ list-style:none; }
+.home .rutina-card{
+    display:block; background:var(--c-surface); border:1px solid var(--c-hair);
+    border-radius:13px; padding:13px 14px; cursor:pointer; color:var(--c-text);
+    transition:border-color .15s ease, transform .1s ease;
+}
+.home .rutina-card:hover{ border-color:var(--c-hair-2); }
+.home .rutina-card:active{ transform:scale(0.99); }
+.home .rutina-card--superado{ opacity:.55; }
+.home .rutina-card__head{ display:flex; align-items:center; gap:13px; }
+.home .rutina-card__nombre-wrap{ flex:1; min-width:0; }
+.home .rutina-card__nombre{ font-family:var(--body); font-size:14.5px; font-weight:600; color:var(--c-text); line-height:1.25; margin:0; }
+.home .rutina-card__objetivo{ font-family:var(--body); font-size:11px; color:var(--c-text-3); margin:3px 0 0; }
+.home .rutina-card__chevron{ flex:0 0 auto; color:var(--c-text-3); width:16px; height:16px; }
+.home .rutina-card__desc{ font-family:var(--body); font-size:12px; line-height:1.45; color:var(--c-text-2); margin:8px 0 0; }
+.home .rutina-card__progreso{ display:inline-block; margin-top:8px; font-family:var(--body); font-size:8.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; border-radius:999px; padding:3px 8px; border:1px solid var(--c-rojo); color:var(--c-rojo); }
+.home .rutina-card__progreso--verde{ border-color:var(--c-oliva); color:var(--c-oliva); }
+.home .rutina-card__progreso--rojo{ border-color:var(--c-rojo); color:var(--c-rojo); }
