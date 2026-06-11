@@ -84,38 +84,3 @@
 .home .progreso-semana--azul  .progreso-semana__fill{ background:#1F4FA8; }
 .home .progreso-semana--sin   .progreso-semana__fill{ background:var(--c-text-3); }
 .home .progreso-semana--actual{ box-shadow:0 0 0 1.5px var(--c-text-3); }
-
-/* ── Tarjetas de ejercicio: look de Design sobre el markup real ────────
-   El JS arma .rutina-card con más datos que la maqueta de Design (objetivo
-   de frecuencia, progreso semanal, descripción, historial de progresiones).
-   Acá le damos el aspecto limpio de Design — Inter en los nombres, píldora
-   que no se estira, sin el borde de categoría grueso — SIN tocar la lógica.
-   Los nombres en la base están en minúscula (verificado), así que con Inter
-   se ven prolijos (no a los gritos como con Bebas). ──────────────────── */
-.home .rutina-lista{ display:flex; flex-direction:column; gap:9px; }
-
-.home .rutina-card{
-  background:var(--c-surface); border:1px solid var(--c-hair);
-  border-left-width:1px; border-radius:13px; padding:13px 14px;
-  box-shadow:none; gap:5px;
-}
-.home .rutina-card__head{ gap:10px; }
-.home .rutina-card__nombre{
-  font-family:var(--body); font-weight:600; font-size:14.5px;
-  letter-spacing:0.05px; line-height:1.25; text-transform:none; color:var(--c-text);
-}
-.home .rutina-card__objetivo{ font-size:11px; color:var(--c-text-3); letter-spacing:0; margin-top:2px; }
-.home .rutina-card__desc{ font-size:11.5px; color:var(--c-text-3); line-height:1.45; }
-.home .rutina-card__chevron{ width:16px; height:16px; color:var(--c-text-3); flex:0 0 auto; }
-
-/* píldora de progreso: chica, alineada a la izquierda, no se estira a todo
-   el ancho (eso era el "churro rojo"). */
-.home .rutina-card__progreso{
-  align-self:flex-start; width:auto; margin-top:3px;
-  padding:3px 10px; font-size:10.5px; font-weight:700; letter-spacing:0.2px;
-}
-
-/* carrusel de historial: la tarjeta vigente ocupa casi todo el ancho; la
-   vecina (paso anterior) asoma apenas, en vez de una cajita gruesa. */
-.home .rutina-track{ gap:8px; }
-.home .rutina-track .rutina-card{ flex:0 0 94%; }
