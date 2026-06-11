@@ -47,17 +47,12 @@
 .home .subtabs .rutina-subtab.is-active{ background:var(--c-text); color:var(--c-bg); border-color:var(--c-text); }
 
 /* ── Refuerzo SOLO en tema claro ──────────────────────────────────────
-   Sobre el crema, los bordes del prototipo (10-16% de negro) quedan casi
-   invisibles. Acá los marcamos más fuerte SOLO en claro; el oscuro, que
-   ya se ve bien, queda intacto. ──────────────────────────────────────── */
-.home[data-theme="claro"] .work-switch.rutina-modo{ border-color:rgba(26,26,26,0.20); background:#E7DECA; }
+   Sobre el crema reforzamos SOLO las subtabs; el oscuro queda intacto.
+   El recuadro del toggle (Rutina/Mi progreso) y las líneas de la banda de
+   KPI (Clases/Realizada/Por reservar) se dejan como en la maqueta de
+   Design — suaves, con var(--c-hair) — por pedido de Charly. ──────────── */
 .home[data-theme="claro"] .subtabs .rutina-subtab{ border-color:rgba(26,26,26,0.24); color:#3A362F; }
 .home[data-theme="claro"] .subtabs .rutina-subtab.is-active{ background:#1A1A1A; color:#F5EFE0; border-color:#1A1A1A; }
-/* Banda de KPI (Clases / Realizada / Por reservar): que se vean las
-   líneas separadoras y el marco, invisibles en claro al 10% de negro. */
-.home[data-theme="claro"] .dBp .band{ border-bottom-color:rgba(26,26,26,0.16); }
-.home[data-theme="claro"] .dBp .band .clases{ border-top-color:rgba(26,26,26,0.16); }
-.home[data-theme="claro"] .clases .c{ border-right-color:rgba(26,26,26,0.14); }
 
 /* ── "Mi progreso": tarjeta por ejercicio ────────────────────────────
    styles.css le daba una tarjeta en crema-sobre-oscuro (invisible en
