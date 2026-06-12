@@ -5041,7 +5041,7 @@ async function cargarMisEntrenos(asignadoId) {
     try {
         const { data, error } = await supabase
             .from('registros_ejercicio')
-            .select('id, registrado_en, datos_registro, tranquilidad, nota')
+            .select('id, registrado_en, datos_registro, tranquilidad, nota, visto_por_admin, comentario_admin, visto_en')
             .eq('ejercicio_asignado_id', asignadoId)
             .order('registrado_en', { ascending: false })
             .limit(10);
@@ -5078,6 +5078,13 @@ function renderMiEntrenoItem(reg) {
     const nota = reg.nota
         ? `<p class="mientreno-item__nota">${escapeHTML(reg.nota)}</p>`
         : '';
+    // Visto + comentario del adiestrador (solo cuando ya lo revisó).
+    const visto = reg.visto_por_admin
+        ? '<p class="mientreno-item__visto">✓ Visto por tu adiestrador</p>'
+        : '';
+    const comentario = (reg.visto_por_admin && reg.comentario_admin)
+        ? `<div class="mientreno-item__comentario"><span class="mientreno-item__comentario-label">Tu adiestrador:</span> ${escapeHTML(reg.comentario_admin)}</div>`
+        : '';
 
     return `
         <li class="mientreno-item">
@@ -5088,6 +5095,8 @@ function renderMiEntrenoItem(reg) {
             </div>
             ${datos}
             ${nota}
+            ${visto}
+            ${comentario}
         </li>
     `;
 }

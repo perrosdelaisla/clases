@@ -3735,6 +3735,31 @@ body {
     white-space: pre-wrap;
 }
 
+.mientreno-item__visto {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--pdli-oliva);
+    margin: 0.35rem 0 0;
+}
+
+.mientreno-item__comentario {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--color-text);
+    line-height: 1.4;
+    margin: 0.3rem 0 0;
+    padding: 0.5rem 0.65rem;
+    border-radius: var(--radius);
+    background: rgba(107, 122, 58, 0.10);
+    border: 1px solid rgba(107, 122, 58, 0.22);
+    white-space: pre-wrap;
+}
+.mientreno-item__comentario-label {
+    font-weight: 700;
+    color: var(--pdli-oliva);
+}
+
 /* ===================== Toggle Rutina / Mi progreso ===================== */
 
 .rutina-modo {

@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=39">
+    <link rel="stylesheet" href="./styles.css?v=40">
 </head>
 <body>
 
@@ -68,6 +68,11 @@
                     <span class="admin-tab-icon" aria-hidden="true">🔔</span>
                     <span class="admin-tab-label">Avisos</span>
                     <span class="admin-tab-badge" id="avisos-badge" hidden aria-label="Avisos sin leer"></span>
+                </button>
+                <button class="admin-tab" data-tab="actividad" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">📝</span>
+                    <span class="admin-tab-label">Actividad</span>
+                    <span class="admin-tab-badge" id="actividad-badge" hidden aria-label="Registros sin ver"></span>
                 </button>
                 <button class="admin-tab" data-tab="clientes" type="button">
                     <span class="admin-tab-icon" aria-hidden="true">👥</span>
@@ -176,6 +181,25 @@
                 </div>
                 <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
                 <ul id="avisos-list" class="avisos-list" role="list"></ul>
+            </section>
+
+            <section class="admin-panel" data-panel="actividad" hidden>
+                <header class="actividad-header">
+                    <h1 class="admin-panel-title">Actividad</h1>
+                    <p class="admin-panel-subtitle">Lo que los clientes registran al entrenar y quién lleva tiempo sin practicar.</p>
+                </header>
+
+                <section class="actividad-seccion">
+                    <h2 class="actividad-seccion-titulo">Registros recientes</h2>
+                    <p id="actividad-registros-empty" class="actividad-empty" hidden>Cargando registros…</p>
+                    <ul id="actividad-registros-lista" class="actividad-lista" role="list"></ul>
+                </section>
+
+                <section class="actividad-seccion">
+                    <h2 class="actividad-seccion-titulo">Sin práctica</h2>
+                    <p id="actividad-sinpractica-empty" class="actividad-empty" hidden>Cargando…</p>
+                    <ul id="actividad-sinpractica-lista" class="actividad-sinpractica-lista" role="list"></ul>
+                </section>
             </section>
 
             <section class="admin-panel" data-panel="clientes" hidden>
@@ -726,11 +750,32 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-comentar-actividad" hidden>
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-content modal-small">
+            <header class="modal-header">
+                <h2>Comentar registro</h2>
+                <button class="modal-close" data-modal-close type="button" aria-label="Cerrar">✕</button>
+            </header>
+            <div class="modal-body">
+                <label class="form-field">
+                    <span>Comentario para el cliente</span>
+                    <textarea id="comentar-actividad-texto" rows="4" maxlength="500" placeholder="Lo que quieras decirle al cliente sobre este entreno…"></textarea>
+                </label>
+                <p id="comentar-actividad-error" class="form-error" hidden></p>
+            </div>
+            <footer class="modal-footer">
+                <button id="comentar-actividad-cancel" class="btn-secondary" type="button" data-modal-close>Cancelar</button>
+                <button id="comentar-actividad-guardar" class="btn-primary" type="button">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=52"></script>
+    <script type="module" src="./admin.js?v=53"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
       function toast(msg) {

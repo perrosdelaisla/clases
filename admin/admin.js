@@ -173,13 +173,13 @@ async function afterLogin(session) {
     // 'inicio' está oculto (decisión 08/05) — solo navegamos entre los 4 visibles.
     initSwipeTabs({
         container: document.querySelector('.admin-main'),
-        tabs: ['agenda', 'avisos', 'clientes', 'stats', 'catalogo'],
+        tabs: ['agenda', 'avisos', 'actividad', 'clientes', 'stats', 'catalogo'],
         getCurrent: () => document.querySelector('.admin-panel:not([hidden])')?.dataset.panel,
         onChange: (tab) => activarTab(tab),
     });
 
     // Tab inicial: prioridad al #hash (notificación, ej. #avisos), si no Agenda.
-    const TABS_VALIDOS = ['agenda', 'avisos', 'clientes', 'stats', 'catalogo'];
+    const TABS_VALIDOS = ['agenda', 'avisos', 'actividad', 'clientes', 'stats', 'catalogo'];
     const hashTab = (location.hash || '').replace('#', '');
     let tabInicial = TABS_VALIDOS.includes(hashTab) ? hashTab : 'agenda';
     if (tabInicial === 'inicio') tabInicial = 'agenda';
@@ -205,6 +205,9 @@ async function afterLogin(session) {
     // Precarga del badge "Avisos" sin pintar el panel (corre en background,
     // tolera fallos para no romper el bootstrap del admin).
     precargarBadgeAvisos().catch((e) => console.warn('[admin] precarga avisos badge:', e));
+
+    // Precarga del badge "Actividad" (registros sin ver), mismo criterio.
+    precargarBadgeActividad().catch((e) => console.warn('[admin] precarga actividad badge:', e));
 }
 
 // ---------- Pestañas (SPA) ----------
@@ -230,6 +233,10 @@ function activarTab(tab) {
         // initAvisos es idempotente: la primera vez bindea y arranca el polling,
         // las siguientes solo recargan los avisos.
         initAvisos().catch((e) => console.error('[admin] initAvisos:', e));
+    }
+    if (tab === 'actividad' && !window.__actividadLoaded) {
+        cargarActividad();
+        window.__actividadLoaded = true;
     }
     if (tab === 'clientes' && !window.__clientesLoaded) {
         cargarClientes();
@@ -260,6 +267,7 @@ async function handleLogout() {
     document.getElementById('cliente-search').value = '';
     window.__clientesLoaded = false;
     window.__catalogoLoaded = false;
+    window.__actividadLoaded = false;
     try { localStorage.removeItem('pdli_admin_tab'); } catch (e) {}
     showScreen('login');
 }
@@ -2516,4 +2524,283 @@ function renderCatalogoCard(ej) {
             ${desc}
         </li>
     `;
+}
+
+/* ═══════════════════════════════════════════
+   ACTIVIDAD — Registros de ejercicio reportados por clientes
+   + clientes sin práctica reciente. Lee las vistas
+   actividad_registros_admin y clientes_actividad_admin (RLS es_admin).
+   El admin marca "visto" / comenta sobre registros_ejercicio (UPDATE).
+   ═══════════════════════════════════════════ */
+
+const actividadState = {
+    registros: [],
+    sinPractica: [],
+    bound: false,
+    comentarRegistroId: null,
+};
+
+// Fecha relativa: Hoy / Ayer / "12 Jun 2026" (reusa helpers de stats/agenda).
+function fechaRelativaActividad(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+    const dDia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (dDia.getTime() === hoy.getTime()) return 'Hoy';
+    if (dDia.getTime() === ayer.getTime()) return 'Ayer';
+    return formatearFechaCorta(formatearFechaLocal(d));
+}
+
+function cargarActividad() {
+    if (!actividadState.bound) {
+        bindActividad();
+        actividadState.bound = true;
+    }
+    cargarRegistrosActividad();
+    cargarSinPractica();
+}
+
+async function cargarRegistrosActividad() {
+    const lista = document.getElementById('actividad-registros-lista');
+    const empty = document.getElementById('actividad-registros-empty');
+    if (!lista) return;
+    lista.innerHTML = '';
+    if (empty) { empty.hidden = false; empty.textContent = 'Cargando registros…'; }
+    try {
+        const { data, error } = await supabase
+            .from('actividad_registros_admin')
+            .select('registro_id, registrado_en, tranquilidad, nota, nota_cierre, visto_por_admin, comentario_admin, visto_en, cliente_nombre, perro_nombre, ejercicio_nombre, ejercicio_categoria')
+            .order('registrado_en', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+        actividadState.registros = data || [];
+        renderRegistrosActividad();
+        renderBadgeActividad();
+    } catch (err) {
+        console.error('[actividad] error cargando registros:', err);
+        if (empty) { empty.hidden = false; empty.textContent = 'Error al cargar los registros.'; }
+    }
+}
+
+function renderRegistrosActividad() {
+    const lista = document.getElementById('actividad-registros-lista');
+    const empty = document.getElementById('actividad-registros-empty');
+    if (!lista) return;
+    const items = actividadState.registros;
+    if (!items.length) {
+        lista.innerHTML = '';
+        if (empty) { empty.hidden = false; empty.textContent = 'Todavía no hay registros de entrenos.'; }
+        return;
+    }
+    if (empty) empty.hidden = true;
+    lista.innerHTML = items.map(renderRegistroActividad).join('');
+}
+
+function renderRegistroActividad(r) {
+    const fecha = fechaRelativaActividad(r.registrado_en);
+    const tq = (r.tranquilidad != null) ? Number(r.tranquilidad) : null;
+    const tqClass = (tq != null && tq <= 2) ? ' actividad-tq--alerta' : '';
+    const tqHTML = (tq != null)
+        ? `<span class="actividad-tq${tqClass}">${tq}/5</span>`
+        : '';
+    const nota = r.nota
+        ? `<p class="actividad-nota">${escapeHTML(r.nota)}</p>`
+        : '';
+    const notaCierre = r.nota_cierre
+        ? `<p class="actividad-nota actividad-nota--cierre"><strong>Cierre:</strong> ${escapeHTML(r.nota_cierre)}</p>`
+        : '';
+
+    let pie;
+    if (r.visto_por_admin) {
+        const coment = r.comentario_admin
+            ? `<div class="actividad-comentario"><strong>Tu comentario:</strong> ${escapeHTML(r.comentario_admin)}</div>`
+            : '';
+        pie = `<div class="actividad-visto">✓ Visto</div>${coment}`;
+    } else {
+        pie = `
+            <div class="actividad-acciones">
+                <button type="button" class="btn-secondary" data-action="visto" data-registro-id="${escapeHTML(r.registro_id)}">Visto ✓</button>
+                <button type="button" class="btn-secondary" data-action="comentar" data-registro-id="${escapeHTML(r.registro_id)}">Comentar</button>
+            </div>`;
+    }
+
+    return `
+        <li class="actividad-item${r.visto_por_admin ? '' : ' actividad-item--nuevo'}" data-registro-id="${escapeHTML(r.registro_id)}">
+            <div class="actividad-item-head">
+                <span class="actividad-fecha">${escapeHTML(fecha)}</span>
+                ${tqHTML}
+            </div>
+            <div class="actividad-quien">${escapeHTML(r.cliente_nombre || '—')} · ${escapeHTML(r.perro_nombre || '—')}</div>
+            <div class="actividad-ejercicio">${escapeHTML(r.ejercicio_nombre || '—')}</div>
+            ${nota}
+            ${notaCierre}
+            ${pie}
+        </li>
+    `;
+}
+
+async function cargarSinPractica() {
+    const lista = document.getElementById('actividad-sinpractica-lista');
+    const empty = document.getElementById('actividad-sinpractica-empty');
+    if (!lista) return;
+    lista.innerHTML = '';
+    if (empty) { empty.hidden = false; empty.textContent = 'Cargando…'; }
+    try {
+        const { data, error } = await supabase
+            .from('clientes_actividad_admin')
+            .select('cliente_id, cliente_nombre, perro_id, perro_nombre, ultima_practica, dias_sin_practica, ejercicios_activos')
+            .gt('ejercicios_activos', 0)
+            .or('ultima_practica.is.null,dias_sin_practica.gte.7')
+            .order('ultima_practica', { ascending: true, nullsFirst: true });
+        if (error) throw error;
+        actividadState.sinPractica = data || [];
+        renderSinPractica();
+    } catch (err) {
+        console.error('[actividad] error cargando sin práctica:', err);
+        if (empty) { empty.hidden = false; empty.textContent = 'Error al cargar.'; }
+    }
+}
+
+function renderSinPractica() {
+    const lista = document.getElementById('actividad-sinpractica-lista');
+    const empty = document.getElementById('actividad-sinpractica-empty');
+    if (!lista) return;
+    const items = actividadState.sinPractica;
+    if (!items.length) {
+        lista.innerHTML = '';
+        if (empty) { empty.hidden = false; empty.textContent = 'Todos los clientes activos registraron hace poco. 🎉'; }
+        return;
+    }
+    if (empty) empty.hidden = true;
+    lista.innerHTML = items.map(renderSinPracticaItem).join('');
+}
+
+function renderSinPracticaItem(c) {
+    const nunca = c.ultima_practica == null;
+    const estadoHTML = nunca
+        ? '<span class="actividad-sinpractica-dias actividad-sinpractica-dias--alerta">Nunca registró</span>'
+        : `<span class="actividad-sinpractica-dias">${escapeHTML(String(c.dias_sin_practica))} días sin registrar</span>`;
+    return `
+        <li class="actividad-sinpractica-item">
+            <span class="actividad-quien">${escapeHTML(c.cliente_nombre || '—')} · ${escapeHTML(c.perro_nombre || '—')}</span>
+            ${estadoHTML}
+        </li>
+    `;
+}
+
+// Badge: cuenta registros no vistos. Usa la vista (RLS es_admin) con count
+// exact head para no traer filas — mismo patrón que precargarBadgeAvisos.
+async function precargarBadgeActividad() {
+    try {
+        const { count, error } = await supabase
+            .from('actividad_registros_admin')
+            .select('registro_id', { count: 'exact', head: true })
+            .eq('visto_por_admin', false);
+        if (error) {
+            console.warn('[actividad] precarga badge falló:', error.message);
+            return;
+        }
+        pintarBadgeActividad(count || 0);
+    } catch (e) {
+        console.warn('[actividad] precarga badge crash:', e);
+    }
+}
+
+// Badge derivado de los registros ya cargados en memoria (tras visto/comentar).
+function renderBadgeActividad() {
+    const noVistos = actividadState.registros.filter((r) => !r.visto_por_admin).length;
+    pintarBadgeActividad(noVistos);
+}
+
+function pintarBadgeActividad(n) {
+    const badge = document.getElementById('actividad-badge');
+    if (!badge) return;
+    if (n > 0) {
+        badge.textContent = n > 99 ? '99+' : String(n);
+        badge.hidden = false;
+    } else {
+        badge.hidden = true;
+    }
+}
+
+// UPDATE sobre registros_ejercicio (no la vista): el admin tiene permiso de
+// escritura ahí. extra permite sumar comentario_admin en la misma operación.
+async function marcarVistoRegistro(registroId, extra = {}) {
+    const patch = { visto_por_admin: true, visto_en: new Date().toISOString(), ...extra };
+    const { error } = await supabase
+        .from('registros_ejercicio')
+        .update(patch)
+        .eq('id', registroId);
+    if (error) {
+        console.error('[actividad] error update visto:', error);
+        alert('No se pudo guardar. Probá de nuevo.');
+        return false;
+    }
+    // Reflejar en memoria + re-render local (sin refetch completo).
+    const reg = actividadState.registros.find((r) => r.registro_id === registroId);
+    if (reg) {
+        reg.visto_por_admin = true;
+        reg.visto_en = patch.visto_en;
+        if ('comentario_admin' in extra) reg.comentario_admin = extra.comentario_admin;
+    }
+    renderRegistrosActividad();
+    renderBadgeActividad();
+    return true;
+}
+
+function bindActividad() {
+    const lista = document.getElementById('actividad-registros-lista');
+    if (lista) {
+        lista.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const registroId = btn.dataset.registroId;
+            if (!registroId) return;
+            if (btn.dataset.action === 'visto') {
+                btn.disabled = true;
+                await marcarVistoRegistro(registroId);
+            } else if (btn.dataset.action === 'comentar') {
+                abrirModalComentarActividad(registroId);
+            }
+        });
+    }
+
+    // Cierre del modal de comentar (el bind global de [data-modal-close] vive
+    // en bindAgendaModals, que solo corre al abrir Agenda — lo garantizamos acá).
+    document.querySelectorAll('#modal-comentar-actividad [data-modal-close]')
+        .forEach((el) => el.addEventListener('click', () => closeModal('modal-comentar-actividad')));
+
+    const guardar = document.getElementById('comentar-actividad-guardar');
+    if (guardar) guardar.addEventListener('click', guardarComentarioActividad);
+}
+
+function abrirModalComentarActividad(registroId) {
+    actividadState.comentarRegistroId = registroId;
+    const reg = actividadState.registros.find((r) => r.registro_id === registroId);
+    const ta = document.getElementById('comentar-actividad-texto');
+    if (ta) ta.value = reg?.comentario_admin || '';
+    const err = document.getElementById('comentar-actividad-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+    openModal('modal-comentar-actividad');
+}
+
+async function guardarComentarioActividad() {
+    const registroId = actividadState.comentarRegistroId;
+    if (!registroId) { closeModal('modal-comentar-actividad'); return; }
+    const ta = document.getElementById('comentar-actividad-texto');
+    const err = document.getElementById('comentar-actividad-error');
+    const comentario = (ta?.value || '').trim();
+    if (!comentario) {
+        if (err) { err.textContent = 'Escribí un comentario o usá "Visto ✓".'; err.hidden = false; }
+        return;
+    }
+    const btn = document.getElementById('comentar-actividad-guardar');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    const ok = await marcarVistoRegistro(registroId, { comentario_admin: comentario });
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    if (ok) {
+        actividadState.comentarRegistroId = null;
+        closeModal('modal-comentar-actividad');
+    }
 }

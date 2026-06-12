@@ -4421,3 +4421,155 @@ body {
 .miembro-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #fff; border: 1px solid #E2D8BF; border-radius: 10px; }
 .miembro-nombre { font-weight: 600; color: #1A1A1A; }
 .miembro-rol { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #6B7A3A; }
+
+/* ============================================================
+   Tab Actividad — registros de entrenos + clientes sin práctica.
+   Reusa los tokens del admin (superficie, borde, rojo de marca).
+   ============================================================ */
+
+.actividad-header { margin-bottom: 20px; }
+
+.actividad-seccion { margin-bottom: 28px; }
+
+.actividad-seccion-titulo {
+    font-family: var(--font-display);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-text);
+    font-size: 18px;
+    margin-bottom: 12px;
+}
+
+.actividad-empty {
+    color: var(--color-muted);
+    font-size: 14px;
+    padding: 16px 4px;
+    text-align: center;
+}
+
+.actividad-lista,
+.actividad-sinpractica-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.actividad-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+}
+.actividad-item--nuevo {
+    border-left: 3px solid var(--color-red);
+    background: linear-gradient(90deg, rgba(200, 16, 46, 0.06) 0%, var(--color-surface) 40%);
+}
+
+.actividad-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.actividad-fecha {
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.actividad-tq {
+    min-width: 34px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+}
+.actividad-tq--alerta {
+    background: rgba(200, 16, 46, 0.16);
+    color: var(--color-red);
+}
+
+.actividad-quien {
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.actividad-ejercicio {
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.actividad-nota {
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.4;
+    margin-top: 8px;
+    padding-left: 10px;
+    border-left: 2px solid var(--color-border);
+    white-space: pre-wrap;
+}
+.actividad-nota--cierre { color: var(--color-muted); }
+
+.actividad-acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.actividad-acciones .btn-secondary { width: auto; }
+
+.actividad-visto {
+    color: var(--color-green);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.actividad-comentario {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(107, 122, 58, 0.10);
+    border: 1px solid rgba(107, 122, 58, 0.25);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.actividad-sinpractica-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+}
+
+.actividad-sinpractica-dias {
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.actividad-sinpractica-dias--alerta { color: var(--color-red); }
