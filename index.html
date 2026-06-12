@@ -908,8 +908,25 @@
                     <input type="text" class="input-pdli" id="edit-perro-raza" maxlength="80" placeholder="Border collie, mestizo…">
                 </div>
                 <div class="form-field">
-                    <label class="form-field__label" for="edit-perro-edad-meses">Edad (meses)</label>
-                    <input type="number" class="input-pdli" id="edit-perro-edad-meses" min="0" max="360" step="1" inputmode="numeric">
+                    <label class="form-field__label" for="edit-perro-edad-meses">Edad</label>
+                    <select class="select-pdli" id="edit-perro-edad-meses" name="edad_meses">
+                        <option value="" disabled>Selecciona la edad</option>
+                        <option value="0">Menos de 1 mes</option>
+                        <option value="1">1 mes</option><option value="2">2 meses</option>
+                        <option value="3">3 meses</option><option value="4">4 meses</option>
+                        <option value="5">5 meses</option><option value="6">6 meses</option>
+                        <option value="7">7 meses</option><option value="8">8 meses</option>
+                        <option value="9">9 meses</option><option value="10">10 meses</option>
+                        <option value="11">11 meses</option>
+                        <option value="12">1 año</option><option value="24">2 años</option>
+                        <option value="36">3 años</option><option value="48">4 años</option>
+                        <option value="60">5 años</option><option value="72">6 años</option>
+                        <option value="84">7 años</option><option value="96">8 años</option>
+                        <option value="108">9 años</option><option value="120">10 años</option>
+                        <option value="132">11 años</option><option value="144">12 años</option>
+                        <option value="156">13 años</option><option value="168">14 años</option>
+                        <option value="180">15 años</option><option value="192">Más de 15 años</option>
+                    </select>
                 </div>
                 <div class="form-field">
                     <label class="form-field__label" for="edit-perro-peso">Peso</label>
@@ -1011,6 +1028,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=1"></script>
     <script src="./js/tutorial.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=77"></script>
+    <script type="module" src="./js/app.js?v=78"></script>
 </body>
 </html>

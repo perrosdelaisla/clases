@@ -419,8 +419,25 @@
                             <input type="text" id="cm-raza" maxlength="80">
                         </label>
                         <label class="form-field">
-                            <span>Edad (meses)</span>
-                            <input type="number" id="cm-edad" min="0" max="360" step="1">
+                            <span>Edad</span>
+                            <select id="cm-edad">
+                                <option value="" disabled selected>Selecciona la edad</option>
+                                <option value="0">Menos de 1 mes</option>
+                                <option value="1">1 mes</option><option value="2">2 meses</option>
+                                <option value="3">3 meses</option><option value="4">4 meses</option>
+                                <option value="5">5 meses</option><option value="6">6 meses</option>
+                                <option value="7">7 meses</option><option value="8">8 meses</option>
+                                <option value="9">9 meses</option><option value="10">10 meses</option>
+                                <option value="11">11 meses</option>
+                                <option value="12">1 año</option><option value="24">2 años</option>
+                                <option value="36">3 años</option><option value="48">4 años</option>
+                                <option value="60">5 años</option><option value="72">6 años</option>
+                                <option value="84">7 años</option><option value="96">8 años</option>
+                                <option value="108">9 años</option><option value="120">10 años</option>
+                                <option value="132">11 años</option><option value="144">12 años</option>
+                                <option value="156">13 años</option><option value="168">14 años</option>
+                                <option value="180">15 años</option><option value="192">Más de 15 años</option>
+                            </select>
                         </label>
                         <label class="form-field">
                             <span>Peso (kg)</span>
@@ -713,7 +730,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=51"></script>
+    <script type="module" src="./admin.js?v=52"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
       function toast(msg) {
