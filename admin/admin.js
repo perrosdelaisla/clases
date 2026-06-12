@@ -2538,6 +2538,7 @@ const actividadState = {
     sinPractica: [],
     bound: false,
     comentarRegistroId: null,
+    filtro: 'pendientes', // 'pendientes' (visto_por_admin=false) | 'todos'
 };
 
 // Fecha relativa: Hoy / Ayer / "12 Jun 2026" (reusa helpers de stats/agenda).
@@ -2559,6 +2560,30 @@ function cargarActividad() {
     }
     cargarRegistrosActividad();
     cargarSinPractica();
+}
+
+// Subtabs internas de Actividad — mismo patrón que bindAgendaSubtabs /
+// activarAgendaSubtab (clic + swipe horizontal), con clases propias.
+function bindActividadSubtabs() {
+    document.querySelectorAll('.actividad-subtab').forEach((btn) => {
+        btn.addEventListener('click', () => activarActividadSubtab(btn.dataset.subtab));
+    });
+
+    initSwipeTabs({
+        container: document.querySelector('[data-panel="actividad"]'),
+        tabs: ['registros', 'sinpractica'],
+        getCurrent: () => document.querySelector('.actividad-subtab.active')?.dataset.subtab,
+        onChange: (sub) => activarActividadSubtab(sub),
+    });
+}
+
+function activarActividadSubtab(sub) {
+    document.querySelectorAll('.actividad-subtab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.subtab === sub);
+    });
+    document.querySelectorAll('[data-actividad-subpanel]').forEach((p) => {
+        p.hidden = p.dataset.actividadSubpanel !== sub;
+    });
 }
 
 async function cargarRegistrosActividad() {
@@ -2587,10 +2612,18 @@ function renderRegistrosActividad() {
     const lista = document.getElementById('actividad-registros-lista');
     const empty = document.getElementById('actividad-registros-empty');
     if (!lista) return;
-    const items = actividadState.registros;
+    const todos = actividadState.registros;
+    const items = actividadState.filtro === 'pendientes'
+        ? todos.filter((r) => !r.visto_por_admin)
+        : todos;
     if (!items.length) {
         lista.innerHTML = '';
-        if (empty) { empty.hidden = false; empty.textContent = 'Todavía no hay registros de entrenos.'; }
+        if (empty) {
+            empty.hidden = false;
+            empty.textContent = actividadState.filtro === 'pendientes'
+                ? 'Todo al día ✓ — no hay registros pendientes.'
+                : 'Todavía no hay registros de entrenos.';
+        }
         return;
     }
     if (empty) empty.hidden = true;
@@ -2667,6 +2700,7 @@ function renderSinPractica() {
     const empty = document.getElementById('actividad-sinpractica-empty');
     if (!lista) return;
     const items = actividadState.sinPractica;
+    pintarContadorSinPractica(items.length);
     if (!items.length) {
         lista.innerHTML = '';
         if (empty) { empty.hidden = false; empty.textContent = 'Todos los clientes activos registraron hace poco. 🎉'; }
@@ -2674,6 +2708,18 @@ function renderSinPractica() {
     }
     if (empty) empty.hidden = true;
     lista.innerHTML = items.map(renderSinPracticaItem).join('');
+}
+
+// Contador de clientes fríos en la subtab "Sin práctica" (visible sin entrar).
+function pintarContadorSinPractica(n) {
+    const count = document.getElementById('actividad-sinpractica-count');
+    if (!count) return;
+    if (n > 0) {
+        count.textContent = n > 99 ? '99+' : String(n);
+        count.hidden = false;
+    } else {
+        count.hidden = true;
+    }
 }
 
 function renderSinPracticaItem(c) {
@@ -2750,6 +2796,21 @@ async function marcarVistoRegistro(registroId, extra = {}) {
 }
 
 function bindActividad() {
+    bindActividadSubtabs();
+
+    // Filtro Pendientes / Todos sobre los registros ya cargados en memoria.
+    document.querySelectorAll('.actividad-filtro').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const f = btn.dataset.filtro;
+            if (f === actividadState.filtro) return;
+            actividadState.filtro = f;
+            document.querySelectorAll('.actividad-filtro').forEach((b) => {
+                b.classList.toggle('active', b.dataset.filtro === f);
+            });
+            renderRegistrosActividad();
+        });
+    });
+
     const lista = document.getElementById('actividad-registros-lista');
     if (lista) {
         lista.addEventListener('click', async (e) => {

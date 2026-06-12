@@ -2138,7 +2138,8 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .agenda-subtab {
+    .agenda-subtab,
+    .actividad-subtab {
         padding: 10px 12px;
         font-size: 12px;
     }
@@ -4438,6 +4439,98 @@ body {
     color: var(--color-text);
     font-size: 18px;
     margin-bottom: 12px;
+}
+
+/* Subtabs de Actividad — mismo look que las subtabs de Agenda
+   (clases propias para no cruzarse con el binding de .agenda-subtab). */
+.actividad-subtabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.actividad-subtab {
+    background: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s ease;
+    min-height: var(--tap);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.actividad-subtab:hover {
+    color: var(--color-text);
+}
+
+.actividad-subtab.active {
+    color: var(--color-red);
+    border-bottom-color: var(--color-red);
+}
+
+/* Contador de clientes fríos en la subtab "Sin práctica". */
+.actividad-subtab-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--color-red);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.actividad-subtab-count[hidden] { display: none; }
+
+.actividad-subpanel {
+    padding-top: 24px;
+}
+
+/* Filtro Pendientes / Todos — píldoras como los filtros de Avisos
+   (clase propia para no cruzarse con el binding de .avisos-filtro). */
+.actividad-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.actividad-filtro {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-height: 34px;
+}
+.actividad-filtro:hover {
+    border-color: var(--color-red);
+    color: var(--color-text);
+}
+.actividad-filtro.active {
+    background: var(--color-red);
+    border-color: var(--color-red);
+    color: var(--color-text);
 }
 
 .actividad-empty {

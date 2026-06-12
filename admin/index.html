@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=40">
+    <link rel="stylesheet" href="./styles.css?v=41">
 </head>
 <body>
 
@@ -187,16 +187,22 @@
                 <header class="actividad-header">
                     <h1 class="admin-panel-title">Actividad</h1>
                     <p class="admin-panel-subtitle">Lo que los clientes registran al entrenar y quién lleva tiempo sin practicar.</p>
+                    <nav class="actividad-subtabs" aria-label="Sub-secciones de actividad">
+                        <button class="actividad-subtab active" data-subtab="registros" type="button">Registros</button>
+                        <button class="actividad-subtab" data-subtab="sinpractica" type="button">Sin práctica<span class="actividad-subtab-count" id="actividad-sinpractica-count" hidden></span></button>
+                    </nav>
                 </header>
 
-                <section class="actividad-seccion">
-                    <h2 class="actividad-seccion-titulo">Registros recientes</h2>
+                <section class="actividad-subpanel" data-actividad-subpanel="registros">
+                    <nav class="actividad-filtros" aria-label="Filtro de registros">
+                        <button type="button" class="actividad-filtro active" data-filtro="pendientes">Pendientes</button>
+                        <button type="button" class="actividad-filtro" data-filtro="todos">Todos</button>
+                    </nav>
                     <p id="actividad-registros-empty" class="actividad-empty" hidden>Cargando registros…</p>
                     <ul id="actividad-registros-lista" class="actividad-lista" role="list"></ul>
                 </section>
 
-                <section class="actividad-seccion">
-                    <h2 class="actividad-seccion-titulo">Sin práctica</h2>
+                <section class="actividad-subpanel" data-actividad-subpanel="sinpractica" hidden>
                     <p id="actividad-sinpractica-empty" class="actividad-empty" hidden>Cargando…</p>
                     <ul id="actividad-sinpractica-lista" class="actividad-sinpractica-lista" role="list"></ul>
                 </section>
@@ -775,7 +781,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=53"></script>
+    <script type="module" src="./admin.js?v=54"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
       function toast(msg) {
