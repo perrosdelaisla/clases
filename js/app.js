@@ -1199,10 +1199,21 @@ function showTab(name) {
     if (name === 'reservar') renderTabReservar();
     if (name === 'mis-citas') renderTabMisCitas();
     if (name === 'salud') cargarTabSalud();
-    if (name === 'mensajes') { renderFeedMensajes(); marcarRespuestasLeidasYActualizar(); }
+    if (name === 'mensajes') {
+        // El composer debe quedar a la vista al entrar. Lo hacemos de inmediato
+        // (sin esperar al fetch del feed, que en frío tarda y dejaba el scroll
+        // colgado de la red) y de nuevo tras pintar el feed, por si el historial
+        // crece y cambia la altura.
+        scrollMensajesAlFondo();
+        renderFeedMensajes().then(scrollMensajesAlFondo);
+        marcarRespuestasLeidasYActualizar();
+    }
 
-    // Scroll al inicio del panel para que la transición se sienta limpia
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Scroll al inicio del panel para que la transición se sienta limpia.
+    // Excepción: Mensajes va al fondo, no arriba (se gestiona aparte).
+    if (name !== 'mensajes') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
 }
 
 // ===================== Salud comportamental → La Isla =====================
@@ -4418,6 +4429,28 @@ async function renderFeedMensajes() {
     });
 }
 
+// Lleva la pestaña Mensajes al fondo: feed scrolleado a los últimos mensajes y
+// composer a la vista. El feed tiene scroll propio (overflow-y), pero con
+// muchos mensajes la página también desborda, así que aseguramos ambos.
+function scrollMensajesAlFondo() {
+    const ejec = () => {
+        const feed = document.querySelector('#tab-mensajes .feed-timeline');
+        if (feed) feed.scrollTop = feed.scrollHeight;
+        const composer = document.getElementById('mensaje-textarea');
+        if (composer) composer.scrollIntoView({ block: 'end', behavior: 'instant' });
+        // El scroll relevante es el del window, no el del feed.
+        window.scrollTo(0, document.body.scrollHeight);
+    };
+    // Inmediato: cubre llamados con el layout ya listo.
+    ejec();
+    // Doble rAF: el tab acaba de pasar a display:flex; esperamos al repaint
+    // para que el layout tenga altura real.
+    requestAnimationFrame(() => requestAnimationFrame(ejec));
+    // Fallback para pestañas hidden / PWA en background, donde Chrome throttlea
+    // requestAnimationFrame y el doble rAF no llega a correr.
+    setTimeout(ejec, 80);
+}
+
 async function enviarMensaje() {
     const ta = document.getElementById('mensaje-textarea');
     const btn = document.getElementById('mensaje-enviar');
@@ -4525,6 +4558,9 @@ function bindNotasEjercicio() {
             }
             ta.focus();
             try { const n = ta.value.length; ta.setSelectionRange(n, n); } catch (_) {}
+            // Aseguramos que el composer quede a la vista (la página puede haber
+            // desbordado con el historial de mensajes).
+            ta.scrollIntoView({ block: 'end', behavior: 'auto' });
         });
 
     // Pills de tranquilidad (1..5). Toque sobre el mismo número deselecciona.
