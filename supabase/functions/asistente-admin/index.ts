@@ -26,12 +26,13 @@ En cada consulta recibís el contexto de UN perro:
 - NOTAS QUE EL CLIENTE DEJÓ AL REPORTAR SUS ENTRENOS (lo que escribió sobre cómo le fue con cada ejercicio). Es la voz directa del tutor sobre el día a día: tenélas muy en cuenta.
 - TUS NOTAS de caso anteriores sobre este perro (tu propia mirada profesional de clases pasadas). Son muy valiosas.
 - MENSAJES sueltos del cliente sobre este perro, si los hay.
+- SEGUIMIENTOS DE CONDUCTA que el tutor registra día a día con un semáforo (verde=bien, amarillo=regular, rojo=mal) por conducta (ej. paseos, quedarse solo). De cada conducta recibís los conteos del mes actual y del mes anterior, una tendencia (mejora/empeora/estable) y las notas del tutor explicando los días puntuales. Es el termómetro más directo de cómo evoluciona cada conducta en el día a día.
 - El CATÁLOGO COMPLETO de ejercicios disponibles, cada uno con código, nombre, categoría y descripción.
 
 Tu trabajo, cruzando TODOS esos datos antes de responder:
 1. Escribir una intro breve (1-2 frases) que abra el caso: con qué viene el perro y por dónde proponés arrancar. Si hay 2 o más evaluaciones, mencioná la evolución. Si las notas de los entrenos o tus notas previas aportan algo clave, reflejálo.
 2. Resumir el estado del caso en EXACTAMENTE 3 líneas cortas.
-3. Sugerir 2 o 3 ejercicios para trabajar, priorizando la dimensión SC más baja, teniendo en cuenta lo que ya tiene asignado, si viene cumpliendo, las notas de los entrenos y tus notas.
+3. Sugerir 2 o 3 ejercicios para trabajar, priorizando la dimensión SC más baja, teniendo en cuenta lo que ya tiene asignado, si viene cumpliendo, las notas de los entrenos y tus notas. Cruzá además la evolución de los SEGUIMIENTOS DE CONDUCTA con los ejercicios asignados y las prácticas: mirá qué conductas mejoran y cuáles empeoran o se estancan, deducí qué parece estar funcionando y qué no, y proponé ejercicios o cambios de rutina en consecuencia. Si una conducta viene empeorando, dale prioridad; si una mejora, no la rompas.
 
 REGLAS QUE NUNCA ROMPÉS:
 - Solo sugerís ejercicios que estén en el CATÁLOGO que te paso, referenciados por su código EXACTO. JAMÁS inventás un ejercicio que no esté en la lista.
@@ -83,6 +84,68 @@ function nombreEjercicio(row: any): string {
   const e = Array.isArray(ea) ? ea[0]?.ejercicios : ea?.ejercicios;
   const ej = Array.isArray(e) ? e[0] : e;
   return ej?.nombre ?? '';
+}
+
+// Arma un resumen ANALÍTICO de los seguimientos de conducta del perro (no
+// vuelca marca por marca). Por cada conducta: conteos del mes actual y el
+// anterior (verde/amarillo/rojo/total), una tendencia simple comparando el %
+// de "verde" entre ambos meses, desde cuándo se registra, y las notas del
+// tutor más recientes (que es donde está el "por qué" de cada día).
+function armarSeguimientos(seguimientos: any[], regs: any[], now: Date): any[] {
+  if (!seguimientos || seguimientos.length === 0) return [];
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const curKey = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}`;
+  const pm = now.getUTCMonth() === 0
+    ? { y: now.getUTCFullYear() - 1, m: 12 }
+    : { y: now.getUTCFullYear(), m: now.getUTCMonth() };
+  const prevKey = `${pm.y}-${pad(pm.m)}`;
+
+  const bySeg = new Map<string, any[]>();
+  for (const r of regs ?? []) {
+    if (!bySeg.has(r.seguimiento_id)) bySeg.set(r.seguimiento_id, []);
+    bySeg.get(r.seguimiento_id)!.push(r);
+  }
+  const emptyCount = () => ({ verde: 0, amarillo: 0, rojo: 0, total: 0 });
+
+  return seguimientos.map((s) => {
+    const rs = bySeg.get(s.id) ?? [];
+    const cur: any = emptyCount();
+    const prev: any = emptyCount();
+    let desde: string | null = null;
+    for (const r of rs) {
+      const f = String(r.fecha ?? '');
+      if (f && (desde === null || f < desde)) desde = f;
+      const bucket = f.slice(0, 7) === curKey ? cur : f.slice(0, 7) === prevKey ? prev : null;
+      if (bucket && (r.color === 'verde' || r.color === 'amarillo' || r.color === 'rojo')) {
+        bucket[r.color]++;
+        bucket.total++;
+      }
+    }
+    const pctVerde = (c: any) => (c.total ? c.verde / c.total : null);
+    const pc = pctVerde(cur), pp = pctVerde(prev);
+    let tendencia: string;
+    if (pc === null) tendencia = 'sin registros este mes';
+    else if (pp === null) tendencia = 'sin comparación (mes anterior sin registros)';
+    else if (pc > pp + 0.1) tendencia = 'mejora';
+    else if (pc < pp - 0.1) tendencia = 'empeora';
+    else tendencia = 'estable';
+
+    const notas = rs
+      .filter((r) => (r.nota ?? '').trim())
+      .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
+      .slice(0, 8)
+      .map((r) => ({ fecha: r.fecha, color: r.color, nota: r.nota }));
+
+    return {
+      conducta: s.nombre,
+      descripcion: (s.descripcion ?? '').trim() || null,
+      desde,
+      mes_actual: cur,
+      mes_anterior: prev,
+      tendencia,
+      notas_recientes: notas,
+    };
+  });
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -165,6 +228,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .eq('perro_id', perroId).not('autor_usuario_cliente_id', 'is', null)
       .order('created_at', { ascending: false }).limit(30);
 
+    // SEGUIMIENTOS DE CONDUCTA del perro (semáforo día a día que registra el
+    // tutor). Traemos los seguimientos activos y sus registros, y los
+    // resumimos analíticamente más abajo (no se vuelca marca por marca).
+    const { data: seguimientos } = await admin
+      .from('seguimientos_conducta')
+      .select('id, nombre, descripcion, creado_en')
+      .eq('perro_id', perroId).eq('activo', true)
+      .order('creado_en', { ascending: true });
+
+    let regsConducta: any[] = [];
+    const segIds = (seguimientos ?? []).map((s: any) => s.id);
+    if (segIds.length) {
+      const { data: rc } = await admin
+        .from('registros_conducta')
+        .select('seguimiento_id, fecha, color, nota')
+        .in('seguimiento_id', segIds)
+        .order('fecha', { ascending: false });
+      regsConducta = rc ?? [];
+    }
+    const seguimientosResumen = armarSeguimientos(seguimientos ?? [], regsConducta, new Date());
+
     const { data: catalogo } = await admin
       .from('ejercicios')
       .select('id, codigo, nombre, categoria, descripcion')
@@ -179,6 +263,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       'NOTAS DE ENTRENO DEL CLIENTE (reciente primero):', JSON.stringify((notasEntreno ?? []).filter((r: any) => (r.nota ?? '').trim()).map((r: any) => ({ fecha: r.registrado_en, ejercicio: nombreEjercicio(r), texto: r.nota }))),
       'TUS NOTAS DE CASO (reciente primero):', JSON.stringify((notas ?? []).map((n: any) => ({ fecha: n.created_at, texto: n.payload?.texto ?? '' }))),
       'MENSAJES SUELTOS DEL CLIENTE (reciente primero):', JSON.stringify((mensajes ?? []).map((m: any) => ({ fecha: m.created_at, texto: m.contenido ?? '' }))),
+      'SEGUIMIENTOS DE CONDUCTA (registrados por el tutor, día a día):', JSON.stringify(seguimientosResumen.length ? seguimientosResumen : 'Sin seguimientos de conducta registrados'),
       'CATÁLOGO DISPONIBLE:', JSON.stringify((catalogo ?? []).map((e: any) => ({ codigo: e.codigo, nombre: e.nombre, categoria: e.categoria, descripcion: e.descripcion }))),
     ].join('\n');
 
