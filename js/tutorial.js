@@ -204,7 +204,9 @@
 
     function montarBoton() {
         if (document.getElementById(BTN_ID)) return;
-        const menu = document.querySelector('.header-cliente__menu');
+        // Tras el rediseño del home, el header es .ctop > .ctop-right (con
+        // .cdogs y .cavatar). Montamos el botón "?" dentro de .ctop-right.
+        const menu = document.querySelector('.ctop-right');
         if (!menu) return;
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -219,9 +221,9 @@
             '<circle cx="12" cy="17" r="0.6" fill="currentColor"/>' +
             '</svg>';
         btn.addEventListener('click', () => abrir(0));
-        // Lo insertamos ANTES del avatar para que el avatar siga siendo el
-        // último elemento del header (foco visual derecho).
-        const avatar = menu.querySelector('.avatar-btn');
+        // Lo insertamos ANTES del avatar (.cavatar) para que el avatar siga
+        // siendo el último elemento del header (foco visual derecho).
+        const avatar = menu.querySelector('.cavatar');
         if (avatar) menu.insertBefore(btn, avatar);
         else menu.appendChild(btn);
     }

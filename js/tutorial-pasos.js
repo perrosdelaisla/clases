@@ -53,6 +53,14 @@ window.PDLI_TUTORIAL_PASOS = [
         posicion: 'auto',
     },
     {
+        id: 'seguimiento',
+        tab: 'rutina',
+        selector: '#btn-seguimiento',
+        titulo: 'Seguimiento de conductas',
+        texto: 'Aquí puedes anotar cómo evoluciona cada conducta de tu perro día a día —los paseos, quedarse solo, lo que estéis trabajando— marcando con un color cómo fue cada jornada. Verás el avance de un vistazo.',
+        posicion: 'auto',
+    },
+    {
         id: 'rutina-subtabs',
         tab: 'rutina',
         selector: '.rutina-subtabs',
@@ -67,6 +75,14 @@ window.PDLI_TUTORIAL_PASOS = [
         titulo: 'Cómo va la semana',
         texto: 'Este anillo te muestra lo que llevas cumplido. Cada pequeño paso suma al bienestar de tu perro.',
         posicion: 'auto',
+    },
+    {
+        id: 'acompanamiento',
+        tab: 'rutina',
+        selector: null,
+        titulo: 'No estás solo en esto',
+        texto: 'Cada vez que registras cómo fue un ejercicio, tu adiestrador lo ve y puede responderte. Y si un día cuesta, te invitamos a escribirle para verlo juntos.',
+        posicion: 'center',
     },
     {
         id: 'tab-reservar',
@@ -97,7 +113,7 @@ window.PDLI_TUTORIAL_PASOS = [
         tab: 'rutina',
         selector: '[data-tab-target="mensajes"]',
         titulo: 'Mensajes',
-        texto: 'Hablas directamente con el adiestrador por aquí. Los avisos importantes también llegan a tu móvil.',
+        texto: 'Hablas directamente con el adiestrador, y aquí recibes cada semana un resumen de cómo vais. Los avisos importantes llegan a tu móvil.',
         posicion: 'top',
     },
     {

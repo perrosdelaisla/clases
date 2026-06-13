@@ -558,6 +558,15 @@
 }
 .home .dBp .cover .theme-toggle:hover{background:rgba(20,18,12,0.55);border-color:rgba(245,239,224,0.55);}
 .home .dBp .cover .theme-toggle svg{width:16px;height:16px;}
+/* Botón "?" del tutorial: lo iguala al theme-toggle dentro del header nuevo. */
+.home .dBp .cover .tutorial-btn{
+  width:32px;height:32px;border-radius:999px;flex:0 0 auto;margin:0;
+  background:rgba(20,18,12,0.38); color:#F5EFE0;
+  border:1px solid rgba(245,239,224,0.30);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.home .dBp .cover .tutorial-btn:hover{background:rgba(20,18,12,0.55);border-color:rgba(245,239,224,0.55);}
+.home .dBp .cover .tutorial-btn svg{width:16px;height:16px;}
 .home .dBp .cover .cbot{position:absolute; left:0; right:0; bottom:0; padding:0 20px 15px; z-index:2;}
 .home .dBp .cover .cbot .hi{
   font-family:var(--body); font-size:11px; font-weight:700; letter-spacing:1.5px;
