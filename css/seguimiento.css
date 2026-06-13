@@ -8,7 +8,30 @@
    ============================================================ */
 
 /* — tokens del semáforo (claro = default) — */
+/* Tokens de tema del overlay (claro = default).
+   IMPORTANTE: en home.css el bloque de tokens --c-x CLARO quedó bajo un
+   selector muerto: un comentario pegado entre dos ".home" hace que el
+   parser lea ".home .home" (descendiente), que no existe. Resultado: en
+   modo claro var(--c-bg) y compania quedan INDEFINIDOS sobre
+   #screen-app.home, y el overlay se veia transparente (background:var(--c-bg)
+   cae a su valor inicial = transparent, no oculta el perfil). Definimos aca
+   los --c-x que usa el overlay para que sea autosuficiente y OPACO en ambos
+   temas, sin depender de esa herencia rota. (El bloque oscuro de home.css si
+   es selector limpio; lo replicamos igual para no depender de el.) */
 #seguimiento-screen{
+  --c-bg:#F5EFE0;
+  --c-surface:#FBF7EC;
+  --c-field:#ECE4D2;
+  --c-text:#1A1A1A;
+  --c-text-2:#4A4A48;
+  --c-text-3:#8A867E;
+  --c-hair:rgba(26,26,26,0.10);
+  --c-hair-2:rgba(26,26,26,0.16);
+  --c-rojo:#C8102E;
+  --c-oliva:#6B7A3A;
+  --c-oliva-soft:rgba(107,122,58,0.12);
+  --c-oliva-line:rgba(107,122,58,0.30);
+
   --sem-verde:#6E9A3C;
   --sem-amarillo:#E0A52E;
   --sem-rojo:#C8102E;
@@ -18,6 +41,19 @@
   --cell-radius:11px;
 }
 .home[data-theme="oscuro"] #seguimiento-screen{
+  --c-bg:#15130D;
+  --c-surface:#211E16;
+  --c-field:#2A261C;
+  --c-text:#F5EFE0;
+  --c-text-2:rgba(245,239,224,0.68);
+  --c-text-3:rgba(245,239,224,0.44);
+  --c-hair:rgba(245,239,224,0.10);
+  --c-hair-2:rgba(245,239,224,0.18);
+  --c-rojo:#E12640;
+  --c-oliva:#9AAA55;
+  --c-oliva-soft:rgba(154,170,85,0.14);
+  --c-oliva-line:rgba(154,170,85,0.32);
+
   --sem-verde:#8FB94E;
   --sem-amarillo:#E8B94B;
   --sem-rojo:#E8415A;
