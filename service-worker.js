@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v154';
+const CACHE_VERSION = 'v155';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
     '/clases/index.html',
     '/clases/manifest.json',
     '/clases/css/styles.css',
+    '/clases/css/seguimiento.css',
     '/clases/js/app.js',
     '/clases/js/supabase.js',
     '/clases/js/tutorial-pasos.js',

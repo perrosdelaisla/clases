@@ -391,6 +391,9 @@ function bindEventos() {
     // Toggle Rutina / Mi progreso dentro del tab Rutina.
     bindRutinaModo();
 
+    // Seguimiento de conductas (calendario-semáforo dentro del perfil).
+    bindSeguimiento();
+
     // Modales: cierres genéricos por data-close
     document.querySelectorAll('.modal-pdli').forEach((modal) => {
         modal.addEventListener('click', (e) => {
@@ -1393,6 +1396,7 @@ async function renderRutinaPerroSeleccionado() {
     protoBox.setAttribute('hidden', '');
     saldoBox.setAttribute('hidden', '');
     cardSalud?.setAttribute('hidden', '');
+    document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
 
@@ -1414,6 +1418,9 @@ async function renderRutinaPerroSeleccionado() {
         if (cardSaludNombre) cardSaludNombre.textContent = perro.nombre || 'tu perro';
         cardSalud.removeAttribute('hidden');
     }
+
+    // Entrada "Seguimiento de conductas"
+    document.getElementById('btn-seguimiento')?.removeAttribute('hidden');
 
     // Foto
     if (perro.foto_url) {
@@ -5191,4 +5198,582 @@ function renderMiEntrenoItem(reg) {
             ${comentario}
         </li>
     `;
+}
+
+
+// ============================================================
+// SEGUIMIENTO DE CONDUCTAS — calendario-semáforo (cliente)
+// Portado del handoff de Design (React) a vanilla. Vive en el overlay
+// #seguimiento-screen (dentro de #screen-app.home → hereda tokens de tema).
+// 3 vistas: lista de seguimientos → calendario de una conducta → hoja
+// "marcar un día". Persiste en seguimientos_conducta / registros_conducta.
+// Texto de cliente en español de España (tú/puedes).
+// ============================================================
+
+const SEG_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const SEG_MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const SEG_DOW_S = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const SEG_DOW_L = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+// Forma de las celdas con varias marcas. El cliente eligió "horizontales"
+// como default (ver handoff); se deja como constante de configuración, no
+// por usuario. Valores: 'horizontales' | 'verticales' | 'diagonales'.
+const SEG_CELL_SHAPE = 'horizontales';
+
+// Color en DB ('verde'|'amarillo'|'rojo') <-> clave corta de UI ('v'|'a'|'r').
+const SEG_COLOR_KEY = { verde: 'v', amarillo: 'a', rojo: 'r' };
+const SEG_COLOR_DB = { v: 'verde', a: 'amarillo', r: 'rojo' };
+const SEG_SEM = {
+    v: { lb: 'Bien', icon: 'check' },
+    a: { lb: 'Regular', icon: 'dots' },
+    r: { lb: 'Mal', icon: 'x' },
+};
+const SEG_VAR = { v: 'var(--sem-verde)', a: 'var(--sem-amarillo)', r: 'var(--sem-rojo)' };
+
+const SEG_ICON = {
+    left: 'M15 18l-6-6 6-6',
+    right: 'M9 18l6-6-6-6',
+    chev: 'M9 18l6-6-6-6',
+    plus: 'M12 5v14M5 12h14',
+    check: 'M20 6L9 17l-5-5',
+    x: 'M18 6L6 18M6 6l12 12',
+    dots: 'M5 12h.01M12 12h.01M19 12h.01',
+    note: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+    trash: 'M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6',
+    trend: 'M3 17l6-6 4 4 7-7M14 8h6v6',
+};
+function segIcon(n) {
+    const d = SEG_ICON[n] || '';
+    const paths = d.split('M').filter(Boolean).map((seg) => `<path d="M${seg}"/>`).join('');
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
+const segState = {
+    perro: null,
+    vista: 'lista',        // 'lista' | 'cal'
+    seguimientos: [],      // [{ id, nombre, descripcion, creado_por_admin, creado_en }]
+    countsMes: {},         // { seguimientoId: {v,a,r} } — mes actual, para la lista
+    activo: null,          // seguimiento abierto en el calendario
+    year: 0,
+    month: 0,              // 0-11
+    dias: {},              // { diaNum: [ { id, key, nota, orden }, ... ] } del mes activo
+    sheetDia: null,        // día abierto en la hoja
+    noteEditId: null,      // id de marca con la nota en edición
+    newFormOpen: false,
+};
+
+// ---------- helpers de fecha ----------
+function segHoy() { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate() }; }
+function segPad(n) { return n < 10 ? '0' + n : '' + n; }
+function segIso(y, m, d) { return `${y}-${segPad(m + 1)}-${segPad(d)}`; }
+function segUltimoDia(y, m) { return new Date(y, m + 1, 0).getDate(); }
+function segMonthGrid(y, m) {
+    const first = new Date(y, m, 1);
+    const lead = (first.getDay() + 6) % 7;   // semana empieza en lunes
+    const days = segUltimoDia(y, m);
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push(null);
+    for (let d = 1; d <= days; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+}
+function segIsFuture(y, m, d) {
+    const t = segHoy();
+    if (y !== t.y) return y > t.y;
+    if (m !== t.m) return m > t.m;
+    return d > t.d;
+}
+function segCanNext() { const t = segHoy(); return !(segState.year === t.y && segState.month >= t.m); }
+function segFechaCorta(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return `${d.getDate()} ${SEG_MESES_C[d.getMonth()]}`;
+}
+
+// ---------- pintado de celdas según N marcas ----------
+function segCellStyle(marks) {
+    if (!marks || !marks.length) return '';
+    if (marks.length === 1) return `background:${SEG_VAR[marks[0].key]};`;
+    const angle = SEG_CELL_SHAPE === 'horizontales' ? '180deg' : SEG_CELL_SHAPE === 'diagonales' ? '135deg' : '90deg';
+    const n = marks.length;
+    const stops = marks.map((mk, i) => {
+        const a = (i / n * 100).toFixed(2), b = ((i + 1) / n * 100).toFixed(2);
+        return `${SEG_VAR[mk.key]} ${a}% ${b}%`;
+    }).join(', ');
+    return `background:linear-gradient(${angle}, ${stops});`;
+}
+
+// ---------- frases (historia / progreso) ----------
+function segStory(c) {
+    const tot = c.v + c.a + c.r;
+    if (!tot) return { pip: 'var(--c-text-3)', text: 'Sin registros aún' };
+    if (c.v >= c.a + c.r) return { pip: 'var(--sem-verde)', text: 'Mayoría en verde' };
+    if (c.r > c.v + c.a) return { pip: 'var(--sem-rojo)', text: 'Semana a semana' };
+    return { pip: 'var(--sem-amarillo)', text: 'Mejorando poco a poco' };
+}
+function segProgressNote(c) {
+    const tot = c.v + c.a + c.r;
+    if (!tot) return ['Todavía no has registrado días este mes. ', '', 'Cuando toques un día, empezarás a ver el color del mes.'];
+    const pv = c.v / tot;
+    if (pv >= 0.5) return ['Este mes ', 'vas mejorando', '. La mayoría de los días salieron bien — sigue por ahí.'];
+    if (pv >= 0.3) return ['Hay ', 'avances', '. Cada vez más días en verde; los difíciles también son parte del proceso.'];
+    return ['Está costando, y ', 'está bien', '. Lo importante es registrar — el camino se construye poco a poco.'];
+}
+function segCountMes() {
+    const c = { v: 0, a: 0, r: 0 };
+    Object.values(segState.dias).forEach((arr) => arr.forEach((mk) => { if (c[mk.key] != null) c[mk.key]++; }));
+    return c;
+}
+
+// ---------- chrome (eyebrow + título) y cambio de vista ----------
+function segActualizarChrome() {
+    const eyebrow = document.getElementById('seg-eyebrow');
+    const title = document.getElementById('seg-title');
+    const p = segState.perro;
+    const nombre = p?.nombre || 'Tu perro';
+    if (segState.vista === 'cal' && segState.activo) {
+        eyebrow.textContent = nombre;
+        title.textContent = segState.activo.nombre || 'Conducta';
+    } else {
+        eyebrow.textContent = [nombre, p?.raza].filter(Boolean).join(' · ');
+        title.textContent = 'Seguimientos';
+    }
+}
+function segMostrarVista(v) {
+    segState.vista = v;
+    document.getElementById('seg-vista-lista').toggleAttribute('hidden', v !== 'lista');
+    document.getElementById('seg-vista-cal').toggleAttribute('hidden', v !== 'cal');
+    const sc = document.querySelector('#seguimiento-screen .seg-scroll');
+    if (sc) sc.scrollTop = 0;
+    segActualizarChrome();
+}
+
+// ---------- abrir / cerrar el overlay ----------
+function abrirSeguimiento() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    if (!perro) return;
+    segState.perro = perro;
+    segState.vista = 'lista';
+    segState.activo = null;
+    segState.newFormOpen = false;
+    segCerrarSheet();
+    segMostrarVista('lista');
+    abrirModal('seguimiento-screen');
+    cargarListaSeguimientos();
+}
+
+// ---------- pantalla 1: lista de seguimientos ----------
+async function cargarListaSeguimientos() {
+    const cont = document.getElementById('seg-vista-lista');
+    const nombre = escapeHTML(segState.perro?.nombre || 'tu perro');
+    cont.innerHTML = `<p class="lead">Registra cómo evoluciona cada conducta de ${nombre}, día a día. Toca un seguimiento para ver su mes.</p><p class="seg-loading">Cargando…</p>`;
+    try {
+        const { data: segs, error } = await supabase
+            .from('seguimientos_conducta')
+            .select('id, nombre, descripcion, creado_por_admin, creado_en')
+            .eq('perro_id', segState.perro.id)
+            .eq('activo', true)
+            .order('creado_en', { ascending: true });
+        if (error) throw error;
+        segState.seguimientos = segs || [];
+
+        // Conteos del mes actual para la mini-barra de cada tarjeta.
+        segState.countsMes = {};
+        const ids = segState.seguimientos.map((s) => s.id);
+        if (ids.length) {
+            const t = segHoy();
+            const desde = segIso(t.y, t.m, 1);
+            const hasta = segIso(t.y, t.m, segUltimoDia(t.y, t.m));
+            const { data: regs, error: e2 } = await supabase
+                .from('registros_conducta')
+                .select('seguimiento_id, color')
+                .in('seguimiento_id', ids)
+                .gte('fecha', desde)
+                .lte('fecha', hasta);
+            if (e2) throw e2;
+            (regs || []).forEach((r) => {
+                const k = SEG_COLOR_KEY[r.color];
+                if (!k) return;
+                const c = segState.countsMes[r.seguimiento_id] || (segState.countsMes[r.seguimiento_id] = { v: 0, a: 0, r: 0 });
+                c[k]++;
+            });
+        }
+        renderSegLista();
+    } catch (err) {
+        console.error('[seguimiento] cargar lista', err);
+        cont.innerHTML = '<p class="lead">No se ha podido cargar el seguimiento. Inténtalo de nuevo.</p>';
+    }
+}
+function renderSegLista() {
+    const cont = document.getElementById('seg-vista-lista');
+    const nombre = escapeHTML(segState.perro?.nombre || 'tu perro');
+    const intro = `<p class="lead">Registra cómo evoluciona cada conducta de ${nombre}, día a día. Toca un seguimiento para ver su mes.</p>`;
+    const cards = segState.seguimientos.map((s) => {
+        const c = segState.countsMes[s.id] || { v: 0, a: 0, r: 0 };
+        const tot = c.v + c.a + c.r;
+        const w = (v) => (tot ? (v / tot * 100) : 0);
+        const st = segStory(c);
+        const meta = (s.descripcion && s.descripcion.trim())
+            ? escapeHTML(s.descripcion.trim())
+            : `Desde ${segFechaCorta(s.creado_en)}`;
+        return `
+            <button type="button" class="track-card" data-seg-action="open-track" data-id="${escapeHTML(s.id)}">
+                <div class="tc-top">
+                    <div class="tc-id">
+                        <div class="nm">${escapeHTML(s.nombre || 'Conducta')}</div>
+                        <div class="meta">${meta}</div>
+                    </div>
+                    <span class="tc-chev">${segIcon('chev')}</span>
+                </div>
+                <div class="mini-bar">
+                    <i class="v" style="width:${w(c.v)}%"></i>
+                    <i class="a" style="width:${w(c.a)}%"></i>
+                    <i class="r" style="width:${w(c.r)}%"></i>
+                </div>
+                <div class="tc-foot">
+                    <span class="story"><span class="pip" style="background:${st.pip}"></span>${st.text}</span>
+                    <span class="counts">
+                        <span class="ct"><span class="sw" style="background:var(--sem-verde)"></span>${c.v}</span>
+                        <span class="ct"><span class="sw" style="background:var(--sem-amarillo)"></span>${c.a}</span>
+                        <span class="ct"><span class="sw" style="background:var(--sem-rojo)"></span>${c.r}</span>
+                    </span>
+                </div>
+            </button>`;
+    }).join('');
+    const vacio = segState.seguimientos.length
+        ? ''
+        : '<p class="seg-empty">Aún no hay conductas en seguimiento. Crea la primera con el botón de abajo.</p>';
+    const footer = segState.newFormOpen
+        ? segNewFormHTML()
+        : `<button type="button" class="new-track" data-seg-action="new-open">${segIcon('plus')} Nueva conducta</button>`;
+    cont.innerHTML = intro + cards + vacio + footer;
+    if (segState.newFormOpen) document.getElementById('seg-new-nombre')?.focus();
+}
+function segNewFormHTML() {
+    return `
+        <div class="new-form">
+            <div class="nf-label">Nueva conducta</div>
+            <input type="text" id="seg-new-nombre" maxlength="60" placeholder="Nombre (p. ej. Paseos, Quedarse solo)" autocomplete="off">
+            <textarea id="seg-new-desc" maxlength="120" placeholder="Descripción (opcional)"></textarea>
+            <div class="nf-foot">
+                <button type="button" data-seg-action="new-cancel">Cancelar</button>
+                <button type="button" class="save" data-seg-action="new-save">Crear</button>
+            </div>
+        </div>`;
+}
+async function segCrearConducta() {
+    const inp = document.getElementById('seg-new-nombre');
+    const ta = document.getElementById('seg-new-desc');
+    const nombre = (inp?.value || '').trim();
+    const desc = (ta?.value || '').trim();
+    if (!nombre) { inp?.focus(); return; }
+    const btn = document.querySelector('#seguimiento-screen [data-seg-action="new-save"]');
+    if (btn) btn.disabled = true;
+    try {
+        const { data, error } = await supabase
+            .from('seguimientos_conducta')
+            .insert({ perro_id: segState.perro.id, nombre, descripcion: desc || null, creado_por_admin: false })
+            .select('id, nombre, descripcion, creado_por_admin, creado_en')
+            .single();
+        if (error) throw error;
+        segState.newFormOpen = false;
+        segState.seguimientos.push(data);
+        segState.countsMes[data.id] = { v: 0, a: 0, r: 0 };
+        renderSegLista();
+        segToast('Conducta creada');
+    } catch (err) {
+        console.error('[seguimiento] crear conducta', err);
+        if (btn) btn.disabled = false;
+        segToast('No se ha podido crear');
+    }
+}
+
+// ---------- pantalla 2: calendario de una conducta ----------
+async function abrirCalendario(id) {
+    const s = segState.seguimientos.find((x) => x.id === id);
+    if (!s) return;
+    segState.activo = s;
+    const t = segHoy();
+    segState.year = t.y;
+    segState.month = t.m;
+    segMostrarVista('cal');
+    await cargarMesCalendario();
+}
+async function cargarMesCalendario() {
+    const cont = document.getElementById('seg-vista-cal');
+    cont.innerHTML = '<p class="seg-loading">Cargando…</p>';
+    segState.dias = {};
+    try {
+        const y = segState.year, m = segState.month;
+        const desde = segIso(y, m, 1);
+        const hasta = segIso(y, m, segUltimoDia(y, m));
+        const { data, error } = await supabase
+            .from('registros_conducta')
+            .select('id, fecha, color, orden, nota')
+            .eq('seguimiento_id', segState.activo.id)
+            .gte('fecha', desde)
+            .lte('fecha', hasta)
+            .order('fecha', { ascending: true })
+            .order('orden', { ascending: true });
+        if (error) throw error;
+        const dias = {};
+        (data || []).forEach((r) => {
+            const dia = parseInt(String(r.fecha).slice(8, 10), 10);
+            const key = SEG_COLOR_KEY[r.color];
+            if (!key || !dia) return;
+            (dias[dia] || (dias[dia] = [])).push({ id: r.id, key, nota: r.nota || '', orden: r.orden });
+        });
+        segState.dias = dias;
+        renderSegCal();
+    } catch (err) {
+        console.error('[seguimiento] cargar mes', err);
+        cont.innerHTML = '<p class="seg-empty">No se ha podido cargar el mes. Inténtalo de nuevo.</p>';
+    }
+}
+function renderSegCal() {
+    const cont = document.getElementById('seg-vista-cal');
+    const y = segState.year, m = segState.month, t = segHoy();
+    const cells = segMonthGrid(y, m).map((d) => {
+        if (d === null) return '<div class="cell is-pad"></div>';
+        const marks = segState.dias[d] || [];
+        const fut = segIsFuture(y, m, d);
+        const cls = ['cell'];
+        cls.push(marks.length ? 'has-marks' : 'is-empty');
+        if (y === t.y && m === t.m && d === t.d) cls.push('is-today');
+        if (fut) cls.push('is-future');
+        const cnt = marks.length >= 2 ? `<span class="cnt">${marks.length}</span>` : '';
+        // Días futuros: deshabilitados (no se registra el futuro).
+        const attrs = fut ? ' disabled' : ` data-seg-action="open-day" data-dia="${d}"`;
+        return `<button type="button" class="${cls.join(' ')}"${attrs} style="${segCellStyle(marks)}"><span class="num">${d}</span>${cnt}</button>`;
+    }).join('');
+    const week = SEG_DOW_S.map((d) => `<span>${d}</span>`).join('');
+    const c = segCountMes();
+    const note = segProgressNote(c);
+    cont.innerHTML = `
+        <div class="month-nav">
+            <button type="button" class="mn-btn" data-seg-action="month-prev" aria-label="Mes anterior">${segIcon('left')}</button>
+            <div class="mn-label"><div class="mo">${SEG_MESES[m]}</div><div class="yr">${y}</div></div>
+            <button type="button" class="mn-btn" data-seg-action="month-next" aria-label="Mes siguiente"${segCanNext() ? '' : ' disabled'}>${segIcon('right')}</button>
+        </div>
+        <div class="weekrow">${week}</div>
+        <div class="calgrid">${cells}</div>
+        <div class="legend">
+            <span class="lg"><span class="dot" style="background:var(--sem-verde)"></span>Bien</span>
+            <span class="sep"></span>
+            <span class="lg"><span class="dot" style="background:var(--sem-amarillo)"></span>Regular</span>
+            <span class="sep"></span>
+            <span class="lg"><span class="dot" style="background:var(--sem-rojo)"></span>Mal</span>
+        </div>
+        <div class="summary">
+            <div class="sm-head">Resumen de ${SEG_MESES[m]}</div>
+            <div class="sm-stats">
+                <div class="st v"><div class="n">${c.v}</div><div class="t">Bien</div></div>
+                <div class="st a"><div class="n">${c.a}</div><div class="t">Regular</div></div>
+                <div class="st r"><div class="n">${c.r}</div><div class="t">Mal</div></div>
+            </div>
+            <div class="sm-prog">
+                <span class="ico">${segIcon('trend')}</span>
+                <span class="tx">${escapeHTML(note[0])}<b>${escapeHTML(note[1])}</b>${escapeHTML(note[2])}</span>
+            </div>
+        </div>`;
+}
+function segMesPrev() {
+    let y = segState.year, m = segState.month - 1;
+    if (m < 0) { m = 11; y--; }
+    segState.year = y; segState.month = m;
+    cargarMesCalendario();
+}
+function segMesNext() {
+    if (!segCanNext()) return;
+    let y = segState.year, m = segState.month + 1;
+    if (m > 11) { m = 0; y++; }
+    segState.year = y; segState.month = m;
+    cargarMesCalendario();
+}
+
+// ---------- pantalla 3: hoja "marcar un día" ----------
+function segAbrirSheet(dia) {
+    if (dia == null || isNaN(dia)) return;
+    segState.sheetDia = dia;
+    segState.noteEditId = null;
+    renderSegSheet();
+    const scrim = document.getElementById('seg-sheet-scrim');
+    const sheet = document.getElementById('seg-sheet');
+    scrim.classList.add('is-open');
+    requestAnimationFrame(() => sheet.classList.add('is-open'));
+}
+function segCerrarSheet() {
+    const scrim = document.getElementById('seg-sheet-scrim');
+    const sheet = document.getElementById('seg-sheet');
+    if (scrim) scrim.classList.remove('is-open');
+    if (sheet) sheet.classList.remove('is-open');
+    segState.sheetDia = null;
+    segState.noteEditId = null;
+}
+function renderSegSheet() {
+    const dia = segState.sheetDia;
+    const body = document.getElementById('seg-sheet-body');
+    const dateEl = document.getElementById('seg-sheet-date');
+    if (dia == null) { body.innerHTML = ''; return; }
+    const y = segState.year, m = segState.month;
+    const dow = SEG_DOW_L[new Date(y, m, dia).getDay()];
+    dateEl.textContent = `${dow} ${dia} · ${SEG_MESES[m]}`;
+    const list = segState.dias[dia] || [];
+    const pick = ['v', 'a', 'r'].map((k) => `
+        <button type="button" class="sem-btn ${k}" data-seg-action="add-mark" data-color="${k}">
+            <span class="disc">${segIcon(SEG_SEM[k].icon)}</span>
+            <span class="lb">${SEG_SEM[k].lb}</span>
+        </button>`).join('');
+    let marksHTML;
+    if (!list.length) {
+        marksHTML = '<div class="marks-empty">Sin marcas. Toca un color de arriba — puedes sumar varias si hubo más de un paseo.</div>';
+    } else {
+        marksHTML = '<div class="mark-list">' + list.map((mk) => {
+            const editing = segState.noteEditId === mk.id;
+            const noteTxt = mk.nota ? escapeHTML(mk.nota) : 'Sin nota';
+            const noteCls = mk.nota ? 'note' : 'note is-empty';
+            const editor = editing ? `
+                <div class="note-edit">
+                    <textarea id="seg-note-ta" maxlength="120" placeholder="Nota corta (opcional)…">${escapeHTML(mk.nota || '')}</textarea>
+                    <div class="ne-foot">
+                        <button type="button" data-seg-action="note-cancel">Cancelar</button>
+                        <button type="button" class="save" data-seg-action="note-save" data-id="${escapeHTML(mk.id)}">Guardar nota</button>
+                    </div>
+                </div>` : '';
+            return `
+                <div class="mark-row ${mk.key}">
+                    <span class="sw">${segIcon(SEG_SEM[mk.key].icon)}</span>
+                    <div class="mt">
+                        <div class="st">${SEG_SEM[mk.key].lb}</div>
+                        <div class="${noteCls}">${noteTxt}</div>
+                    </div>
+                    <button type="button" class="note-btn" data-seg-action="note-toggle" data-id="${escapeHTML(mk.id)}" aria-label="Nota">${segIcon('note')}</button>
+                    <button type="button" class="del" data-seg-action="del-mark" data-id="${escapeHTML(mk.id)}" aria-label="Borrar">${segIcon('trash')}</button>
+                </div>${editor}`;
+        }).join('') + '</div>';
+    }
+    body.innerHTML = `
+        <div class="sb-label">¿Cómo fue?</div>
+        <div class="sem-pick">${pick}</div>
+        <div class="marks-block">
+            <div class="mb-head">
+                <span class="lbl">Marcas del día</span>
+                ${list.length ? `<span class="cnt">${list.length} ${list.length === 1 ? 'marca' : 'marcas'}</span>` : ''}
+            </div>
+            ${marksHTML}
+        </div>`;
+    if (segState.noteEditId != null) {
+        const ta = document.getElementById('seg-note-ta');
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    }
+}
+async function segAddMark(key) {
+    const dia = segState.sheetDia;
+    if (dia == null || !segState.activo || !SEG_COLOR_DB[key]) return;
+    const fecha = segIso(segState.year, segState.month, dia);
+    // orden = max(orden del día) + 1 (monotónico; evita choques si se borró
+    // una marca intermedia, manteniendo el sentido de "siguiente marca").
+    const previas = segState.dias[dia] || [];
+    const orden = previas.reduce((mx, mk) => Math.max(mx, mk.orden || 0), 0) + 1;
+    try {
+        const { data, error } = await supabase
+            .from('registros_conducta')
+            .insert({ seguimiento_id: segState.activo.id, fecha, color: SEG_COLOR_DB[key], orden })
+            .select('id, fecha, color, orden, nota')
+            .single();
+        if (error) throw error;
+        (segState.dias[dia] || (segState.dias[dia] = [])).push({ id: data.id, key, nota: data.nota || '', orden: data.orden });
+        renderSegSheet();
+        renderSegCal();
+        segToast(`${SEG_SEM[key].lb} · marca añadida`);
+    } catch (err) {
+        console.error('[seguimiento] añadir marca', err);
+        segToast('No se ha podido guardar');
+    }
+}
+async function segDelMark(id) {
+    const dia = segState.sheetDia;
+    try {
+        const { error } = await supabase.from('registros_conducta').delete().eq('id', id);
+        if (error) throw error;
+        if (dia != null && segState.dias[dia]) {
+            segState.dias[dia] = segState.dias[dia].filter((mk) => mk.id !== id);
+            if (!segState.dias[dia].length) delete segState.dias[dia];
+        }
+        if (segState.noteEditId === id) segState.noteEditId = null;
+        renderSegSheet();
+        renderSegCal();
+    } catch (err) {
+        console.error('[seguimiento] borrar marca', err);
+        segToast('No se ha podido borrar');
+    }
+}
+async function segSaveNote(id) {
+    const ta = document.getElementById('seg-note-ta');
+    const txt = (ta?.value || '').trim();
+    const dia = segState.sheetDia;
+    try {
+        const { error } = await supabase.from('registros_conducta').update({ nota: txt || null }).eq('id', id);
+        if (error) throw error;
+        if (dia != null && segState.dias[dia]) {
+            const mk = segState.dias[dia].find((x) => x.id === id);
+            if (mk) mk.nota = txt;
+        }
+        segState.noteEditId = null;
+        renderSegSheet();
+    } catch (err) {
+        console.error('[seguimiento] guardar nota', err);
+        segToast('No se ha podido guardar la nota');
+    }
+}
+
+// ---------- toast propio del overlay ----------
+let _segToastT = null;
+function segToast(msg) {
+    const el = document.getElementById('seg-toast');
+    if (!el) return;
+    el.innerHTML = segIcon('check') + escapeHTML(msg);
+    el.classList.add('is-on');
+    clearTimeout(_segToastT);
+    _segToastT = setTimeout(() => el.classList.remove('is-on'), 1600);
+}
+
+// ---------- botón "atrás" del appbar (contextual) ----------
+function segBack() {
+    if (segState.vista === 'cal') {
+        segMostrarVista('lista');
+        cargarListaSeguimientos();   // refresca conteos del mes por si cambió algo
+    } else {
+        cerrarModal('seguimiento-screen');
+    }
+}
+
+// ---------- binding (entrada + delegación en el overlay) ----------
+function bindSeguimiento() {
+    document.getElementById('btn-seguimiento')?.addEventListener('click', abrirSeguimiento);
+
+    const overlay = document.getElementById('seguimiento-screen');
+    if (!overlay || overlay.__segBound) return;
+    overlay.__segBound = true;
+    overlay.addEventListener('click', (e) => {
+        const t = e.target.closest('[data-seg-action]');
+        if (!t || !overlay.contains(t)) return;
+        switch (t.dataset.segAction) {
+            case 'back': segBack(); break;
+            case 'open-track': abrirCalendario(t.dataset.id); break;
+            case 'new-open': segState.newFormOpen = true; renderSegLista(); break;
+            case 'new-cancel': segState.newFormOpen = false; renderSegLista(); break;
+            case 'new-save': segCrearConducta(); break;
+            case 'month-prev': segMesPrev(); break;
+            case 'month-next': segMesNext(); break;
+            case 'open-day': segAbrirSheet(parseInt(t.dataset.dia, 10)); break;
+            case 'add-mark': segAddMark(t.dataset.color); break;
+            case 'del-mark': segDelMark(t.dataset.id); break;
+            case 'note-toggle': segState.noteEditId = (segState.noteEditId === t.dataset.id ? null : t.dataset.id); renderSegSheet(); break;
+            case 'note-cancel': segState.noteEditId = null; renderSegSheet(); break;
+            case 'note-save': segSaveNote(t.dataset.id); break;
+            case 'sheet-close': segCerrarSheet(); break;
+        }
+    });
 }

@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="./css/styles.css?v=55">
     <link rel="stylesheet" href="./css/home.css?v=5">
     <link rel="stylesheet" href="./css/home-bridge.css?v=15">
+    <link rel="stylesheet" href="./css/seguimiento.css?v=1">
 </head>
 <body class="app-cliente">
 
@@ -197,6 +198,15 @@
                     <p id="perro-saldo-detalle" hidden></p>
                 </div>
             </div>
+
+            <button type="button" class="seg-entry" id="btn-seguimiento" hidden>
+                <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>
+                <span class="htx">
+                    <span class="ht">Seguimiento de conductas</span>
+                    <span class="hs">Registra día a día cómo evoluciona cada conducta</span>
+                </span>
+                <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+            </button>
 
             <div class="work">
                 <div class="work-head"><span class="ttl">Hoy</span><span class="day" id="work-day"></span></div>
@@ -436,6 +446,46 @@
                 <span class="bottom-nav__label">Mensajes</span>
             </button>
         </nav>
+
+        <!-- ── SEGUIMIENTO DE CONDUCTAS (overlay full-screen, dentro de #screen-app
+             para heredar tokens --c-* y data-theme) ── -->
+        <section class="modal-pdli" id="seguimiento-screen" hidden aria-hidden="true">
+            <div class="appbar">
+                <button type="button" class="back" id="seg-back" data-seg-action="back" aria-label="Atrás">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div class="hd">
+                    <div class="eyebrow" id="seg-eyebrow"></div>
+                    <div class="ttl" id="seg-title">Seguimientos</div>
+                </div>
+            </div>
+
+            <div class="seg-scroll">
+                <div id="seg-vista-lista" class="lista"></div>
+                <div id="seg-vista-cal" class="cal-wrap" hidden></div>
+            </div>
+
+            <!-- hoja "marcar un día" -->
+            <div class="sheet-scrim" id="seg-sheet-scrim" data-seg-action="sheet-close"></div>
+            <div class="sheet" id="seg-sheet" role="dialog" aria-modal="true" aria-label="Marcar día">
+                <div class="grip"></div>
+                <div class="sheet-head">
+                    <div class="ht">
+                        <div class="eyebrow">Marcar día</div>
+                        <div class="dt" id="seg-sheet-date">—</div>
+                    </div>
+                    <button type="button" class="x" id="seg-sheet-x" data-seg-action="sheet-close" aria-label="Cerrar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="sheet-body" id="seg-sheet-body"></div>
+                <div class="sheet-foot">
+                    <button type="button" class="done" data-seg-action="sheet-close">Listo</button>
+                </div>
+            </div>
+
+            <div class="seg-toast" id="seg-toast"></div>
+        </section>
     </section>
 
     <!-- ── MODAL: subir foto del perro ── -->
@@ -1041,6 +1091,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=2"></script>
     <script src="./js/tutorial.js?v=2"></script>
-    <script type="module" src="./js/app.js?v=86"></script>
+    <script type="module" src="./js/app.js?v=87"></script>
 </body>
 </html>
