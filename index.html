@@ -14,9 +14,9 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=54">
-    <link rel="stylesheet" href="./css/home.css?v=4">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=14">
+    <link rel="stylesheet" href="./css/styles.css?v=55">
+    <link rel="stylesheet" href="./css/home.css?v=5">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=15">
 </head>
 <body class="app-cliente">
 
@@ -971,6 +971,19 @@
         </div>
     </aside>
 
+    <aside class="aviso-banner" id="aviso-trq-banner" hidden role="status" aria-live="polite">
+        <p class="aviso-banner__text" id="aviso-trq-texto"></p>
+        <div class="aviso-banner__actions">
+            <button type="button" class="btn-install-primary" id="aviso-trq-escribir">Escribir al adiestrador</button>
+        </div>
+        <button type="button" class="aviso-banner__close" id="aviso-trq-cerrar" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18"/>
+            </svg>
+        </button>
+    </aside>
+
     <div class="ios-install-modal" id="ios-install-modal" hidden aria-hidden="true">
         <div class="ios-install-modal__overlay" data-close></div>
         <div class="ios-install-modal__panel" role="dialog" aria-modal="true" aria-labelledby="ios-modal-titulo">
@@ -1022,12 +1035,12 @@
 
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
-    <script src="./js/vendor/supabase.umd.js?v=1"></script>
+    <script src="./js/vendor/supabase.umd.js?v=2"></script>
     <!-- Tutorial / tour de bienvenida. Cargamos los pasos antes del motor
          para que `window.PDLI_TUTORIAL_PASOS` exista cuando el motor se
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
-    <script src="./js/tutorial-pasos.js?v=1"></script>
-    <script src="./js/tutorial.js?v=1"></script>
-    <script type="module" src="./js/app.js?v=81"></script>
+    <script src="./js/tutorial-pasos.js?v=2"></script>
+    <script src="./js/tutorial.js?v=2"></script>
+    <script type="module" src="./js/app.js?v=82"></script>
 </body>
 </html>

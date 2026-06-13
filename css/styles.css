@@ -761,6 +761,69 @@ body {
 
 .btn-install-secondary:hover { color: var(--color-text); }
 
+/* ===== Aviso de tranquilidad baja tras registrar un entreno ===== */
+.aviso-banner {
+    position: fixed;
+    left: 50%;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 140%);
+    width: calc(100% - 1.5rem);
+    max-width: 460px;
+    z-index: 150;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0.85rem 2.5rem 0.85rem 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+        "text"
+        "actions";
+    row-gap: 0.65rem;
+    align-items: center;
+    box-shadow: 0 12px 32px rgba(26, 26, 26, 0.2);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease;
+    opacity: 0;
+}
+
+.aviso-banner[hidden] { display: none; }
+
+.aviso-banner.is-open {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+
+.aviso-banner__text {
+    grid-area: text;
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--color-text);
+}
+
+.aviso-banner__actions {
+    grid-area: actions;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.aviso-banner__close {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    width: 28px;
+    height: 28px;
+    padding: 5px;
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    cursor: pointer;
+}
+
+.aviso-banner__close:hover { color: var(--color-text); }
+
 @media (min-width: 480px) {
     .install-banner {
         grid-template-columns: auto 1fr auto;
