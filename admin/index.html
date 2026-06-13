@@ -128,11 +128,21 @@
                         </p>
                     </div>
                     <form id="form-bloqueo" class="form-bloqueo" autocomplete="off">
+                        <!-- Fecha: input oculto (preserva el submit existente) +
+                             calendario visual replicado del de cita manual. -->
+                        <input type="hidden" id="bloq-fecha" required>
+                        <div id="bloq-cal-mes" class="cal-mes">
+                            <div class="cal-mes__header">
+                                <button type="button" class="cal-mes__nav" id="bloq-cal-mes-prev" aria-label="Mes anterior">‹</button>
+                                <h3 class="cal-mes__titulo" id="bloq-cal-mes-titulo">—</h3>
+                                <button type="button" class="cal-mes__nav" id="bloq-cal-mes-next" aria-label="Mes siguiente">›</button>
+                            </div>
+                            <div class="cal-mes__dias-semana">
+                                <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+                            </div>
+                            <div class="cal-mes__grid" id="bloq-cal-mes-grid"></div>
+                        </div>
                         <div class="form-row">
-                            <label class="form-field">
-                                <span>Fecha</span>
-                                <input type="date" id="bloq-fecha" required>
-                            </label>
                             <label class="form-field">
                                 <span>Hora (opcional)</span>
                                 <select id="bloq-hora">
@@ -781,7 +791,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=54"></script>
+    <script type="module" src="./admin.js?v=55"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
       function toast(msg) {

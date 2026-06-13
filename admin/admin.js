@@ -956,6 +956,166 @@ async function poblarDropdownHorasBloqueo() {
     }
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Calendario visual de Bloqueos — réplica del de cita manual (cmCal),
+// con estado e IDs propios (bloqCal / bloq-cal-*). Reutiliza los helpers
+// de fecha (_hoyIso / _primerDiaMesIso / _sumarMesesIso / _ultimoDiaMesIso /
+// _nombreMesAnio) y las clases CSS cal-dia. NO toca cita manual.
+// ────────────────────────────────────────────────────────────────────
+
+const bloqCal = {
+    slotsPorFecha: {},   // { 'YYYY-MM-DD': ['HH:MM', ...] }
+    mesAnchor: null,     // 'YYYY-MM-01'
+    diaSeleccionado: null,
+    desdeIso: null,      // límite inferior (hoy)
+    hastaIso: null,      // límite superior (último día del mes +2)
+};
+
+async function initCalendarioBloqueo() {
+    const hoy = _hoyIso();
+    const mesHoy = _primerDiaMesIso(hoy);
+    const limiteSup = _sumarMesesIso(mesHoy, 2);
+    const hastaIso = _ultimoDiaMesIso(limiteSup);
+
+    bloqCal.desdeIso = hoy;
+    bloqCal.hastaIso = hastaIso;
+    bloqCal.mesAnchor = mesHoy;
+    bloqCal.diaSeleccionado = null;
+    bloqCal.slotsPorFecha = {};
+
+    // Hidden input vuelve a vacío al re-inicializar.
+    const hidden = document.getElementById('bloq-fecha');
+    if (hidden) hidden.value = '';
+
+    try {
+        bloqCal.slotsPorFecha = await agenda.obtenerSlotsDisponiblesEnRango(hoy, hastaIso);
+    } catch (err) {
+        console.error('Error precargando slots del calendario bloqueo:', err);
+        bloqCal.slotsPorFecha = {};
+    }
+
+    // Anchor inicial: mes del primer día con disponibilidad si existe.
+    const fechasDisp = Object.keys(bloqCal.slotsPorFecha).sort();
+    if (fechasDisp.length > 0) {
+        bloqCal.mesAnchor = _primerDiaMesIso(fechasDisp[0]);
+    }
+
+    wireCalendarioBloqueoNav();
+    renderCalendarioBloqueo();
+}
+
+function wireCalendarioBloqueoNav() {
+    const prev = document.getElementById('bloq-cal-mes-prev');
+    const next = document.getElementById('bloq-cal-mes-next');
+    if (prev && !prev.dataset.navBound) {
+        prev.addEventListener('click', () => {
+            bloqCal.mesAnchor = _sumarMesesIso(bloqCal.mesAnchor, -1);
+            renderCalendarioBloqueo();
+        });
+        prev.dataset.navBound = '1';
+    }
+    if (next && !next.dataset.navBound) {
+        next.addEventListener('click', () => {
+            bloqCal.mesAnchor = _sumarMesesIso(bloqCal.mesAnchor, 1);
+            renderCalendarioBloqueo();
+        });
+        next.dataset.navBound = '1';
+    }
+}
+
+function renderCalendarioBloqueo() {
+    const grid = document.getElementById('bloq-cal-mes-grid');
+    const titulo = document.getElementById('bloq-cal-mes-titulo');
+    const prev = document.getElementById('bloq-cal-mes-prev');
+    const next = document.getElementById('bloq-cal-mes-next');
+    const anchor = bloqCal.mesAnchor;
+    if (!grid || !anchor) return;
+
+    titulo.textContent = _nombreMesAnio(anchor).toUpperCase();
+
+    // Mismo límite que cita manual: hoy → +2 meses (cubre el fetch).
+    const hoyMes = _primerDiaMesIso(_hoyIso());
+    const limiteSup = _sumarMesesIso(hoyMes, 2);
+
+    if (prev) prev.disabled = anchor <= hoyMes;
+    if (next) next.disabled = anchor >= limiteSup;
+
+    const [y, m] = anchor.split('-').map(Number);
+    const primero = new Date(y, m - 1, 1);
+    const ultimoDia = new Date(y, m, 0).getDate();
+    const diaSemanaInicio = (primero.getDay() + 6) % 7;
+
+    const hoyIso = _hoyIso();
+    const cells = [];
+
+    for (let i = 0; i < diaSemanaInicio; i++) {
+        cells.push('<button type="button" class="cal-dia is-fuera-mes" disabled></button>');
+    }
+
+    for (let d = 1; d <= ultimoDia; d++) {
+        const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const tieneDispo = !!bloqCal.slotsPorFecha[iso];
+        const esSeleccionado = iso === bloqCal.diaSeleccionado;
+        const esPasado = iso < hoyIso;
+
+        const clases = ['cal-dia'];
+        if (esPasado || !tieneDispo) clases.push('is-deshabilitado');
+        if (tieneDispo) clases.push('is-disponible');
+        if (esSeleccionado) clases.push('is-seleccionado');
+
+        const punto = tieneDispo ? '<span class="cal-dia__punto" aria-hidden="true"></span>' : '';
+        const disabled = (esPasado || !tieneDispo) ? 'disabled' : '';
+        cells.push(`
+            <button type="button" class="${clases.join(' ')}" data-fecha="${iso}" ${disabled}>
+                <span>${d}</span>
+                ${punto}
+            </button>
+        `);
+    }
+
+    grid.innerHTML = cells.join('');
+
+    grid.querySelectorAll('.cal-dia.is-disponible').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const fecha = btn.dataset.fecha;
+            bloqCal.diaSeleccionado = fecha;
+            const hidden = document.getElementById('bloq-fecha');
+            if (hidden) hidden.value = fecha;
+            renderCalendarioBloqueo();
+            actualizarHorasBloqueoSegunFecha(fecha);
+        });
+    });
+}
+
+// Repuebla #bloq-hora según la fecha elegida, CONSERVANDO "Día completo"
+// como primera opción y las horas disponibles debajo (misma fuente que
+// cita manual: get_available_slots vía obtenerSlotsDisponiblesPorFecha).
+async function actualizarHorasBloqueoSegunFecha(fechaIso) {
+    const select = document.getElementById('bloq-hora');
+    if (!select) return;
+
+    const valorPrevio = select.value;
+
+    if (!fechaIso) {
+        select.innerHTML = '<option value="">Día completo</option>';
+        select.value = '';
+        return;
+    }
+
+    try {
+        const horasUnicas = await agenda.obtenerSlotsDisponiblesPorFecha(fechaIso);
+        select.innerHTML = '<option value="">Día completo</option>' +
+            horasUnicas.map((h) => `<option value="${escapeHTML(h)}">${escapeHTML(h)}</option>`).join('');
+        if (valorPrevio && horasUnicas.includes(valorPrevio)) {
+            select.value = valorPrevio;
+        }
+    } catch (err) {
+        console.error('Error cargando horas para dropdown bloqueo:', err);
+        select.innerHTML = '<option value="">Día completo</option>';
+        select.value = '';
+    }
+}
+
 function initAgenda() {
     if (window.__agendaBound) return;
     bindAgendaSubtabs();
@@ -1272,6 +1432,10 @@ async function cargarBloqueos() {
         const bloqueos = await agenda.obtenerBloqueos();
         renderBloqueos(bloqueos);
         bindBloqueosActions();
+        // Refresca el calendario visual para reflejar el estado actual
+        // (cubre alta de subtab, post-submit y post-eliminación, que
+        // pasan todos por acá).
+        initCalendarioBloqueo();
     } catch (err) {
         console.error('Error cargando bloqueos:', err);
         list.innerHTML = '<p class="agenda-empty">Error al cargar bloqueos.</p>';
