@@ -4289,6 +4289,7 @@ function iniciarModificarCita(cita) {
 
 let _ejercicioModalActualId = null;
 let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccionado)
+let _avisoTrqEjercicio = '';           // nombre del ejercicio del último aviso de tranquilidad baja
 let _reporteRepes = [];                // [{ minStr, segStr }, ...] — filas dinámicas de repeticiones
 let _reporteCampos = [];               // campos activos del ejercicio actual (de la RPC)
 let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquilidad, nota, registrado_en }
@@ -4478,6 +4479,27 @@ function bindComposerMensaje() {
     if (btn) btn.addEventListener('click', enviarMensaje);
 }
 
+// Aviso "tranquilidad baja": banner no bloqueante que invita a escribirle al
+// adiestrador cuando el cliente puntúa tranquilidad <= 2 en un registro.
+function mostrarAvisoTranquilidadBaja(nombrePerro, nombreEjercicio) {
+    const banner = document.getElementById('aviso-trq-banner');
+    if (!banner) return;
+    _avisoTrqEjercicio = nombreEjercicio || '';
+    const txt = document.getElementById('aviso-trq-texto');
+    if (txt) {
+        txt.textContent = `¿Le ha costado a ${nombrePerro}? Cuéntaselo a tu adiestrador y lo vemos juntos.`;
+    }
+    banner.removeAttribute('hidden');
+    requestAnimationFrame(() => banner.classList.add('is-open'));
+}
+
+function cerrarAvisoTranquilidadBaja() {
+    const banner = document.getElementById('aviso-trq-banner');
+    if (!banner || banner.hasAttribute('hidden')) return;
+    banner.classList.remove('is-open');
+    setTimeout(() => banner.setAttribute('hidden', ''), 350);
+}
+
 function bindNotasEjercicio() {
     // Bloque B — reporte de entreno por ejercicio.
     document.getElementById('btn-reportar-entreno')
@@ -4486,6 +4508,24 @@ function bindNotasEjercicio() {
         ?.addEventListener('click', guardarReporteEjercicio);
     document.getElementById('reporte-tarea-hecho')
         ?.addEventListener('click', marcarTareaHecha);
+
+    // Aviso de tranquilidad baja: cerrar (X) y "Escribir al adiestrador".
+    document.getElementById('aviso-trq-cerrar')
+        ?.addEventListener('click', cerrarAvisoTranquilidadBaja);
+    document.getElementById('aviso-trq-escribir')
+        ?.addEventListener('click', () => {
+            cerrarAvisoTranquilidadBaja();
+            showTab('mensajes');
+            const ta = document.getElementById('mensaje-textarea');
+            if (!ta) return;
+            // Precargamos solo si el composer está vacío, para no pisar un borrador.
+            if (_avisoTrqEjercicio && ta.value.trim() === '') {
+                ta.value = `Sobre ${_avisoTrqEjercicio}: `;
+                validarComposerMensaje();
+            }
+            ta.focus();
+            try { const n = ta.value.length; ta.setSelectionRange(n, n); } catch (_) {}
+        });
 
     // Pills de tranquilidad (1..5). Toque sobre el mismo número deselecciona.
     document.querySelectorAll('#reporte-tranquilidad .reporte-pill').forEach((btn) => {
@@ -4921,12 +4961,28 @@ async function guardarReporteEjercicio() {
             cargarVistaProgreso();
         }
 
+        // Tranquilidad efectiva del registro recién guardado (en modo "sumar"
+        // sin nueva puntuación, se conserva la previa).
+        const trqGuardada = modoSumar
+            ? ((trq != null) ? trq : (_reporteRegistroPrevio?.tranquilidad ?? null))
+            : trq;
+        // Capturamos nombres antes de cerrar el modal para el aviso posterior.
+        const nombrePerroAviso = state.perros.find((p) => p.id === perroId)?.nombre || 'tu perro';
+        const nombreEjAviso = document.getElementById('modal-reporte-ejercicio-nombre')
+            ?.textContent?.trim() || '';
+
         cerrarModal('modal-reporte-ejercicio');
         if (superoTopeDiario) {
             // Cartel informativo, sin tono reprochador. 5s para que se lea.
             toast('Ya superaste el máximo diario de este ejercicio.', 'info', 5000);
         } else {
             toast('Entreno registrado');
+        }
+
+        // Si el perro lo pasó mal (tranquilidad <= 2), ofrecemos contárselo
+        // al adiestrador. Banner no bloqueante, una vez por registro.
+        if (trqGuardada != null && trqGuardada <= 2) {
+            mostrarAvisoTranquilidadBaja(nombrePerroAviso, nombreEjAviso);
         }
 
         // Re-render de la rutina (chips + anillo) y, si corresponde, pulso.
