@@ -1012,16 +1012,14 @@ body {
     padding: 16px 16px 32px;
 }
 
-/* Tab panels: solo .is-active visible. Fade rápido al cambiar. */
-.tab-panel {
-    animation: tab-fade 0.2s ease;
-}
+/* Tab panels: solo .is-active visible.
+   Sin animación de entrada a propósito: la vieja `animation: tab-fade` arrancaba
+   en opacity:0 y, si la pestaña estaba throttleada (segundo plano / PWA reanudada /
+   ahorro de energía), la animación se congelaba en su frame inicial y el panel
+   quedaba clavado en opacity:0 = "pantalla en blanco con contenido invisible".
+   La visibilidad ahora la gobierna solo el par [hidden]/:not([hidden]) de abajo,
+   con opacity:1 estable que no depende de que ninguna animación complete. */
 .tab-panel[hidden] { display: none; }
-
-@keyframes tab-fade {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
 
 /* ===== Bottom navigation (ANCLA OSCURA) ===== */
 
@@ -2335,11 +2333,14 @@ body {
     object-fit: contain;
 }
 
-/* ===================== Swipe tabs — animación fade ===================== */
+/* ===================== Swipe tabs — visibilidad por opacity ===================== */
 
-.tab-panel {
-    transition: opacity 0.18s ease;
-}
+/* Sin transición de opacity a propósito: una transición opacity 0→1 al mostrar el
+   panel se congela en su frame inicial (opacity 0) si la pestaña está throttleada
+   (segundo plano / PWA reanudada / ahorro de energía), dejando el panel invisible
+   con su contenido cargado. El panel de Mensajes lo sufría aún sin la animación
+   tab-fade, porque queda `display:flex` incluso oculto y sí dispara la transición.
+   La visibilidad la fija de forma instantánea el par [hidden]/:not([hidden]). */
 .tab-panel[hidden] {
     opacity: 0;
 }
