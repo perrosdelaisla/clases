@@ -594,5 +594,9 @@
 /* ── Integración con la app real (home-bridge) ─────────────── */
 #screen-app.home{ background:var(--c-bg); color:var(--c-text); }
 .home #tab-rutina{ padding:0; }                 /* cover a sangrado */
-.home #tab-rutina.tab-panel{ display:block; }
+/* OJO: con `:not([hidden])` para no pisar el `.tab-panel[hidden] { display:none }`
+   global. Sin esto, esta regla gana por especificidad (incluye un ID) y deja
+   a tab-rutina ocupando espacio aunque tenga [hidden] → empuja las otras tabs
+   fuera de viewport. (La misma regla existía duplicada en home-bridge.css.) */
+.home #tab-rutina.tab-panel:not([hidden]){ display:block; }
 .home .philo{ padding-left:0; padding-right:0; }
