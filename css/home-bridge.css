@@ -3,7 +3,13 @@
    a la foto real del perro, el avatar y el lápiz del nombre. ──────── */
 
 /* La home entra a sangrado (sin el padding del tab-panel) */
-.home #tab-rutina.tab-panel{ padding:0; display:block; }
+/* OJO: el `display:block` va con `:not([hidden])` para no pisar el
+   `.tab-panel[hidden] { display:none }` global. Sin eso, esta regla
+   gana por especificidad (incluye un ID) y deja a tab-rutina ocupando
+   espacio aunque tenga [hidden] → empuja a las otras tabs fuera de la
+   viewport y se ven en blanco. */
+.home #tab-rutina.tab-panel{ padding:0; }
+.home #tab-rutina.tab-panel:not([hidden]){ display:block; }
 #screen-app.home{ background:var(--c-bg); color:var(--c-text); }
 
 /* Foto real del perro como fondo del cover (reemplaza al image-slot) */

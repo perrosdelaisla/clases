@@ -2547,7 +2547,11 @@ body {
 
 /* ═══ Mensajes — pantalla cliente ═══════════════════════ */
 
-.tab-panel[data-tab="mensajes"] {
+/* OJO: el `display:flex` va con `:not([hidden])` para no pisar el
+   `.tab-panel[hidden] { display:none }` global. Misma especificidad
+   pero esta regla viene después → ganaba siempre y dejaba a Mensajes
+   ocupando espacio aunque tuviera [hidden]. */
+.tab-panel[data-tab="mensajes"]:not([hidden]) {
     display: flex;
     flex-direction: column;
     padding: 0;
