@@ -2071,6 +2071,42 @@ body {
     font-size: 13px;
 }
 
+/* RESUMEN DE CLASE POR VOZ (modal editar cita) */
+.rc-grabar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.rc-indicador {
+    color: var(--color-red);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    animation: rc-parpadeo 1.2s ease-in-out infinite;
+}
+
+@keyframes rc-parpadeo {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+#rc-generar {
+    margin-bottom: 12px;
+}
+
+.rc-guardar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.rc-msg {
+    color: var(--color-muted);
+    font-size: 13px;
+}
+
 /* AUTOCOMPLETE de clientes (form crear cita + modal editar) */
 .ac-wrap {
     position: relative;

@@ -693,6 +693,9 @@ function closeModal(id) {
     if (id === 'modal-cita-manual') {
         resetCmForm();
     }
+    if (id === 'modal-cita-edit') {
+        resetResumenClase();
+    }
     // Si el cierre vino de la UI (X, backdrop, Esc, botón Guardar/Eliminar),
     // consumimos la entrada que pusheamos al abrir. El handler de popstate
     // detecta cierreUiPendiente y no dispara la lógica de toast.
@@ -2023,6 +2026,8 @@ async function abrirModalEditarCita(citaId) {
     document.getElementById('ce-numero-clase').value = cita.numero_clase != null ? String(cita.numero_clase) : '';
     document.getElementById('ce-notas').value = notasLimpias;
 
+    setupResumenClase(cita);
+
     openModal('modal-cita-edit');
 }
 
@@ -2133,6 +2138,212 @@ function bindModalCitaEdit() {
     }
 
     window.__modalEditCitaBound = true;
+}
+
+/* ═══════════════════════════════════════════
+   RESUMEN DE CLASE POR VOZ — modal editar cita
+   Dicta → Web Speech API vuelca el crudo → edge fn
+   `resumir-clase` lo redacta para el tutor → UPDATE
+   citas.resumen_cliente. Todo editable a mano.
+   ═══════════════════════════════════════════ */
+
+const resumenClaseCtx = {
+    cita: null,
+    reconocedor: null,   // instancia SpeechRecognition (o null si no hay soporte)
+    grabando: false,
+    baseCrudo: '',       // texto ya consolidado antes del tramo interino actual
+};
+
+// Se llama en cada apertura del modal editar cita. Bindea una sola vez los
+// botones (guard) y precarga el estado a partir de la cita.
+function setupResumenClase(cita) {
+    resumenClaseCtx.cita = cita;
+    bindResumenClase();
+
+    const crudo = document.getElementById('rc-crudo');
+    const resumen = document.getElementById('rc-resumen');
+    const generar = document.getElementById('rc-generar');
+    const msg = document.getElementById('rc-msg');
+    if (crudo) crudo.value = '';
+    if (resumen) resumen.value = cita?.resumen_cliente || '';
+    if (msg) msg.textContent = '';
+    if (generar) generar.disabled = true;
+
+    actualizarBotonGrabar(false);
+}
+
+// Bindeo único de los tres botones + el input del crudo. Idempotente.
+function bindResumenClase() {
+    if (window.__resumenClaseBound) return;
+
+    const grabarBtn = document.getElementById('rc-grabar');
+    const generarBtn = document.getElementById('rc-generar');
+    const guardarBtn = document.getElementById('rc-guardar');
+    const crudo = document.getElementById('rc-crudo');
+
+    // Web Speech API — si no existe, ocultamos el botón y el indicador y
+    // dejamos que Charly tipee el crudo a mano.
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+        if (grabarBtn) grabarBtn.hidden = true;
+        const ind = document.getElementById('rc-indicador');
+        if (ind) ind.hidden = true;
+    } else if (grabarBtn) {
+        grabarBtn.addEventListener('click', () => {
+            if (resumenClaseCtx.grabando) detenerGrabacion();
+            else iniciarGrabacion(SpeechRec);
+        });
+    }
+
+    // El botón Generar se habilita solo cuando hay crudo.
+    if (crudo) {
+        crudo.addEventListener('input', () => {
+            if (generarBtn) generarBtn.disabled = !crudo.value.trim();
+        });
+    }
+
+    if (generarBtn) generarBtn.addEventListener('click', generarResumenClase);
+    if (guardarBtn) guardarBtn.addEventListener('click', guardarResumenClase);
+
+    window.__resumenClaseBound = true;
+}
+
+function actualizarBotonGrabar(grabando) {
+    const grabarBtn = document.getElementById('rc-grabar');
+    const ind = document.getElementById('rc-indicador');
+    if (grabarBtn && !grabarBtn.hidden) grabarBtn.textContent = grabando ? 'Detener' : '🎙 Grabar';
+    if (ind) ind.hidden = !grabando;
+}
+
+function iniciarGrabacion(SpeechRec) {
+    const crudo = document.getElementById('rc-crudo');
+    if (!crudo) return;
+    const rec = new SpeechRec();
+    rec.lang = 'es-AR';
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    // Arrancamos a partir de lo que ya haya tipeado/dictado, sin pisarlo.
+    resumenClaseCtx.baseCrudo = crudo.value ? crudo.value.replace(/\s+$/, '') + ' ' : '';
+
+    rec.onresult = (e) => {
+        let finales = '';
+        let interino = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const txt = e.results[i][0].transcript;
+            if (e.results[i].isFinal) finales += txt;
+            else interino += txt;
+        }
+        if (finales) resumenClaseCtx.baseCrudo += finales;
+        crudo.value = (resumenClaseCtx.baseCrudo + interino).trimStart();
+        const generarBtn = document.getElementById('rc-generar');
+        if (generarBtn) generarBtn.disabled = !crudo.value.trim();
+    };
+    rec.onerror = () => detenerGrabacion();
+    rec.onend = () => {
+        // Si seguimos en modo grabando (no fue un stop manual), reanudamos:
+        // continuous se corta solo tras silencios largos.
+        if (resumenClaseCtx.grabando) {
+            try { rec.start(); } catch { detenerGrabacion(); }
+        }
+    };
+
+    resumenClaseCtx.reconocedor = rec;
+    resumenClaseCtx.grabando = true;
+    actualizarBotonGrabar(true);
+    try { rec.start(); } catch { detenerGrabacion(); }
+}
+
+function detenerGrabacion() {
+    resumenClaseCtx.grabando = false;
+    const rec = resumenClaseCtx.reconocedor;
+    if (rec) {
+        try { rec.onend = null; rec.stop(); } catch { /* ya estaba parado */ }
+    }
+    resumenClaseCtx.reconocedor = null;
+    actualizarBotonGrabar(false);
+}
+
+async function generarResumenClase() {
+    const crudoEl = document.getElementById('rc-crudo');
+    const resumenEl = document.getElementById('rc-resumen');
+    const generarBtn = document.getElementById('rc-generar');
+    const msg = document.getElementById('rc-msg');
+    const textoCrudo = (crudoEl?.value || '').trim();
+    if (!textoCrudo) { if (msg) msg.textContent = 'Dictá o escribí algo primero.'; return; }
+
+    const cita = resumenClaseCtx.cita;
+    const numeroClase = parseIntOrNull(document.getElementById('ce-numero-clase')?.value);
+    const modalidad = document.getElementById('ce-modalidad')?.value || undefined;
+    const nombrePerro = cita?.clientes?.perros?.[0]?.nombre || undefined;
+
+    if (generarBtn) { generarBtn.disabled = true; generarBtn.textContent = 'Generando…'; }
+    if (msg) msg.textContent = '';
+    try {
+        const { data, error } = await supabase.functions.invoke('resumir-clase', {
+            body: { textoCrudo, contexto: { numeroClase, modalidad, nombrePerro } },
+        });
+        let res = data;
+        if (error?.context && typeof error.context.json === 'function') {
+            res = await error.context.json().catch(() => null);
+        }
+        if (res?.resumen) {
+            if (resumenEl) resumenEl.value = res.resumen;
+            if (msg) msg.textContent = 'Resumen generado. Revisalo y guardá.';
+        } else {
+            if (msg) msg.textContent = res?.error || error?.message || 'No se pudo generar el resumen.';
+        }
+    } catch (err) {
+        console.error('Error generarResumenClase:', err);
+        if (msg) msg.textContent = 'No se pudo generar el resumen.';
+    } finally {
+        if (generarBtn) { generarBtn.textContent = 'Generar resumen'; generarBtn.disabled = !(crudoEl?.value || '').trim(); }
+    }
+}
+
+async function guardarResumenClase() {
+    const cita = resumenClaseCtx.cita;
+    const resumenEl = document.getElementById('rc-resumen');
+    const guardarBtn = document.getElementById('rc-guardar');
+    const msg = document.getElementById('rc-msg');
+    if (!cita?.id) { if (msg) msg.textContent = 'No hay cita seleccionada.'; return; }
+
+    const texto = (resumenEl?.value || '').trim();
+    const ahora = new Date().toISOString();
+
+    if (guardarBtn) { guardarBtn.disabled = true; guardarBtn.textContent = 'Guardando…'; }
+    if (msg) msg.textContent = '';
+    try {
+        const { error } = await supabase
+            .from('citas')
+            .update({ resumen_cliente: texto || null, resumen_creado_en: texto ? ahora : null })
+            .eq('id', cita.id);
+        if (error) throw error;
+        // Reflejamos en memoria para que al reabrir el modal precargue.
+        cita.resumen_cliente = texto || null;
+        cita.resumen_creado_en = texto ? ahora : null;
+        if (msg) msg.textContent = 'Guardado.';
+    } catch (err) {
+        console.error('Error guardarResumenClase:', err);
+        if (msg) msg.textContent = err?.message || 'No se pudo guardar el resumen.';
+    } finally {
+        if (guardarBtn) { guardarBtn.disabled = false; guardarBtn.textContent = 'Guardar resumen'; }
+    }
+}
+
+// Limpieza al cerrar el modal: corta la grabación y vacía los campos.
+function resetResumenClase() {
+    detenerGrabacion();
+    resumenClaseCtx.cita = null;
+    resumenClaseCtx.baseCrudo = '';
+    const crudo = document.getElementById('rc-crudo');
+    const resumen = document.getElementById('rc-resumen');
+    const msg = document.getElementById('rc-msg');
+    const generar = document.getElementById('rc-generar');
+    if (crudo) crudo.value = '';
+    if (resumen) resumen.value = '';
+    if (msg) msg.textContent = '';
+    if (generar) generar.disabled = true;
 }
 
 /* ═══════════════════════════════════════════

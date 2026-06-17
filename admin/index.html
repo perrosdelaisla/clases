@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=41">
+    <link rel="stylesheet" href="./styles.css?v=42">
 </head>
 <body>
 
@@ -614,6 +614,28 @@
                     </label>
                 </fieldset>
 
+                <fieldset class="form-fieldset">
+                    <legend>Resumen de la clase</legend>
+                    <p class="form-hint">Dictá lo trabajado en la clase y la IA lo convierte en un resumen para el tutor. Podés editar todo antes de guardar.</p>
+                    <div class="rc-grabar-row">
+                        <button id="rc-grabar" class="btn-secondary" type="button">🎙 Grabar</button>
+                        <span id="rc-indicador" class="rc-indicador" hidden>🎙 Grabando…</span>
+                    </div>
+                    <label class="form-field">
+                        <span>Lo que dijiste</span>
+                        <textarea id="rc-crudo" rows="4" placeholder="Empezá a hablar…"></textarea>
+                    </label>
+                    <button id="rc-generar" class="btn-secondary" type="button" disabled>Generar resumen</button>
+                    <label class="form-field">
+                        <span>Resumen para el tutor</span>
+                        <textarea id="rc-resumen" rows="6"></textarea>
+                    </label>
+                    <div class="rc-guardar-row">
+                        <button id="rc-guardar" class="btn-primary" type="button">Guardar resumen</button>
+                        <span id="rc-msg" class="rc-msg"></span>
+                    </div>
+                </fieldset>
+
                 <p id="ce-error" class="form-error" hidden></p>
             </div>
             <footer class="modal-footer">
@@ -791,7 +813,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=55"></script>
+    <script type="module" src="./admin.js?v=56"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=1';
       function toast(msg) {

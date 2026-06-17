@@ -2579,12 +2579,32 @@ function renderCitaHistorial(cita) {
     const fecha = formatearFechaLarga(cita.fecha).toUpperCase();
     const hora = (cita.hora || '').substring(0, 5);
     const icono = cita.estado === 'realizada' ? '✅' : cita.estado === 'cancelada' ? '❌' : '·';
+    const resumen = (cita.resumen_cliente || '').trim();
+    const bloqueResumen = resumen
+        ? `<div class="cita-resumen">
+               <p class="cita-resumen__titulo">Resumen de la clase</p>
+               <p class="cita-resumen__texto">${escapeHTML(resumen)}</p>
+               ${cita.resumen_creado_en
+                   ? `<p class="cita-resumen__fecha">Publicado el ${escapeHTML(formatearFechaPublicacion(cita.resumen_creado_en))}</p>`
+                   : ''}
+           </div>`
+        : '';
     return `
-        <article class="cita-item cita-item--hist">
+        <article class="cita-item cita-item--hist${resumen ? ' cita-item--con-resumen' : ''}">
             <span class="cita-item__icono">${icono}</span>
             <p class="cita-item__fecha">${cita.numero_clase != null ? `<span class="cita-numero cita-numero--hist">Clase ${cita.numero_clase}</span> ` : ''}${escapeHTML(fecha)} · ${escapeHTML(hora)}</p>
+            ${bloqueResumen}
         </article>
     `;
+}
+
+// 'YYYY-MM-DDTHH:MM:SS+00:00' → '12 de junio de 2026'. Sólo la parte de
+// fecha, en español de España, para el sello "Publicado el …".
+function formatearFechaPublicacion(iso) {
+    if (!iso || typeof iso !== 'string') return '';
+    const [y, m, d] = iso.split('T')[0].split('-').map(Number);
+    if (!y || !m || !d) return '';
+    return `${d} de ${SEG_MESES[m - 1].toLowerCase()} de ${y}`;
 }
 
 function abrirModalCancelar(cita) {
