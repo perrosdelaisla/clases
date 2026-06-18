@@ -32,6 +32,17 @@
 .home .dBp .cover .cbot .nm .edit-dog{ border:0; background:transparent; color:rgba(245,239,224,0.7); cursor:pointer; vertical-align:middle; margin-left:8px; }
 .home .dBp .cover .cbot .nm .edit-dog svg{ width:16px; height:16px; }
 
+/* Slogan oficial de marca sobre el cover (entre saludo y nombre del perro) */
+.dBp .cover .cbot .slogan{
+  font-family:var(--body);
+  font-size:12px;
+  font-style:italic;
+  color:rgba(245, 239, 224, 0.82);
+  letter-spacing:0.2px;
+  margin-top:4px;
+  margin-bottom:2px;
+}
+
 /* Complemento del protocolo */
 .home .dBp .band .proto-row .protocol .pp .v-comp{ font-size:11px; color:var(--c-text); opacity:.7; margin-top:3px; }
 
