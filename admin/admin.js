@@ -2149,10 +2149,15 @@ function bindModalCitaEdit() {
 
 const resumenClaseCtx = {
     cita: null,
-    reconocedor: null,   // instancia SpeechRecognition (o null si no hay soporte)
+    reconocedor: null,    // instancia SpeechRecognition (o null si no hay soporte)
     grabando: false,
-    baseCrudo: '',       // texto ya consolidado antes del tramo interino actual
+    baseCrudo: '',        // texto consolidado de sesiones ANTERIORES (solo se toca en onend)
+    sesionFinales: '',    // finales de la sesión EN CURSO (se reconstruye en cada onresult)
+    detenerManual: false, // true = el usuario paró; onend consolida y NO reinicia
 };
+
+// Une dos tramos con un solo espacio en la juntura (sin pisar el interior).
+const juntar = (a, b) => (a && b) ? (a.replace(/\s+$/, '') + ' ' + b.replace(/^\s+/, '')) : (a + b);
 
 // Se llama en cada apertura del modal editar cita. Bindea una sola vez los
 // botones (guard) y precarga el estado a partir de la cita.
@@ -2223,45 +2228,77 @@ function iniciarGrabacion(SpeechRec) {
     rec.continuous = true;
     rec.interimResults = true;
 
-    // Arrancamos a partir de lo que ya haya tipeado/dictado, sin pisarlo.
-    resumenClaseCtx.baseCrudo = crudo.value ? crudo.value.replace(/\s+$/, '') + ' ' : '';
+    // baseCrudo = lo ya consolidado (lo tipeado/dictado antes de esta sesión).
+    // Solo se vuelve a tocar en onend; la juntura de espacios la maneja juntar().
+    resumenClaseCtx.baseCrudo = crudo.value || '';
+    resumenClaseCtx.sesionFinales = '';
+    resumenClaseCtx.detenerManual = false;
 
     rec.onresult = (e) => {
-        let finales = '';
-        let interino = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            const txt = e.results[i][0].transcript;
-            if (e.results[i].isFinal) finales += txt;
-            else interino += txt;
+        // Reconstruimos la sesión COMPLETA desde 0 en cada evento (no resultIndex):
+        // así un re-emit de finales no se doble-cuenta. baseCrudo no se toca acá.
+        let fin = '', inter = '';
+        for (let i = 0; i < e.results.length; i++) {
+            const tr = e.results[i][0].transcript;
+            if (e.results[i].isFinal) fin += tr; else inter += tr;
         }
-        if (finales) resumenClaseCtx.baseCrudo += finales;
-        crudo.value = (resumenClaseCtx.baseCrudo + interino).trimStart();
+        resumenClaseCtx.sesionFinales = fin;
+        crudo.value = juntar(resumenClaseCtx.baseCrudo, resumenClaseCtx.sesionFinales + inter).trimStart();
         const generarBtn = document.getElementById('rc-generar');
         if (generarBtn) generarBtn.disabled = !crudo.value.trim();
     };
-    rec.onerror = () => detenerGrabacion();
+
+    rec.onerror = (ev) => {
+        // Errores terminales → tratamos como parada manual (no reiniciar).
+        // No consolidamos acá: de eso se encarga onend.
+        if (['not-allowed', 'service-not-allowed', 'aborted'].includes(ev.error)) {
+            resumenClaseCtx.detenerManual = true;
+        }
+    };
+
     rec.onend = () => {
-        // Si seguimos en modo grabando (no fue un stop manual), reanudamos:
-        // continuous se corta solo tras silencios largos.
-        if (resumenClaseCtx.grabando) {
-            try { rec.start(); } catch { detenerGrabacion(); }
+        // Consolidación: ÚNICA línea que toca baseCrudo, una sola vez por sesión.
+        if (resumenClaseCtx.sesionFinales) {
+            resumenClaseCtx.baseCrudo = juntar(resumenClaseCtx.baseCrudo, resumenClaseCtx.sesionFinales);
+            resumenClaseCtx.sesionFinales = '';
+        }
+        if (resumenClaseCtx.detenerManual) {
+            // Paró el usuario (o error terminal): volver al estado "no grabando".
+            resumenClaseCtx.detenerManual = false;
+            resumenClaseCtx.grabando = false;
+            resumenClaseCtx.reconocedor = null;
+            actualizarBotonGrabar(false);
+            const generarBtn = document.getElementById('rc-generar');
+            const crudoEl = document.getElementById('rc-crudo');
+            if (generarBtn && crudoEl) generarBtn.disabled = !crudoEl.value.trim();
+        } else {
+            // Fin por silencio (continuous): reanudar la misma instancia.
+            try { rec.start(); } catch (_) { /* no se pudo reanudar */ }
         }
     };
 
     resumenClaseCtx.reconocedor = rec;
     resumenClaseCtx.grabando = true;
     actualizarBotonGrabar(true);
-    try { rec.start(); } catch { detenerGrabacion(); }
+    try {
+        rec.start();
+    } catch (_) {
+        resumenClaseCtx.grabando = false;
+        resumenClaseCtx.reconocedor = null;
+        actualizarBotonGrabar(false);
+    }
 }
 
+// Parada manual: marcamos la bandera y frenamos. onend consolida y NO reinicia.
 function detenerGrabacion() {
-    resumenClaseCtx.grabando = false;
     const rec = resumenClaseCtx.reconocedor;
     if (rec) {
-        try { rec.onend = null; rec.stop(); } catch { /* ya estaba parado */ }
+        resumenClaseCtx.detenerManual = true;
+        try { rec.stop(); } catch (_) { /* ya estaba parado */ }
+    } else {
+        resumenClaseCtx.grabando = false;
+        actualizarBotonGrabar(false);
     }
-    resumenClaseCtx.reconocedor = null;
-    actualizarBotonGrabar(false);
 }
 
 async function generarResumenClase() {
@@ -2336,6 +2373,7 @@ function resetResumenClase() {
     detenerGrabacion();
     resumenClaseCtx.cita = null;
     resumenClaseCtx.baseCrudo = '';
+    resumenClaseCtx.sesionFinales = '';
     const crudo = document.getElementById('rc-crudo');
     const resumen = document.getElementById('rc-resumen');
     const msg = document.getElementById('rc-msg');
