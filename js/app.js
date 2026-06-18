@@ -3911,6 +3911,7 @@ function registrarServiceWorker() {
     // inicial → NO hay que reloadear.
     const habiaSwAntes = !!navigator.serviceWorker.controller;
     let recargandoPorSw = false;
+    let reg = null;
 
     navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!habiaSwAntes) return;
@@ -3919,10 +3920,21 @@ function registrarServiceWorker() {
         window.location.reload();
     });
 
+    // Al volver a la tab (PWA reanudada, vuelta de background), forzamos un
+    // chequeo de versión nueva. reg se asigna tras el register de abajo.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && reg) {
+            reg.update();
+        }
+    });
+
     window.addEventListener('load', () => {
         navigator.serviceWorker
-            .register('/clases/service-worker.js', { scope: '/clases/' })
-            .then((reg) => console.log('[app] SW Clases registrado, scope:', reg.scope))
+            .register('/clases/service-worker.js', { scope: '/clases/', updateViaCache: 'none' })
+            .then((registration) => {
+                reg = registration;
+                console.log('[app] SW Clases registrado, scope:', registration.scope);
+            })
             .catch((err) => console.error('[app] SW Clases error:', err));
     });
 }
