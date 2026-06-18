@@ -2147,17 +2147,7 @@ function bindModalCitaEdit() {
    citas.resumen_cliente. Todo editable a mano.
    ═══════════════════════════════════════════ */
 
-const resumenClaseCtx = {
-    cita: null,
-    reconocedor: null,    // instancia SpeechRecognition (o null si no hay soporte)
-    grabando: false,
-    baseCrudo: '',        // texto consolidado de sesiones ANTERIORES (solo se toca en onend)
-    sesionFinales: '',    // finales de la sesión EN CURSO (se reconstruye en cada onresult)
-    detenerManual: false, // true = el usuario paró; onend consolida y NO reinicia
-};
-
-// Une dos tramos con un solo espacio en la juntura (sin pisar el interior).
-const juntar = (a, b) => (a && b) ? (a.replace(/\s+$/, '') + ' ' + b.replace(/^\s+/, '')) : (a + b);
+const resumenClaseCtx = { cita:null, rec:null, grabando:false, finalText:'', detenerManual:false };
 
 // Se llama en cada apertura del modal editar cita. Bindea una sola vez los
 // botones (guard) y precarga el estado a partir de la cita.
@@ -2220,78 +2210,63 @@ function actualizarBotonGrabar(grabando) {
     if (ind) ind.hidden = !grabando;
 }
 
-function construirRecognizer(SpeechRec) {
-    const rec = new SpeechRec();
-    rec.lang = 'es-AR';
-    rec.continuous = true;
-    rec.interimResults = true;
+function construirRec(SpeechRec){
+  const rec = new SpeechRec();
+  rec.lang='es-AR'; rec.continuous=true; rec.interimResults=true;
 
-    rec.onresult = (e) => {
-        let fin = '', inter = '';
-        for (let i = 0; i < e.results.length; i++) {
-            const tr = e.results[i][0].transcript;
-            if (e.results[i].isFinal) fin += tr; else inter += tr;
-        }
-        resumenClaseCtx.sesionFinales = fin;
-        const crudo = document.getElementById('rc-crudo');
-        if (!crudo) return;
-        crudo.value = juntar(resumenClaseCtx.baseCrudo, resumenClaseCtx.sesionFinales + inter).trimStart();
-        const generarBtn = document.getElementById('rc-generar');
-        if (generarBtn) generarBtn.disabled = !crudo.value.trim();
-    };
-
-    rec.onerror = (ev) => {
-        if (['not-allowed', 'service-not-allowed', 'aborted'].includes(ev.error)) {
-            resumenClaseCtx.detenerManual = true;
-        }
-    };
-
-    rec.onend = () => {
-        if (resumenClaseCtx.sesionFinales) {
-            resumenClaseCtx.baseCrudo = juntar(resumenClaseCtx.baseCrudo, resumenClaseCtx.sesionFinales);
-            resumenClaseCtx.sesionFinales = '';
-        }
-        if (resumenClaseCtx.detenerManual) {
-            resumenClaseCtx.detenerManual = false;
-            resumenClaseCtx.grabando = false;
-            resumenClaseCtx.reconocedor = null;
-            actualizarBotonGrabar(false);
-            const generarBtn = document.getElementById('rc-generar');
-            const crudoEl = document.getElementById('rc-crudo');
-            if (generarBtn && crudoEl) generarBtn.disabled = !crudoEl.value.trim();
-        } else {
-            // Fin por silencio: reanudar con INSTANCIA NUEVA (e.results limpio). Esta es la corrección del bug.
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const nuevo = construirRecognizer(SR);
-            resumenClaseCtx.reconocedor = nuevo;
-            try { nuevo.start(); } catch (_) {}
-        }
-    };
-
-    return rec;
-}
-
-function iniciarGrabacion(SpeechRec) {
-    const crudo = document.getElementById('rc-crudo');
-    if (!crudo) return;
-    resumenClaseCtx.baseCrudo = crudo.value || '';
-    resumenClaseCtx.sesionFinales = '';
-    resumenClaseCtx.detenerManual = false;
-    const rec = construirRecognizer(SpeechRec);
-    resumenClaseCtx.reconocedor = rec;
-    resumenClaseCtx.grabando = true;
-    actualizarBotonGrabar(true);
-    try { rec.start(); }
-    catch (_) {
-        resumenClaseCtx.grabando = false;
-        resumenClaseCtx.reconocedor = null;
-        actualizarBotonGrabar(false);
+  rec.onresult = (e)=>{
+    let interim='';
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) resumenClaseCtx.finalText += t + ' ';
+      else interim += t;
     }
+    const crudo = document.getElementById('rc-crudo');
+    if(crudo){
+      crudo.value = (resumenClaseCtx.finalText + interim).replace(/\s+/g,' ').trimStart();
+      const g = document.getElementById('rc-generar');
+      if(g) g.disabled = !crudo.value.trim();
+    }
+  };
+
+  rec.onerror = (ev)=>{
+    if(['not-allowed','service-not-allowed','aborted'].includes(ev.error)) resumenClaseCtx.detenerManual = true;
+  };
+
+  rec.onend = ()=>{
+    if(resumenClaseCtx.detenerManual){
+      resumenClaseCtx.detenerManual = false;
+      resumenClaseCtx.grabando = false;
+      resumenClaseCtx.rec = null;
+      actualizarBotonGrabar(false);
+    } else {
+      // restart por silencio: INSTANCIA NUEVA (e.results limpio). finalText ya tiene lo dicho.
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const n = construirRec(SR);
+      resumenClaseCtx.rec = n;
+      try{ n.start(); }catch(_){}
+    }
+  };
+
+  return rec;
 }
 
-// Parada manual: marcamos la bandera y frenamos. onend consolida y NO reinicia.
+function iniciarGrabacion(SpeechRec){
+  const crudo = document.getElementById('rc-crudo');
+  if(!crudo) return;
+  resumenClaseCtx.finalText = crudo.value ? (crudo.value.trim() + ' ') : '';
+  resumenClaseCtx.detenerManual = false;
+  const rec = construirRec(SpeechRec);
+  resumenClaseCtx.rec = rec;
+  resumenClaseCtx.grabando = true;
+  actualizarBotonGrabar(true);
+  try{ rec.start(); }
+  catch(_){ resumenClaseCtx.grabando=false; resumenClaseCtx.rec=null; actualizarBotonGrabar(false); }
+}
+
+// Parada manual: marcamos la bandera y frenamos. onend cierra el estado y NO reinicia.
 function detenerGrabacion() {
-    const rec = resumenClaseCtx.reconocedor;
+    const rec = resumenClaseCtx.rec;
     if (rec) {
         resumenClaseCtx.detenerManual = true;
         try { rec.stop(); } catch (_) { /* ya estaba parado */ }
@@ -2372,8 +2347,8 @@ async function guardarResumenClase() {
 function resetResumenClase() {
     detenerGrabacion();
     resumenClaseCtx.cita = null;
-    resumenClaseCtx.baseCrudo = '';
-    resumenClaseCtx.sesionFinales = '';
+    resumenClaseCtx.finalText = '';
+    resumenClaseCtx.rec = null;
     const crudo = document.getElementById('rc-crudo');
     const resumen = document.getElementById('rc-resumen');
     const msg = document.getElementById('rc-msg');
