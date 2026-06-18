@@ -2220,50 +2220,38 @@ function actualizarBotonGrabar(grabando) {
     if (ind) ind.hidden = !grabando;
 }
 
-function iniciarGrabacion(SpeechRec) {
-    const crudo = document.getElementById('rc-crudo');
-    if (!crudo) return;
+function construirRecognizer(SpeechRec) {
     const rec = new SpeechRec();
     rec.lang = 'es-AR';
     rec.continuous = true;
     rec.interimResults = true;
 
-    // baseCrudo = lo ya consolidado (lo tipeado/dictado antes de esta sesión).
-    // Solo se vuelve a tocar en onend; la juntura de espacios la maneja juntar().
-    resumenClaseCtx.baseCrudo = crudo.value || '';
-    resumenClaseCtx.sesionFinales = '';
-    resumenClaseCtx.detenerManual = false;
-
     rec.onresult = (e) => {
-        // Reconstruimos la sesión COMPLETA desde 0 en cada evento (no resultIndex):
-        // así un re-emit de finales no se doble-cuenta. baseCrudo no se toca acá.
         let fin = '', inter = '';
         for (let i = 0; i < e.results.length; i++) {
             const tr = e.results[i][0].transcript;
             if (e.results[i].isFinal) fin += tr; else inter += tr;
         }
         resumenClaseCtx.sesionFinales = fin;
+        const crudo = document.getElementById('rc-crudo');
+        if (!crudo) return;
         crudo.value = juntar(resumenClaseCtx.baseCrudo, resumenClaseCtx.sesionFinales + inter).trimStart();
         const generarBtn = document.getElementById('rc-generar');
         if (generarBtn) generarBtn.disabled = !crudo.value.trim();
     };
 
     rec.onerror = (ev) => {
-        // Errores terminales → tratamos como parada manual (no reiniciar).
-        // No consolidamos acá: de eso se encarga onend.
         if (['not-allowed', 'service-not-allowed', 'aborted'].includes(ev.error)) {
             resumenClaseCtx.detenerManual = true;
         }
     };
 
     rec.onend = () => {
-        // Consolidación: ÚNICA línea que toca baseCrudo, una sola vez por sesión.
         if (resumenClaseCtx.sesionFinales) {
             resumenClaseCtx.baseCrudo = juntar(resumenClaseCtx.baseCrudo, resumenClaseCtx.sesionFinales);
             resumenClaseCtx.sesionFinales = '';
         }
         if (resumenClaseCtx.detenerManual) {
-            // Paró el usuario (o error terminal): volver al estado "no grabando".
             resumenClaseCtx.detenerManual = false;
             resumenClaseCtx.grabando = false;
             resumenClaseCtx.reconocedor = null;
@@ -2272,17 +2260,29 @@ function iniciarGrabacion(SpeechRec) {
             const crudoEl = document.getElementById('rc-crudo');
             if (generarBtn && crudoEl) generarBtn.disabled = !crudoEl.value.trim();
         } else {
-            // Fin por silencio (continuous): reanudar la misma instancia.
-            try { rec.start(); } catch (_) { /* no se pudo reanudar */ }
+            // Fin por silencio: reanudar con INSTANCIA NUEVA (e.results limpio). Esta es la corrección del bug.
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const nuevo = construirRecognizer(SR);
+            resumenClaseCtx.reconocedor = nuevo;
+            try { nuevo.start(); } catch (_) {}
         }
     };
 
+    return rec;
+}
+
+function iniciarGrabacion(SpeechRec) {
+    const crudo = document.getElementById('rc-crudo');
+    if (!crudo) return;
+    resumenClaseCtx.baseCrudo = crudo.value || '';
+    resumenClaseCtx.sesionFinales = '';
+    resumenClaseCtx.detenerManual = false;
+    const rec = construirRecognizer(SpeechRec);
     resumenClaseCtx.reconocedor = rec;
     resumenClaseCtx.grabando = true;
     actualizarBotonGrabar(true);
-    try {
-        rec.start();
-    } catch (_) {
+    try { rec.start(); }
+    catch (_) {
         resumenClaseCtx.grabando = false;
         resumenClaseCtx.reconocedor = null;
         actualizarBotonGrabar(false);
