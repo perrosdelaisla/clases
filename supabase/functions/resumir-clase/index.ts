@@ -26,7 +26,9 @@ Reglas obligatorias:
 - NO inventes nada que el adiestrador no haya dicho. Si el dictado es breve, el resumen es breve. No rellenes con frases genéricas de relleno.
 - Cierra con la firma: 'El equipo de Perros de la Isla'.
 
-Estructura orientativa (solo con lo que el dictado contenga): qué hemos trabajado hoy, cómo ha respondido el perro, qué conviene practicar en casa, y el siguiente paso. Devuelve solo el texto del resumen, sin comillas ni preámbulos.`;
+Estructura orientativa (solo con lo que el dictado contenga): qué hemos trabajado hoy, cómo ha respondido el perro, qué conviene practicar en casa, y el siguiente paso. Devuelve solo el texto del resumen, sin comillas ni preámbulos.
+
+No uses Markdown ni ningún formato: nada de asteriscos, almohadillas, guiones de separación ni viñetas. Devuelve solo texto plano en párrafos separados por saltos de línea. No incluyas una línea de título tipo 'Resumen de clase — …'; empieza directamente por el contenido.`;
 
 function buildCors(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? '';
