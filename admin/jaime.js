@@ -1,4 +1,5 @@
-import { supabase } from '../js/supabase.js';
+import { getSupabase } from '../js/supabase.js';
+const supabase = getSupabase('admin');
 
 const MALLORCA_D = 'M59.5,77.3 L51.9,65.9 L35.6,63.3 L32.6,58.7 L34.1,46.6 L28.4,40.9 L24.6,40.2 L16.3,43.9 L12.5,50.8 L9.8,48.1 L9.1,42.0 L3.4,41.7 L0.0,37.5 L0.0,34.5 L15.5,24.2 L21.6,22.7 L40.5,8.3 L54.9,3.0 L68.6,2.3 L73.9,0.0 L73.1,2.3 L67.4,4.9 L69.3,9.8 L76.5,8.7 L74.6,12.9 L69.7,13.3 L70.5,18.6 L78.4,25.8 L83.7,25.0 L89.8,20.5 L100.0,28.4 L97.7,35.2 L92.4,39.0 L91.7,44.3 L82.6,52.7 L76.5,66.3 L59.5,77.3 Z';
 const LOAD_STEPS = ['Leyendo evaluación SC', 'Revisando ejercicios asignados', 'Eligiendo del catálogo'];

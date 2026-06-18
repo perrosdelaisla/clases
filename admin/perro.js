@@ -7,10 +7,11 @@
 // placeholders "Próximamente".
 // =====================================================================
 
-import { supabase, getSessionConTimeout } from '../js/supabase.js';
+import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initJaime } from './jaime.js?v=6';
+import { initJaime } from './jaime.js?v=7';
+const supabase = getSupabase('admin');
 import {
     estadoChipFrecuencia,
     COLOR_CHIP_FRECUENCIA,
@@ -86,7 +87,7 @@ async function bootstrap() {
     state.perroId = id;
 
     try {
-        const { data: { session } } = await getSessionConTimeout();
+        const { data: { session } } = await getSessionConTimeout(8000, 'admin');
         if (!session) {
             window.location.replace('./index.html');
             return;

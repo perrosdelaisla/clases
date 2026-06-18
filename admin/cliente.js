@@ -9,7 +9,8 @@
 // instrucciones por WhatsApp.
 // =====================================================================
 
-import { supabase, getSessionConTimeout } from '../js/supabase.js';
+import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
+const supabase = getSupabase('admin');
 
 const SCREENS = {
     loading: document.getElementById('screen-loading'),
@@ -50,7 +51,7 @@ async function bootstrap() {
     state.clienteId = id;
 
     try {
-        const { data: { session } } = await getSessionConTimeout();
+        const { data: { session } } = await getSessionConTimeout(8000, 'admin');
         if (!session) {
             window.location.replace('./index.html');
             return;

@@ -14,7 +14,8 @@
 // devuelve [] sin error, asumir que el usuario no es admin.
 // =====================================================================
 
-import { supabase } from '../js/supabase.js';
+import { getSupabase } from '../js/supabase.js';
+const supabase = getSupabase('admin');
 
 // ---- Estado interno del módulo ----
 const state = {

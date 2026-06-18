@@ -7,13 +7,14 @@
 // usuario logueado y deja pasar el SELECT a clientes/perros/admins.
 // =====================================================================
 
-import { supabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=11';
-import * as stats from './stats/api.js?v=3';
-import * as catalogo from './catalogo/api.js?v=2';
+import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
+import * as agenda from './agenda/api.js?v=12';
+import * as stats from './stats/api.js?v=4';
+import * as catalogo from './catalogo/api.js?v=3';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=3';
+import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
+const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
 
@@ -48,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function bootstrap() {
     showScreen('loading');
     try {
-        const { data: { session } } = await getSessionConTimeout();
+        const { data: { session } } = await getSessionConTimeout(8000, 'admin');
         if (!session) {
             showScreen('login');
             return;

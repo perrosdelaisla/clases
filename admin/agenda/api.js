@@ -21,7 +21,8 @@
 // está anotada en su JSDoc.
 // =====================================================================
 
-import { supabase } from '../../js/supabase.js';
+import { getSupabase } from '../../js/supabase.js';
+const supabase = getSupabase('admin');
 
 /**
  * Detecta si un error de Supabase corresponde a violación del constraint

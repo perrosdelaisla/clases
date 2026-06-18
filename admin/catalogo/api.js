@@ -7,7 +7,8 @@
 // existente (decisión de Charly).
 // =====================================================================
 
-import { supabase } from '../../js/supabase.js';
+import { getSupabase } from '../../js/supabase.js';
+const supabase = getSupabase('admin');
 
 /**
  * Lista todos los ejercicios activos del catálogo, ordenados por

@@ -19,7 +19,8 @@
 // cambiar a .or('es_prueba.is.null,es_prueba.eq.false')).
 // =====================================================================
 
-import { supabase } from '../../js/supabase.js';
+import { getSupabase } from '../../js/supabase.js';
+const supabase = getSupabase('admin');
 
 // Filtro de sesiones reales del embudo Victoria: excluye pruebas
 // (es_prueba) Y el flujo Vicky (es_vicky). Las sesiones es_vicky=true

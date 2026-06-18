@@ -3,7 +3,8 @@
    activarNotificaciones(): pide permiso, registra el SW de push, suscribe y guarda la suscripción.
    probarPush(): dispara un push de prueba a todos los dispositivos suscritos. */
 
-import { supabase } from '../js/supabase.js';
+import { getSupabase } from '../js/supabase.js';
+const supabase = getSupabase('admin');
 
 const VAPID_PUBLIC = 'BJUH9P-NqieRIGgq71z2E1NcyxVZDquadmLJ7rSfYX1KoSnoKIXOafWTQWEY1z2JXy1lNjmDqexwoyjPR43mGms';
 
