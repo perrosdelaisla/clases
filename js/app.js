@@ -4938,9 +4938,11 @@ function setVideoSeleccionado(file) {
     const player = document.getElementById('reporte-video-player');
     const preview = document.getElementById('reporte-video-preview');
     const btn = document.getElementById('reporte-video-btn');
+    const hint = document.getElementById('reporte-video-hint');
     if (player) player.src = _reporteVideoPreviewUrl;
     if (preview) preview.hidden = false;
     if (btn) btn.hidden = true;
+    if (hint) hint.hidden = true;
 }
 
 function quitarVideoSeleccionado() {
@@ -4949,10 +4951,12 @@ function quitarVideoSeleccionado() {
     const player = document.getElementById('reporte-video-player');
     const preview = document.getElementById('reporte-video-preview');
     const btn = document.getElementById('reporte-video-btn');
+    const hint = document.getElementById('reporte-video-hint');
     const errEl = document.getElementById('reporte-video-error');
     if (player) player.removeAttribute('src');
     if (preview) preview.hidden = true;
     if (btn) btn.hidden = false;
+    if (hint) hint.hidden = false;
     if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
 }
 

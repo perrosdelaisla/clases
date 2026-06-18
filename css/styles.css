@@ -3435,6 +3435,11 @@ body {
     gap: 0.5rem;
 }
 
+/* El atributo hidden debe ganar sobre los display: flex/inline-flex de arriba:
+   sin esto, el preview (cuadro negro) y el botón "Subir video" se ven siempre. */
+.reporte-video__preview[hidden] { display: none; }
+#reporte-video-btn[hidden] { display: none; }
+
 .reporte-video__player {
     width: 100%;
     max-height: 240px;
