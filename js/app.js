@@ -4342,7 +4342,13 @@ let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccion
 let _avisoTrqEjercicio = '';           // nombre del ejercicio del último aviso de tranquilidad baja
 let _reporteRepes = [];                // [{ minStr, segStr }, ...] — filas dinámicas de repeticiones
 let _reporteCampos = [];               // campos activos del ejercicio actual (de la RPC)
-let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquilidad, nota, registrado_en }
+let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquilidad, nota, registrado_en, video_path }
+let _reporteVideoFile = null;          // File de video seleccionado para subir (o null)
+let _reporteVideoPreviewUrl = null;    // objectURL activo del preview (para revocar)
+
+// Límites de video del entreno (Paso 1A): 25 MB y 65 s.
+const VIDEO_MAX_BYTES = 26214400;
+const VIDEO_MAX_SEG = 65;
 
 // Helpers de fecha
 function formatearFechaRelativa(dateStr) {
@@ -4581,6 +4587,16 @@ function bindNotasEjercicio() {
     document.getElementById('reporte-tarea-hecho')
         ?.addEventListener('click', marcarTareaHecha);
 
+    // Video del entreno (opcional): subir / cambiar / quitar + validación.
+    document.getElementById('reporte-video-btn')
+        ?.addEventListener('click', () => document.getElementById('reporte-video-input')?.click());
+    document.getElementById('reporte-video-cambiar')
+        ?.addEventListener('click', () => document.getElementById('reporte-video-input')?.click());
+    document.getElementById('reporte-video-quitar')
+        ?.addEventListener('click', quitarVideoSeleccionado);
+    document.getElementById('reporte-video-input')
+        ?.addEventListener('change', (e) => onVideoSeleccionado(e.target));
+
     // Aviso de tranquilidad baja: cerrar (X) y "Escribir al adiestrador".
     document.getElementById('aviso-trq-cerrar')
         ?.addEventListener('click', cerrarAvisoTranquilidadBaja);
@@ -4774,6 +4790,9 @@ function abrirModalReporte() {
     _reporteRepes = [];
     renderRepesLista();
 
+    // Reset del video del entreno (estado + preview + errores).
+    quitarVideoSeleccionado();
+
     // Reset del banner "registro previo del día" — se va a setear async.
     _reporteRegistroPrevio = null;
     const banner = document.getElementById('reporte-banner-previo');
@@ -4852,7 +4871,7 @@ async function cargarRegistroPrevioDelDia() {
     try {
         const { data, error } = await supabase
             .from('registros_ejercicio')
-            .select('id, datos_registro, tranquilidad, nota, registrado_en')
+            .select('id, datos_registro, tranquilidad, nota, registrado_en, video_path')
             .eq('ejercicio_asignado_id', asignadoIdAlAbrir)
             .gte('registrado_en', inicioDiaLocalIso())
             .order('registrado_en', { ascending: false })
@@ -4878,6 +4897,117 @@ async function cargarRegistroPrevioDelDia() {
         console.error('[reporte] previo del día:', e);
         // Silencioso: comportamiento como hoy (sin banner).
     }
+}
+
+// ───────────────────────────────────────────────────────────
+// Video del entreno (opcional) — Paso 1A
+// ───────────────────────────────────────────────────────────
+
+// Lee la duración (en segundos) de un video local. Resuelve null si no se
+// puede leer la metadata (validación blanda: el tamaño y el límite del bucket
+// siguen protegiendo). Libera el objectURL al terminar.
+function leerDuracionVideo(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => {
+            const d = v.duration;
+            URL.revokeObjectURL(url);
+            resolve(Number.isFinite(d) ? d : null);
+        };
+        v.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('No se pudo leer el video'));
+        };
+        v.src = url;
+    });
+}
+
+function limpiarVideoPreviewUrl() {
+    if (_reporteVideoPreviewUrl) {
+        URL.revokeObjectURL(_reporteVideoPreviewUrl);
+        _reporteVideoPreviewUrl = null;
+    }
+}
+
+function setVideoSeleccionado(file) {
+    limpiarVideoPreviewUrl();
+    _reporteVideoFile = file;
+    _reporteVideoPreviewUrl = URL.createObjectURL(file);
+    const player = document.getElementById('reporte-video-player');
+    const preview = document.getElementById('reporte-video-preview');
+    const btn = document.getElementById('reporte-video-btn');
+    if (player) player.src = _reporteVideoPreviewUrl;
+    if (preview) preview.hidden = false;
+    if (btn) btn.hidden = true;
+}
+
+function quitarVideoSeleccionado() {
+    limpiarVideoPreviewUrl();
+    _reporteVideoFile = null;
+    const player = document.getElementById('reporte-video-player');
+    const preview = document.getElementById('reporte-video-preview');
+    const btn = document.getElementById('reporte-video-btn');
+    const errEl = document.getElementById('reporte-video-error');
+    if (player) player.removeAttribute('src');
+    if (preview) preview.hidden = true;
+    if (btn) btn.hidden = false;
+    if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+}
+
+// Valida un archivo elegido por el cliente (tamaño, duración, tipo) y, si pasa,
+// lo deja seleccionado con preview. No sube nada todavía.
+async function onVideoSeleccionado(input) {
+    const errEl = document.getElementById('reporte-video-error');
+    const showVErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } };
+    if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+
+    const file = input.files && input.files[0];
+    // Permitir volver a elegir el mismo archivo más adelante (reset del input).
+    input.value = '';
+    if (!file) return;
+
+    // c) Tipo (chequeo blando).
+    if (!file.type || !file.type.startsWith('video/')) {
+        showVErr('Ese archivo no parece un video. Usa MP4, MOV o WEBM.');
+        return;
+    }
+    // a) Tamaño.
+    if (file.size > VIDEO_MAX_BYTES) {
+        showVErr('El video supera los 25 MB. Graba o elige un clip más corto.');
+        return;
+    }
+    // b) Duración.
+    let dur = null;
+    try {
+        dur = await leerDuracionVideo(file);
+    } catch (_) {
+        dur = null; // metadata ilegible → dejamos pasar (validación blanda)
+    }
+    if (dur != null && dur > VIDEO_MAX_SEG) {
+        showVErr('El video dura más de 1 minuto. Elige un clip más corto.');
+        return;
+    }
+
+    setVideoSeleccionado(file);
+}
+
+// Sube el video al bucket privado entrenos-videos en {cliente_id}/{uuid}.{ext}
+// y devuelve el path. Lanza si el tipo no es soportado, falta cuenta o falla
+// la subida. (Bucket privado: NO se usa getPublicUrl.)
+async function subirVideoEntreno(file) {
+    const extPorMime = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' };
+    const ext = extPorMime[file.type];
+    if (!ext) throw new Error('Tipo de video no soportado. Usa MP4, MOV o WEBM.');
+    const cliente_id = state.usuarioCliente?.cliente_id;
+    if (!cliente_id) throw new Error('No pude identificar tu cuenta. Recarga la app.');
+    const path = `${cliente_id}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+        .from('entrenos-videos')
+        .upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) throw upErr;
+    return path;
 }
 
 async function guardarReporteEjercicio() {
@@ -4957,6 +5087,32 @@ async function guardarReporteEjercicio() {
     const asignadoId = _ejercicioModalActualId;
     const modoSumar = !!(_reporteRegistroPrevio
         && document.getElementById('reporte-modo-sumar')?.checked);
+
+    // Video del entreno (opcional). Se sube ANTES del insert/update para poder
+    // persistir el path. Si la subida falla, NO bloquea el guardado.
+    let videoPath = null;
+    if (_reporteVideoFile) {
+        // 1A: 1 video por registro. Si vamos a sumar a un registro que YA tiene
+        // video, frenamos: la UX de reemplazo/segundo video se define aparte.
+        if (modoSumar && _reporteRegistroPrevio?.video_path) {
+            showErr('Este entreno ya tiene un video. Por ahora no se puede agregar otro: empezá un entreno nuevo para subir uno.');
+            if (btn) btn.disabled = false;
+            return;
+        }
+        try {
+            videoPath = await subirVideoEntreno(_reporteVideoFile);
+        } catch (e) {
+            console.error('[reporte] error subiendo video:', e);
+            // No bloquear: el video es opcional. Aceptar = guardar sin video;
+            // Cancelar = volver (el cliente puede reintentar el guardado).
+            const guardarSinVideo = window.confirm(
+                'No pudimos subir el video. ¿Querés guardar el entreno sin el video? '
+                + '(Cancelá para volver e intentar de nuevo.)');
+            if (!guardarSinVideo) { if (btn) btn.disabled = false; return; }
+            videoPath = null;
+        }
+    }
+
     try {
         if (modoSumar) {
             // UPDATE: concat reps, suma tiempo, sobreescribe tranquilidad
@@ -4983,26 +5139,36 @@ async function guardarReporteEjercicio() {
                 notaFinal = prev.nota ? `${prev.nota}\n${append}` : append;
             }
 
+            const updatePayload = {
+                datos_registro: nuevoDatosRegistro,
+                tranquilidad: tqFinal,
+                nota: notaFinal,
+            };
+            if (videoPath) {
+                updatePayload.video_path = videoPath;
+                updatePayload.video_subido_en = new Date().toISOString();
+            }
             const { error } = await supabase
                 .from('registros_ejercicio')
-                .update({
-                    datos_registro: nuevoDatosRegistro,
-                    tranquilidad: tqFinal,
-                    nota: notaFinal,
-                })
+                .update(updatePayload)
                 .eq('id', prev.id);
             if (error) throw error;
         } else {
             const practica_id = await obtenerOCrearPracticaHoy(perroId);
+            const insertPayload = {
+                practica_id,
+                ejercicio_asignado_id: asignadoId,
+                datos_registro,
+                tranquilidad: trq,
+                nota,
+            };
+            if (videoPath) {
+                insertPayload.video_path = videoPath;
+                insertPayload.video_subido_en = new Date().toISOString();
+            }
             const { error } = await supabase
                 .from('registros_ejercicio')
-                .insert({
-                    practica_id,
-                    ejercicio_asignado_id: asignadoId,
-                    datos_registro,
-                    tranquilidad: trq,
-                    nota,
-                });
+                .insert(insertPayload);
             if (error) throw error;
         }
 

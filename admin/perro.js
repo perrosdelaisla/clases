@@ -53,6 +53,9 @@ const state = {
     progresoAdminCargado: false,     // idem para el tab Progreso
 };
 
+// Bind único del delegado de "Ver video" en el histórico (ver cargarHistorico).
+let _histVideoBound = false;
+
 document.addEventListener('DOMContentLoaded', bootstrap);
 
 async function bootstrap() {
@@ -2120,13 +2123,19 @@ async function cargarHistorico() {
     listaEl.setAttribute('hidden', '');
     listaEl.innerHTML = '';
 
+    // Delegación para "Ver video del entreno" (una sola vez sobre el contenedor).
+    if (!_histVideoBound) {
+        listaEl.addEventListener('click', onHistoricoVideoClick);
+        _histVideoBound = true;
+    }
+
     try {
         const { data, error } = await supabase
             .from('practicas_rutina')
             .select(`
                 id, iniciada_en, cerrada_en, estado_emocional_final, nota_cierre,
                 registros_ejercicio (
-                    id, registrado_en, datos_registro, tranquilidad, nota,
+                    id, registrado_en, datos_registro, tranquilidad, nota, video_path,
                     ejercicios_asignados (
                         id,
                         ejercicios ( id, nombre, categoria )
@@ -2252,6 +2261,12 @@ function renderHistoricoRegistro(reg) {
     const notaHtml = reg.nota
         ? `<p class="hist-registro__nota">${escapeHTML(reg.nota)}</p>`
         : '';
+    const videoHtml = reg.video_path
+        ? `<div class="hist-registro__video-wrap">
+                <button type="button" class="btn-secondary hist-registro__video-btn" data-video-path="${escapeHTML(reg.video_path)}">Ver video del entreno</button>
+                <div class="hist-registro__video" hidden></div>
+            </div>`
+        : '';
 
     return `
         <li class="hist-registro">
@@ -2262,8 +2277,48 @@ function renderHistoricoRegistro(reg) {
             </div>
             ${datosHtml}
             ${notaHtml}
+            ${videoHtml}
         </li>
     `;
+}
+
+// Click en "Ver video del entreno": firma el URL on-demand (no al cargar la
+// lista) y reproduce inline. Segundo click oculta.
+async function onHistoricoVideoClick(e) {
+    const btn = e.target.closest('.hist-registro__video-btn');
+    if (!btn) return;
+    const path = btn.dataset.videoPath;
+    if (!path) return;
+    const cont = btn.nextElementSibling; // .hist-registro__video
+
+    // Toggle: si ya está abierto, lo cerramos.
+    if (cont && !cont.hidden && cont.querySelector('video')) {
+        cont.hidden = true;
+        cont.innerHTML = '';
+        btn.textContent = 'Ver video del entreno';
+        return;
+    }
+
+    btn.disabled = true;
+    const txtPrev = btn.textContent;
+    btn.textContent = 'Cargando video…';
+    try {
+        const { data, error } = await supabase.storage
+            .from('entrenos-videos')
+            .createSignedUrl(path, 3600);
+        if (error) throw error;
+        if (cont) {
+            cont.innerHTML = `<video class="hist-registro__video-player" controls playsinline preload="metadata" src="${escapeHTML(data.signedUrl)}"></video>`;
+            cont.hidden = false;
+        }
+        btn.textContent = 'Ocultar video';
+    } catch (err) {
+        console.error('[perro] error firmando video:', err);
+        toast('No se pudo cargar el video', 'error');
+        btn.textContent = txtPrev;
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 // ===================== Tab Progreso — cumplimiento + racha =====================

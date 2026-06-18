@@ -3427,6 +3427,50 @@ body {
     line-height: 1;
 }
 
+/* Video del entreno (opcional) — Paso 1A */
+.reporte-video__preview {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.reporte-video__player {
+    width: 100%;
+    max-height: 240px;
+    border-radius: var(--radius-sm);
+    background: #000;
+    border: 1px solid var(--color-border);
+}
+
+.reporte-video__acciones {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.reporte-video__btn-mini {
+    padding: 0.3rem 0.75rem;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.reporte-video__btn-mini:hover,
+.reporte-video__btn-mini:focus-visible {
+    background: var(--color-surface-2);
+    outline: none;
+}
+
+.reporte-video__error {
+    margin-top: 0.4rem;
+}
+
 .reporte-repes__total {
     margin-top: 0.6rem;
     font-family: var(--font-body);

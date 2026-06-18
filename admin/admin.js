@@ -2968,7 +2968,7 @@ async function cargarRegistrosActividad() {
     try {
         const { data, error } = await supabase
             .from('actividad_registros_admin')
-            .select('registro_id, registrado_en, tranquilidad, nota, nota_cierre, visto_por_admin, comentario_admin, visto_en, cliente_nombre, perro_nombre, ejercicio_nombre, ejercicio_categoria')
+            .select('registro_id, registrado_en, tranquilidad, nota, nota_cierre, visto_por_admin, comentario_admin, visto_en, cliente_nombre, perro_nombre, ejercicio_nombre, ejercicio_categoria, video_path')
             .order('registrado_en', { ascending: false })
             .limit(50);
         if (error) throw error;
@@ -3016,6 +3016,12 @@ function renderRegistroActividad(r) {
     const notaCierre = r.nota_cierre
         ? `<p class="actividad-nota actividad-nota--cierre"><strong>Cierre:</strong> ${escapeHTML(r.nota_cierre)}</p>`
         : '';
+    const videoHTML = r.video_path
+        ? `<div class="actividad-video-wrap">
+                <button type="button" class="btn-secondary actividad-video-btn" data-action="ver-video" data-video-path="${escapeHTML(r.video_path)}">Ver video del entreno</button>
+                <div class="actividad-video" hidden></div>
+            </div>`
+        : '';
 
     let pie;
     if (r.visto_por_admin) {
@@ -3041,6 +3047,7 @@ function renderRegistroActividad(r) {
             <div class="actividad-ejercicio">${escapeHTML(r.ejercicio_nombre || '—')}</div>
             ${nota}
             ${notaCierre}
+            ${videoHTML}
             ${pie}
         </li>
     `;
@@ -3168,6 +3175,42 @@ async function marcarVistoRegistro(registroId, extra = {}) {
     return true;
 }
 
+// Click en "Ver video del entreno" del feed: firma el URL on-demand (no al
+// cargar la lista) y reproduce inline. Segundo click oculta.
+async function onActividadVideoClick(btn) {
+    const path = btn.dataset.videoPath;
+    if (!path) return;
+    const cont = btn.nextElementSibling; // .actividad-video
+
+    if (cont && !cont.hidden && cont.querySelector('video')) {
+        cont.hidden = true;
+        cont.innerHTML = '';
+        btn.textContent = 'Ver video del entreno';
+        return;
+    }
+
+    btn.disabled = true;
+    const txtPrev = btn.textContent;
+    btn.textContent = 'Cargando video…';
+    try {
+        const { data, error } = await supabase.storage
+            .from('entrenos-videos')
+            .createSignedUrl(path, 3600);
+        if (error) throw error;
+        if (cont) {
+            cont.innerHTML = `<video class="actividad-video-player" controls playsinline preload="metadata" src="${escapeHTML(data.signedUrl)}"></video>`;
+            cont.hidden = false;
+        }
+        btn.textContent = 'Ocultar video';
+    } catch (err) {
+        console.error('[actividad] error firmando video:', err);
+        toast('No se pudo cargar el video', 'error');
+        btn.textContent = txtPrev;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 function bindActividad() {
     bindActividadSubtabs();
 
@@ -3189,6 +3232,11 @@ function bindActividad() {
         lista.addEventListener('click', async (e) => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
+            // "Ver video" no depende de un registroId: se resuelve por path.
+            if (btn.dataset.action === 'ver-video') {
+                await onActividadVideoClick(btn);
+                return;
+            }
             const registroId = btn.dataset.registroId;
             if (!registroId) return;
             if (btn.dataset.action === 'visto') {

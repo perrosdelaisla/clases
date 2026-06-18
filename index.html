@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=58">
+    <link rel="stylesheet" href="./css/styles.css?v=59">
     <link rel="stylesheet" href="./css/home.css?v=7">
     <link rel="stylesheet" href="./css/home-bridge.css?v=16">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
@@ -752,6 +752,23 @@
                     </div>
                 </div>
 
+                <div class="reporte-field reporte-video" id="reporte-video-field">
+                    <label class="reporte-label">Video del entreno (opcional)</label>
+                    <p class="reporte-hint">Sube un clip corto: máximo 1 minuto y 25 MB.</p>
+                    <input type="file" id="reporte-video-input" accept="video/*" hidden>
+                    <button type="button" class="reporte-repes__add" id="reporte-video-btn">
+                        <span class="plus">+</span> Subir video
+                    </button>
+                    <div class="reporte-video__preview" id="reporte-video-preview" hidden>
+                        <video class="reporte-video__player" id="reporte-video-player" controls playsinline preload="metadata"></video>
+                        <div class="reporte-video__acciones">
+                            <button type="button" class="reporte-video__btn-mini" id="reporte-video-cambiar">Cambiar</button>
+                            <button type="button" class="reporte-video__btn-mini" id="reporte-video-quitar">Quitar</button>
+                        </div>
+                    </div>
+                    <p class="error-message reporte-video__error" id="reporte-video-error" hidden></p>
+                </div>
+
                 <p class="error-message" id="reporte-error" hidden></p>
             </div>
 
@@ -1091,6 +1108,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=89"></script>
+    <script type="module" src="./js/app.js?v=90"></script>
 </body>
 </html>
