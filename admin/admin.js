@@ -2147,7 +2147,7 @@ function bindModalCitaEdit() {
    citas.resumen_cliente. Todo editable a mano.
    ═══════════════════════════════════════════ */
 
-const resumenClaseCtx = { cita:null, rec:null, grabando:false, finalText:'', detenerManual:false };
+const resumenClaseCtx = { cita:null, rec:null, grabando:false, textoBase:'' };
 
 // Se llama en cada apertura del modal editar cita. Bindea una sola vez los
 // botones (guard) y precarga el estado a partir de la cita.
@@ -2212,50 +2212,41 @@ function actualizarBotonGrabar(grabando) {
 
 function construirRec(SpeechRec){
   const rec = new SpeechRec();
-  rec.lang='es-AR'; rec.continuous=true; rec.interimResults=true;
+  rec.lang = 'es-AR';
+  rec.continuous = false;      // CLAVE: una sola pasada, SIN auto-restart
+  rec.interimResults = true;
 
   rec.onresult = (e)=>{
-    let interim='';
-    for(let i=e.resultIndex; i<e.results.length; i++){
-      const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) resumenClaseCtx.finalText += t + ' ';
-      else interim += t;
-    }
+    // reconstruir SOLO esta sesión desde 0; textoBase es snapshot fijo
+    let txt = '';
+    for(let i=0; i<e.results.length; i++) txt += e.results[i][0].transcript;
     const crudo = document.getElementById('rc-crudo');
-    if(crudo){
-      crudo.value = (resumenClaseCtx.finalText + interim).replace(/\s+/g,' ').trimStart();
-      const g = document.getElementById('rc-generar');
-      if(g) g.disabled = !crudo.value.trim();
-    }
+    if(!crudo) return;
+    const base = resumenClaseCtx.textoBase;
+    crudo.value = (base ? base + ' ' + txt : txt).replace(/\s+/g,' ').trimStart();
+    const g = document.getElementById('rc-generar');
+    if(g) g.disabled = !crudo.value.trim();
   };
 
-  rec.onerror = (ev)=>{
-    if(['not-allowed','service-not-allowed','aborted'].includes(ev.error)) resumenClaseCtx.detenerManual = true;
-  };
+  rec.onerror = ()=>{};  // onend limpia igual
 
   rec.onend = ()=>{
-    if(resumenClaseCtx.detenerManual){
-      resumenClaseCtx.detenerManual = false;
-      resumenClaseCtx.grabando = false;
-      resumenClaseCtx.rec = null;
-      actualizarBotonGrabar(false);
-    } else {
-      // restart por silencio: INSTANCIA NUEVA (e.results limpio). finalText ya tiene lo dicho.
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const n = construirRec(SR);
-      resumenClaseCtx.rec = n;
-      try{ n.start(); }catch(_){}
-    }
+    // consolidar lo dictado como nueva base. SIN reiniciar.
+    const crudo = document.getElementById('rc-crudo');
+    if(crudo) resumenClaseCtx.textoBase = crudo.value.trim();
+    resumenClaseCtx.grabando = false;
+    resumenClaseCtx.rec = null;
+    actualizarBotonGrabar(false);
   };
 
   return rec;
 }
 
 function iniciarGrabacion(SpeechRec){
+  if(resumenClaseCtx.grabando || resumenClaseCtx.rec) return;  // SEGURO: una sola instancia
   const crudo = document.getElementById('rc-crudo');
   if(!crudo) return;
-  resumenClaseCtx.finalText = crudo.value ? (crudo.value.trim() + ' ') : '';
-  resumenClaseCtx.detenerManual = false;
+  resumenClaseCtx.textoBase = crudo.value.trim();   // snapshot fijo de lo ya escrito
   const rec = construirRec(SpeechRec);
   resumenClaseCtx.rec = rec;
   resumenClaseCtx.grabando = true;
@@ -2264,16 +2255,10 @@ function iniciarGrabacion(SpeechRec){
   catch(_){ resumenClaseCtx.grabando=false; resumenClaseCtx.rec=null; actualizarBotonGrabar(false); }
 }
 
-// Parada manual: marcamos la bandera y frenamos. onend cierra el estado y NO reinicia.
-function detenerGrabacion() {
-    const rec = resumenClaseCtx.rec;
-    if (rec) {
-        resumenClaseCtx.detenerManual = true;
-        try { rec.stop(); } catch (_) { /* ya estaba parado */ }
-    } else {
-        resumenClaseCtx.grabando = false;
-        actualizarBotonGrabar(false);
-    }
+function detenerGrabacion(){
+  const rec = resumenClaseCtx.rec;
+  if(rec){ try{ rec.stop(); }catch(_){} }  // dispara onend que consolida
+  else { resumenClaseCtx.grabando=false; actualizarBotonGrabar(false); }
 }
 
 async function generarResumenClase() {
@@ -2347,7 +2332,7 @@ async function guardarResumenClase() {
 function resetResumenClase() {
     detenerGrabacion();
     resumenClaseCtx.cita = null;
-    resumenClaseCtx.finalText = '';
+    resumenClaseCtx.textoBase = '';
     resumenClaseCtx.rec = null;
     const crudo = document.getElementById('rc-crudo');
     const resumen = document.getElementById('rc-resumen');
