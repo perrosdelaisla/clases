@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=60">
+    <link rel="stylesheet" href="./css/styles.css?v=61">
     <link rel="stylesheet" href="./css/home.css?v=8">
     <link rel="stylesheet" href="./css/home-bridge.css?v=17">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
@@ -755,11 +755,24 @@
 
                 <div class="reporte-field reporte-video" id="reporte-video-field">
                     <label class="reporte-label">Video del entreno (opcional)</label>
-                    <p class="reporte-hint" id="reporte-video-hint">Sube un clip corto: máximo 1 minuto y 25 MB.</p>
+                    <p class="reporte-hint" id="reporte-video-hint">Sube un clip o graba uno (cámara). Máximo 1 minuto y 25 MB.</p>
                     <input type="file" id="reporte-video-input" accept="video/*" hidden>
-                    <button type="button" class="reporte-repes__add" id="reporte-video-btn">
-                        <span class="plus">+</span> Subir video
-                    </button>
+                    <div class="reporte-video__botones">
+                        <button type="button" class="reporte-repes__add" id="reporte-video-btn">
+                            <span class="plus">+</span> Subir video
+                        </button>
+                        <button type="button" class="reporte-repes__add" id="reporte-video-grabar">
+                            <span class="plus">●</span> Grabar ahora
+                        </button>
+                    </div>
+                    <div class="reporte-video__rec" id="reporte-video-rec" hidden>
+                        <video class="reporte-rec__live" id="reporte-rec-live" muted autoplay playsinline></video>
+                        <div class="reporte-rec__timer" id="reporte-rec-timer">0:60</div>
+                        <div class="reporte-rec__acciones">
+                            <button type="button" class="reporte-video__btn-mini" id="reporte-rec-stop">Detener</button>
+                            <button type="button" class="reporte-video__btn-mini" id="reporte-rec-cancel">Cancelar</button>
+                        </div>
+                    </div>
                     <div class="reporte-video__preview" id="reporte-video-preview" hidden>
                         <video class="reporte-video__player" id="reporte-video-player" controls playsinline preload="metadata"></video>
                         <div class="reporte-video__acciones">
@@ -1109,6 +1122,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=91"></script>
+    <script type="module" src="./js/app.js?v=92"></script>
 </body>
 </html>

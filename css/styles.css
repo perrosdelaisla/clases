@@ -3439,6 +3439,45 @@ body {
    sin esto, el preview (cuadro negro) y el botón "Subir video" se ven siempre. */
 .reporte-video__preview[hidden] { display: none; }
 #reporte-video-btn[hidden] { display: none; }
+#reporte-video-grabar[hidden] { display: none; }
+
+/* Grabar ahora (Parte 1B) — los dos botones contiguos y el contenedor de cámara. */
+.reporte-video__botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.reporte-video__rec {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.reporte-video__rec[hidden] { display: none; }
+
+.reporte-rec__live {
+    width: 100%;
+    max-height: 240px;
+    border-radius: var(--radius-sm);
+    background: #000;
+    border: 1px solid var(--color-border);
+}
+
+.reporte-rec__timer {
+    align-self: flex-start;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--pdli-rojo);
+}
+
+.reporte-rec__acciones {
+    display: flex;
+    gap: 0.5rem;
+}
 
 .reporte-video__player {
     width: 100%;

@@ -4346,6 +4346,14 @@ let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquili
 let _reporteVideoFile = null;          // File de video seleccionado para subir (o null)
 let _reporteVideoPreviewUrl = null;    // objectURL activo del preview (para revocar)
 
+// Grabación en vivo (Parte 1B).
+let _grabStream = null;        // MediaStream activo de la cámara
+let _grabRecorder = null;      // MediaRecorder
+let _grabChunks = [];          // Blob[] de la grabación
+let _grabMimeType = null;      // mimeType elegido para esta grabación
+let _grabTimer = null;         // setInterval del countdown
+let _grabSegundosRest = 0;
+
 // Límites de video del entreno (Paso 1A): 25 MB y 65 s.
 const VIDEO_MAX_BYTES = 26214400;
 const VIDEO_MAX_SEG = 65;
@@ -4597,6 +4605,15 @@ function bindNotasEjercicio() {
     document.getElementById('reporte-video-input')
         ?.addEventListener('change', (e) => onVideoSeleccionado(e.target));
 
+    // Video del entreno (opcional) — Grabar ahora (Parte 1B).
+    document.getElementById('reporte-video-grabar')
+        ?.addEventListener('click', iniciarGrabacion);
+    document.getElementById('reporte-rec-stop')
+        ?.addEventListener('click', detenerGrabacion);
+    document.getElementById('reporte-rec-cancel')
+        ?.addEventListener('click', cancelarGrabacion);
+    aplicarSoporteGrabacion();
+
     // Aviso de tranquilidad baja: cerrar (X) y "Escribir al adiestrador".
     document.getElementById('aviso-trq-cerrar')
         ?.addEventListener('click', cerrarAvisoTranquilidadBaja);
@@ -4792,6 +4809,9 @@ function abrirModalReporte() {
 
     // Reset del video del entreno (estado + preview + errores).
     quitarVideoSeleccionado();
+    // Si quedó una grabación a medias (modal cerrado abrupto), liberar cámara.
+    liberarRecursosGrabacion();
+    document.getElementById('reporte-video-rec')?.setAttribute('hidden', '');
 
     // Reset del banner "registro previo del día" — se va a setear async.
     _reporteRegistroPrevio = null;
@@ -4938,10 +4958,12 @@ function setVideoSeleccionado(file) {
     const player = document.getElementById('reporte-video-player');
     const preview = document.getElementById('reporte-video-preview');
     const btn = document.getElementById('reporte-video-btn');
+    const grabar = document.getElementById('reporte-video-grabar');
     const hint = document.getElementById('reporte-video-hint');
     if (player) player.src = _reporteVideoPreviewUrl;
     if (preview) preview.hidden = false;
     if (btn) btn.hidden = true;
+    if (grabar) grabar.hidden = true;
     if (hint) hint.hidden = true;
 }
 
@@ -4951,38 +4973,40 @@ function quitarVideoSeleccionado() {
     const player = document.getElementById('reporte-video-player');
     const preview = document.getElementById('reporte-video-preview');
     const btn = document.getElementById('reporte-video-btn');
+    const grabar = document.getElementById('reporte-video-grabar');
     const hint = document.getElementById('reporte-video-hint');
     const errEl = document.getElementById('reporte-video-error');
     if (player) player.removeAttribute('src');
     if (preview) preview.hidden = true;
     if (btn) btn.hidden = false;
+    if (grabar) grabar.hidden = false;
     if (hint) hint.hidden = false;
     if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+    // Respetar el fallback: si no hay soporte de grabación, ocultar de nuevo.
+    aplicarSoporteGrabacion();
 }
 
-// Valida un archivo elegido por el cliente (tamaño, duración, tipo) y, si pasa,
-// lo deja seleccionado con preview. No sube nada todavía.
-async function onVideoSeleccionado(input) {
+// Valida un File de video (tipo blando, tamaño, duración) y, si pasa,
+// lo deja seleccionado con preview. Reusable: la usa tanto el flujo de
+// "Subir video" (onVideoSeleccionado) como "Grabar ahora" (Parte 1B).
+async function procesarVideoFile(file) {
     const errEl = document.getElementById('reporte-video-error');
     const showVErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } };
     if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
 
-    const file = input.files && input.files[0];
-    // Permitir volver a elegir el mismo archivo más adelante (reset del input).
-    input.value = '';
     if (!file) return;
 
-    // c) Tipo (chequeo blando).
+    // Tipo (chequeo blando).
     if (!file.type || !file.type.startsWith('video/')) {
         showVErr('Ese archivo no parece un video. Usa MP4, MOV o WEBM.');
         return;
     }
-    // a) Tamaño.
+    // Tamaño.
     if (file.size > VIDEO_MAX_BYTES) {
         showVErr('El video supera los 25 MB. Graba o elige un clip más corto.');
         return;
     }
-    // b) Duración.
+    // Duración (blanda).
     let dur = null;
     try {
         dur = await leerDuracionVideo(file);
@@ -4995,6 +5019,168 @@ async function onVideoSeleccionado(input) {
     }
 
     setVideoSeleccionado(file);
+}
+
+// Valida un archivo elegido por el cliente (tamaño, duración, tipo) y, si pasa,
+// lo deja seleccionado con preview. No sube nada todavía.
+async function onVideoSeleccionado(input) {
+    const file = input.files && input.files[0];
+    // Permitir volver a elegir el mismo archivo más adelante (reset del input).
+    input.value = '';
+    if (!file) return;
+    await procesarVideoFile(file);
+}
+
+// ── Grabar ahora (Parte 1B) ─────────────────────────────────────────────
+
+// Libera la cámara, el recorder y el timer si quedó una grabación a medias.
+// Idempotente: se puede llamar siempre sin riesgo.
+function liberarRecursosGrabacion() {
+    if (_grabTimer) { clearInterval(_grabTimer); _grabTimer = null; }
+    if (_grabRecorder && _grabRecorder.state !== 'inactive') {
+        try { _grabRecorder.onstop = null; _grabRecorder.stop(); } catch (_) {}
+    }
+    _grabRecorder = null;
+    _grabChunks = [];
+    if (_grabStream) {
+        _grabStream.getTracks().forEach((t) => { try { t.stop(); } catch (_) {} });
+        _grabStream = null;
+    }
+    const live = document.getElementById('reporte-rec-live');
+    if (live) { live.srcObject = null; }
+}
+
+function actualizarTimerUI(seg) {
+    const el = document.getElementById('reporte-rec-timer');
+    if (!el) return;
+    const s = Math.max(0, Math.floor(seg));
+    const mm = Math.floor(s / 60);
+    const ss = String(s % 60).padStart(2, '0');
+    el.textContent = `${mm}:${ss}`;
+}
+
+async function iniciarGrabacion() {
+    // Defensivo: si llegó acá sin soporte (no debería, el fallback oculta el botón).
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+        return;
+    }
+
+    // Pedir cámara trasera + audio.
+    try {
+        _grabStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: true,
+        });
+    } catch (err) {
+        const errEl = document.getElementById('reporte-video-error');
+        if (errEl) {
+            errEl.textContent = 'No se pudo acceder a la cámara. Puedes subir un video en su lugar.';
+            errEl.hidden = false;
+        }
+        return;
+    }
+
+    // Conectar al preview-en-vivo.
+    const live = document.getElementById('reporte-rec-live');
+    if (live) { live.srcObject = _grabStream; await live.play().catch(() => {}); }
+
+    // Toggle UI: entrar a estado "grabando".
+    document.getElementById('reporte-video-btn')?.setAttribute('hidden', '');
+    document.getElementById('reporte-video-grabar')?.setAttribute('hidden', '');
+    document.getElementById('reporte-video-hint')?.setAttribute('hidden', '');
+    const errEl = document.getElementById('reporte-video-error');
+    if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+    document.getElementById('reporte-video-rec')?.removeAttribute('hidden');
+
+    // Elegir mimeType (primero soportado).
+    const candidatos = ['video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
+    _grabMimeType = candidatos.find((m) => MediaRecorder.isTypeSupported(m)) || '';
+
+    // Instanciar MediaRecorder.
+    _grabRecorder = _grabMimeType
+        ? new MediaRecorder(_grabStream, { mimeType: _grabMimeType })
+        : new MediaRecorder(_grabStream);
+    _grabChunks = [];
+    _grabRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) _grabChunks.push(e.data); };
+    _grabRecorder.onstop = onGrabacionDetenida;
+    _grabRecorder.start();
+
+    // Countdown visible (60 → 0), corte automático a los 60s.
+    _grabSegundosRest = 60;
+    actualizarTimerUI(_grabSegundosRest);
+    _grabTimer = setInterval(() => {
+        _grabSegundosRest -= 1;
+        actualizarTimerUI(_grabSegundosRest);
+        if (_grabSegundosRest <= 0) {
+            clearInterval(_grabTimer);
+            _grabTimer = null;
+            try { _grabRecorder?.stop(); } catch (_) {}
+        }
+    }, 1000);
+}
+
+async function onGrabacionDetenida() {
+    // Limpiar timer.
+    if (_grabTimer) { clearInterval(_grabTimer); _grabTimer = null; }
+
+    // Liberar cámara (pero conservamos chunks/recorder hasta armar el File).
+    if (_grabStream) {
+        _grabStream.getTracks().forEach((t) => { try { t.stop(); } catch (_) {} });
+        _grabStream = null;
+    }
+    const live = document.getElementById('reporte-rec-live');
+    if (live) { live.srcObject = null; }
+
+    // Ocultar UI de grabación; procesarVideoFile mostrará el preview después.
+    document.getElementById('reporte-video-rec')?.setAttribute('hidden', '');
+
+    // Normalizar MIME real a uno de los 3 que acepta subirVideoEntreno.
+    // El mimeType del recorder puede traer codecs (ej. 'video/webm;codecs=vp8').
+    const realMime = (_grabRecorder?.mimeType || _grabMimeType || '').toLowerCase();
+    let typeNormalizado, ext;
+    if (realMime.startsWith('video/mp4')) {
+        typeNormalizado = 'video/mp4'; ext = 'mp4';
+    } else if (realMime.startsWith('video/webm')) {
+        typeNormalizado = 'video/webm'; ext = 'webm';
+    } else {
+        // Caso raro: no se reconoce. Dejamos al fallback de procesarVideoFile.
+        typeNormalizado = realMime || 'video/webm';
+        ext = 'webm';
+    }
+    const blob = new Blob(_grabChunks, { type: typeNormalizado });
+    const file = new File([blob], `grabacion.${ext}`, { type: typeNormalizado });
+    _grabChunks = [];
+    _grabRecorder = null;
+
+    // Pasar al flujo de 1A (valida tamaño/duración/tipo y, si pasa, preview).
+    await procesarVideoFile(file);
+}
+
+function detenerGrabacion() {
+    if (_grabTimer) { clearInterval(_grabTimer); _grabTimer = null; }
+    try { _grabRecorder?.stop(); } catch (_) {}
+    // onGrabacionDetenida se encarga del resto.
+}
+
+function cancelarGrabacion() {
+    liberarRecursosGrabacion();
+    // Volver al estado inicial: ocultar rec, mostrar btn+grabar+hint, sin error.
+    document.getElementById('reporte-video-rec')?.setAttribute('hidden', '');
+    document.getElementById('reporte-video-btn')?.removeAttribute('hidden');
+    document.getElementById('reporte-video-grabar')?.removeAttribute('hidden');
+    document.getElementById('reporte-video-hint')?.removeAttribute('hidden');
+    const errEl = document.getElementById('reporte-video-error');
+    if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+}
+
+// Si el dispositivo no soporta grabación, esconder "Grabar ahora".
+function aplicarSoporteGrabacion() {
+    const btn = document.getElementById('reporte-video-grabar');
+    if (!btn) return;
+    const soportado = !!(navigator.mediaDevices?.getUserMedia) && typeof MediaRecorder !== 'undefined';
+    if (!soportado) {
+        btn.hidden = true;
+    }
 }
 
 // Sube el video al bucket privado entrenos-videos en {cliente_id}/{uuid}.{ext}
