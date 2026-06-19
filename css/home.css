@@ -66,14 +66,14 @@
    FRAME / TEMA (tokens conmutables)
    ============================================================ */
 .home{
-  --c-bg:#F5EFE0;
-  --c-surface:#FBF7EC;
+  --c-bg:#EFE7D4;
+  --c-surface:#FFFDF7;
   --c-field:#ECE4D2;
   --c-text:#1A1A1A;
   --c-text-2:#4A4A48;
   --c-text-3:#8A867E;
-  --c-hair:rgba(26,26,26,0.10);
-  --c-hair-2:rgba(26,26,26,0.16);
+  --c-hair:rgba(26,26,26,0.20);
+  --c-hair-2:rgba(26,26,26,0.26);
   --c-rojo:#C8102E;
   --c-rojo-press:#a93226;
   --c-azul:#2E6CA8;
@@ -606,3 +606,17 @@
    fuera de viewport. (La misma regla existía duplicada en home-bridge.css.) */
 .home #tab-rutina.tab-panel:not([hidden]){ display:block; }
 .home .philo{ padding-left:0; padding-right:0; }
+
+/* ── Sombras de tarjetas de superficie — SOLO tema claro ──────────────
+   En claro el lift de --c-surface sobre --c-bg es sutil (ΔL* bajo): la
+   sombra es lo que define el plano. En oscuro el contraste de luminosidad
+   ya separa las tarjetas, así que ahí no se aplica. ────────────────── */
+.home[data-theme="claro"] .rutina-card,
+.home[data-theme="claro"] .r-item,
+.home[data-theme="claro"] .progreso-item,
+.home[data-theme="claro"] .progress .note,
+.home[data-theme="claro"] .dC .panel,
+.home[data-theme="claro"] .idcard,
+.home[data-theme="claro"] .dA .hero{
+  box-shadow:0 1px 3px rgba(26,26,26,0.08),0 1px 2px rgba(26,26,26,0.04);
+}

@@ -85,7 +85,7 @@
 .home .progreso-lista{ gap:10px; }
 .home .progreso-item{ background:var(--c-surface); border:1px solid var(--c-hair-2); border-radius:14px; padding:13px 14px; }
 .home .progreso-item__nombre{ color:var(--c-text); }
-.home[data-theme="claro"] .progreso-item{ border-color:rgba(26,26,26,0.12); box-shadow:0 1px 3px rgba(26,26,26,0.06); }
+.home[data-theme="claro"] .progreso-item{ border-color:rgba(26,26,26,0.12); }
 
 /* Historial: mini-gráfico de barras verticales, una por semana desde la
    asignación. Altura = cumplimiento; color = estado (rojo/verde/azul).
