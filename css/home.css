@@ -66,8 +66,8 @@
    FRAME / TEMA (tokens conmutables)
    ============================================================ */
 .home{
-  --c-bg:#EFE7D4;
-  --c-surface:#FFFDF7;
+  --c-bg:#F5EFE0;
+  --c-surface:#FFFFFF;
   --c-field:#ECE4D2;
   --c-text:#1A1A1A;
   --c-text-2:#4A4A48;
@@ -80,8 +80,8 @@
   --c-azul-soft:rgba(46,108,168,0.12);
   --c-azul-line:rgba(46,108,168,0.32);
   --c-oliva:#6B7A3A;
-  --c-oliva-soft:rgba(107,122,58,0.12);
-  --c-oliva-line:rgba(107,122,58,0.30);
+  --c-oliva-soft:rgba(107,122,58,0.20);
+  --c-oliva-line:rgba(107,122,58,0.45);
   --c-statusbar:#1A1A1A;
 
   width:392px; height:838px;
