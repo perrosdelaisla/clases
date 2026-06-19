@@ -62,10 +62,11 @@
   color:var(--pdli-crema);
 }
 .home-label .tag{color:rgba(245,239,224,0.4);font-weight:600;}
-.home /* ============================================================
+/* ============================================================
    FRAME / TEMA (tokens conmutables)
    ============================================================ */
-.home{
+.home,
+.home[data-theme="claro"]{
   --c-bg:#F5EFE0;
   --c-surface:#FFFFFF;
   --c-field:#ECE4D2;
@@ -84,14 +85,8 @@
   --c-oliva-line:rgba(107,122,58,0.45);
   --c-statusbar:#1A1A1A;
 
-  width:392px; height:838px;
-  border-radius:34px;
   background:var(--c-bg);
   color:var(--c-text);
-  overflow:hidden;
-  position:relative;
-  display:flex; flex-direction:column;
-  box-shadow:0 0 0 1px rgba(245,239,224,0.06),0 36px 90px rgba(0,0,0,0.55),0 10px 30px rgba(0,0,0,0.35);
 }
 .home[data-theme="oscuro"]{
   --c-bg:#15130D;
