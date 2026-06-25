@@ -1565,6 +1565,61 @@ function renderRutinaCard(cadena) {
 
 // Markup de una tarjeta de rutina. tag = 'li' para el renglón simple, 'article'
 // para las tarjetas dentro de un carrusel. superado = paso anterior (apagado).
+let _herramientaAsignadoActual = null;
+let _herramientaEstadoCargado = null;
+
+function pintarHerramientaBotones(valor) {
+    const btnTiene = document.getElementById('btn-herramienta-tiene');
+    const btnNo = document.getElementById('btn-herramienta-no');
+    const set = (btn, on) => { if (!btn) return; btn.style.background = on ? '#C8102E' : 'transparent'; btn.style.color = on ? '#ffffff' : '#C8102E'; };
+    set(btnTiene, valor === 'tiene');
+    set(btnNo, valor === 'no_tiene');
+}
+
+function textoHerramientaDesde(valor, fechaIso) {
+    const hint = document.getElementById('herramienta-estado-hint');
+    if (!hint) return;
+    if (valor === 'tiene') {
+        let txt = 'Marcado como que ya la tienes.';
+        if (fechaIso) { const f = new Date(fechaIso); if (!isNaN(f.getTime())) txt = 'La tienes desde el ' + f.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) + '.'; }
+        hint.textContent = txt; hint.hidden = false;
+    } else if (valor === 'no_tiene') {
+        hint.textContent = 'Cuando la consigas, volve y marca que ya la tienes.'; hint.hidden = false;
+    } else { hint.hidden = true; }
+}
+
+async function renderHerramientaEstado(asignadoId) {
+    _herramientaAsignadoActual = asignadoId;
+    _herramientaEstadoCargado = null;
+    const btnTiene = document.getElementById('btn-herramienta-tiene');
+    const btnNo = document.getElementById('btn-herramienta-no');
+    const hint = document.getElementById('herramienta-estado-hint');
+    if (hint) hint.hidden = true;
+    pintarHerramientaBotones(null);
+    if (btnTiene) btnTiene.onclick = () => guardarEstadoHerramienta(asignadoId, 'tiene');
+    if (btnNo) btnNo.onclick = () => guardarEstadoHerramienta(asignadoId, 'no_tiene');
+    try {
+        const { data, error } = await supabase.from('ejercicios_asignados').select('estado_cliente, estado_actualizado_en').eq('id', asignadoId).single();
+        if (error) throw error;
+        if (_herramientaAsignadoActual !== asignadoId) return;
+        _herramientaEstadoCargado = data ? data.estado_cliente : null;
+        pintarHerramientaBotones(_herramientaEstadoCargado);
+        textoHerramientaDesde(_herramientaEstadoCargado, data ? data.estado_actualizado_en : null);
+    } catch (e) { console.error('[herramienta] no se pudo leer estado:', e); }
+}
+
+async function guardarEstadoHerramienta(asignadoId, valor) {
+    if (valor === _herramientaEstadoCargado) return;
+    pintarHerramientaBotones(valor);
+    const ahora = new Date().toISOString();
+    try {
+        const { error } = await supabase.from('ejercicios_asignados').update({ estado_cliente: valor, estado_actualizado_en: ahora }).eq('id', asignadoId);
+        if (error) throw error;
+        _herramientaEstadoCargado = valor;
+        textoHerramientaDesde(valor, ahora);
+    } catch (e) { console.error('[herramienta] no se pudo guardar:', e); if (typeof toast === 'function') toast('No pudimos guardar. Intentalo de nuevo.', 'error'); }
+}
+
 function rutinaCardHTML(row, { tag, superado }) {
     const ej = row.ejercicios;
     if (!ej) return '';
@@ -2883,8 +2938,18 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
     const seccionMisEntrenos = document.getElementById('mientreno');
     const btnReportar = document.getElementById('btn-reportar-entreno');
     const seccionTarea = document.getElementById('tarea-lista');
+    const seccionHerramienta = document.getElementById('herramienta-estado');
+    const esHerramienta = (ej.categoria === 'herramienta');
 
-    if (esTarea) {
+    if (seccionHerramienta) seccionHerramienta.hidden = true;
+    if (esHerramienta) {
+        if (seccionProgreso) seccionProgreso.hidden = true;
+        if (seccionMisEntrenos) seccionMisEntrenos.hidden = true;
+        if (btnReportar) btnReportar.hidden = true;
+        if (seccionTarea) seccionTarea.hidden = true;
+        if (seccionHerramienta) seccionHerramienta.hidden = false;
+        renderHerramientaEstado(ejercicioAsignadoId);
+    } else if (esTarea) {
         // Ocultamos progreso / mis entrenos / reportar. Mostramos tarea-lista.
         if (seccionProgreso) seccionProgreso.hidden = true;
         if (seccionMisEntrenos) seccionMisEntrenos.hidden = true;
