@@ -3893,6 +3893,31 @@ body {
     color: var(--color-muted);
 }
 
+/* "Editar" de un entreno de hoy. margin-left:auto lo lleva a la derecha
+   tanto si hay chip de tranquilidad como si no. */
+.mientreno-item__editar {
+    margin-left: auto;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-text);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+}
+.mientreno-item__editar:hover,
+.mientreno-item__editar:focus-visible {
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+/* Si además hay chip de tranquilidad, ese ya toma el auto; el botón queda
+   pegado a su derecha con un respiro. */
+.mientreno-tq + .mientreno-item__editar {
+    margin-left: 0.45rem;
+}
+
 .mientreno-tq {
     display: inline-flex;
     align-items: center;

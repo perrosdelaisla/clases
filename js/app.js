@@ -4410,6 +4410,8 @@ let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccion
 let _avisoTrqEjercicio = '';           // nombre del ejercicio del último aviso de tranquilidad baja
 let _reporteCampos = [];               // campos activos del ejercicio actual (de la RPC)
 let _reporteSpecs = null;              // null o { valorComida, dificultad, objetivoSeg, objetivoDistancia }
+let _editandoRegistroId = null;        // null = reporte nuevo (INSERT); id = editando ese registro (UPDATE)
+let _misEntrenosCache = [];            // registros de "Mis entrenos" en pantalla (para el botón Editar)
 let _reporteVideoFile = null;          // File de video seleccionado para subir (o null)
 let _reporteVideoPreviewUrl = null;    // objectURL activo del preview (para revocar)
 
@@ -4662,6 +4664,14 @@ function bindNotasEjercicio() {
     document.getElementById('reporte-tarea-hecho')
         ?.addEventListener('click', marcarTareaHecha);
 
+    // "Editar" de cada entreno de hoy (delegado: la lista se repinta por innerHTML).
+    document.getElementById('mientreno-lista')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="editar-entreno"]');
+        if (!btn) return;
+        const reg = (_misEntrenosCache || []).find((r) => String(r.id) === String(btn.dataset.regId));
+        if (reg) abrirModalReporteEdicion(reg);
+    });
+
     // Video del entreno (opcional): subir / cambiar / quitar + validación.
     document.getElementById('reporte-video-btn')
         ?.addEventListener('click', () => document.getElementById('reporte-video-input')?.click());
@@ -4804,6 +4814,15 @@ function abrirModalReporte() {
     }
     _reporteCampos = _progresoCache.get(_ejercicioModalActualId)?.campos || [];
 
+    // Reporte NUEVO: nunca en modo edición. Título/botón/video en modo "nuevo".
+    _editandoRegistroId = null;
+    const tituloModal = document.getElementById('modal-reporte-titulo');
+    if (tituloModal) tituloModal.textContent = 'Reportar entreno';
+    const guardarTxt = document.getElementById('reporte-guardar');
+    if (guardarTxt) guardarTxt.textContent = 'Guardar';
+    const videoField = document.getElementById('reporte-video-field');
+    if (videoField) videoField.hidden = false;
+
     const nombreEl = document.getElementById('modal-reporte-ejercicio-nombre');
     const tituloOrigen = document.getElementById('modal-ejercicio-titulo');
     if (nombreEl && tituloOrigen) nombreEl.textContent = tituloOrigen.textContent;
@@ -4859,6 +4878,78 @@ function abrirModalReporte() {
     if (_formEl) _formEl.hidden = false;
     if (_guardarBtn) _guardarBtn.hidden = false;
     if (_tareaEl) _tareaEl.hidden = true;
+    abrirModal('modal-reporte-ejercicio');
+}
+
+// Abre el modal en modo EDICIÓN de un entreno ya reportado (solo forma v:2).
+// Corrige marca/reps + tranquilidad + nota. El video NO se edita acá.
+function abrirModalReporteEdicion(reg) {
+    if (!reg?.id || !_ejercicioModalActualId) return;
+    _editandoRegistroId = reg.id;
+    _reporteCampos = _progresoCache.get(_ejercicioModalActualId)?.campos || [];
+
+    // Modo "editar": título + botón + ocultar el control de video.
+    const tituloModal = document.getElementById('modal-reporte-titulo');
+    if (tituloModal) tituloModal.textContent = 'Editar entreno';
+    const guardarTxt = document.getElementById('reporte-guardar');
+    if (guardarTxt) guardarTxt.textContent = 'Guardar cambios';
+    const videoField = document.getElementById('reporte-video-field');
+    if (videoField) videoField.hidden = true;
+
+    const nombreEl = document.getElementById('modal-reporte-ejercicio-nombre');
+    const tituloOrigen = document.getElementById('modal-ejercicio-titulo');
+    if (nombreEl && tituloOrigen) nombreEl.textContent = tituloOrigen.textContent;
+
+    const err = document.getElementById('reporte-error');
+    if (err) { err.textContent = ''; err.hidden = true; }
+
+    // Control de marca (mismo tipo que el ejercicio) + specs read-only.
+    const _filaRutina = (state.rutinaFilas || []).find((f) => f.id === _ejercicioModalActualId);
+    _reporteSpecs = _filaRutina ? {
+        valorComida: _filaRutina.valor_comida ?? null,
+        dificultad: _filaRutina.dificultad ?? null,
+        objetivoSeg: _filaRutina.objetivo_seg ?? null,
+        objetivoDistancia: _filaRutina.objetivo_distancia ?? null,
+    } : null;
+    renderReporteControl();
+
+    // Prefill de la marca desde datos_registro (solo forma v:2).
+    const datos = reg.datos_registro || {};
+    const tipo = tipoReporteDeCampos(_reporteCampos);
+    if (tipo === 'tiempo' && datos.mejor_seg != null) {
+        const seg = Math.max(0, Math.floor(Number(datos.mejor_seg) || 0));
+        const minEl = document.getElementById('reporte-marca-min');
+        const segEl = document.getElementById('reporte-marca-seg');
+        if (minEl) minEl.value = String(Math.floor(seg / 60));
+        if (segEl) segEl.value = String(seg % 60);
+    } else if (tipo === 'distancia' && datos.mejor_pasos != null) {
+        const el = document.getElementById('reporte-marca');
+        if (el) el.value = String(datos.mejor_pasos);
+    } else if (tipo === 'reps' && datos.reps != null) {
+        const el = document.getElementById('reporte-marca');
+        if (el) el.value = String(datos.reps);
+    }
+
+    // Prefill de tranquilidad: activa la pill correspondiente.
+    _reporteTranquilidad = (reg.tranquilidad != null) ? Number(reg.tranquilidad) : null;
+    document.querySelectorAll('#reporte-tranquilidad .reporte-pill').forEach((p) => {
+        const activa = Number(p.dataset.valor) === _reporteTranquilidad;
+        p.classList.toggle('is-active', activa);
+        p.setAttribute('aria-checked', activa ? 'true' : 'false');
+    });
+
+    // Prefill de la nota.
+    const notaEl = document.getElementById('reporte-nota');
+    if (notaEl) notaEl.value = reg.nota || '';
+
+    // Aseguramos ver el form (no la sección tarea) y el botón de guardar.
+    const _formEl = document.querySelector('#modal-reporte-ejercicio .reporte-form');
+    const _tareaEl = document.getElementById('reporte-tarea');
+    const _guardarBtn = document.getElementById('reporte-guardar');
+    if (_formEl) _formEl.hidden = false;
+    if (_tareaEl) _tareaEl.hidden = true;
+    if (_guardarBtn) _guardarBtn.hidden = false;
+
     abrirModal('modal-reporte-ejercicio');
 }
 
@@ -5232,11 +5323,13 @@ async function guardarReporteEjercicio() {
     const btn = document.getElementById('reporte-guardar');
     if (btn) btn.disabled = true;
     const asignadoId = _ejercicioModalActualId;
+    const esEdicion = (_editandoRegistroId != null);
 
-    // Video del entreno (opcional). Se sube ANTES del insert para persistir el
-    // path. Si la subida falla, NO bloquea el guardado.
+    // Video del entreno (opcional). Solo en reporte NUEVO: al editar no se toca
+    // el video. Se sube ANTES del insert para persistir el path; si la subida
+    // falla, NO bloquea el guardado.
     let videoPath = null;
-    if (_reporteVideoFile) {
+    if (!esEdicion && _reporteVideoFile) {
         try {
             videoPath = await subirVideoEntreno(_reporteVideoFile);
         } catch (e) {
@@ -5252,23 +5345,34 @@ async function guardarReporteEjercicio() {
     }
 
     try {
-        // Cada reporte es SIEMPRE un entreno nuevo: un INSERT independiente del día.
-        const practica_id = await obtenerOCrearPracticaHoy(perroId);
-        const insertPayload = {
-            practica_id,
-            ejercicio_asignado_id: asignadoId,
-            datos_registro,
-            tranquilidad: trq,
-            nota,
-        };
-        if (videoPath) {
-            insertPayload.video_path = videoPath;
-            insertPayload.video_subido_en = new Date().toISOString();
+        if (esEdicion) {
+            // EDICIÓN: UPDATE de marca + tranquilidad + nota. NO tocamos
+            // practica_id ni video_path.
+            const { error } = await supabase
+                .from('registros_ejercicio')
+                .update({ datos_registro, tranquilidad: trq, nota })
+                .eq('id', _editandoRegistroId);
+            if (error) throw error;
+            _editandoRegistroId = null;
+        } else {
+            // Reporte NUEVO: un INSERT independiente del día.
+            const practica_id = await obtenerOCrearPracticaHoy(perroId);
+            const insertPayload = {
+                practica_id,
+                ejercicio_asignado_id: asignadoId,
+                datos_registro,
+                tranquilidad: trq,
+                nota,
+            };
+            if (videoPath) {
+                insertPayload.video_path = videoPath;
+                insertPayload.video_subido_en = new Date().toISOString();
+            }
+            const { error } = await supabase
+                .from('registros_ejercicio')
+                .insert(insertPayload);
+            if (error) throw error;
         }
-        const { error } = await supabase
-            .from('registros_ejercicio')
-            .insert(insertPayload);
-        if (error) throw error;
 
         // Comparación de estados para detectar el "pulso de logro": pasamos
         // de 'debajo' (no llegabamos al mínimo) a 'en_zona' (justo cumplido).
@@ -5312,7 +5416,7 @@ async function guardarReporteEjercicio() {
             // Cartel informativo, sin tono reprochador. 5s para que se lea.
             toast('Ya superaste el máximo diario de este ejercicio.', 'info', 5000);
         } else {
-            toast('Entreno registrado');
+            toast(esEdicion ? 'Cambios guardados' : 'Entreno registrado');
         }
 
         // Si el perro lo pasó mal (tranquilidad <= 2), ofrecemos contárselo
@@ -5391,6 +5495,17 @@ function fmtFechaCliente(iso) {
     return str.replace(/\./g, '').replace(/^\w/, (c) => c.toUpperCase());
 }
 
+// ¿El registro es de HOY? Comparación por día LOCAL (mismo criterio que
+// fmtFechaCliente / obtenerOCrearPracticaHoy). NO usar toISOString: en Madrid
+// (UTC+2) eso correría el día y rompería el gate de edición.
+function esDeHoyLocal(iso) {
+    if (!iso) return false;
+    const d = new Date(iso);
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const dDia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return dDia.getTime() === hoy.getTime();
+}
+
 function fmtHoraCliente(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -5460,6 +5575,7 @@ async function cargarMisEntrenos(asignadoId) {
             lista.hidden = true;
             return;
         }
+        _misEntrenosCache = data;
         lista.innerHTML = data.map(renderMiEntrenoItem).join('');
         lista.hidden = false;
         empty.hidden = true;
@@ -5493,12 +5609,20 @@ function renderMiEntrenoItem(reg) {
         ? `<div class="mientreno-item__comentario"><span class="mientreno-item__comentario-label">Tu adiestrador:</span> ${escapeHTML(reg.comentario_admin)}</div>`
         : '';
 
+    // Editar: solo entrenos de HOY y con la forma nueva (v:2). Los días
+    // anteriores y los registros viejos (v !== 2) quedan fijos.
+    const editable = esDeHoyLocal(reg.registrado_en) && reg.datos_registro?.v === 2;
+    const editarBtn = editable
+        ? `<button type="button" class="mientreno-item__editar" data-action="editar-entreno" data-reg-id="${escapeHTML(reg.id)}">Editar</button>`
+        : '';
+
     return `
         <li class="mientreno-item">
             <div class="mientreno-item__cab">
                 <span class="mientreno-item__fecha">${escapeHTML(fecha)}</span>
                 <span class="mientreno-item__hora">${escapeHTML(hora)}</span>
                 ${tqChip}
+                ${editarBtn}
             </div>
             ${datos}
             ${nota}
