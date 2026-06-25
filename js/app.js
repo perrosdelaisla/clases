@@ -1895,12 +1895,38 @@ function renderProgresoItem(row) {
     const rachaHTML = racha >= 2
         ? `<span class="progreso-item__racha"><strong>${racha}</strong> semanas seguidas</span>`
         : '';
+
+    // Línea compacta de marca, solo si hay objetivo. Informativa: usa la mejor
+    // marca histórica (récord) vs el objetivo. No toca constancia/racha.
+    let marcaHTML = '';
+    if (row.objetivo_seg != null || row.objetivo_distancia != null) {
+        let mejor, objetivoTxt, mejorTxt, sufijo, objetivo;
+        if (row.objetivo_seg != null) {
+            objetivo = Number(row.objetivo_seg);
+            mejor = (row.mejor_seg_total != null) ? Number(row.mejor_seg_total) : null;
+            mejorTxt = (mejor != null) ? fmtSegToMinSeg(mejor) : '—';
+            objetivoTxt = fmtSegToMinSeg(objetivo);
+            sufijo = '';
+        } else {
+            objetivo = Number(row.objetivo_distancia);
+            mejor = (row.mejor_pasos_total != null) ? Number(row.mejor_pasos_total) : null;
+            mejorTxt = (mejor != null) ? String(mejor) : '—';
+            objetivoTxt = String(objetivo);
+            sufijo = ' pasos';
+        }
+        const alcanzado = (mejor != null && objetivo > 0 && mejor >= objetivo);
+        const cuerpo = `${mejorTxt} / ${objetivoTxt}${sufijo}`;
+        const texto = alcanzado ? `✓ ${cuerpo}` : `Marca: ${cuerpo}`;
+        marcaHTML = `<span class="progreso-item__chip progreso-item__chip--sin">${escapeHTML(texto)}</span>`;
+    }
+
     const historialHTML = renderHistorialSemanal(row.ejercicio_asignado_id);
     return `
         <li class="progreso-item">
             <div class="progreso-item__nombre">${escapeHTML(row.nombre || 'Ejercicio')}</div>
             <div class="progreso-item__meta">
                 ${chipHTML}
+                ${marcaHTML}
                 ${rachaHTML}
             </div>
             ${historialHTML}
