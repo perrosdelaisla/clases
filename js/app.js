@@ -2742,7 +2742,7 @@ function renderTareaLista() {
                     class="tarea-item__input"
                     type="text"
                     maxlength="${TAREA_LISTA_MAX_CHARS}"
-                    placeholder="Ej: ponerme el abrigo"
+                    placeholder="Escribe aquí cada ítem"
                     value="${escapeAttr(texto)}"
                     data-action="edit">
                 <button type="button" class="tarea-item__btn" data-action="up" aria-label="Subir ítem" ${esPrimero ? 'disabled' : ''}>↑</button>
