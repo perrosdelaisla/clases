@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=62">
+    <link rel="stylesheet" href="./css/styles.css?v=63">
     <link rel="stylesheet" href="./css/home.css?v=12">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
@@ -710,35 +710,13 @@
             <h2 id="modal-reporte-titulo">Reportar entreno</h2>
             <p class="modal-pdli__lead">¿Cómo fue esta práctica de <strong id="modal-reporte-ejercicio-nombre">este ejercicio</strong>?</p>
 
-            <div class="reporte-banner-previo" id="reporte-banner-previo" hidden>
-                <p class="reporte-banner-previo__texto">
-                    Ya reportaste este ejercicio hoy:
-                    <strong id="reporte-banner-previo-resumen">—</strong>
-                </p>
-                <div class="reporte-banner-previo__opciones" role="radiogroup" aria-label="¿Sumar al entreno anterior o empezar uno nuevo?">
-                    <label class="reporte-banner-previo__op">
-                        <input type="radio" name="reporte-modo" value="sumar" id="reporte-modo-sumar">
-                        <span>Sumar al entreno anterior</span>
-                    </label>
-                    <label class="reporte-banner-previo__op">
-                        <input type="radio" name="reporte-modo" value="nuevo" id="reporte-modo-nuevo" checked>
-                        <span>Empezar entreno nuevo</span>
-                    </label>
-                </div>
-            </div>
-
             <div class="reporte-form">
 
                 <div class="reporte-field">
-                    <label class="reporte-label">Repeticiones</label>
-                    <p class="reporte-hint">Sumá cada repetición con sus datos. Dejá vacío lo que no quieras registrar.</p>
-                    <ul class="reporte-repes" id="reporte-repes-lista">
-                        <!-- Filas dinámicas. Vacío por default. -->
-                    </ul>
-                    <button type="button" class="reporte-repes__add" id="reporte-repes-add">
-                        <span class="plus">+</span> Sumar repetición
-                    </button>
-                    <p class="reporte-repes__total" id="reporte-repes-total" hidden></p>
+                    <!-- Specs del adiestrador (solo lectura): objetivo + valor + dificultad. -->
+                    <div class="reporte-specs" id="reporte-specs" hidden></div>
+                    <!-- Control único de marca, según el tipo de ejercicio (lo pinta JS). -->
+                    <div id="reporte-control"></div>
                 </div>
 
                 <div class="reporte-field">
@@ -1148,6 +1126,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=93"></script>
+    <script type="module" src="./js/app.js?v=94"></script>
 </body>
 </html>

@@ -3176,6 +3176,25 @@ body {
     letter-spacing: 0.01em;
 }
 
+/* Specs del adiestrador en el reporte (solo lectura): objetivo + valor +
+   dificultad. Chips informativos, no editables. */
+.reporte-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 0.6rem;
+}
+.reporte-specs .reporte-spec {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+}
+
 .reporte-tiempo {
     display: flex;
     align-items: center;

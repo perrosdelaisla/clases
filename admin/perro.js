@@ -2316,9 +2316,28 @@ function fmtHora(iso) {
     return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-// Resumen compacto de las repeticiones del registro.
+// Resumen compacto del registro. Lee las DOS formas de datos_registro:
+// forma nueva { v: 2, ... } con una sola marca, y la vieja (lista de reps).
 function fmtRepes(datos) {
-    if (!datos || !Array.isArray(datos.repeticiones)) return '';
+    if (!datos) return '';
+    // Forma NUEVA (v:2): una sola marca por entreno.
+    if (datos.v === 2) {
+        if (datos.reps != null) {
+            const n = Number(datos.reps);
+            return `${n} ${n === 1 ? 'repetición' : 'repeticiones'}`;
+        }
+        if (datos.mejor_seg != null) {
+            const s = Math.max(0, Math.floor(Number(datos.mejor_seg) || 0));
+            return `Mejor marca: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        }
+        if (datos.mejor_pasos != null) {
+            const n = Number(datos.mejor_pasos);
+            return `Mejor marca: ${n} ${n === 1 ? 'paso' : 'pasos'}`;
+        }
+        return '';
+    }
+    // Forma VIEJA: lista de repeticiones. No tocar.
+    if (!Array.isArray(datos.repeticiones)) return '';
     const n = datos.repeticiones.length;
     if (n === 0) return '';
     const totalSeg = Number(datos.tiempo_total_seg) || 0;

@@ -960,7 +960,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -4408,9 +4408,8 @@ function iniciarModificarCita(cita) {
 let _ejercicioModalActualId = null;
 let _reporteTranquilidad = null;       // 1..5 o null (estado del pill seleccionado)
 let _avisoTrqEjercicio = '';           // nombre del ejercicio del último aviso de tranquilidad baja
-let _reporteRepes = [];                // [{ minStr, segStr }, ...] — filas dinámicas de repeticiones
 let _reporteCampos = [];               // campos activos del ejercicio actual (de la RPC)
-let _reporteRegistroPrevio = null;     // null o { id, datos_registro, tranquilidad, nota, registrado_en, video_path }
+let _reporteSpecs = null;              // null o { valorComida, dificultad, objetivoSeg, objetivoDistancia }
 let _reporteVideoFile = null;          // File de video seleccionado para subir (o null)
 let _reporteVideoPreviewUrl = null;    // objectURL activo del preview (para revocar)
 
@@ -4716,133 +4715,82 @@ function bindNotasEjercicio() {
         });
     });
 
-    // Lista dinámica de repeticiones: sumar / editar / eliminar.
-    document.getElementById('reporte-repes-add')?.addEventListener('click', () => {
-        _reporteRepes.push({});
-        renderRepesLista();
-        // Foco automático en el min de la nueva repe.
-        const ul = document.getElementById('reporte-repes-lista');
-        const lastMin = ul?.querySelector('li:last-child .reporte-repe__min');
-        lastMin?.focus();
-    });
-
-    const ulRepes = document.getElementById('reporte-repes-lista');
-    const onRepeChange = (e) => {
-        const el = e.target.closest('[data-idx][data-campo]');
-        if (!el) return;
-        const idx = Number(el.dataset.idx);
-        const campo = el.dataset.campo;
-        if (!_reporteRepes[idx]) return;
-        _reporteRepes[idx][campo] = el.value;
-        if (campo.endsWith('_min') || campo.endsWith('_seg')) actualizarTotalRepes();
-    };
-    ulRepes?.addEventListener('input', onRepeChange);
-    ulRepes?.addEventListener('change', onRepeChange);
-    ulRepes?.addEventListener('click', (e) => {
-        // Selector 1-5 de botones (valor / dificultad).
-        const seg = e.target.closest('.seg-btn');
-        if (seg) {
-            const scale = seg.closest('.scale');
-            if (!scale) return;
-            const idx = Number(scale.dataset.idx);
-            const campo = scale.dataset.campo;
-            if (!_reporteRepes[idx]) return;
-            const val = seg.dataset.val;
-            // Toque sobre el mismo número deselecciona.
-            _reporteRepes[idx][campo] = (String(_reporteRepes[idx][campo]) === String(val)) ? '' : val;
-            scale.querySelectorAll('.seg-btn').forEach((b) => {
-                b.classList.toggle('is-sel', String(b.dataset.val) === String(_reporteRepes[idx][campo]));
-            });
-            return;
-        }
-        // Borrado de repetición.
-        const btn = e.target.closest('.reporte-repe__del');
-        if (!btn) return;
-        const idx = Number(btn.dataset.idx);
-        _reporteRepes.splice(idx, 1);
-        renderRepesLista();
-    });
+    // El control de marca (un solo input min:seg / pasos / reps) se lee
+    // directo del DOM al guardar; no necesita listeners en vivo.
 }
 
-function renderRepesLista() {
-    const ul = document.getElementById('reporte-repes-lista');
-    if (!ul) return;
-    const campos = _reporteCampos || [];
-    const escala = (campo, val, idx) => {
-        const btns = [1, 2, 3, 4, 5].map((n) =>
-            `<button type="button" class="seg-btn${String(val) === String(n) ? ' is-sel' : ''}" data-val="${n}">${n}</button>`
-        ).join('');
-        return `<div class="scale" data-idx="${idx}" data-campo="${campo}" role="radiogroup">${btns}</div>`;
-    };
-    ul.innerHTML = _reporteRepes.map((rep, idx) => {
-        const fields = campos.map((campo) => {
-            if (campo === 'tiempo_total' || campo === 'tiempo_parcial') {
-                const label = campo === 'tiempo_total' ? 'Tiempo' : 'Parcial';
-                return `
-                    <div class="field">
-                        <label class="field-label">${label}</label>
-                        <div class="time-ctrl">
-                            <span class="seg"><input type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${escapeHTML(rep[campo + '_min'] || '')}" data-idx="${idx}" data-campo="${campo}_min"><span class="u">min</span></span>
-                            <span class="colon">:</span>
-                            <span class="seg"><input type="number" inputmode="numeric" min="0" max="59" step="1" placeholder="00" value="${escapeHTML(rep[campo + '_seg'] || '')}" data-idx="${idx}" data-campo="${campo}_seg"><span class="u">seg</span></span>
-                        </div>
-                    </div>`;
-            }
-            if (campo === 'distancia') {
-                return `
-                    <div class="field">
-                        <label class="field-label">Distancia</label>
-                        <div class="num-ctrl">
-                            <input type="number" inputmode="numeric" min="0" step="1" placeholder="—" value="${escapeHTML(rep.distancia || '')}" data-idx="${idx}" data-campo="distancia">
-                            <span class="u">pasos</span>
-                        </div>
-                    </div>`;
-            }
-            if (campo === 'valor_estimulo' || campo === 'dificultad') {
-                const label = campo === 'valor_estimulo' ? 'Valor' : 'Dificultad';
-                return `
-                    <div class="field">
-                        <label class="field-label">${label}</label>
-                        ${escala(campo, rep[campo], idx)}
-                    </div>`;
-            }
-            return '';
-        }).join('');
-        return `
-            <li class="reporte-repe rep" data-idx="${idx}">
-                <div class="rep-top">
-                    <span class="rep-num"><span class="hash">Rep</span> ${idx + 1}</span>
-                    <button type="button" class="rep-del reporte-repe__del" data-idx="${idx}" aria-label="Eliminar repetición">✕</button>
-                </div>
-                <div class="rep-fields">${fields}</div>
-            </li>`;
-    }).join('');
-    actualizarTotalRepes();
+// Tipo de control de marca según los campos del ejercicio:
+//   tiempo (tiempo_total/parcial) → min:seg · distancia → pasos · resto → reps.
+function tipoReporteDeCampos(campos) {
+    const cs = campos || [];
+    if (cs.includes('tiempo_total') || cs.includes('tiempo_parcial')) return 'tiempo';
+    if (cs.includes('distancia')) return 'distancia';
+    return 'reps';
 }
 
-function actualizarTotalRepes() {
-    const totalEl = document.getElementById('reporte-repes-total');
-    if (!totalEl) return;
-    if (_reporteRepes.length === 0) { totalEl.hidden = true; return; }
-    const tieneTiempo = (_reporteCampos || []).includes('tiempo_total');
-    let segs = 0;
-    if (tieneTiempo) {
-        _reporteRepes.forEach((r) => {
-            const m = parseInt(r.tiempo_total_min || '0', 10);
-            const s = parseInt(r.tiempo_total_seg || '0', 10);
-            if (!isNaN(m) && !isNaN(s) && (m > 0 || s > 0)) segs += m * 60 + s;
-        });
-    }
-    const n = _reporteRepes.length;
-    if (!tieneTiempo || segs === 0) {
-        totalEl.textContent = `${n} ${n === 1 ? 'repetición' : 'repeticiones'}`;
+// Segundos → "M:SS" (para mostrar marca/objetivo de tiempo).
+function fmtSegToMinSeg(seg) {
+    const s = Math.max(0, Math.floor(Number(seg) || 0));
+    const min = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+// Pinta el control único de marca + las specs read-only del adiestrador.
+// Reutiliza time-ctrl / num-ctrl ya estilados en el modal del cliente.
+function renderReporteControl() {
+    const cont = document.getElementById('reporte-control');
+    if (!cont) return;
+    const tipo = tipoReporteDeCampos(_reporteCampos);
+
+    if (tipo === 'tiempo') {
+        cont.innerHTML = `
+            <label class="reporte-label">Tu mejor marca de este entreno</label>
+            <div class="time-ctrl">
+                <span class="seg"><input type="number" id="reporte-marca-min" inputmode="numeric" min="0" step="1" placeholder="0"><span class="u">min</span></span>
+                <span class="colon">:</span>
+                <span class="seg"><input type="number" id="reporte-marca-seg" inputmode="numeric" min="0" max="59" step="1" placeholder="00"><span class="u">seg</span></span>
+            </div>`;
+    } else if (tipo === 'distancia') {
+        cont.innerHTML = `
+            <label class="reporte-label">Tu mejor marca (pasos)</label>
+            <div class="num-ctrl">
+                <input type="number" id="reporte-marca" inputmode="numeric" min="0" step="1" placeholder="—">
+                <span class="u">pasos</span>
+            </div>`;
     } else {
-        const min = Math.floor(segs / 60);
-        const sec = segs % 60;
-        const dur = sec === 0 ? `${min} min` : `${min} min ${String(sec).padStart(2, '0')} seg`;
-        totalEl.textContent = `${n} ${n === 1 ? 'repetición' : 'repeticiones'} · total ${dur}`;
+        cont.innerHTML = `
+            <label class="reporte-label">¿Cuántas repeticiones hiciste?</label>
+            <div class="num-ctrl">
+                <input type="number" id="reporte-marca" inputmode="numeric" min="0" step="1" placeholder="—">
+                <span class="u">reps</span>
+            </div>`;
     }
-    totalEl.hidden = false;
+
+    // Specs del adiestrador, solo lectura. El objetivo se muestra según el
+    // tipo; valor de comida y dificultad si están definidos.
+    const specsEl = document.getElementById('reporte-specs');
+    if (specsEl) {
+        const s = _reporteSpecs || {};
+        const chips = [];
+        if (tipo === 'tiempo' && s.objetivoSeg != null) {
+            chips.push(`Objetivo: ${fmtSegToMinSeg(s.objetivoSeg)}`);
+        } else if (tipo === 'distancia' && s.objetivoDistancia != null) {
+            const n = Number(s.objetivoDistancia);
+            chips.push(`Objetivo: ${n} ${n === 1 ? 'paso' : 'pasos'}`);
+        }
+        if (s.valorComida != null) chips.push(`Valor de comida: ${Number(s.valorComida)}`);
+        if (s.dificultad != null) chips.push(`Dificultad: ${Number(s.dificultad)}`);
+        if (chips.length > 0) {
+            specsEl.innerHTML = chips
+                .map((t) => `<span class="reporte-spec">${escapeHTML(t)}</span>`)
+                .join('');
+            specsEl.hidden = false;
+        } else {
+            specsEl.innerHTML = '';
+            specsEl.hidden = true;
+        }
+    }
 }
 
 // ───────────────────────────────────────────────────────────
@@ -4872,21 +4820,22 @@ function abrirModalReporte() {
         p.setAttribute('aria-checked', 'false');
     });
 
-    _reporteRepes = [];
-    renderRepesLista();
+    // Specs del adiestrador para este ejercicio asignado (read-only) y
+    // control de marca según el tipo. Las specs viven en la fila de la rutina.
+    const _filaRutina = (state.rutinaFilas || []).find((f) => f.id === _ejercicioModalActualId);
+    _reporteSpecs = _filaRutina ? {
+        valorComida: _filaRutina.valor_comida ?? null,
+        dificultad: _filaRutina.dificultad ?? null,
+        objetivoSeg: _filaRutina.objetivo_seg ?? null,
+        objetivoDistancia: _filaRutina.objetivo_distancia ?? null,
+    } : null;
+    renderReporteControl();
 
     // Reset del video del entreno (estado + preview + errores).
     quitarVideoSeleccionado();
     // Si quedó una grabación a medias (modal cerrado abrupto), liberar cámara.
     liberarRecursosGrabacion();
     document.getElementById('reporte-video-rec')?.setAttribute('hidden', '');
-
-    // Reset del banner "registro previo del día" — se va a setear async.
-    _reporteRegistroPrevio = null;
-    const banner = document.getElementById('reporte-banner-previo');
-    if (banner) banner.hidden = true;
-    const radioNuevo = document.getElementById('reporte-modo-nuevo');
-    if (radioNuevo) radioNuevo.checked = true;
 
     // Ramificar según categoría: tareas/cambios usan botón "Hecho", no repeticiones.
     const _progActual = _progresoCache.get(_ejercicioModalActualId);
@@ -4911,7 +4860,6 @@ function abrirModalReporte() {
     if (_guardarBtn) _guardarBtn.hidden = false;
     if (_tareaEl) _tareaEl.hidden = true;
     abrirModal('modal-reporte-ejercicio');
-    cargarRegistroPrevioDelDia();
 }
 
 // Busca la práctica abierta de hoy (LOCAL del cliente) y la devuelve;
@@ -4943,48 +4891,6 @@ async function obtenerOCrearPracticaHoy(perroId) {
         .single();
     if (errIns) throw errIns;
     return creada.id;
-}
-
-// Busca el último registro del ejercicio del día (LOCAL) para ofrecer
-// "sumar al entreno anterior". Si encuentra, popula el banner.
-async function cargarRegistroPrevioDelDia() {
-    if (!_ejercicioModalActualId) return;
-    const banner = document.getElementById('reporte-banner-previo');
-    const resumen = document.getElementById('reporte-banner-previo-resumen');
-    const radioNuevo = document.getElementById('reporte-modo-nuevo');
-    const radioSumar = document.getElementById('reporte-modo-sumar');
-    if (!banner || !resumen) return;
-
-    const asignadoIdAlAbrir = _ejercicioModalActualId;
-    try {
-        const { data, error } = await supabase
-            .from('registros_ejercicio')
-            .select('id, datos_registro, tranquilidad, nota, registrado_en, video_path')
-            .eq('ejercicio_asignado_id', asignadoIdAlAbrir)
-            .gte('registrado_en', inicioDiaLocalIso())
-            .order('registrado_en', { ascending: false })
-            .limit(1);
-        if (error) throw error;
-
-        // Defensivo: si el cliente cerró el modal o cambió de ejercicio
-        // mientras corría la query, no tocamos nada.
-        const modal = document.getElementById('modal-reporte-ejercicio');
-        if (!modal || modal.hasAttribute('hidden')) return;
-        if (_ejercicioModalActualId !== asignadoIdAlAbrir) return;
-
-        if (!data || data.length === 0) return;
-
-        _reporteRegistroPrevio = data[0];
-        const hora = fmtHoraCliente(data[0].registrado_en);
-        const repesTxt = fmtRepesCliente(data[0].datos_registro);
-        resumen.textContent = repesTxt ? `${hora} · ${repesTxt}` : hora;
-        if (radioNuevo) radioNuevo.checked = true;
-        if (radioSumar) radioSumar.checked = false;
-        banner.hidden = false;
-    } catch (e) {
-        console.error('[reporte] previo del día:', e);
-        // Silencioso: comportamiento como hoy (sin banner).
-    }
 }
 
 // ───────────────────────────────────────────────────────────
@@ -5278,60 +5184,43 @@ async function guardarReporteEjercicio() {
     const nota = document.getElementById('reporte-nota').value.trim() || null;
     const trq = _reporteTranquilidad;
 
-    // Validar y normalizar repeticiones. Una fila con ambos campos vacíos es
-    // válida (repe sin duración registrada); si alguno tiene valor, los dos
-    // deben ser enteros >= 0 y los segundos <= 59.
-    const repeticionesData = [];
-    let tiempoTotalSeg = 0;
-    const _campos = _reporteCampos || [];
-    for (const r of _reporteRepes) {
-        const repObj = {};
-        const parseTiempo = (minV, segV) => {
-            const m = (minV || '').trim() === '' ? 0 : Number(minV);
-            const s = (segV || '').trim() === '' ? 0 : Number(segV);
-            const ok = Number.isInteger(m) && m >= 0 && Number.isInteger(s) && s >= 0 && s <= 59;
-            return ok ? { ok: true, seg: m * 60 + s } : { ok: false };
-        };
-        if (_campos.includes('tiempo_total')) {
-            const t = parseTiempo(r.tiempo_total_min, r.tiempo_total_seg);
-            if (!t.ok) { showErr('Revisá el tiempo (enteros, segundos hasta 59).'); return; }
-            if (t.seg > 0) { repObj.tiempo_total_seg = t.seg; tiempoTotalSeg += t.seg; }
-        }
-        if (_campos.includes('tiempo_parcial')) {
-            const t = parseTiempo(r.tiempo_parcial_min, r.tiempo_parcial_seg);
-            if (!t.ok) { showErr('Revisá el tiempo parcial (enteros, segundos hasta 59).'); return; }
-            if (t.seg > 0) repObj.tiempo_parcial_seg = t.seg;
-        }
-        if (_campos.includes('distancia')) {
-            const d = (r.distancia || '').trim();
-            if (d !== '') {
-                const dn = Number(d);
-                if (!Number.isFinite(dn) || dn < 0) { showErr('Revisá la distancia.'); return; }
-                repObj.distancia = dn;
+    // Marca única según el tipo de ejercicio. Forma NUEVA de datos_registro:
+    // { v: 2, ... } con UNA sola clave de marca (mejor_seg / mejor_pasos / reps).
+    const tipo = tipoReporteDeCampos(_reporteCampos);
+    const datos_registro = { v: 2 };
+    let tieneValor = false;
+    if (tipo === 'tiempo') {
+        const minRaw = (document.getElementById('reporte-marca-min')?.value || '').trim();
+        const segRaw = (document.getElementById('reporte-marca-seg')?.value || '').trim();
+        if (minRaw !== '' || segRaw !== '') {
+            const m = minRaw === '' ? 0 : Number(minRaw);
+            const s = segRaw === '' ? 0 : Number(segRaw);
+            if (!Number.isInteger(m) || m < 0 || !Number.isInteger(s) || s < 0 || s > 59) {
+                showErr('Revisá tu marca (enteros, segundos hasta 59).'); return;
             }
+            const total = m * 60 + s;
+            if (total > 0) { datos_registro.mejor_seg = total; tieneValor = true; }
         }
-        if (_campos.includes('valor_estimulo')) {
-            const v = Number(r.valor_estimulo);
-            if (v >= 1 && v <= 5) repObj.valor_estimulo = v;
+    } else if (tipo === 'distancia') {
+        const raw = (document.getElementById('reporte-marca')?.value || '').trim();
+        if (raw !== '') {
+            const n = Number(raw);
+            if (!Number.isInteger(n) || n < 0) { showErr('Revisá tu marca (entero ≥ 0).'); return; }
+            if (n > 0) { datos_registro.mejor_pasos = n; tieneValor = true; }
         }
-        if (_campos.includes('dificultad')) {
-            const dif = Number(r.dificultad);
-            if (dif >= 1 && dif <= 5) repObj.dificultad = dif;
+    } else {
+        const raw = (document.getElementById('reporte-marca')?.value || '').trim();
+        if (raw !== '') {
+            const n = Number(raw);
+            if (!Number.isInteger(n) || n < 0) { showErr('Revisá las repeticiones (entero ≥ 0).'); return; }
+            if (n > 0) { datos_registro.reps = n; tieneValor = true; }
         }
-        repeticionesData.push(repObj);
     }
 
-    const tieneRepes = _reporteRepes.length > 0;
     const tieneTrq = trq != null;
-    if (!tieneRepes && !tieneTrq) {
-        showErr('Cargá al menos una repetición o la tranquilidad para reportar.');
+    if (!tieneValor && !tieneTrq) {
+        showErr('Cargá tu marca o la tranquilidad para reportar.');
         return;
-    }
-
-    const datos_registro = {};
-    if (tieneRepes) {
-        datos_registro.repeticiones = repeticionesData;
-        if (tiempoTotalSeg > 0) datos_registro.tiempo_total_seg = tiempoTotalSeg;
     }
 
     const perroId = state.perroSeleccionadoId;
@@ -5343,20 +5232,11 @@ async function guardarReporteEjercicio() {
     const btn = document.getElementById('reporte-guardar');
     if (btn) btn.disabled = true;
     const asignadoId = _ejercicioModalActualId;
-    const modoSumar = !!(_reporteRegistroPrevio
-        && document.getElementById('reporte-modo-sumar')?.checked);
 
-    // Video del entreno (opcional). Se sube ANTES del insert/update para poder
-    // persistir el path. Si la subida falla, NO bloquea el guardado.
+    // Video del entreno (opcional). Se sube ANTES del insert para persistir el
+    // path. Si la subida falla, NO bloquea el guardado.
     let videoPath = null;
     if (_reporteVideoFile) {
-        // 1A: 1 video por registro. Si vamos a sumar a un registro que YA tiene
-        // video, frenamos: la UX de reemplazo/segundo video se define aparte.
-        if (modoSumar && _reporteRegistroPrevio?.video_path) {
-            showErr('Este entreno ya tiene un video. Por ahora no se puede agregar otro: empezá un entreno nuevo para subir uno.');
-            if (btn) btn.disabled = false;
-            return;
-        }
         try {
             videoPath = await subirVideoEntreno(_reporteVideoFile);
         } catch (e) {
@@ -5372,63 +5252,23 @@ async function guardarReporteEjercicio() {
     }
 
     try {
-        if (modoSumar) {
-            // UPDATE: concat reps, suma tiempo, sobreescribe tranquilidad
-            // sólo si vino una nueva, concat nota con timestamp.
-            const prev = _reporteRegistroPrevio;
-            const prevRepes = Array.isArray(prev.datos_registro?.repeticiones)
-                ? prev.datos_registro.repeticiones : [];
-            const repesCombinadas = prevRepes.concat(repeticionesData);
-
-            const prevSeg = Number(prev.datos_registro?.tiempo_total_seg) || 0;
-            const totalSeg = prevSeg + tiempoTotalSeg;
-
-            const nuevoDatosRegistro = { repeticiones: repesCombinadas };
-            if (totalSeg > 0) nuevoDatosRegistro.tiempo_total_seg = totalSeg;
-
-            const tqFinal = (trq != null) ? trq : prev.tranquilidad;
-
-            let notaFinal = prev.nota || null;
-            if (nota) {
-                const ahora = new Date();
-                const hh = String(ahora.getHours()).padStart(2, '0');
-                const mm = String(ahora.getMinutes()).padStart(2, '0');
-                const append = `[${hh}:${mm}] ${nota}`;
-                notaFinal = prev.nota ? `${prev.nota}\n${append}` : append;
-            }
-
-            const updatePayload = {
-                datos_registro: nuevoDatosRegistro,
-                tranquilidad: tqFinal,
-                nota: notaFinal,
-            };
-            if (videoPath) {
-                updatePayload.video_path = videoPath;
-                updatePayload.video_subido_en = new Date().toISOString();
-            }
-            const { error } = await supabase
-                .from('registros_ejercicio')
-                .update(updatePayload)
-                .eq('id', prev.id);
-            if (error) throw error;
-        } else {
-            const practica_id = await obtenerOCrearPracticaHoy(perroId);
-            const insertPayload = {
-                practica_id,
-                ejercicio_asignado_id: asignadoId,
-                datos_registro,
-                tranquilidad: trq,
-                nota,
-            };
-            if (videoPath) {
-                insertPayload.video_path = videoPath;
-                insertPayload.video_subido_en = new Date().toISOString();
-            }
-            const { error } = await supabase
-                .from('registros_ejercicio')
-                .insert(insertPayload);
-            if (error) throw error;
+        // Cada reporte es SIEMPRE un entreno nuevo: un INSERT independiente del día.
+        const practica_id = await obtenerOCrearPracticaHoy(perroId);
+        const insertPayload = {
+            practica_id,
+            ejercicio_asignado_id: asignadoId,
+            datos_registro,
+            tranquilidad: trq,
+            nota,
+        };
+        if (videoPath) {
+            insertPayload.video_path = videoPath;
+            insertPayload.video_subido_en = new Date().toISOString();
         }
+        const { error } = await supabase
+            .from('registros_ejercicio')
+            .insert(insertPayload);
+        if (error) throw error;
 
         // Comparación de estados para detectar el "pulso de logro": pasamos
         // de 'debajo' (no llegabamos al mínimo) a 'en_zona' (justo cumplido).
@@ -5460,11 +5300,8 @@ async function guardarReporteEjercicio() {
             cargarVistaProgreso();
         }
 
-        // Tranquilidad efectiva del registro recién guardado (en modo "sumar"
-        // sin nueva puntuación, se conserva la previa).
-        const trqGuardada = modoSumar
-            ? ((trq != null) ? trq : (_reporteRegistroPrevio?.tranquilidad ?? null))
-            : trq;
+        // Tranquilidad del registro recién guardado.
+        const trqGuardada = trq;
         // Capturamos nombres antes de cerrar el modal para el aviso posterior.
         const nombrePerroAviso = state.perros.find((p) => p.id === perroId)?.nombre || 'tu perro';
         const nombreEjAviso = document.getElementById('modal-reporte-ejercicio-nombre')
@@ -5561,7 +5398,22 @@ function fmtHoraCliente(iso) {
 }
 
 function fmtRepesCliente(datos) {
-    if (!datos || !Array.isArray(datos.repeticiones) || datos.repeticiones.length === 0) return '';
+    if (!datos) return '';
+    // Forma NUEVA (v:2): una sola marca por entreno.
+    if (datos.v === 2) {
+        if (datos.reps != null) {
+            const n = Number(datos.reps);
+            return `${n} ${n === 1 ? 'repetición' : 'repeticiones'}`;
+        }
+        if (datos.mejor_seg != null) return `Mejor marca: ${fmtSegToMinSeg(datos.mejor_seg)}`;
+        if (datos.mejor_pasos != null) {
+            const n = Number(datos.mejor_pasos);
+            return `Mejor marca: ${n} ${n === 1 ? 'paso' : 'pasos'}`;
+        }
+        return '';
+    }
+    // Forma VIEJA (historial de 104 reportes): lista de repeticiones. No tocar.
+    if (!Array.isArray(datos.repeticiones) || datos.repeticiones.length === 0) return '';
     const n = datos.repeticiones.length;
     const totalSeg = Number(datos.tiempo_total_seg) || 0;
     const palabra = n === 1 ? 'rep' : 'reps';
