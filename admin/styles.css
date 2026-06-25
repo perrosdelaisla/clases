@@ -4184,6 +4184,74 @@ body {
     font-style: italic;
 }
 
+/* Estado de completitud de la lista del cliente (tareas). */
+.tarea-lista-admin__estado {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    vertical-align: middle;
+}
+
+.tarea-lista-admin__estado--lista {
+    background: rgba(156, 182, 75, 0.15);
+    color: #9CB64B;
+    border: 1px solid rgba(156, 182, 75, 0.3);
+}
+
+.tarea-lista-admin__estado--pendiente {
+    background: rgba(232, 182, 45, 0.15);
+    color: #E8B62D;
+    border: 1px solid rgba(232, 182, 45, 0.3);
+}
+
+.tarea-lista-admin__estado--vacia {
+    background: var(--color-surface-2);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+}
+
+/* Estado del cliente sobre una herramienta (la tiene / no la tiene / sin marcar). */
+.herramienta-estado {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.55rem 0 0.3rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--color-text);
+}
+
+.herramienta-estado__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-muted);
+    flex: 0 0 auto;
+}
+
+.herramienta-estado--tiene {
+    background: rgba(156, 182, 75, 0.08);
+    border-color: rgba(156, 182, 75, 0.3);
+}
+.herramienta-estado--tiene .herramienta-estado__dot { background: #9CB64B; }
+
+.herramienta-estado--no-tiene {
+    background: rgba(232, 182, 45, 0.08);
+    border-color: rgba(232, 182, 45, 0.3);
+}
+.herramienta-estado--no-tiene .herramienta-estado__dot { background: #E8B62D; }
+
+.herramienta-estado--sin-marcar .herramienta-estado__txt { color: var(--color-muted); }
+
 .notas-ej-item__hora {
     font-family: var(--font-body);
     font-size: 0.78rem;

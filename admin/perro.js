@@ -426,7 +426,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, parametros, ejercicios (id, codigo, nombre, categoria)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, parametros, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -610,28 +610,63 @@ function renderEjercicioActivoCard(row, history = []) {
         : '';
 
     // Para tareas: mostramos la lista que escribió el cliente (read-only).
-    // El cliente la edita desde su app, acá solo la leemos.
+    // El cliente la edita desde su app, acá solo la leemos. El cliente la
+    // considera "lista" con 3+ ítems con texto (mín 3, máx 6).
     let listaClienteHtml = '';
     if (esTarea) {
         const items = (row.parametros && Array.isArray(row.parametros.items))
             ? row.parametros.items.filter((s) => typeof s === 'string' && s.trim().length > 0)
             : [];
-        if (items.length > 0) {
+        const n = items.length;
+        let estado;
+        if (n === 0) {
+            estado = { clase: 'vacia', txt: 'Sin empezar' };
+        } else if (n >= 3) {
+            estado = { clase: 'lista', txt: `Lista lista (${n} ítems)` };
+        } else {
+            estado = { clase: 'pendiente', txt: `Pendiente (${n} ítem${n === 1 ? '' : 's'})` };
+        }
+        const estadoChip = `<span class="tarea-lista-admin__estado tarea-lista-admin__estado--${estado.clase}">${escapeHTML(estado.txt)}</span>`;
+        if (n > 0) {
             const lis = items
                 .map((s) => `<li class="tarea-lista-admin__item">${escapeHTML(s)}</li>`)
                 .join('');
             listaClienteHtml = `
                 <div class="tarea-lista-admin">
-                    <div class="tarea-lista-admin__head">Lista del cliente</div>
+                    <div class="tarea-lista-admin__head">Lista del cliente ${estadoChip}</div>
                     <ol class="tarea-lista-admin__items">${lis}</ol>
                 </div>`;
         } else {
             listaClienteHtml = `
                 <div class="tarea-lista-admin tarea-lista-admin--vacia">
-                    <div class="tarea-lista-admin__head">Lista del cliente</div>
+                    <div class="tarea-lista-admin__head">Lista del cliente ${estadoChip}</div>
                     <p class="tarea-lista-admin__empty">El cliente todavía no escribió su lista.</p>
                 </div>`;
         }
+    }
+
+    // Para herramientas: el cliente marca si ya la tiene. Solo lectura.
+    let herramientaEstadoHtml = '';
+    if (categoria === 'herramienta') {
+        let clase, txt;
+        if (row.estado_cliente === 'tiene') {
+            const desde = row.estado_actualizado_en
+                ? new Date(row.estado_actualizado_en).toLocaleDateString('es-ES')
+                : '';
+            clase = 'tiene';
+            txt = desde ? `La tiene desde el ${desde}` : 'La tiene';
+        } else if (row.estado_cliente === 'no_tiene') {
+            clase = 'no-tiene';
+            txt = 'Todavía no la tiene';
+        } else {
+            clase = 'sin-marcar';
+            txt = 'Sin marcar';
+        }
+        herramientaEstadoHtml = `
+            <div class="herramienta-estado herramienta-estado--${clase}">
+                <span class="herramienta-estado__dot"></span>
+                <span class="herramienta-estado__txt">${escapeHTML(txt)}</span>
+            </div>`;
     }
 
     return `
@@ -646,6 +681,7 @@ function renderEjercicioActivoCard(row, history = []) {
                     </div>
                 </div>${toggle}
             </div>
+            ${herramientaEstadoHtml}
             ${listaClienteHtml}
             ${historiaHtml}
             <div class="ejercicio-activo-acciones">
