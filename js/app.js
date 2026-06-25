@@ -1931,8 +1931,11 @@ function renderProgresoEnModal(asignadoId) {
     const lineaDia = document.getElementById('ejercicio-progreso-dia');
     const row = _progresoCache.get(asignadoId);
     const ev = evaluarProgresoEjercicio(row);
+    // La barra de marca es independiente de la constancia: puede haber
+    // objetivo sin min/max. Mostramos el bloque si hay constancia O objetivo.
+    const tieneObjetivo = !!(row && (row.objetivo_seg != null || row.objetivo_distancia != null));
 
-    if (!row || !ev.tieneTarget) {
+    if (!row || (!ev.tieneTarget && !tieneObjetivo)) {
         cont.setAttribute('hidden', '');
         return;
     }
@@ -1978,6 +1981,58 @@ function renderProgresoEnModal(asignadoId) {
         });
     } else {
         lineaDia.setAttribute('hidden', '');
+    }
+
+    // --- línea de marca objetivo (informativa, solo si hay objetivo) ---
+    const lineaMarca = document.getElementById('ejercicio-progreso-marca');
+    if (lineaMarca) {
+        if (row.objetivo_seg != null) {
+            lineaMarca.removeAttribute('hidden');
+            pintarLineaMarca(row, 'tiempo');
+        } else if (row.objetivo_distancia != null) {
+            lineaMarca.removeAttribute('hidden');
+            pintarLineaMarca(row, 'distancia');
+        } else {
+            lineaMarca.setAttribute('hidden', '');
+        }
+    }
+}
+
+// Barra informativa de cercanía a la marca objetivo. Usa la MEJOR marca
+// histórica (récord) contra el objetivo del adiestrador. No toca la
+// constancia. Reutiliza las clases de barra/relleno existentes.
+function pintarLineaMarca(row, tipo) {
+    const valor = document.getElementById('ej-prog-marca-valor');
+    const fill = document.getElementById('ej-prog-marca-fill');
+
+    let objetivo, mejor, mejorTxt, objetivoTxt, sufijo;
+    if (tipo === 'tiempo') {
+        objetivo = Number(row.objetivo_seg);
+        mejor = (row.mejor_seg_total != null) ? Number(row.mejor_seg_total) : null;
+        mejorTxt = (mejor != null) ? fmtSegToMinSeg(mejor) : '—';
+        objetivoTxt = fmtSegToMinSeg(objetivo);
+        sufijo = '';
+    } else {
+        objetivo = Number(row.objetivo_distancia);
+        mejor = (row.mejor_pasos_total != null) ? Number(row.mejor_pasos_total) : null;
+        mejorTxt = (mejor != null) ? String(mejor) : '—';
+        objetivoTxt = String(objetivo);
+        sufijo = ' pasos';
+    }
+
+    const alcanzado = (mejor != null && objetivo > 0 && mejor >= objetivo);
+    if (valor) {
+        valor.textContent = alcanzado
+            ? `${mejorTxt} / ${objetivoTxt}${sufijo} · ✓ ¡Objetivo alcanzado!`
+            : `${mejorTxt} / ${objetivoTxt}${sufijo}`;
+    }
+
+    if (fill) {
+        // Relleno = min(mejor/objetivo, 1) * 100. Sin marca todavía → 0%.
+        const pct = (mejor != null && objetivo > 0)
+            ? Math.min(100, Math.max(0, (mejor / objetivo) * 100))
+            : 0;
+        fill.style.width = `${pct}%`;
     }
 }
 

@@ -669,6 +669,16 @@
                         <div class="ejercicio-progreso__bar-marks" id="ej-prog-dia-marks"></div>
                     </div>
                 </div>
+                <!-- Barra informativa de cercanía a la marca objetivo (solo si hay objetivo). -->
+                <div class="ejercicio-progreso__linea" id="ejercicio-progreso-marca" hidden>
+                    <div class="ejercicio-progreso__head">
+                        <span class="ejercicio-progreso__label">Marca</span>
+                        <span class="ejercicio-progreso__valor" id="ej-prog-marca-valor"></span>
+                    </div>
+                    <div class="ejercicio-progreso__bar">
+                        <div class="ejercicio-progreso__bar-fill" id="ej-prog-marca-fill"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="mientreno" id="mientreno" hidden>
@@ -1126,6 +1136,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=95"></script>
+    <script type="module" src="./js/app.js?v=96"></script>
 </body>
 </html>
