@@ -1472,7 +1472,11 @@ function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia, val
     setInput('frecuencia-dificultad', dificultad);
     // Prefijamos ambos objetivos aunque uno esté oculto: así el guardado
     // hace round-trip del valor del campo que no aplica, sin pisarlo.
-    setInput('frecuencia-objetivo-seg', objetivoSeg);
+    // objetivo_seg vive en segundos en la base; en la UI lo partimos en
+    // minutos + segundos (la base no se toca, sigue guardando el total).
+    const segTotal = (objetivoSeg == null) ? null : Number(objetivoSeg);
+    setInput('frecuencia-objetivo-min', segTotal == null ? null : Math.floor(segTotal / 60));
+    setInput('frecuencia-objetivo-seg', segTotal == null ? null : (segTotal % 60));
     setInput('frecuencia-objetivo-distancia', objetivoDistancia);
 
     // Valor de comida y dificultad solo aplican a ejercicios de
@@ -1571,11 +1575,29 @@ function parseInputFrecuencia(raw) {
 function leerYValidarFrecuencia() {
     const pMinSem = parseInputFrecuencia(document.getElementById('frecuencia-min-sem').value.trim());
     const pMaxDia = parseInputFrecuencia(document.getElementById('frecuencia-max-dia').value.trim());
-    const pObjSeg = parseInputFrecuencia(document.getElementById('frecuencia-objetivo-seg').value.trim());
     const pObjDist = parseInputFrecuencia(document.getElementById('frecuencia-objetivo-distancia').value.trim());
 
-    if (!pMinSem.ok || !pMaxDia.ok || !pObjSeg.ok || !pObjDist.ok) {
+    if (!pMinSem.ok || !pMaxDia.ok || !pObjDist.ok) {
         return { ok: false, error: 'Los valores deben ser números enteros.' };
+    }
+
+    // Objetivo de tiempo: dos inputs min + seg que se combinan al total en
+    // segundos (lo que guarda la base). Vacíos los dos → NULL. Mismo criterio
+    // que el reporte del cliente: enteros ≥ 0 y segundos 0-59.
+    const rawObjMin = document.getElementById('frecuencia-objetivo-min').value.trim();
+    const rawObjSeg = document.getElementById('frecuencia-objetivo-seg').value.trim();
+    let objetivoSeg = null;
+    if (rawObjMin !== '' || rawObjSeg !== '') {
+        const pMin = parseInputFrecuencia(rawObjMin);
+        const pSeg = parseInputFrecuencia(rawObjSeg);
+        if (!pMin.ok || !pSeg.ok) {
+            return { ok: false, error: 'Los valores deben ser números enteros.' };
+        }
+        const segPart = pSeg.value ?? 0;
+        if (segPart > 59) {
+            return { ok: false, error: 'Los segundos deben estar entre 0 y 59.' };
+        }
+        objetivoSeg = (pMin.value ?? 0) * 60 + segPart;
     }
 
     const rawComida = document.getElementById('frecuencia-valor-comida').value;
@@ -1587,7 +1609,7 @@ function leerYValidarFrecuencia() {
             maxDia: pMaxDia.value,
             valorComida: rawComida === '' ? null : Number(rawComida),
             dificultad: rawDif === '' ? null : Number(rawDif),
-            objetivoSeg: pObjSeg.value,
+            objetivoSeg: objetivoSeg,
             objetivoDistancia: pObjDist.value,
         },
     };

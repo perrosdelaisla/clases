@@ -4031,6 +4031,37 @@ body {
     line-height: 1.4;
 }
 
+/* Control de tiempo min:seg del objetivo (mismo patrón que el reporte del
+   cliente, adaptado al tema oscuro del admin). */
+#modal-frecuencia .time-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+}
+#modal-frecuencia .time-ctrl:focus-within { border-color: var(--color-red); }
+#modal-frecuencia .time-ctrl .seg { display: flex; align-items: baseline; gap: 3px; min-width: 0; }
+#modal-frecuencia .time-ctrl input {
+    width: 2.6ch;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 18px;
+    text-align: center;
+    padding: 0;
+    min-height: auto;
+    -moz-appearance: textfield;
+}
+#modal-frecuencia .time-ctrl input::-webkit-outer-spin-button,
+#modal-frecuencia .time-ctrl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#modal-frecuencia .time-ctrl .u { font-size: 10px; font-weight: 600; color: var(--color-muted); text-transform: uppercase; }
+#modal-frecuencia .time-ctrl .colon { font-family: var(--font-body); font-size: 20px; color: var(--color-muted); padding: 0 1px; }
+
 .prog-admin-racha {
     display: inline-flex;
     align-items: baseline;
