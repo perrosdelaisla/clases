@@ -1397,6 +1397,9 @@ async function renderRutinaPerroSeleccionado() {
     saldoBox.setAttribute('hidden', '');
     cardSalud?.setAttribute('hidden', '');
     document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
+    // Bloque de productos recomendados: solo visible en la sub-pestaña Herramientas
+    const cardProductosHerr = document.getElementById('card-productos-herramienta');
+    if (cardProductosHerr) cardProductosHerr.hidden = (state.rutinaCategoriaActiva !== 'herramienta');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
 
