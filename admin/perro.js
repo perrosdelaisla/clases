@@ -426,7 +426,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, parametros, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, parametros, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria, campos)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -485,11 +485,19 @@ async function renderEjerciciosActivos() {
         btn.addEventListener('click', () => {
             const card = btn.closest('.ejercicio-activo-card');
             const nombre = card?.querySelector('.ejercicio-activo-nombre')?.textContent || '';
+            let campos = [];
+            try { campos = JSON.parse(btn.dataset.campos || '[]'); } catch (_e) { campos = []; }
             abrirModalFrecuencia({
                 asignadoId: btn.dataset.asignadoId,
                 ejercicioNombre: nombre,
                 minSem: btn.dataset.minSem ? Number(btn.dataset.minSem) : null,
                 maxDia: btn.dataset.maxDia ? Number(btn.dataset.maxDia) : null,
+                valorComida: btn.dataset.valorComida ? Number(btn.dataset.valorComida) : null,
+                dificultad: btn.dataset.dificultad ? Number(btn.dataset.dificultad) : null,
+                objetivoSeg: btn.dataset.objetivoSeg ? Number(btn.dataset.objetivoSeg) : null,
+                objetivoDistancia: btn.dataset.objetivoDistancia ? Number(btn.dataset.objetivoDistancia) : null,
+                campos: Array.isArray(campos) ? campos : [],
+                categoria: btn.dataset.categoria || '',
             });
         });
     });
@@ -563,6 +571,7 @@ function renderEjercicioActivoCard(row, history = []) {
     // Las tareas-lista no usan frecuencia (no se "entrenan" semanalmente).
     // Ocultamos el chip para mantener la UI coherente con el cliente.
     const esTarea = (categoria === 'tarea');
+    const camposJson = JSON.stringify(Array.isArray(ej.campos) ? ej.campos : []);
     const freqChip = esTarea ? '' : `
         <button type="button"
                 class="frecuencia-chip${vacio ? ' frecuencia-chip--vacio' : ''}"
@@ -570,6 +579,12 @@ function renderEjercicioActivoCard(row, history = []) {
                 data-asignado-id="${escapeHTML(row.id)}"
                 data-min-sem="${escapeHTML(minSem == null ? '' : String(minSem))}"
                 data-max-dia="${escapeHTML(maxDia == null ? '' : String(maxDia))}"
+                data-valor-comida="${escapeHTML(row.valor_comida == null ? '' : String(row.valor_comida))}"
+                data-dificultad="${escapeHTML(row.dificultad == null ? '' : String(row.dificultad))}"
+                data-objetivo-seg="${escapeHTML(row.objetivo_seg == null ? '' : String(row.objetivo_seg))}"
+                data-objetivo-distancia="${escapeHTML(row.objetivo_distancia == null ? '' : String(row.objetivo_distancia))}"
+                data-campos="${escapeHTML(camposJson)}"
+                data-categoria="${escapeHTML(categoria)}"
                 aria-label="Configurar frecuencia">
             ${freqLabel}
         </button>`;
@@ -1438,7 +1453,7 @@ function bindFrecuencia() {
     bindSwipeClose('frecuencia-handle', 'modal-frecuencia', cerrarModalFrecuencia);
 }
 
-function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia }) {
+function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia, valorComida, dificultad, objetivoSeg, objetivoDistancia, campos, categoria }) {
     const modal = document.getElementById('modal-frecuencia');
     if (!modal || !asignadoId) return;
 
@@ -1453,6 +1468,33 @@ function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia }) {
     };
     setInput('frecuencia-min-sem', minSem);
     setInput('frecuencia-max-dia', maxDia);
+    setInput('frecuencia-valor-comida', valorComida);
+    setInput('frecuencia-dificultad', dificultad);
+    // Prefijamos ambos objetivos aunque uno esté oculto: así el guardado
+    // hace round-trip del valor del campo que no aplica, sin pisarlo.
+    setInput('frecuencia-objetivo-seg', objetivoSeg);
+    setInput('frecuencia-objetivo-distancia', objetivoDistancia);
+
+    // Valor de comida y dificultad solo aplican a ejercicios de
+    // entrenamiento; en herramientas y tareas no se muestran.
+    const esEjercicio = (categoria === 'ejercicio');
+    const specsPareja = document.getElementById('frecuencia-specs-pareja');
+    if (specsPareja) specsPareja.hidden = !esEjercicio;
+
+    // El objetivo de marca depende de los campos del ejercicio: tiempo →
+    // segundos, distancia → pasos, ninguno → no se muestra.
+    const cs = Array.isArray(campos) ? campos : [];
+    const usaTiempo = cs.includes('tiempo_total') || cs.includes('tiempo_parcial');
+    const usaDistancia = cs.includes('distancia');
+    const segField = document.getElementById('frecuencia-objetivo-seg-field');
+    const distField = document.getElementById('frecuencia-objetivo-distancia-field');
+    if (segField) segField.hidden = !usaTiempo;
+    if (distField) distField.hidden = !usaDistancia;
+
+    // El encabezado "Specs del ejercicio" solo tiene sentido si se muestra
+    // algún input de spec (valor/dificultad o algún objetivo).
+    const specsTitulo = document.getElementById('frecuencia-specs-titulo');
+    if (specsTitulo) specsTitulo.hidden = !(esEjercicio || usaTiempo || usaDistancia);
 
     const err = document.getElementById('frecuencia-error');
     if (err) { err.textContent = ''; err.hidden = true; }
@@ -1478,7 +1520,9 @@ function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia }) {
 
     const btnQuitar = document.getElementById('frecuencia-quitar');
     if (btnQuitar) {
-        const hayAlguno = (minSem != null || maxDia != null);
+        const hayAlguno = (minSem != null || maxDia != null
+            || valorComida != null || dificultad != null
+            || objetivoSeg != null || objetivoDistancia != null);
         if (hayAlguno) btnQuitar.removeAttribute('hidden');
         else btnQuitar.setAttribute('hidden', '');
     }
@@ -1519,21 +1563,32 @@ function parseInputFrecuencia(raw) {
     return { ok: true, value: n };
 }
 
-// Lee y valida los 2 inputs del modal. Devuelve { ok, valores, error }
-// donde valores = { minSem, maxDia }. La advertencia "min > max*7" es
-// blanda y se muestra inline durante el tipeo (no bloquea el guardado).
+// Lee y valida los inputs del modal. Devuelve { ok, valores, error } donde
+// valores = { minSem, maxDia, valorComida, dificultad, objetivoSeg,
+// objetivoDistancia }. La advertencia "min > max*7" es blanda y se muestra
+// inline durante el tipeo (no bloquea el guardado). Los <select> de escala
+// 1-5 solo ofrecen '' o 1-5, así que no necesitan validación de rango.
 function leerYValidarFrecuencia() {
     const pMinSem = parseInputFrecuencia(document.getElementById('frecuencia-min-sem').value.trim());
     const pMaxDia = parseInputFrecuencia(document.getElementById('frecuencia-max-dia').value.trim());
+    const pObjSeg = parseInputFrecuencia(document.getElementById('frecuencia-objetivo-seg').value.trim());
+    const pObjDist = parseInputFrecuencia(document.getElementById('frecuencia-objetivo-distancia').value.trim());
 
-    if (!pMinSem.ok || !pMaxDia.ok) {
+    if (!pMinSem.ok || !pMaxDia.ok || !pObjSeg.ok || !pObjDist.ok) {
         return { ok: false, error: 'Los valores deben ser números enteros.' };
     }
+
+    const rawComida = document.getElementById('frecuencia-valor-comida').value;
+    const rawDif = document.getElementById('frecuencia-dificultad').value;
     return {
         ok: true,
         valores: {
             minSem: pMinSem.value,
             maxDia: pMaxDia.value,
+            valorComida: rawComida === '' ? null : Number(rawComida),
+            dificultad: rawDif === '' ? null : Number(rawDif),
+            objetivoSeg: pObjSeg.value,
+            objetivoDistancia: pObjDist.value,
         },
     };
 }
@@ -1555,7 +1610,11 @@ async function guardarFrecuencia() {
 async function quitarFrecuencia() {
     const ctx = state.frecuenciaContext;
     if (!ctx?.asignadoId) return;
-    await persistirFrecuencia(ctx.asignadoId, { minSem: null, maxDia: null });
+    await persistirFrecuencia(ctx.asignadoId, {
+        minSem: null, maxDia: null,
+        valorComida: null, dificultad: null,
+        objetivoSeg: null, objetivoDistancia: null,
+    });
 }
 
 async function persistirFrecuencia(asignadoId, valores) {
@@ -1571,6 +1630,10 @@ async function persistirFrecuencia(asignadoId, valores) {
             .update({
                 min_semanal: valores.minSem,
                 max_diario: valores.maxDia,
+                valor_comida: valores.valorComida,
+                dificultad: valores.dificultad,
+                objetivo_seg: valores.objetivoSeg,
+                objetivo_distancia: valores.objetivoDistancia,
                 actualizado_en: new Date().toISOString(),
             })
             .eq('id', asignadoId);

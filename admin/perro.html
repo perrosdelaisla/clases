@@ -314,6 +314,41 @@
                     </label>
                 </div>
                 <p class="frecuencia-warning" id="frecuencia-warning" hidden></p>
+
+                <p class="muted" id="frecuencia-specs-titulo">Specs del ejercicio. Dejá vacío lo que no aplique.</p>
+                <div class="frecuencia-pareja" id="frecuencia-specs-pareja">
+                    <label class="form-field">
+                        <span>Valor de comida (1-5)</span>
+                        <select id="frecuencia-valor-comida">
+                            <option value="">—</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </label>
+                    <label class="form-field">
+                        <span>Dificultad (1-5)</span>
+                        <select id="frecuencia-dificultad">
+                            <option value="">—</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </label>
+                </div>
+                <label class="form-field" id="frecuencia-objetivo-seg-field" hidden>
+                    <span>Objetivo de tiempo (segundos)</span>
+                    <input type="number" id="frecuencia-objetivo-seg" inputmode="numeric" min="0" step="1" placeholder="—">
+                </label>
+                <label class="form-field" id="frecuencia-objetivo-distancia-field" hidden>
+                    <span>Objetivo de distancia (pasos)</span>
+                    <input type="number" id="frecuencia-objetivo-distancia" inputmode="numeric" min="0" step="1" placeholder="—">
+                </label>
+
                 <p class="error-message" id="frecuencia-error" hidden></p>
             </div>
             <footer class="bottom-sheet__footer frecuencia-footer">
@@ -355,6 +390,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=38"></script>
+    <script type="module" src="./perro.js?v=39"></script>
 </body>
 </html>
