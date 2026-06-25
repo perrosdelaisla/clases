@@ -320,7 +320,7 @@
 .home .health .harr{color:var(--c-oliva);flex:0 0 auto;}
 .home .health .harr svg{width:16px;height:16px;}
 .home /* — filosofía — */
-.philo{padding:4px 2px;}
+.philo{margin-top:16px;padding:4px 2px;}
 .home .philo .pk{
   font-family:var(--body); font-size:9.5px; font-weight:700; letter-spacing:2px;
   text-transform:uppercase; color:var(--c-oliva); margin-bottom:9px;
