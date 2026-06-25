@@ -3152,6 +3152,9 @@ body {
     margin-bottom: 1.25rem;
 }
 
+/* El boton hereda display de .btn/.modal-ejercicio__reportar, que pisa el atributo hidden. Esta regla lo respeta. */
+.modal-ejercicio__reportar[hidden] { display: none; }
+
 .reporte-form {
     display: flex;
     flex-direction: column;
