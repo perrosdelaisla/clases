@@ -443,10 +443,15 @@ function bindEventos() {
             if (fila) abrirModalEjercicio(fila.ejercicios, fila.id);
         };
         rutinaLista.addEventListener('click', (e) => {
+            // Las pills de días de tarea son su propio control: no abren el detalle.
+            const pill = e.target.closest('.tarea-dias__pill');
+            if (pill) { onTareaDiaPill(pill); return; }
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
         rutinaLista.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
+            // El botón de la pill maneja su propia activación; no abrir el detalle.
+            if (e.target.closest('.tarea-dias__pill')) return;
             e.preventDefault();
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
@@ -995,6 +1000,16 @@ function inicioSemanaLocalIso() {
     const offset = (dia === 0) ? 6 : (dia - 1);
     const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset, 0, 0, 0, 0);
     return lunes.toISOString();
+}
+
+// 'YYYY-MM-DD' del lunes local de esta semana (para registros_tarea.semana_inicio).
+// Usa formatearFechaLocal (NO toISOString) para no correr el día en Madrid UTC+2.
+function inicioSemanaLocalFecha() {
+    const d = new Date();
+    const dia = d.getDay();
+    const offset = (dia === 0) ? 6 : (dia - 1);
+    const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset, 0, 0, 0, 0);
+    return formatearFechaLocal(lunes);
 }
 
 // 00:00:00 local de hoy en ISO (UTC).
@@ -1647,6 +1662,10 @@ function renderSelectorPerros() {
     }
 }
 
+// Días de uso de cada tarea en la semana actual: { ejercicio_asignado_id -> dias }.
+// Se recarga al pintar la rutina del perro (registros_tarea de esta semana).
+let _diasTareaSemana = {};
+
 async function renderRutinaPerroSeleccionado() {
     const myToken = ++_renderRutinaToken;
 
@@ -1760,6 +1779,28 @@ async function renderRutinaPerroSeleccionado() {
             await cargarProgresoPerro(perro.id);
         } catch (e) {
             console.error('[progreso] continuando sin chips:', e);
+        }
+
+        // Días de uso de las tareas esta semana (registros_tarea). Aditivo: si
+        // falla, las tareas igual se pintan con el control en 0.
+        _diasTareaSemana = {};
+        try {
+            const idsTareas = filas
+                .filter((f) => (f.ejercicios?.categoria) === 'tarea')
+                .map((f) => f.id);
+            if (idsTareas.length > 0) {
+                const { data: regs, error } = await supabase
+                    .from('registros_tarea')
+                    .select('ejercicio_asignado_id, dias')
+                    .in('ejercicio_asignado_id', idsTareas)
+                    .eq('semana_inicio', inicioSemanaLocalFecha());
+                if (error) throw error;
+                (regs || []).forEach((r) => {
+                    _diasTareaSemana[r.ejercicio_asignado_id] = Number(r.dias) || 0;
+                });
+            }
+        } catch (e) {
+            console.error('[tarea-dias] no se pudieron cargar:', e);
         }
 
         if (filas.length === 0) {
@@ -1921,6 +1962,8 @@ function rutinaCardHTML(row, { tag, superado }) {
     // las tareas-lista no tienen "frecuencia"). Tampoco en cards superadas.
     const chip = (superado || esTarea) ? '' : renderChipProgreso(row.id);
     const objetivo = (superado || esTarea) ? '' : renderObjetivoBajoNombre(row.id);
+    // Tareas: control "días que la usé esta semana" (0-7). No en cards superadas.
+    const diasControl = (esTarea && !superado) ? renderTareaDiasControl(row.id) : '';
     return `
         <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
@@ -1931,9 +1974,70 @@ function rutinaCardHTML(row, { tag, superado }) {
                 <svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
             ${desc}
+            ${diasControl}
             ${chip}
         </${tag}>
     `;
+}
+
+// Control de "días que la usaste esta semana" (0-7) para una tarea. El valor
+// actual (del mapa _diasTareaSemana) queda resaltado. Una pulsación lo fija.
+function renderTareaDiasControl(asignadoId) {
+    const sel = Number(_diasTareaSemana[asignadoId] || 0);
+    let pills = '';
+    for (let n = 0; n <= 7; n++) {
+        const on = (n === sel);
+        pills += `<button type="button" class="tarea-dias__pill${on ? ' tarea-dias__pill--sel' : ''}" data-asignado-id="${escapeHTML(asignadoId)}" data-dias="${n}" aria-pressed="${on ? 'true' : 'false'}">${n}</button>`;
+    }
+    return `
+        <div class="tarea-dias" data-asignado-id="${escapeHTML(asignadoId)}">
+            <span class="tarea-dias__label">Días que la usaste esta semana</span>
+            <div class="tarea-dias__pills">${pills}</div>
+        </div>`;
+}
+
+// Guarda el nº de días elegido (upsert por semana). Optimista: resalta al
+// instante y revierte si la query falla.
+async function onTareaDiaPill(pill) {
+    const asignadoId = pill.dataset.asignadoId;
+    const n = Number(pill.dataset.dias);
+    if (!asignadoId || !Number.isInteger(n)) return;
+    const prev = Number(_diasTareaSemana[asignadoId] || 0);
+    if (n === prev) return;
+
+    const grupo = pill.closest('.tarea-dias');
+    const setSel = (valor) => {
+        grupo?.querySelectorAll('.tarea-dias__pill').forEach((b) => {
+            const on = Number(b.dataset.dias) === valor;
+            b.classList.toggle('tarea-dias__pill--sel', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    };
+
+    // Optimista.
+    _diasTareaSemana[asignadoId] = n;
+    setSel(n);
+    grupo?.classList.add('tarea-dias--saving');
+
+    try {
+        const { error } = await supabase
+            .from('registros_tarea')
+            .upsert({
+                ejercicio_asignado_id: asignadoId,
+                semana_inicio: inicioSemanaLocalFecha(),
+                dias: n,
+                actualizado_en: new Date().toISOString(),
+            }, { onConflict: 'ejercicio_asignado_id,semana_inicio' });
+        if (error) throw error;
+        grupo?.classList.remove('tarea-dias--saving');
+        if (typeof toast === 'function') toast('Guardado', 'info', 1200);
+    } catch (e) {
+        console.error('[tarea-dias] no se pudo guardar:', e);
+        _diasTareaSemana[asignadoId] = prev;
+        setSel(prev);
+        grupo?.classList.remove('tarea-dias--saving');
+        if (typeof toast === 'function') toast('No se pudo guardar, prueba de nuevo', 'error');
+    }
 }
 
 // Texto del objetivo bajo el nombre del ejercicio.

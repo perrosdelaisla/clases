@@ -717,6 +717,22 @@
 }
 .home .jaime-chat__enviar:disabled{ opacity:.5; cursor:default; }
 
+/* ── Tareas: control "días que la usaste esta semana" (0-7) ──────────── */
+.home .tarea-dias{ margin-top:11px; }
+.home .tarea-dias__label{
+  display:block; font-family:var(--body); font-size:11px; font-weight:700;
+  letter-spacing:.4px; text-transform:uppercase; color:var(--c-text-3); margin-bottom:7px;
+}
+.home .tarea-dias__pills{ display:flex; gap:5px; flex-wrap:wrap; }
+.home .tarea-dias__pill{
+  flex:1 1 auto; min-width:32px; padding:7px 0; cursor:pointer;
+  border:1px solid var(--c-hair-2); border-radius:9px; background:transparent;
+  font-family:var(--body); font-size:14px; font-weight:600; color:var(--c-text);
+  transition:background .12s ease, border-color .12s ease, color .12s ease;
+}
+.home .tarea-dias__pill--sel{ background:var(--c-oliva); border-color:var(--c-oliva); color:#fff; }
+.home .tarea-dias--saving{ opacity:.7; }
+
 /* ── Sombras de tarjetas de superficie — SOLO tema claro ──────────────
    En claro el lift de --c-surface sobre --c-bg es sutil (ΔL* bajo): la
    sombra es lo que define el plano. En oscuro el contraste de luminosidad
