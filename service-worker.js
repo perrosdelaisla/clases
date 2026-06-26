@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v194';
+const CACHE_VERSION = 'v195';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -29,6 +29,7 @@ const PRECACHE_URLS = [
     '/clases/js/vendor/supabase.umd.js',
     '/clases/img/logo.png',
     '/clases/img/logo-ucm.png',
+    '/clases/img/jaime.png',
     '/clases/img/icon-192.png',
     '/clases/img/icon-512.png',
     '/clases/img/icon-maskable-512.png',

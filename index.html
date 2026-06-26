@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
     <link rel="stylesheet" href="./css/styles.css?v=66">
-    <link rel="stylesheet" href="./css/home.css?v=13">
+    <link rel="stylesheet" href="./css/home.css?v=14">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
 </head>
@@ -180,6 +180,16 @@
                     <div class="br" id="perro-hero-meta"></div>
                 </div>
             </article>
+
+            <!-- Aviso del día de Jaime (Fase 1, sin IA). Oculto si no hay aviso. -->
+            <div class="jaime-aviso" id="jaime-aviso" hidden>
+                <img src="img/jaime.png" class="jaime-aviso__cara" alt="Jaime">
+                <div class="jaime-aviso__body">
+                    <p class="jaime-aviso__texto" id="jaime-aviso__texto"></p>
+                    <button type="button" class="jaime-aviso__cta" id="jaime-aviso__cta" hidden></button>
+                </div>
+                <button type="button" class="jaime-aviso__cerrar" id="jaime-aviso__cerrar" aria-label="Ocultar por hoy">✕</button>
+            </div>
 
             <div class="band">
                 <div class="proto-row">
@@ -1137,6 +1147,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=101"></script>
+    <script type="module" src="./js/app.js?v=102"></script>
 </body>
 </html>

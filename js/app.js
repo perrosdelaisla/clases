@@ -1003,6 +1003,120 @@ function inicioDiaLocalIso() {
     return inicio.toISOString();
 }
 
+// 'YYYY-MM-DD' del día LOCAL (sin toISOString, que correría el día en
+// Madrid UTC+2). Mismo criterio que el formatearFechaLocal del admin.
+function formatearFechaLocal(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+// ───────────────────────────────────────────────────────────
+// Aviso del día de Jaime (Fase 1, sin IA). Tarjeta informativa en el home
+// con UN aviso calculado por la RPC get_avisos_jaime. Aditivo: si no hay
+// aviso, hay error, o el cliente lo descartó hoy, la tarjeta queda oculta.
+// ───────────────────────────────────────────────────────────
+const JAIME_AVISO_OCULTO_KEY = 'jaime_aviso_oculto';
+
+async function cargarAvisoJaime() {
+    const card = document.getElementById('jaime-aviso');
+    if (!card) return;
+    const ocultar = () => card.setAttribute('hidden', '');
+
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    if (!perro) { ocultar(); return; }
+
+    // Descartado por hoy (mismo día local → no molestar de nuevo).
+    if (localStorage.getItem(JAIME_AVISO_OCULTO_KEY) === formatearFechaLocal(new Date())) {
+        ocultar();
+        return;
+    }
+
+    let data = null;
+    try {
+        const { data: d, error } = await supabase.rpc('get_avisos_jaime', {
+            p_perro_id: perro.id,
+            p_inicio_semana: inicioSemanaLocalIso(),
+            p_inicio_dia: inicioDiaLocalIso(),
+        });
+        if (error) throw error;
+        data = d;
+    } catch (e) {
+        console.error('[jaime] no se pudo cargar el aviso:', e);
+        ocultar();
+        return;
+    }
+    if (!data || !data.tipo) { ocultar(); return; }
+
+    const nombre = data.perro || perro.nombre || 'tu perro';
+    let texto = '';
+    let ctaLabel = '';
+    let ctaAccion = null;
+
+    switch (data.tipo) {
+        case 'informe':
+            texto = `Te hemos dejado el resumen de la semana de ${nombre}. ¡Échale un ojo!`;
+            ctaLabel = 'Ver resumen';
+            ctaAccion = () => showTab('mensajes');
+            break;
+        case 'mensaje': {
+            const n = Number(data.n) || 1;
+            texto = n > 1
+                ? `Tienes ${n} mensajes nuestros sin leer.`
+                : 'Tienes un mensaje nuestro sin leer.';
+            ctaLabel = 'Abrir mensajes';
+            ctaAccion = () => showTab('mensajes');
+            break;
+        }
+        case 'sin_entrenar':
+            texto = data.nunca
+                ? `${nombre} aún no tiene ninguna clase registrada. ¿Empezamos hoy?`
+                : `Hace ${data.dias} días que ${nombre} no entrena. Una clase cortita hoy suma un montón.`;
+            ctaLabel = data.nunca ? 'Registrar clase' : 'Entrenar ahora';
+            ctaAccion = () => showTab('rutina');
+            break;
+        case 'flojo':
+            texto = `Esta semana ${nombre} va flojo con '${data.ejercicio}'. Faltan ${data.faltan} para la meta. ¿Le damos?`;
+            ctaLabel = 'Ir al ejercicio';
+            ctaAccion = () => showTab('rutina');
+            break;
+        case 'al_dia':
+            texto = `¡${nombre} viene constante! Seguid así. Cualquier duda, escríbenos.`;
+            ctaLabel = '';
+            ctaAccion = null;
+            break;
+        default:
+            ocultar();
+            return;
+    }
+
+    const textoEl = document.getElementById('jaime-aviso__texto');
+    if (textoEl) textoEl.textContent = texto;
+
+    const ctaEl = document.getElementById('jaime-aviso__cta');
+    if (ctaEl) {
+        if (ctaLabel && ctaAccion) {
+            ctaEl.textContent = ctaLabel;
+            ctaEl.onclick = ctaAccion;
+            ctaEl.hidden = false;
+        } else {
+            ctaEl.onclick = null;
+            ctaEl.hidden = true;
+        }
+    }
+
+    const cerrarEl = document.getElementById('jaime-aviso__cerrar');
+    if (cerrarEl) {
+        cerrarEl.onclick = () => {
+            try { localStorage.setItem(JAIME_AVISO_OCULTO_KEY, formatearFechaLocal(new Date())); } catch (_e) {}
+            card.setAttribute('hidden', '');
+        };
+    }
+
+    card.removeAttribute('hidden');
+}
+
 // Evalúa el progreso de un ejercicio asignado usando el helper compartido
 // frecuencia.js (mismo lugar que el admin). Devuelve un objeto con la
 // forma legacy para no romper consumidores:
@@ -1420,6 +1534,10 @@ async function renderRutinaPerroSeleccionado() {
     if (cardProductosHerr) cardProductosHerr.hidden = (state.rutinaCategoriaActiva !== 'herramienta');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+
+    // Aviso del día de Jaime: independiente de la rutina y no bloquea el
+    // render. Se ocupa solo de mostrarse/ocultarse (incl. cuando no hay perro).
+    cargarAvisoJaime();
 
     if (!perro) {
         loading.setAttribute('hidden', '');
