@@ -639,6 +639,11 @@
 }
 @media (prefers-reduced-motion: reduce){
   .home .jaime-zzz span{ animation:none; opacity:.85; }
+  /* Sin animación las z quedarían amontonadas (todas en bottom:0 right:0):
+     las escalonamos en posición estática. */
+  .home .jaime-zzz span:nth-child(1){ transform: translate(0, 0); }
+  .home .jaime-zzz span:nth-child(2){ transform: translate(-5px, -11px); }
+  .home .jaime-zzz span:nth-child(3){ transform: translate(-11px, -22px); }
 }
 
 /* Burbuja: sale del FAB hacia arriba/izquierda, con colita apuntando al botón. */
