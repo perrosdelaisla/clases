@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v198';
+const CACHE_VERSION = 'v199';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -30,6 +30,8 @@ const PRECACHE_URLS = [
     '/clases/img/logo.png',
     '/clases/img/logo-ucm.png',
     '/clases/img/jaime.png',
+    '/clases/img/jaime-durmiendo.png',
+    '/clases/img/jaime-pensando.png',
     '/clases/img/icon-192.png',
     '/clases/img/icon-512.png',
     '/clases/img/icon-maskable-512.png',

@@ -1160,6 +1160,51 @@ async function cargarAvisoJaime() {
 let _jaimeChatHist = [];   // [{ role:'user'|'assistant', content:string }]
 const JAIME_CHAT_ERROR = 'Uy, ahora mismo no puedo responder. Prueba de nuevo en un momento, o escríbele a tu adiestrador desde Mensajes.';
 
+// Estados de la carita de Jaime (solo front: swap del src de la imagen).
+const JAIME_CARAS = {
+    normal: 'img/jaime.png',
+    durmiendo: 'img/jaime-durmiendo.png',
+    pensando: 'img/jaime-pensando.png',
+};
+let _jaimeEstado = 'normal';
+let _jaimeInactivTimer = null;
+
+// Cambia la carita del FAB y, si el chat está abierto, la de su cabecera.
+// Sin parpadeos: solo reescribe el src si cambió. No toca las caritas por
+// mensaje del chat (esas son fijas).
+function setJaimeCara(estado) {
+    if (!JAIME_CARAS[estado]) estado = 'normal';
+    _jaimeEstado = estado;
+    const src = JAIME_CARAS[estado];
+    const fabImg = document.querySelector('#jaime-fab img');
+    if (fabImg && fabImg.getAttribute('src') !== src) fabImg.setAttribute('src', src);
+    const chat = document.getElementById('jaime-chat');
+    if (chat && !chat.hasAttribute('hidden')) {
+        const cabImg = chat.querySelector('.jaime-chat__cara');
+        if (cabImg && cabImg.getAttribute('src') !== src) cabImg.setAttribute('src', src);
+    }
+}
+
+// Inactividad: 45s sin interacción → 'durmiendo'. Cualquier interacción
+// despierta. No duerme con el chat abierto ni mientras está 'pensando'.
+function jaimeReiniciarInactividad() {
+    if (_jaimeInactivTimer) clearTimeout(_jaimeInactivTimer);
+    if (_jaimeEstado === 'durmiendo') setJaimeCara('normal');
+    _jaimeInactivTimer = setTimeout(() => {
+        const chat = document.getElementById('jaime-chat');
+        const chatAbierto = chat && !chat.hasAttribute('hidden');
+        if (_jaimeEstado === 'pensando' || chatAbierto) return;
+        setJaimeCara('durmiendo');
+    }, 45000);
+}
+
+function bindJaimeInactividad() {
+    ['pointerdown', 'keydown', 'scroll'].forEach((ev) => {
+        document.addEventListener(ev, jaimeReiniciarInactividad, { passive: true });
+    });
+    jaimeReiniciarInactividad();   // arranca el conteo
+}
+
 function bindJaimeChat() {
     const abrirBtn = document.getElementById('jaime-burbuja__chat');
     if (abrirBtn) abrirBtn.onclick = () => { cerrarBurbujaJaime(); abrirChatJaime(); };
@@ -1181,6 +1226,9 @@ function bindJaimeChat() {
             input.style.height = Math.min(input.scrollHeight, 96) + 'px';
         });
     }
+
+    // Timer de inactividad de la carita (durmiendo). Una sola vez.
+    bindJaimeInactividad();
 }
 
 function abrirChatJaime() {
@@ -1256,6 +1304,7 @@ async function enviarChatJaime() {
 
     if (enviarBtn) enviarBtn.disabled = true;
     mostrarEscribiendoJaime();
+    setJaimeCara('pensando');
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     try {
@@ -1276,6 +1325,7 @@ async function enviarChatJaime() {
         pintarMsgJaime('assistant', JAIME_CHAT_ERROR);
     } finally {
         quitarEscribiendoJaime();
+        setJaimeCara('normal');
         if (enviarBtn) enviarBtn.disabled = false;
         input.focus();
     }
