@@ -1179,6 +1179,7 @@ async function llamarPuedeReservar() {
 function showTab(name) {
     if (!name) return;
     if (name === 'reservar' && !esPrincipal()) name = 'rutina';
+    const prev = state.currentTab;
     state.currentTab = name;
 
     // Si el usuario sale de Reservar sin completar una modificación,
@@ -1193,6 +1194,23 @@ function showTab(name) {
         else panel.setAttribute('hidden', '');
         panel.classList.toggle('is-active', match);
     });
+
+    // Animación de entrada direccional sobre el panel ya visible: entra desde
+    // la derecha (tab posterior) o la izquierda (tab anterior). No anima en el
+    // primer load, en la misma tab, ni si la tab está fuera del orden.
+    const orden = ['rutina', 'reservar', 'mis-citas', 'salud', 'mensajes'];
+    document.querySelectorAll('.tab-panel').forEach((p) =>
+        p.classList.remove('tab-enter-right', 'tab-enter-left'));
+    const oldIdx = orden.indexOf(prev);
+    const newIdx = orden.indexOf(name);
+    if (prev && prev !== name && oldIdx !== -1 && newIdx !== -1) {
+        const dir = newIdx > oldIdx ? 'right' : 'left';
+        const panelNuevo = document.querySelector('.tab-panel[data-tab="' + name + '"]');
+        if (panelNuevo) {
+            void panelNuevo.offsetWidth; // reflow para reiniciar la animación
+            panelNuevo.classList.add('tab-enter-' + dir);
+        }
+    }
 
     document.querySelectorAll('.bottom-nav__btn').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.tabTarget === name);

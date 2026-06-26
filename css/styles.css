@@ -1010,6 +1010,10 @@ body {
     max-width: 560px;
     margin: 0 auto;
     padding: 16px 16px 32px;
+    /* Recorta el desplazamiento de la animación de entrada de tabs sin crear
+       scroll-container (no usar overflow:hidden / overflow-y → rompería el
+       position:sticky de hijos). */
+    overflow-x: clip;
 }
 
 /* Tab panels: solo .is-active visible.
@@ -2380,6 +2384,18 @@ body {
 }
 .tab-panel:not([hidden]) {
     opacity: 1;
+}
+
+/* Animación de entrada DIRECCIONAL al cambiar de pestaña (showTab agrega la
+   clase one-shot según la dirección). El panel nuevo entra deslizándose desde
+   la derecha (tab posterior) o la izquierda (tab anterior) + fade corto. */
+@keyframes tabEnterRight { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tabEnterLeft  { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.tab-panel.tab-enter-right { animation: tabEnterRight 240ms ease-out; }
+.tab-panel.tab-enter-left  { animation: tabEnterLeft  240ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-panel.tab-enter-right, .tab-panel.tab-enter-left { animation: none; }
 }
 
 /* Tarjeta de rutina tocable + chevron */
