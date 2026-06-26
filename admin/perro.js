@@ -674,12 +674,9 @@ function renderEjercicioActivoCard(row, history = []) {
                 : '';
             clase = 'tiene';
             txt = desde ? `La tiene desde el ${desde}` : 'La tiene';
-        } else if (row.estado_cliente === 'no_tiene') {
-            clase = 'no-tiene';
-            txt = 'Todavía no la tiene';
         } else {
             clase = 'sin-marcar';
-            txt = 'Sin marcar';
+            txt = 'Sin confirmar';
         }
         herramientaEstadoHtml = `
             <div class="herramienta-estado herramienta-estado--${clase}">
