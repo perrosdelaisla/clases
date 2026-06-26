@@ -22,7 +22,7 @@ export function initJaime(context) {
   fabEl = document.createElement('button');
   fabEl.className = 'jm-fab';
   fabEl.setAttribute('aria-label', 'Abrir asistente');
-  fabEl.innerHTML = svgMallorca(28, '#F5EFE0');
+  fabEl.innerHTML = '<img class="jm-img" src="img/jaime.png" alt="Jaime">';
   fabEl.addEventListener('click', abrir);
   document.body.appendChild(fabEl);
 }
@@ -42,7 +42,7 @@ function abrir() {
     <div class="jm-sheet" role="dialog" aria-modal="true">
       <div class="jm-grabber"></div>
       <div class="jm-head">
-        <div class="jm-avatar">${svgMallorca(20, 'var(--jm-rojo)')}</div>
+        <div class="jm-avatar"><img class="jm-img" src="img/jaime.png" alt="Jaime"></div>
         <div style="flex:1">
           <div class="jm-name">Jaime</div>
           <div class="jm-sub">Asistente · ${ctx.nombre || ''}</div>
