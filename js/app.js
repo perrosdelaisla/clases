@@ -1218,6 +1218,26 @@ async function cargarAvisoJaime() {
             ctaLabel = '';
             ctaAccion = null;
             break;
+        case 'racha': {
+            // Felicitación: sin CTA (como 'al_dia'). Si no viene el número, texto neutro.
+            const n = Number(data.n) || 0;
+            texto = n > 0
+                ? `¡${nombre} lleva ${n} semanas seguidas entrenando! Qué constancia, así da gusto.`
+                : `¡${nombre} lleva varias semanas seguidas entrenando! Qué constancia, así da gusto.`;
+            ctaLabel = '';
+            ctaAccion = null;
+            break;
+        }
+        case 'regreso':
+            texto = `¡Qué bueno volver a verte con ${nombre}! Retomar es lo más difícil y ya está hecho.`;
+            ctaLabel = '';
+            ctaAccion = null;
+            break;
+        case 'semana_redonda':
+            texto = `¡${nombre} ya cumplió todas sus metas de esta semana! Genial.`;
+            ctaLabel = '';
+            ctaAccion = null;
+            break;
         default:
             _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
@@ -1225,13 +1245,29 @@ async function cargarAvisoJaime() {
     _jaimeAvisoActual = { texto, ctaLabel, ctaAccion };
     pintarBurbujaJaime();
 
-    // Apertura automática: solo si NO es 'al_dia' y NO fue descartado hoy.
-    // En esos casos la burbuja arranca cerrada (el botón sigue ahí para abrirla).
-    const descartadoHoy = (localStorage.getItem(JAIME_AVISO_OCULTO_KEY) === formatearFechaLocal(new Date()));
-    if (data.tipo !== 'al_dia' && !descartadoHoy) {
-        abrirBurbujaJaime();
+    // Apertura automática.
+    // · Felicitaciones (racha/regreso/semana_redonda): auto-abren UNA VEZ POR
+    //   SEMANA por tipo (flag semanal en localStorage). Si ya saltaron esta
+    //   semana, no vuelven a saltar solas (siguen visibles tocando la carita).
+    // · al_dia: nunca auto-abre.
+    // · Resto (informe/mensaje/sin_entrenar/flojo/tarea_floja): gate diario
+    //   descartadoHoy, exactamente como antes.
+    const TIPOS_FELICITACION = ['racha', 'regreso', 'semana_redonda'];
+    if (TIPOS_FELICITACION.includes(data.tipo)) {
+        const claveFelic = 'jaime_felic_' + data.tipo + '_' + inicioSemanaLocalFecha();
+        if (!localStorage.getItem(claveFelic)) {
+            localStorage.setItem(claveFelic, '1');
+            abrirBurbujaJaime();
+        } else {
+            cerrarBurbujaJaime();
+        }
     } else {
-        cerrarBurbujaJaime();
+        const descartadoHoy = (localStorage.getItem(JAIME_AVISO_OCULTO_KEY) === formatearFechaLocal(new Date()));
+        if (data.tipo !== 'al_dia' && !descartadoHoy) {
+            abrirBurbujaJaime();
+        } else {
+            cerrarBurbujaJaime();
+        }
     }
 }
 
