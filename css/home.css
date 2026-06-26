@@ -638,7 +638,7 @@
   100% { opacity:0; transform:translate(8px,-22px) scale(1.1); }
 }
 @media (prefers-reduced-motion: reduce){
-  .home .jaime-zzz span{ animation:none; opacity:0; }
+  .home .jaime-zzz span{ animation:none; opacity:.85; }
 }
 
 /* Burbuja: sale del FAB hacia arriba/izquierda, con colita apuntando al botón. */
