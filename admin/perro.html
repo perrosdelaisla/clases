@@ -352,6 +352,15 @@
                     <span>Objetivo de distancia (pasos)</span>
                     <input type="number" id="frecuencia-objetivo-distancia" inputmode="numeric" min="0" step="1" placeholder="—">
                 </label>
+                <div class="form-field" id="frecuencia-reps-field" hidden>
+                    <span>Repeticiones sugeridas (1-99)</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span class="muted">de</span>
+                        <input type="number" id="frecuencia-reps-min" inputmode="numeric" min="1" max="99" step="1" placeholder="—" style="width:72px">
+                        <span class="muted">a</span>
+                        <input type="number" id="frecuencia-reps-max" inputmode="numeric" min="1" max="99" step="1" placeholder="—" style="width:72px">
+                    </div>
+                </div>
 
                 <p class="error-message" id="frecuencia-error" hidden></p>
             </div>
@@ -394,6 +403,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=42"></script>
+    <script type="module" src="./perro.js?v=43"></script>
 </body>
 </html>

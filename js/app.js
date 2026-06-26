@@ -960,7 +960,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -4874,6 +4874,14 @@ function renderReporteControl() {
         }
         if (s.valorComida != null) chips.push(`Valor de comida: ${Number(s.valorComida)}`);
         if (s.dificultad != null) chips.push(`Dificultad: ${Number(s.dificultad)}`);
+        // Repeticiones sugeridas (guía del adiestrador). Rango si min≠max; un
+        // solo número si solo hay min o min===max. Sin min → no se muestra.
+        if (s.repsMin != null) {
+            const rmin = Number(s.repsMin);
+            const rmax = (s.repsMax != null) ? Number(s.repsMax) : null;
+            const txt = (rmax != null && rmax !== rmin) ? `${rmin}-${rmax}` : `${rmin}`;
+            chips.push(`Repeticiones sugeridas: ${txt}`);
+        }
         if (chips.length > 0) {
             specsEl.innerHTML = chips
                 .map((t) => `<span class="reporte-spec">${escapeHTML(t)}</span>`)
@@ -4930,6 +4938,8 @@ function abrirModalReporte() {
         dificultad: _filaRutina.dificultad ?? null,
         objetivoSeg: _filaRutina.objetivo_seg ?? null,
         objetivoDistancia: _filaRutina.objetivo_distancia ?? null,
+        repsMin: _filaRutina.reps_sugeridas_min ?? null,
+        repsMax: _filaRutina.reps_sugeridas_max ?? null,
     } : null;
     renderReporteControl();
 
@@ -4993,6 +5003,8 @@ function abrirModalReporteEdicion(reg) {
         dificultad: _filaRutina.dificultad ?? null,
         objetivoSeg: _filaRutina.objetivo_seg ?? null,
         objetivoDistancia: _filaRutina.objetivo_distancia ?? null,
+        repsMin: _filaRutina.reps_sugeridas_min ?? null,
+        repsMax: _filaRutina.reps_sugeridas_max ?? null,
     } : null;
     renderReporteControl();
 

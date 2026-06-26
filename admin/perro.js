@@ -426,7 +426,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, parametros, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria, campos)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, parametros, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria, campos)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -496,6 +496,8 @@ async function renderEjerciciosActivos() {
                 dificultad: btn.dataset.dificultad ? Number(btn.dataset.dificultad) : null,
                 objetivoSeg: btn.dataset.objetivoSeg ? Number(btn.dataset.objetivoSeg) : null,
                 objetivoDistancia: btn.dataset.objetivoDistancia ? Number(btn.dataset.objetivoDistancia) : null,
+                repsMin: btn.dataset.repsMin ? Number(btn.dataset.repsMin) : null,
+                repsMax: btn.dataset.repsMax ? Number(btn.dataset.repsMax) : null,
                 campos: Array.isArray(campos) ? campos : [],
                 categoria: btn.dataset.categoria || '',
             });
@@ -583,6 +585,8 @@ function renderEjercicioActivoCard(row, history = []) {
                 data-dificultad="${escapeHTML(row.dificultad == null ? '' : String(row.dificultad))}"
                 data-objetivo-seg="${escapeHTML(row.objetivo_seg == null ? '' : String(row.objetivo_seg))}"
                 data-objetivo-distancia="${escapeHTML(row.objetivo_distancia == null ? '' : String(row.objetivo_distancia))}"
+                data-reps-min="${escapeHTML(row.reps_sugeridas_min == null ? '' : String(row.reps_sugeridas_min))}"
+                data-reps-max="${escapeHTML(row.reps_sugeridas_max == null ? '' : String(row.reps_sugeridas_max))}"
                 data-campos="${escapeHTML(camposJson)}"
                 data-categoria="${escapeHTML(categoria)}"
                 aria-label="Configurar frecuencia">
@@ -1453,7 +1457,7 @@ function bindFrecuencia() {
     bindSwipeClose('frecuencia-handle', 'modal-frecuencia', cerrarModalFrecuencia);
 }
 
-function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia, valorComida, dificultad, objetivoSeg, objetivoDistancia, campos, categoria }) {
+function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia, valorComida, dificultad, objetivoSeg, objetivoDistancia, repsMin, repsMax, campos, categoria }) {
     const modal = document.getElementById('modal-frecuencia');
     if (!modal || !asignadoId) return;
 
@@ -1478,12 +1482,16 @@ function abrirModalFrecuencia({ asignadoId, ejercicioNombre, minSem, maxDia, val
     setInput('frecuencia-objetivo-min', segTotal == null ? null : Math.floor(segTotal / 60));
     setInput('frecuencia-objetivo-seg', segTotal == null ? null : (segTotal % 60));
     setInput('frecuencia-objetivo-distancia', objetivoDistancia);
+    setInput('frecuencia-reps-min', repsMin);
+    setInput('frecuencia-reps-max', repsMax);
 
-    // Valor de comida y dificultad solo aplican a ejercicios de
-    // entrenamiento; en herramientas y tareas no se muestran.
+    // Valor de comida, dificultad y reps sugeridas solo aplican a ejercicios
+    // de entrenamiento; en herramientas y tareas no se muestran.
     const esEjercicio = (categoria === 'ejercicio');
     const specsPareja = document.getElementById('frecuencia-specs-pareja');
     if (specsPareja) specsPareja.hidden = !esEjercicio;
+    const repsField = document.getElementById('frecuencia-reps-field');
+    if (repsField) repsField.hidden = !esEjercicio;
 
     // El objetivo de marca depende de los campos del ejercicio: tiempo →
     // segundos, distancia → pasos, ninguno → no se muestra.
@@ -1600,6 +1608,23 @@ function leerYValidarFrecuencia() {
         objetivoSeg = (pMin.value ?? 0) * 60 + segPart;
     }
 
+    // Repeticiones sugeridas: dos inputs enteros 1-99. Vacío = NULL. Si están
+    // los dos y max < min, error (no se guarda).
+    const parseReps = (raw) => {
+        if (raw === '') return { ok: true, value: null };
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 1 || n > 99) return { ok: false };
+        return { ok: true, value: n };
+    };
+    const pRepsMin = parseReps(document.getElementById('frecuencia-reps-min').value.trim());
+    const pRepsMax = parseReps(document.getElementById('frecuencia-reps-max').value.trim());
+    if (!pRepsMin.ok || !pRepsMax.ok) {
+        return { ok: false, error: 'Las repeticiones sugeridas deben ser enteros del 1 al 99.' };
+    }
+    if (pRepsMin.value != null && pRepsMax.value != null && pRepsMax.value < pRepsMin.value) {
+        return { ok: false, error: 'El máximo de repeticiones no puede ser menor que el mínimo.' };
+    }
+
     const rawComida = document.getElementById('frecuencia-valor-comida').value;
     const rawDif = document.getElementById('frecuencia-dificultad').value;
     return {
@@ -1611,6 +1636,8 @@ function leerYValidarFrecuencia() {
             dificultad: rawDif === '' ? null : Number(rawDif),
             objetivoSeg: objetivoSeg,
             objetivoDistancia: pObjDist.value,
+            repsMin: pRepsMin.value,
+            repsMax: pRepsMax.value,
         },
     };
 }
@@ -1636,6 +1663,7 @@ async function quitarFrecuencia() {
         minSem: null, maxDia: null,
         valorComida: null, dificultad: null,
         objetivoSeg: null, objetivoDistancia: null,
+        repsMin: null, repsMax: null,
     });
 }
 
@@ -1656,6 +1684,8 @@ async function persistirFrecuencia(asignadoId, valores) {
                 dificultad: valores.dificultad,
                 objetivo_seg: valores.objetivoSeg,
                 objetivo_distancia: valores.objetivoDistancia,
+                reps_sugeridas_min: valores.repsMin,
+                reps_sugeridas_max: valores.repsMax,
                 actualizado_en: new Date().toISOString(),
             })
             .eq('id', asignadoId);
