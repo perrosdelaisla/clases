@@ -680,6 +680,13 @@
   padding:7px 12px; font-family:var(--body); font-size:13px; font-weight:600;
   background:transparent; color:var(--c-oliva);
 }
+/* "Ver el tutorial": misma forma, variante secundaria (más apagada). */
+.home .jaime-burbuja__tutorial{
+  align-self:flex-start; border:1px solid var(--c-hair-2); cursor:pointer; border-radius:9px;
+  padding:7px 12px; font-family:var(--body); font-size:13px; font-weight:600;
+  background:transparent; color:var(--c-text-3);
+}
+.home .jaime-burbuja__tutorial[hidden]{ display:none; }
 
 /* ── Jaime Fase 2: panel de chat (hoja inferior, por encima del FAB y del
    contenido, debajo de los modales; deja la barra de navegación visible). ── */

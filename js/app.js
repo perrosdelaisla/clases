@@ -1036,7 +1036,34 @@ function formatearFechaLocal(d) {
 // hay perro, la burbuja no se abre sola.
 // ───────────────────────────────────────────────────────────
 const JAIME_AVISO_OCULTO_KEY = 'jaime_aviso_oculto';
+const JAIME_BIENVENIDA_KEY = 'jaime_bienvenida_vista';
 let _jaimeAvisoActual = null;   // { texto, ctaLabel, ctaAccion } o null
+
+function jaimeBienvenidaVista() {
+    try { return localStorage.getItem(JAIME_BIENVENIDA_KEY) === '1'; } catch (_e) { return false; }
+}
+function marcarBienvenidaJaimeVista() {
+    try { localStorage.setItem(JAIME_BIENVENIDA_KEY, '1'); } catch (_e) {}
+}
+// Primer nombre del tutor (la primera palabra de usuarioCliente.nombre).
+function primerNombreTutor() {
+    const n = state.usuarioCliente?.nombre;
+    if (!n) return '';
+    return String(n).trim().split(/\s+/)[0] || '';
+}
+
+// Burbuja de bienvenida (primera vez). Auto-abierta, con prioridad sobre el
+// aviso normal. Botones: "Hablar con Jaime" (existente) y "Ver el tutorial".
+function mostrarBienvenidaJaime(perro) {
+    const nom = primerNombreTutor();
+    const nombrePerro = perro?.nombre || 'tu perro';
+    const saludo = nom ? `¡Hola, ${nom}!` : '¡Hola!';
+    const texto = `${saludo} Soy Jaime, el asistente de Perros de la Isla. Estoy aquí para ayudarte con la app y con la rutina de ${nombrePerro}: pregúntame lo que necesites, como registrar una clase o ver el progreso. ¿Te enseño cómo funciona la app?`;
+    // En bienvenida no usamos el CTA normal; mostramos chat + "Ver el tutorial".
+    _jaimeAvisoActual = { texto, ctaLabel: '', ctaAccion: null };
+    document.getElementById('jaime-burbuja__tutorial')?.removeAttribute('hidden');
+    abrirBurbujaJaime();
+}
 
 function pintarBurbujaJaime() {
     const textoEl = document.getElementById('jaime-burbuja__texto');
@@ -1078,10 +1105,21 @@ async function cargarAvisoJaime() {
     const cerrarEl = document.getElementById('jaime-burbuja__cerrar');
     if (cerrarEl) cerrarEl.onclick = () => {
         try { localStorage.setItem(JAIME_AVISO_OCULTO_KEY, formatearFechaLocal(new Date())); } catch (_e) {}
+        // Cerrar la burbuja también da por vista la bienvenida (no vuelve a salir).
+        marcarBienvenidaJaimeVista();
         cerrarBurbujaJaime();
     };
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+
+    // Bienvenida de Jaime (primera vez): prioridad sobre el aviso normal.
+    if (perro && state.usuarioCliente && !jaimeBienvenidaVista()) {
+        mostrarBienvenidaJaime(perro);
+        return;
+    }
+    // Fuera de la bienvenida, el botón "Ver el tutorial" nunca se muestra.
+    document.getElementById('jaime-burbuja__tutorial')?.setAttribute('hidden', '');
+
     if (!perro) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
     let data = null;
@@ -1209,7 +1247,15 @@ function bindJaimeInactividad() {
 
 function bindJaimeChat() {
     const abrirBtn = document.getElementById('jaime-burbuja__chat');
-    if (abrirBtn) abrirBtn.onclick = () => { cerrarBurbujaJaime(); abrirChatJaime(); };
+    if (abrirBtn) abrirBtn.onclick = () => { marcarBienvenidaJaimeVista(); cerrarBurbujaJaime(); abrirChatJaime(); };
+
+    // "Ver el tutorial" (solo visible en la bienvenida): lanza el tour.
+    const tutBtn = document.getElementById('jaime-burbuja__tutorial');
+    if (tutBtn) tutBtn.onclick = () => {
+        marcarBienvenidaJaimeVista();
+        cerrarBurbujaJaime();
+        try { window.PdliTour?.abrir(); } catch (_e) { console.error('[jaime] no se pudo abrir el tour:', _e); }
+    };
 
     const cerrarBtn = document.getElementById('jaime-chat__cerrar');
     if (cerrarBtn) cerrarBtn.onclick = cerrarChatJaime;

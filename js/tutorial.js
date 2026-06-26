@@ -407,35 +407,10 @@
     // el usuario inicia sesión.
     function iniciar() {
         montarBoton();
-        const yaVisto = (() => {
-            try {
-                return localStorage.getItem(STORAGE_KEY) === '1';
-            } catch (_e) {
-                return false;
-            }
-        })();
-
-        if (yaVisto) return;
-
-        // Observamos cuándo deja de estar `hidden` la pantalla principal
-        // para abrir el tour solo una vez logueado.
-        const screen = document.getElementById('screen-app');
-        if (!screen) return;
-
-        if (!screen.hasAttribute('hidden')) {
-            // Ya está visible — abrimos tras un pequeño delay para que
-            // termine de pintar la rutina.
-            setTimeout(() => abrir(0), 800);
-            return;
-        }
-
-        const obs = new MutationObserver(() => {
-            if (!screen.hasAttribute('hidden')) {
-                obs.disconnect();
-                setTimeout(() => abrir(0), 800);
-            }
-        });
-        obs.observe(screen, { attributes: true, attributeFilter: ['hidden'] });
+        // Auto-apertura desactivada: en la primera vez ahora se presenta Jaime
+        // (burbuja de bienvenida) y desde ahí se ofrece lanzar el tutorial. El
+        // tour sigue disponible por su botón (montarBoton) y por
+        // window.PdliTour.abrir(). El flag STORAGE_KEY se mantiene intacto.
     }
 
     // Exponemos un mini-API por si en el futuro quisiéramos abrirlo desde
