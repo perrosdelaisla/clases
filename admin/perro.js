@@ -2219,7 +2219,7 @@ function renderNotaFeedItem(n) {
     const fecha = fmtFechaDia(n.fecha);
     const hora  = fmtHora(n.fecha);
     const tranq = (n.fuente === 'entreno' && n.tranquilidad != null)
-        ? `<span class="nota-feed__tranq">Tranquilidad ${n.tranquilidad}/5</span>`
+        ? `<span class="nota-feed__tranq">Estado emocional ${n.tranquilidad}/5</span>`
         : '';
     return `
         <article class="nota-feed__item">

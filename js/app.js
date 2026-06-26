@@ -5393,7 +5393,7 @@ async function guardarReporteEjercicio() {
 
     const tieneTrq = trq != null;
     if (!tieneValor && !tieneTrq) {
-        showErr('Cargá tu marca o la tranquilidad para reportar.');
+        showErr('Cargá tu marca o el estado emocional para reportar.');
         return;
     }
 
