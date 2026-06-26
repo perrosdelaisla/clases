@@ -1327,16 +1327,68 @@ function abrirChatJaime() {
     const panel = document.getElementById('jaime-chat');
     if (!panel) return;
     panel.removeAttribute('hidden');
+    // Primera apertura de la sesión (historial vacío) → cargar la conversación
+    // guardada del perro. Reapertura (ya hay mensajes) → mostrar lo que hay.
     if (_jaimeChatHist.length === 0) {
-        const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-        const nombre = perro?.nombre || 'tu perro';
-        const primer = (_jaimeAvisoActual && _jaimeAvisoActual.texto)
-            ? _jaimeAvisoActual.texto
-            : `¡Hola! Soy Jaime. ¿Te ayudo con la app o con la rutina de ${nombre}?`;
-        _jaimeChatHist.push({ role: 'assistant', content: primer });
-        pintarMsgJaime('assistant', primer);
+        cargarHistorialJaime();
     }
     document.getElementById('jaime-chat__input')?.focus();
+}
+
+// Siembra el saludo/aviso como primer mensaje (comportamiento original).
+// Se usa como fallback cuando no hay historial guardado o falla la carga.
+function sembrarSaludoJaime() {
+    if (_jaimeChatHist.length > 0) return;
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    const nombre = perro?.nombre || 'tu perro';
+    const primer = (_jaimeAvisoActual && _jaimeAvisoActual.texto)
+        ? _jaimeAvisoActual.texto
+        : `¡Hola! Soy Jaime. ¿Te ayudo con la app o con la rutina de ${nombre}?`;
+    _jaimeChatHist.push({ role: 'assistant', content: primer });
+    pintarMsgJaime('assistant', primer);
+}
+
+// Carga los últimos 20 mensajes guardados del perro (tabla mensajes_jaime,
+// RLS limita a los perros del cliente) y los pinta en orden cronológico.
+// Si no hay nada guardado o falla, cae al saludo/aviso de siempre.
+let _jaimeHistCargando = false;
+async function cargarHistorialJaime() {
+    if (_jaimeChatHist.length > 0 || _jaimeHistCargando) return;
+    _jaimeHistCargando = true;
+    try {
+        const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+        let filas = [];
+        if (perro) {
+            const { data, error } = await supabase
+                .from('mensajes_jaime')
+                .select('rol, contenido')
+                .eq('perro_id', perro.id)
+                .order('created_at', { ascending: false })
+                .limit(20);
+            if (!error && Array.isArray(data)) filas = data;
+        }
+        // Si entre medio ya se sembró/cargó algo, no duplicar.
+        if (_jaimeChatHist.length > 0) return;
+
+        if (filas.length > 0) {
+            // La query trae de más reciente a más viejo: invertimos a orden
+            // cronológico (el más viejo arriba) antes de pintar.
+            filas.reverse();
+            filas.forEach((f) => {
+                const role = (f.rol === 'user') ? 'user' : 'assistant';
+                _jaimeChatHist.push({ role, content: f.contenido });
+                pintarMsgJaime(role, f.contenido);
+            });
+        } else {
+            // Sin historial guardado → saludo/aviso como hoy.
+            sembrarSaludoJaime();
+        }
+    } catch (e) {
+        console.error('[jaime-chat] error cargando historial:', e);
+        sembrarSaludoJaime();
+    } finally {
+        _jaimeHistCargando = false;
+    }
 }
 
 function cerrarChatJaime() {
@@ -1402,7 +1454,7 @@ async function enviarChatJaime() {
     try {
         if (!perro) throw new Error('sin perro seleccionado');
         const { data, error } = await supabase.functions.invoke('asistente-cliente', {
-            body: { perro_id: perro.id, mensajes: _jaimeChatHist },
+            body: { perro_id: perro.id, mensajes: _jaimeChatHist.slice(-20) },
         });
         if (error) throw error;
         if (data && data.ok && data.reply) {
