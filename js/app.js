@@ -380,6 +380,7 @@ function bindEventos() {
     bindComposerMensaje();
     bindNotasEjercicio();
     bindTareaLista();
+    bindJaimeChat();
 
     // Back navigation Android — atrapar el botón atrás físico para cerrar
     // modales / volver a Rutina antes de salir. Idempotente.
@@ -1134,6 +1135,134 @@ async function cargarAvisoJaime() {
         abrirBurbujaJaime();
     } else {
         cerrarBurbujaJaime();
+    }
+}
+
+// ───────────────────────────────────────────────────────────
+// Jaime Fase 2 — chat conversacional con IA (edge function asistente-cliente).
+// Historial en memoria de sesión (no se persiste). Aditivo sobre la Fase 1.
+// ───────────────────────────────────────────────────────────
+let _jaimeChatHist = [];   // [{ role:'user'|'assistant', content:string }]
+const JAIME_CHAT_ERROR = 'Uy, ahora mismo no puedo responder. Prueba de nuevo en un momento, o escríbele a tu adiestrador desde Mensajes.';
+
+function bindJaimeChat() {
+    const abrirBtn = document.getElementById('jaime-burbuja__chat');
+    if (abrirBtn) abrirBtn.onclick = () => { cerrarBurbujaJaime(); abrirChatJaime(); };
+
+    const cerrarBtn = document.getElementById('jaime-chat__cerrar');
+    if (cerrarBtn) cerrarBtn.onclick = cerrarChatJaime;
+
+    const enviarBtn = document.getElementById('jaime-chat__enviar');
+    if (enviarBtn) enviarBtn.onclick = enviarChatJaime;
+
+    const input = document.getElementById('jaime-chat__input');
+    if (input) {
+        // Enter envía; Shift+Enter = salto de línea. Auto-crece la altura.
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarChatJaime(); }
+        });
+        input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 96) + 'px';
+        });
+    }
+}
+
+function abrirChatJaime() {
+    const panel = document.getElementById('jaime-chat');
+    if (!panel) return;
+    panel.removeAttribute('hidden');
+    if (_jaimeChatHist.length === 0) {
+        const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+        const nombre = perro?.nombre || 'tu perro';
+        const primer = (_jaimeAvisoActual && _jaimeAvisoActual.texto)
+            ? _jaimeAvisoActual.texto
+            : `¡Hola! Soy Jaime. ¿Te ayudo con la app o con la rutina de ${nombre}?`;
+        _jaimeChatHist.push({ role: 'assistant', content: primer });
+        pintarMsgJaime('assistant', primer);
+    }
+    document.getElementById('jaime-chat__input')?.focus();
+}
+
+function cerrarChatJaime() {
+    // No borra el historial: al reabrir sigue la charla de la sesión.
+    document.getElementById('jaime-chat')?.setAttribute('hidden', '');
+}
+
+function pintarMsgJaime(role, texto) {
+    const cont = document.getElementById('jaime-chat__msgs');
+    if (!cont) return;
+    const esJaime = (role !== 'user');
+    const fila = document.createElement('div');
+    fila.className = 'jaime-chat__fila jaime-chat__fila--' + (esJaime ? 'jaime' : 'user');
+    if (esJaime) {
+        const cara = document.createElement('img');
+        cara.className = 'jaime-chat__msgcara';
+        cara.src = 'img/jaime.png';
+        cara.alt = 'Jaime';
+        fila.appendChild(cara);
+    }
+    const burb = document.createElement('div');
+    burb.className = 'jaime-chat__burb';
+    burb.textContent = texto;   // textContent: sin inyección de HTML
+    fila.appendChild(burb);
+    cont.appendChild(fila);
+    cont.scrollTop = cont.scrollHeight;
+}
+
+function mostrarEscribiendoJaime() {
+    const cont = document.getElementById('jaime-chat__msgs');
+    if (!cont || document.getElementById('jaime-chat__typing')) return;
+    const fila = document.createElement('div');
+    fila.id = 'jaime-chat__typing';
+    fila.className = 'jaime-chat__fila jaime-chat__fila--jaime';
+    fila.innerHTML = '<img class="jaime-chat__msgcara" src="img/jaime.png" alt="Jaime">'
+        + '<div class="jaime-chat__burb jaime-chat__burb--typing"><span></span><span></span><span></span></div>';
+    cont.appendChild(fila);
+    cont.scrollTop = cont.scrollHeight;
+}
+
+function quitarEscribiendoJaime() {
+    document.getElementById('jaime-chat__typing')?.remove();
+}
+
+async function enviarChatJaime() {
+    const input = document.getElementById('jaime-chat__input');
+    const enviarBtn = document.getElementById('jaime-chat__enviar');
+    if (!input) return;
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    // Mensaje del tutor → UI + historial. Limpiamos input.
+    pintarMsgJaime('user', texto);
+    _jaimeChatHist.push({ role: 'user', content: texto });
+    input.value = '';
+    input.style.height = 'auto';
+
+    if (enviarBtn) enviarBtn.disabled = true;
+    mostrarEscribiendoJaime();
+
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    try {
+        if (!perro) throw new Error('sin perro seleccionado');
+        const { data, error } = await supabase.functions.invoke('asistente-cliente', {
+            body: { perro_id: perro.id, mensajes: _jaimeChatHist },
+        });
+        if (error) throw error;
+        if (data && data.ok && data.reply) {
+            _jaimeChatHist.push({ role: 'assistant', content: data.reply });
+            pintarMsgJaime('assistant', data.reply);
+        } else {
+            // Error de la función: mensaje neutro (NO se agrega al historial).
+            pintarMsgJaime('assistant', JAIME_CHAT_ERROR);
+        }
+    } catch (e) {
+        console.error('[jaime-chat] error invocando asistente-cliente:', e);
+        pintarMsgJaime('assistant', JAIME_CHAT_ERROR);
+    } finally {
+        quitarEscribiendoJaime();
+        if (enviarBtn) enviarBtn.disabled = false;
+        input.focus();
     }
 }
 

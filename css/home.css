@@ -651,6 +651,71 @@
   font-size:13px; line-height:1; border-radius:50%;
 }
 .home .jaime-burbuja__cerrar:hover{ color:var(--c-text); }
+.home .jaime-burbuja__chat{
+  align-self:flex-start; border:1px solid var(--c-oliva-line); cursor:pointer; border-radius:9px;
+  padding:7px 12px; font-family:var(--body); font-size:13px; font-weight:600;
+  background:transparent; color:var(--c-oliva);
+}
+
+/* ── Jaime Fase 2: panel de chat (hoja inferior, por encima del FAB y del
+   contenido, debajo de los modales; deja la barra de navegación visible). ── */
+.home .jaime-chat{
+  position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom,0px) + 60px);
+  z-index:100; max-width:560px; margin:0 auto; height:70vh; max-height:600px;
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--c-bg); border:1px solid var(--c-hair-2); border-bottom:0;
+  border-radius:18px 18px 0 0;
+}
+.home .jaime-chat[hidden]{ display:none; }
+.home .jaime-chat__head{
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+  padding:12px 14px; border-bottom:1px solid var(--c-hair-2);
+}
+.home .jaime-chat__cara{ width:34px; height:34px; object-fit:contain; flex-shrink:0; }
+.home .jaime-chat__nombre{ flex:1; font-family:var(--display); font-size:18px; letter-spacing:1px; color:var(--c-text); }
+.home .jaime-chat__cerrar{
+  width:30px; height:30px; border:0; background:transparent; cursor:pointer;
+  color:var(--c-text-3); font-size:14px; line-height:1; border-radius:50%;
+}
+.home .jaime-chat__cerrar:hover{ color:var(--c-text); }
+.home .jaime-chat__msgs{
+  flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+.home .jaime-chat__fila{ display:flex; align-items:flex-end; gap:8px; max-width:85%; }
+.home .jaime-chat__fila--jaime{ align-self:flex-start; }
+.home .jaime-chat__fila--user{ align-self:flex-end; }
+.home .jaime-chat__msgcara{ width:26px; height:26px; object-fit:contain; flex-shrink:0; }
+.home .jaime-chat__burb{
+  padding:9px 12px; border-radius:14px; font-family:var(--body); font-size:14px;
+  line-height:1.45; white-space:pre-wrap; word-break:break-word;
+}
+.home .jaime-chat__fila--jaime .jaime-chat__burb{
+  background:var(--c-surface); color:var(--c-text); border:1px solid var(--c-hair-2);
+}
+.home .jaime-chat__fila--user .jaime-chat__burb{ background:var(--c-oliva); color:#fff; }
+.home .jaime-chat__burb--typing{ display:flex; gap:4px; align-items:center; }
+.home .jaime-chat__burb--typing span{
+  width:6px; height:6px; border-radius:50%; background:var(--c-text-3);
+  animation:jaimeTyping 1s infinite ease-in-out;
+}
+.home .jaime-chat__burb--typing span:nth-child(2){ animation-delay:.15s; }
+.home .jaime-chat__burb--typing span:nth-child(3){ animation-delay:.3s; }
+@keyframes jaimeTyping{ 0%,60%,100%{ opacity:.3; } 30%{ opacity:1; } }
+.home .jaime-chat__barra{
+  display:flex; align-items:flex-end; gap:8px; flex-shrink:0;
+  padding:10px 12px; border-top:1px solid var(--c-hair-2);
+}
+.home .jaime-chat__input{
+  flex:1; resize:none; max-height:96px; border:1px solid var(--c-hair-2); border-radius:12px;
+  padding:10px 12px; font-family:var(--body); font-size:14px; line-height:1.4;
+  background:var(--c-surface); color:var(--c-text);
+}
+.home .jaime-chat__input:focus{ outline:none; border-color:var(--c-oliva); }
+.home .jaime-chat__enviar{
+  flex-shrink:0; width:40px; height:40px; border:0; border-radius:50%; cursor:pointer;
+  background:var(--c-oliva); color:#fff; font-size:15px;
+}
+.home .jaime-chat__enviar:disabled{ opacity:.5; cursor:default; }
 
 /* ── Sombras de tarjetas de superficie — SOLO tema claro ──────────────
    En claro el lift de --c-surface sobre --c-bg es sutil (ΔL* bajo): la

@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
     <link rel="stylesheet" href="./css/styles.css?v=66">
-    <link rel="stylesheet" href="./css/home.css?v=15">
+    <link rel="stylesheet" href="./css/home.css?v=16">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
 </head>
@@ -474,6 +474,22 @@
             <button type="button" class="jaime-burbuja__cerrar" id="jaime-burbuja__cerrar" aria-label="Cerrar">✕</button>
             <p class="jaime-burbuja__texto" id="jaime-burbuja__texto"></p>
             <button type="button" class="jaime-burbuja__cta" id="jaime-burbuja__cta" hidden></button>
+            <button type="button" class="jaime-burbuja__chat" id="jaime-burbuja__chat">Hablar con Jaime 💬</button>
+        </div>
+
+        <!-- ── Asistente Jaime (Fase 2): panel de chat con IA (edge function
+             asistente-cliente). Dentro de #screen-app, hereda tema. ── -->
+        <div class="jaime-chat" id="jaime-chat" hidden role="dialog" aria-modal="true" aria-label="Chat con Jaime">
+            <div class="jaime-chat__head">
+                <img class="jaime-chat__cara" src="img/jaime.png" alt="Jaime">
+                <span class="jaime-chat__nombre">Jaime</span>
+                <button type="button" class="jaime-chat__cerrar" id="jaime-chat__cerrar" aria-label="Cerrar chat">✕</button>
+            </div>
+            <div class="jaime-chat__msgs" id="jaime-chat__msgs"></div>
+            <div class="jaime-chat__barra">
+                <textarea class="jaime-chat__input" id="jaime-chat__input" rows="1" placeholder="Escríbele a Jaime…"></textarea>
+                <button type="button" class="jaime-chat__enviar" id="jaime-chat__enviar" aria-label="Enviar">➤</button>
+            </div>
         </div>
 
         <!-- ── SEGUIMIENTO DE CONDUCTAS (overlay full-screen, dentro de #screen-app
@@ -1148,6 +1164,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=103"></script>
+    <script type="module" src="./js/app.js?v=104"></script>
 </body>
 </html>
