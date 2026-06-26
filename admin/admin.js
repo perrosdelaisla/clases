@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=12';
 import * as stats from './stats/api.js?v=4';
-import * as catalogo from './catalogo/api.js?v=3';
+import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
@@ -2728,6 +2728,7 @@ function abrirModalEditarEjercicio(ej) {
     document.getElementById('ee-nombre').value = ej.nombre || '';
     document.getElementById('ee-categoria').value = ej.categoria || 'ejercicio';
     document.getElementById('ee-descripcion').value = ej.descripcion || '';
+    document.getElementById('ee-como-se-hace').value = ej.como_se_hace || '';
     document.getElementById('ee-instrucciones').value = ej.instrucciones || '';
     document.getElementById('ee-video').value = ej.video_url || '';
     const err = document.getElementById('ee-error');
@@ -2743,6 +2744,7 @@ async function guardarEdicionEjercicio() {
     const nombre = document.getElementById('ee-nombre').value.trim();
     const categoria = document.getElementById('ee-categoria').value;
     const descripcion = document.getElementById('ee-descripcion').value.trim();
+    const comoSeHace = document.getElementById('ee-como-se-hace').value.trim();
     const instrucciones = document.getElementById('ee-instrucciones').value.trim();
     const videoUrl = document.getElementById('ee-video').value.trim();
     if (!nombre) {
@@ -2756,6 +2758,7 @@ async function guardarEdicionEjercicio() {
             nombre,
             categoria,
             descripcion: descripcion || null,
+            como_se_hace: comoSeHace || null,
             instrucciones: instrucciones || null,
             video_url: videoUrl || null,
         });
@@ -2774,6 +2777,7 @@ function abrirModalCrearEjercicio(categoria) {
     document.getElementById('nc-codigo').value = '';
     document.getElementById('nc-plantilla').value = '';
     document.getElementById('nc-descripcion').value = '';
+    document.getElementById('nc-como-se-hace').value = '';
     document.getElementById('nc-instrucciones').value = '';
     document.getElementById('nc-video').value = '';
     const sel = document.getElementById('nc-categoria');
@@ -2792,6 +2796,7 @@ async function guardarNuevoEjercicio() {
     const plantillaRaw = document.getElementById('nc-plantilla').value;
     const categoria = document.getElementById('nc-categoria').value;
     const descripcion = document.getElementById('nc-descripcion').value.trim();
+    const comoSeHace = document.getElementById('nc-como-se-hace').value.trim();
     const instrucciones = document.getElementById('nc-instrucciones').value.trim();
     const videoUrl = document.getElementById('nc-video').value.trim();
 
@@ -2813,6 +2818,7 @@ async function guardarNuevoEjercicio() {
             plantilla: parseInt(plantillaRaw, 10),
             categoria,
             descripcion: descripcion || null,
+            como_se_hace: comoSeHace || null,
             instrucciones: instrucciones || null,
             video_url: videoUrl || null,
         });

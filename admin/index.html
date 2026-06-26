@@ -728,6 +728,10 @@
                     <input type="text" id="ee-descripcion" maxlength="200" placeholder="Línea breve que ve el cliente en la tarjeta">
                 </label>
                 <label class="form-field">
+                    <span>Cómo se hace (instructivo para el tutor)</span>
+                    <textarea id="ee-como-se-hace" rows="10" placeholder="Instructivo largo para el tutor: cómo trabajar el ejercicio en casa, paso a paso."></textarea>
+                </label>
+                <label class="form-field">
                     <span>Instrucciones detalladas</span>
                     <textarea id="ee-instrucciones" rows="8" placeholder="Explica paso a paso cómo se hace el ejercicio. El cliente lo ve al tocar la tarjeta."></textarea>
                 </label>
@@ -785,6 +789,10 @@
                     <input type="text" id="nc-descripcion" maxlength="200" placeholder="Línea breve que ve el cliente en la tarjeta">
                 </label>
                 <label class="form-field">
+                    <span>Cómo se hace (instructivo para el tutor)</span>
+                    <textarea id="nc-como-se-hace" rows="10" placeholder="Instructivo largo para el tutor: cómo trabajar el ejercicio en casa, paso a paso."></textarea>
+                </label>
+                <label class="form-field">
                     <span>Instrucciones detalladas</span>
                     <textarea id="nc-instrucciones" rows="8" placeholder="Explica paso a paso cómo se hace el ejercicio. El cliente lo ve al tocar la tarjeta."></textarea>
                 </label>
@@ -826,7 +834,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=63"></script>
+    <script type="module" src="./admin.js?v=64"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {
