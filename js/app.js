@@ -1013,25 +1013,60 @@ function formatearFechaLocal(d) {
 }
 
 // ───────────────────────────────────────────────────────────
-// Aviso del día de Jaime (Fase 1, sin IA). Tarjeta informativa en el home
-// con UN aviso calculado por la RPC get_avisos_jaime. Aditivo: si no hay
-// aviso, hay error, o el cliente lo descartó hoy, la tarjeta queda oculta.
+// Asistente Jaime (Fase 1, sin IA). Botón flotante + burbuja con UN aviso
+// calculado por la RPC get_avisos_jaime. El botón vive siempre en la app;
+// la burbuja se abre sola con el aviso (salvo 'al_dia' o descartado hoy) y se
+// puede abrir/cerrar tocando el botón. Aditivo: si no hay aviso, error o no
+// hay perro, la burbuja no se abre sola.
 // ───────────────────────────────────────────────────────────
 const JAIME_AVISO_OCULTO_KEY = 'jaime_aviso_oculto';
+let _jaimeAvisoActual = null;   // { texto, ctaLabel, ctaAccion } o null
+
+function pintarBurbujaJaime() {
+    const textoEl = document.getElementById('jaime-burbuja__texto');
+    const ctaEl = document.getElementById('jaime-burbuja__cta');
+    const a = _jaimeAvisoActual;
+    if (textoEl) textoEl.textContent = a ? a.texto : 'Por hoy no hay novedades. ¡Seguimos!';
+    if (ctaEl) {
+        if (a && a.ctaLabel && a.ctaAccion) {
+            ctaEl.textContent = a.ctaLabel;
+            ctaEl.onclick = a.ctaAccion;
+            ctaEl.hidden = false;
+        } else {
+            ctaEl.onclick = null;
+            ctaEl.hidden = true;
+        }
+    }
+}
+
+function abrirBurbujaJaime() {
+    pintarBurbujaJaime();
+    document.getElementById('jaime-burbuja')?.removeAttribute('hidden');
+}
+
+function cerrarBurbujaJaime() {
+    document.getElementById('jaime-burbuja')?.setAttribute('hidden', '');
+}
 
 async function cargarAvisoJaime() {
-    const card = document.getElementById('jaime-aviso');
-    if (!card) return;
-    const ocultar = () => card.setAttribute('hidden', '');
+    const fab = document.getElementById('jaime-fab');
+    if (!fab) return;
+
+    // Bind del FAB (toggle) y del ✕ — idempotente (onclick reasignado).
+    fab.onclick = () => {
+        const b = document.getElementById('jaime-burbuja');
+        if (!b) return;
+        if (b.hasAttribute('hidden')) abrirBurbujaJaime();
+        else cerrarBurbujaJaime();
+    };
+    const cerrarEl = document.getElementById('jaime-burbuja__cerrar');
+    if (cerrarEl) cerrarEl.onclick = () => {
+        try { localStorage.setItem(JAIME_AVISO_OCULTO_KEY, formatearFechaLocal(new Date())); } catch (_e) {}
+        cerrarBurbujaJaime();
+    };
 
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    if (!perro) { ocultar(); return; }
-
-    // Descartado por hoy (mismo día local → no molestar de nuevo).
-    if (localStorage.getItem(JAIME_AVISO_OCULTO_KEY) === formatearFechaLocal(new Date())) {
-        ocultar();
-        return;
-    }
+    if (!perro) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
     let data = null;
     try {
@@ -1044,10 +1079,9 @@ async function cargarAvisoJaime() {
         data = d;
     } catch (e) {
         console.error('[jaime] no se pudo cargar el aviso:', e);
-        ocultar();
-        return;
+        _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
-    if (!data || !data.tipo) { ocultar(); return; }
+    if (!data || !data.tipo) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
     const nombre = data.perro || perro.nombre || 'tu perro';
     let texto = '';
@@ -1087,34 +1121,20 @@ async function cargarAvisoJaime() {
             ctaAccion = null;
             break;
         default:
-            ocultar();
-            return;
+            _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
 
-    const textoEl = document.getElementById('jaime-aviso__texto');
-    if (textoEl) textoEl.textContent = texto;
+    _jaimeAvisoActual = { texto, ctaLabel, ctaAccion };
+    pintarBurbujaJaime();
 
-    const ctaEl = document.getElementById('jaime-aviso__cta');
-    if (ctaEl) {
-        if (ctaLabel && ctaAccion) {
-            ctaEl.textContent = ctaLabel;
-            ctaEl.onclick = ctaAccion;
-            ctaEl.hidden = false;
-        } else {
-            ctaEl.onclick = null;
-            ctaEl.hidden = true;
-        }
+    // Apertura automática: solo si NO es 'al_dia' y NO fue descartado hoy.
+    // En esos casos la burbuja arranca cerrada (el botón sigue ahí para abrirla).
+    const descartadoHoy = (localStorage.getItem(JAIME_AVISO_OCULTO_KEY) === formatearFechaLocal(new Date()));
+    if (data.tipo !== 'al_dia' && !descartadoHoy) {
+        abrirBurbujaJaime();
+    } else {
+        cerrarBurbujaJaime();
     }
-
-    const cerrarEl = document.getElementById('jaime-aviso__cerrar');
-    if (cerrarEl) {
-        cerrarEl.onclick = () => {
-            try { localStorage.setItem(JAIME_AVISO_OCULTO_KEY, formatearFechaLocal(new Date())); } catch (_e) {}
-            card.setAttribute('hidden', '');
-        };
-    }
-
-    card.removeAttribute('hidden');
 }
 
 // Evalúa el progreso de un ejercicio asignado usando el helper compartido

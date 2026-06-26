@@ -602,30 +602,55 @@
 .home #tab-rutina.tab-panel:not([hidden]){ display:block; }
 .home .philo{ padding-left:0; padding-right:0; }
 
-/* ── Aviso del día de Jaime (burbuja de asistente) ──────────────────── */
-.home .jaime-aviso{
-  position:relative; display:flex; align-items:flex-start; gap:12px;
-  margin:14px 0 0; padding:13px 36px 13px 13px;
+/* ── Asistente Jaime (Fase 1): botón flotante + burbuja ──────────────── */
+/* FAB: carita-sticker sin círculo de fondo, drop-shadow de silueta. Va arriba
+   de la barra inferior. z-index 45 = sobre el contenido, debajo del nav (50)
+   y de los modales (200). */
+.home .jaime-fab{
+  position:fixed; right:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 76px);
+  z-index:45; width:56px; height:56px; padding:0; border:0; cursor:pointer;
+  background:transparent; filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .12s ease;
+}
+.home .jaime-fab:active{ transform:scale(.93); }
+.home .jaime-fab[hidden]{ display:none; }
+.home .jaime-fab img{ width:100%; height:100%; object-fit:contain; display:block; }
+
+/* Burbuja: sale del FAB hacia arriba/izquierda, con colita apuntando al botón. */
+.home .jaime-burbuja{
+  position:fixed; right:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 140px);
+  z-index:46; width:max-content; max-width:280px;
   background:var(--c-surface); border:1px solid var(--c-hair-2); border-radius:14px;
+  padding:14px 14px 13px; display:flex; flex-direction:column; gap:9px;
 }
-.home .jaime-aviso[hidden]{ display:none; }
-.home .jaime-aviso__cara{ width:48px; height:48px; flex-shrink:0; object-fit:contain; }
-.home .jaime-aviso__body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
-.home .jaime-aviso__texto{
-  margin:0; font-family:var(--body); font-size:14px; line-height:1.5; color:var(--c-text);
+.home .jaime-burbuja[hidden]{ display:none; }
+/* Colita: triángulo apuntando hacia abajo-derecha (al FAB). */
+.home .jaime-burbuja::after{
+  content:''; position:absolute; right:24px; bottom:-8px;
+  width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent;
+  border-top:8px solid var(--c-surface);
 }
-.home .jaime-aviso__cta{
+.home .jaime-burbuja::before{
+  content:''; position:absolute; right:23px; bottom:-10px;
+  width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent;
+  border-top:9px solid var(--c-hair-2);
+}
+.home .jaime-burbuja__texto{
+  margin:0; padding-right:18px; font-family:var(--body); font-size:14px; line-height:1.5; color:var(--c-text);
+}
+.home .jaime-burbuja__cta{
   align-self:flex-start; border:0; cursor:pointer; border-radius:9px;
   padding:8px 14px; font-family:var(--body); font-size:13px; font-weight:600;
   background:var(--c-oliva); color:#fff;
 }
-.home .jaime-aviso__cta[hidden]{ display:none; }
-.home .jaime-aviso__cerrar{
+.home .jaime-burbuja__cta[hidden]{ display:none; }
+.home .jaime-burbuja__cerrar{
   position:absolute; top:7px; right:7px; width:24px; height:24px;
   border:0; background:transparent; cursor:pointer; color:var(--c-text-3);
   font-size:13px; line-height:1; border-radius:50%;
 }
-.home .jaime-aviso__cerrar:hover{ color:var(--c-text); }
+.home .jaime-burbuja__cerrar:hover{ color:var(--c-text); }
 
 /* ── Sombras de tarjetas de superficie — SOLO tema claro ──────────────
    En claro el lift de --c-surface sobre --c-bg es sutil (ΔL* bajo): la
