@@ -3176,6 +3176,54 @@ body {
     letter-spacing: 0.01em;
 }
 
+/* Interruptor "¿Ya la tienes?" del estado de herramienta (modal de detalle,
+   contexto claro). ON = la tiene; OFF = sin marcar. */
+.herr-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.herr-switch-label {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+}
+.herr-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 52px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(26, 26, 26, 0.18);
+    cursor: pointer;
+    transition: background 180ms ease;
+}
+.herr-switch[aria-checked="true"] {
+    background: #C8102E;
+}
+.herr-switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 180ms ease;
+}
+.herr-switch[aria-checked="true"] .herr-switch__thumb {
+    transform: translateX(22px);
+}
+.herr-switch:focus-visible {
+    outline: 2px solid #C8102E;
+    outline-offset: 2px;
+}
+
 /* Specs del adiestrador en el reporte (solo lectura): objetivo + valor +
    dificultad. Chips informativos, no editables. */
 .reporte-specs {

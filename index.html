@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=64">
+    <link rel="stylesheet" href="./css/styles.css?v=65">
     <link rel="stylesheet" href="./css/home.css?v=13">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
@@ -697,10 +697,11 @@
             </button>
 
                 <div id="herramienta-estado" hidden style="margin-top:8px">
-                    <h3 style="font-size:16px;margin:0 0 12px;color:#1A1A1A">¿Tu perro ya tiene esto?</h3>
-                    <div style="display:flex;gap:10px">
-                        <button type="button" id="btn-herramienta-tiene" style="flex:1;padding:12px;border-radius:12px;border:2px solid #C8102E;background:transparent;color:#C8102E;font-weight:600;font-size:15px;cursor:pointer">Sí, ya la tengo</button>
-                        <button type="button" id="btn-herramienta-no" style="flex:1;padding:12px;border-radius:12px;border:2px solid #C8102E;background:transparent;color:#C8102E;font-weight:600;font-size:15px;cursor:pointer">Todavía no</button>
+                    <div class="herr-switch-row">
+                        <span class="herr-switch-label">¿Ya la tienes?</span>
+                        <button type="button" id="btn-herramienta-switch" class="herr-switch" role="switch" aria-checked="false" aria-label="¿Ya la tienes?">
+                            <span class="herr-switch__thumb"></span>
+                        </button>
                     </div>
                     <p id="herramienta-estado-hint" hidden style="font-size:13px;color:#5A534C;margin:12px 0 0"></p>
                 </div>
@@ -1136,6 +1137,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=3"></script>
-    <script type="module" src="./js/app.js?v=97"></script>
+    <script type="module" src="./js/app.js?v=98"></script>
 </body>
 </html>

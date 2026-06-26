@@ -1569,11 +1569,10 @@ let _herramientaAsignadoActual = null;
 let _herramientaEstadoCargado = null;
 
 function pintarHerramientaBotones(valor) {
-    const btnTiene = document.getElementById('btn-herramienta-tiene');
-    const btnNo = document.getElementById('btn-herramienta-no');
-    const set = (btn, on) => { if (!btn) return; btn.style.background = on ? '#C8102E' : 'transparent'; btn.style.color = on ? '#ffffff' : '#C8102E'; };
-    set(btnTiene, valor === 'tiene');
-    set(btnNo, valor === 'no_tiene');
+    const sw = document.getElementById('btn-herramienta-switch');
+    if (!sw) return;
+    // Switch ON solo si la tiene; cualquier otro caso (null) = OFF.
+    sw.setAttribute('aria-checked', valor === 'tiene' ? 'true' : 'false');
 }
 
 function textoHerramientaDesde(valor, fechaIso) {
@@ -1583,21 +1582,21 @@ function textoHerramientaDesde(valor, fechaIso) {
         let txt = 'Marcado como que ya la tienes.';
         if (fechaIso) { const f = new Date(fechaIso); if (!isNaN(f.getTime())) txt = 'La tienes desde el ' + f.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) + '.'; }
         hint.textContent = txt; hint.hidden = false;
-    } else if (valor === 'no_tiene') {
-        hint.textContent = 'Cuando la consigas, volve y marca que ya la tienes.'; hint.hidden = false;
     } else { hint.hidden = true; }
 }
 
 async function renderHerramientaEstado(asignadoId) {
     _herramientaAsignadoActual = asignadoId;
     _herramientaEstadoCargado = null;
-    const btnTiene = document.getElementById('btn-herramienta-tiene');
-    const btnNo = document.getElementById('btn-herramienta-no');
+    const sw = document.getElementById('btn-herramienta-switch');
     const hint = document.getElementById('herramienta-estado-hint');
     if (hint) hint.hidden = true;
     pintarHerramientaBotones(null);
-    if (btnTiene) btnTiene.onclick = () => guardarEstadoHerramienta(asignadoId, 'tiene');
-    if (btnNo) btnNo.onclick = () => guardarEstadoHerramienta(asignadoId, 'no_tiene');
+    // Toggle: si la tiene → apagar (null); si no → encender ('tiene').
+    if (sw) sw.onclick = () => {
+        const nuevo = (_herramientaEstadoCargado === 'tiene') ? null : 'tiene';
+        guardarEstadoHerramienta(asignadoId, nuevo);
+    };
     try {
         const { data, error } = await supabase.from('ejercicios_asignados').select('estado_cliente, estado_actualizado_en').eq('id', asignadoId).single();
         if (error) throw error;
@@ -1609,14 +1608,17 @@ async function renderHerramientaEstado(asignadoId) {
 }
 
 async function guardarEstadoHerramienta(asignadoId, valor) {
+    // Guarda contra reescribir el mismo valor (no resetea la fecha en cada render).
     if (valor === _herramientaEstadoCargado) return;
     pintarHerramientaBotones(valor);
-    const ahora = new Date().toISOString();
+    // Solo 'tiene' o null. La fecha "desde cuándo" se setea al encender; al
+    // apagar se limpia. Nunca se escribe el valor que el constraint rechaza.
+    const fecha = (valor === 'tiene') ? new Date().toISOString() : null;
     try {
-        const { error } = await supabase.from('ejercicios_asignados').update({ estado_cliente: valor, estado_actualizado_en: ahora }).eq('id', asignadoId);
+        const { error } = await supabase.from('ejercicios_asignados').update({ estado_cliente: valor, estado_actualizado_en: fecha }).eq('id', asignadoId);
         if (error) throw error;
         _herramientaEstadoCargado = valor;
-        textoHerramientaDesde(valor, ahora);
+        textoHerramientaDesde(valor, fecha);
     } catch (e) { console.error('[herramienta] no se pudo guardar:', e); if (typeof toast === 'function') toast('No pudimos guardar. Intentalo de nuevo.', 'error'); }
 }
 
