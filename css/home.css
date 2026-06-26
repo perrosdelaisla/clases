@@ -737,6 +737,15 @@
 .home .jaime-chat__burb--typing span:nth-child(2){ animation-delay:.15s; }
 .home .jaime-chat__burb--typing span:nth-child(3){ animation-delay:.3s; }
 @keyframes jaimeTyping{ 0%,60%,100%{ opacity:.3; } 30%{ opacity:1; } }
+.home .jaime-chat__chips{
+  align-self:flex-start; display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; max-width:85%;
+}
+.home .jaime-chat__chip{
+  font-family:var(--body); font-size:12.5px; line-height:1.2; cursor:pointer;
+  padding:6px 12px; border-radius:999px;
+  border:1px solid var(--c-oliva-line); background:var(--c-oliva-soft); color:var(--c-oliva);
+}
+.home .jaime-chat__chip:hover{ border-color:var(--c-oliva); }
 .home .jaime-chat__barra{
   display:flex; align-items:flex-end; gap:8px; flex-shrink:0;
   padding:10px 12px; border-top:1px solid var(--c-hair-2);

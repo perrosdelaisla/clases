@@ -1382,6 +1382,39 @@ function sembrarSaludoJaime() {
         : `¡Hola! Soy Jaime. ¿Te ayudo con la app o con la rutina de ${nombre}?`;
     _jaimeChatHist.push({ role: 'assistant', content: primer });
     pintarMsgJaime('assistant', primer);
+    // Chat fresco (saludo, sin historial): ofrecemos chips de preguntas frecuentes.
+    mostrarChipsJaime();
+}
+
+// Chips de preguntas frecuentes debajo del saludo (solo en chat fresco).
+// Tocar uno escribe la pregunta en el input y reusa enviarChatJaime().
+function mostrarChipsJaime() {
+    const cont = document.getElementById('jaime-chat__msgs');
+    if (!cont || document.getElementById('jaime-chat__chips')) return;
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    const nombre = perro?.nombre || 'mi perro';
+    const preguntas = [
+        '¿Cómo registro una clase?',
+        `¿Cómo viene ${nombre}?`,
+        '¿Qué hago esta semana?',
+    ];
+    const fila = document.createElement('div');
+    fila.id = 'jaime-chat__chips';
+    fila.className = 'jaime-chat__chips';
+    preguntas.forEach((q) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'jaime-chat__chip';
+        chip.textContent = q;
+        chip.addEventListener('click', () => {
+            const input = document.getElementById('jaime-chat__input');
+            if (input) input.value = q;
+            enviarChatJaime();
+        });
+        fila.appendChild(chip);
+    });
+    cont.appendChild(fila);
+    cont.scrollTop = cont.scrollHeight;
 }
 
 // Carga los últimos 20 mensajes guardados del perro (tabla mensajes_jaime,
@@ -1475,6 +1508,9 @@ async function enviarChatJaime() {
     if (!input) return;
     const texto = input.value.trim();
     if (!texto) return;
+
+    // Al primer envío (por chip o escribiendo) quitamos los chips de sugerencias.
+    document.getElementById('jaime-chat__chips')?.remove();
 
     // Mensaje del tutor → UI + historial. Limpiamos input.
     pintarMsgJaime('user', texto);
