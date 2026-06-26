@@ -4492,6 +4492,56 @@ body {
     /* hereda lo de .aviso-btn base */
 }
 
+/* ---- Tab "Atención" (reusa .aviso-* / .avisos-*) ---- */
+.atencion-grupo-titulo {
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 22px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.atencion-grupo-titulo:first-child { margin-top: 4px; }
+.atencion-grupo-count {
+    background: var(--color-red);
+    color: var(--color-text);
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.atencion-tabla-wrap { overflow-x: auto; }
+.atencion-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+    font-size: 13px;
+}
+.atencion-tabla th,
+.atencion-tabla td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+}
+.atencion-tabla th {
+    color: var(--color-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+}
+.atencion-tabla td { color: var(--color-text); }
+
 .aviso-copiables {
     margin-top: 12px;
     display: flex;

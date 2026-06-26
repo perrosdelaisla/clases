@@ -14,6 +14,7 @@ import * as catalogo from './catalogo/api.js?v=3';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
+import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=1';
 const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
@@ -174,13 +175,13 @@ async function afterLogin(session) {
     // 'inicio' está oculto (decisión 08/05) — solo navegamos entre los 4 visibles.
     initSwipeTabs({
         container: document.querySelector('.admin-main'),
-        tabs: ['agenda', 'avisos', 'actividad', 'clientes', 'stats', 'catalogo'],
+        tabs: ['agenda', 'avisos', 'atencion', 'actividad', 'clientes', 'stats', 'catalogo'],
         getCurrent: () => document.querySelector('.admin-panel:not([hidden])')?.dataset.panel,
         onChange: (tab) => activarTab(tab),
     });
 
     // Tab inicial: prioridad al #hash (notificación, ej. #avisos), si no Agenda.
-    const TABS_VALIDOS = ['agenda', 'avisos', 'actividad', 'clientes', 'stats', 'catalogo'];
+    const TABS_VALIDOS = ['agenda', 'avisos', 'atencion', 'actividad', 'clientes', 'stats', 'catalogo'];
     const hashTab = (location.hash || '').replace('#', '');
     let tabInicial = TABS_VALIDOS.includes(hashTab) ? hashTab : 'agenda';
     if (tabInicial === 'inicio') tabInicial = 'agenda';
@@ -206,6 +207,9 @@ async function afterLogin(session) {
     // Precarga del badge "Avisos" sin pintar el panel (corre en background,
     // tolera fallos para no romper el bootstrap del admin).
     precargarBadgeAvisos().catch((e) => console.warn('[admin] precarga avisos badge:', e));
+
+    // Precarga del badge "Atención" (perros que necesitan un empujón), mismo criterio.
+    precargarBadgeAtencion().catch((e) => console.warn('[admin] precarga atencion badge:', e));
 
     // Precarga del badge "Actividad" (registros sin ver), mismo criterio.
     precargarBadgeActividad().catch((e) => console.warn('[admin] precarga actividad badge:', e));
@@ -234,6 +238,11 @@ function activarTab(tab) {
         // initAvisos es idempotente: la primera vez bindea y arranca el polling,
         // las siguientes solo recargan los avisos.
         initAvisos().catch((e) => console.error('[admin] initAvisos:', e));
+    }
+    if (tab === 'atencion') {
+        // initAtencion es idempotente: bindea una vez y recalcula la foto
+        // en vivo cada vez que se abre la pestaña (sin polling).
+        initAtencion().catch((e) => console.error('[admin] initAtencion:', e));
     }
     if (tab === 'actividad' && !window.__actividadLoaded) {
         cargarActividad();

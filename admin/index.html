@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=43">
+    <link rel="stylesheet" href="./styles.css?v=44">
 </head>
 <body>
 
@@ -68,6 +68,11 @@
                     <span class="admin-tab-icon" aria-hidden="true">🔔</span>
                     <span class="admin-tab-label">Avisos</span>
                     <span class="admin-tab-badge" id="avisos-badge" hidden aria-label="Avisos sin leer"></span>
+                </button>
+                <button class="admin-tab" data-tab="atencion" type="button">
+                    <span class="admin-tab-icon" aria-hidden="true">👀</span>
+                    <span class="admin-tab-label">Atención</span>
+                    <span class="admin-tab-badge" id="atencion-badge" hidden aria-label="Perros que necesitan atención"></span>
                 </button>
                 <button class="admin-tab" data-tab="actividad" type="button">
                     <span class="admin-tab-icon" aria-hidden="true">📝</span>
@@ -191,6 +196,14 @@
                 </div>
                 <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
                 <ul id="avisos-list" class="avisos-list" role="list"></ul>
+            </section>
+
+            <section class="admin-panel" data-panel="atencion" hidden>
+                <header class="avisos-header">
+                    <h1 class="admin-panel-title">Qué necesita atención</h1>
+                    <p class="admin-panel-subtitle">Perros de clientes activos que necesitan un empujón.</p>
+                </header>
+                <div id="atencion-contenido"></div>
             </section>
 
             <section class="admin-panel" data-panel="actividad" hidden>
@@ -813,7 +826,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=62"></script>
+    <script type="module" src="./admin.js?v=63"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {
