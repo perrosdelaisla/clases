@@ -1178,6 +1178,8 @@ function setJaimeCara(estado) {
     const src = JAIME_CARAS[estado];
     const fabImg = document.querySelector('#jaime-fab img');
     if (fabImg && fabImg.getAttribute('src') !== src) fabImg.setAttribute('src', src);
+    // El "zzz" flotante solo se ve en estado dormido.
+    document.getElementById('jaime-fab')?.classList.toggle('is-durmiendo', estado === 'durmiendo');
     const chat = document.getElementById('jaime-chat');
     if (chat && !chat.hasAttribute('hidden')) {
         const cabImg = chat.querySelector('.jaime-chat__cara');

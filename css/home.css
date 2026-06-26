@@ -617,6 +617,30 @@
 .home .jaime-fab[hidden]{ display:none; }
 .home .jaime-fab img{ width:100%; height:100%; object-fit:contain; display:block; }
 
+/* "zzz" flotante: decorativo, solo en estado dormido. Nunca intercepta clicks. */
+.home .jaime-zzz{
+  position:absolute; top:-6px; right:-4px; pointer-events:none;
+  display:none; line-height:1;
+}
+.home .jaime-fab.is-durmiendo .jaime-zzz{ display:block; }
+.home .jaime-zzz span{
+  position:absolute; bottom:0; right:0;
+  font-family:var(--body); font-weight:700; font-style:italic;
+  color:var(--c-oliva); opacity:0;
+  animation:jaimeZzz 2.7s ease-in-out infinite;
+}
+.home .jaime-zzz span:nth-child(1){ font-size:11px; animation-delay:0s; }
+.home .jaime-zzz span:nth-child(2){ font-size:14px; animation-delay:.9s; }
+.home .jaime-zzz span:nth-child(3){ font-size:17px; animation-delay:1.8s; }
+@keyframes jaimeZzz{
+  0%   { opacity:0; transform:translate(0,0) scale(.8); }
+  20%  { opacity:.85; }
+  100% { opacity:0; transform:translate(8px,-22px) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce){
+  .home .jaime-zzz span{ animation:none; opacity:0; }
+}
+
 /* Burbuja: sale del FAB hacia arriba/izquierda, con colita apuntando al botón. */
 .home .jaime-burbuja{
   position:fixed; right:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 140px);
