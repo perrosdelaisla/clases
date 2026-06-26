@@ -966,7 +966,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, ejercicios (id, codigo, nombre, descripcion, categoria, instrucciones, video_url)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -3652,6 +3652,20 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
         desc.removeAttribute('hidden');
     } else {
         desc.setAttribute('hidden', '');
+    }
+    // "Cómo se hace": instructivo largo del tutor. Solo si tiene texto.
+    // textContent escapa el contenido; los saltos de línea se preservan con
+    // white-space: pre-line en el CSS de la sección.
+    const comoBox = document.getElementById('modal-ejercicio-comosehace');
+    const comoCuerpo = document.getElementById('modal-ejercicio-comosehace-cuerpo');
+    if (comoBox && comoCuerpo) {
+        if (ej.como_se_hace && ej.como_se_hace.trim()) {
+            comoCuerpo.textContent = ej.como_se_hace;
+            comoBox.removeAttribute('hidden');
+        } else {
+            comoCuerpo.textContent = '';
+            comoBox.setAttribute('hidden', '');
+        }
     }
     const videoBox = document.getElementById('modal-ejercicio-video');
     const ytId = extraerYouTubeId(ej.video_url);
