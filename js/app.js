@@ -1091,6 +1091,41 @@ function cerrarBurbujaJaime() {
     document.getElementById('jaime-burbuja')?.setAttribute('hidden', '');
 }
 
+// Deep-link desde un aviso de Jaime: lleva a Rutina, activa el subtab de la
+// categoría y abre la card puntual del item (por su ejercicio_asignado_id).
+// Si no se encuentra la card, se queda en Rutina (comportamiento neutro).
+function irAItemRutina(asignadoId, categoria) {
+    showTab('rutina');
+
+    // Activar el subtab de la categoría (mismo mecanismo que el handler de
+    // .rutina-subtab y el swipe de sub-pestañas).
+    if (categoria && categoria !== state.rutinaCategoriaActiva) {
+        state.rutinaCategoriaActiva = categoria;
+        document.querySelectorAll('.rutina-subtab').forEach((b) => {
+            const isActive = b.dataset.cat === categoria;
+            b.classList.toggle('is-active', isActive);
+            b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        renderRutinaPerroSeleccionado();
+    }
+
+    if (!asignadoId) return;
+
+    // Doble rAF: esperar a que el re-render de la rutina haya pintado el DOM.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const card = document.querySelector(
+            `.rutina-card[data-asignado-id="${CSS.escape(String(asignadoId))}"]`
+        );
+        if (!card) return; // caso borde: nos quedamos en Rutina.
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Mismo efecto que tocar la card (cf. abrirDesdeCard, clausura local):
+        // buscar la fila por su ejercicio-id y abrir el modal.
+        const fila = (state.rutinaFilas || [])
+            .find((r) => r.ejercicios && r.ejercicios.id === card.dataset.ejercicioId);
+        if (fila) abrirModalEjercicio(fila.ejercicios, fila.id);
+    }));
+}
+
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
     if (!fab) return;
@@ -1167,7 +1202,7 @@ async function cargarAvisoJaime() {
         case 'flojo':
             texto = `Esta semana ${nombre} va flojo con '${data.ejercicio}'. Faltan ${data.faltan} para la meta. ¿Le damos?`;
             ctaLabel = 'Ir al ejercicio';
-            ctaAccion = () => showTab('rutina');
+            ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'ejercicio');
             break;
         case 'tarea_floja': {
             const tNom = (data.tarea || '').trim();
@@ -1175,7 +1210,7 @@ async function cargarAvisoJaime() {
                 ? `Esta semana no registraste '${tNom}' para ${nombre}. ¿La retomamos?`
                 : `Esta semana no registraste esta tarea para ${nombre}. ¿La retomamos?`;
             ctaLabel = 'Ir a la tarea';
-            ctaAccion = () => showTab('rutina');
+            ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'tarea');
             break;
         }
         case 'al_dia':
