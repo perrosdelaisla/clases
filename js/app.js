@@ -1169,6 +1169,15 @@ async function cargarAvisoJaime() {
             ctaLabel = 'Ir al ejercicio';
             ctaAccion = () => showTab('rutina');
             break;
+        case 'tarea_floja': {
+            const tNom = (data.tarea || '').trim();
+            texto = tNom
+                ? `Esta semana no registraste '${tNom}' para ${nombre}. ¿La retomamos?`
+                : `Esta semana no registraste esta tarea para ${nombre}. ¿La retomamos?`;
+            ctaLabel = 'Ir a la tarea';
+            ctaAccion = () => showTab('rutina');
+            break;
+        }
         case 'al_dia':
             texto = `¡${nombre} viene constante! Seguid así. Cualquier duda, escríbenos.`;
             ctaLabel = '';
