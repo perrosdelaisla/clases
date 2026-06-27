@@ -143,6 +143,10 @@ function renderCliente(c, tieneUsuario) {
     const packInput = document.getElementById('cliente-pack-actual');
     if (packInput) packInput.value = c.pack_actual != null ? c.pack_actual : '';
 
+    // Checkbox "habilitar próxima clase" — refleja clase_extra_habilitada
+    const extraCheck = document.getElementById('cli-clase-extra');
+    if (extraCheck) extraCheck.checked = !!c.clase_extra_habilitada;
+
     document.title = `${c.nombre || 'Cliente'} — Admin PDLI`;
 
     // Feed de mensajes del cliente (Bloque A.3)
@@ -328,6 +332,38 @@ function escapeHTML(str) {
 function bindWidgetPack() {
     const btn = document.getElementById('cliente-pack-guardar');
     if (btn) btn.addEventListener('click', guardarPackActual);
+
+    const extraCheck = document.getElementById('cli-clase-extra');
+    if (extraCheck) extraCheck.addEventListener('change', guardarClaseExtra);
+}
+
+// Guardado inmediato del flag "habilitar próxima clase" — sin botón.
+async function guardarClaseExtra(ev) {
+    if (!state.clienteId) return;
+    const check = ev.target;
+    const fb = document.getElementById('cli-clase-extra-feedback');
+    const valor = !!check.checked;
+
+    check.disabled = true;
+    if (fb) fb.textContent = 'Guardando…';
+
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update({ clase_extra_habilitada: valor })
+            .eq('id', state.clienteId);
+        if (error) throw error;
+        if (state.cliente) state.cliente.clase_extra_habilitada = valor;
+        if (fb) fb.textContent = 'Guardado ✓';
+    } catch (err) {
+        console.error('[cliente] error guardando clase_extra_habilitada:', err);
+        // Revertimos el check al estado real para no mentir sobre lo guardado.
+        check.checked = !valor;
+        if (fb) fb.textContent = '';
+        toast('No se pudo guardar', 'error');
+    } finally {
+        check.disabled = false;
+    }
 }
 
 async function guardarPackActual() {
