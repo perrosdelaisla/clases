@@ -1159,10 +1159,16 @@ async function cargarAvisoJaime() {
 
     let data = null;
     try {
+        // Estado del pack para el aviso 'agendar_clase' (reusa la función ya
+        // existente; si pack_actual es null devuelve {pack_actual:null} y el
+        // ?? 0 deja los params en 0 → el aviso no salta).
+        const _packJaime = calcularEstadoPack(state.cliente, state.citas);
         const { data: d, error } = await supabase.rpc('get_avisos_jaime', {
             p_perro_id: perro.id,
             p_inicio_semana: inicioSemanaLocalIso(),
             p_inicio_dia: inicioDiaLocalIso(),
+            p_por_reservar: _packJaime?.por_reservar ?? 0,
+            p_confirmadas_futuras: _packJaime?.confirmadas_futuras_del_pack ?? 0,
         });
         if (error) throw error;
         data = d;
@@ -1238,6 +1244,15 @@ async function cargarAvisoJaime() {
             ctaLabel = '';
             ctaAccion = null;
             break;
+        case 'agendar_clase': {
+            const n = Number(data.pendientes) || 1;
+            texto = n === 1
+                ? `Os queda 1 clase del pack por reservar y todavía no tenéis fecha. Cuando queráis, podéis elegir el día desde aquí. 🐾`
+                : `Os quedan ${n} clases del pack por reservar y todavía no tenéis fecha. Cuando queráis, podéis elegir el día desde aquí. 🐾`;
+            ctaLabel = 'Reservar clase';
+            ctaAccion = () => showTab('reservar');
+            break;
+        }
         default:
             _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
@@ -1253,7 +1268,22 @@ async function cargarAvisoJaime() {
     // · Resto (informe/mensaje/sin_entrenar/flojo/tarea_floja): gate diario
     //   descartadoHoy, exactamente como antes.
     const TIPOS_FELICITACION = ['racha', 'regreso', 'semana_redonda'];
-    if (TIPOS_FELICITACION.includes(data.tipo)) {
+    if (data.tipo === 'agendar_clase') {
+        // Recordatorio de reserva: reaparece cada 3 días (no machaca a diario).
+        const KEY = 'jaime_agendar_visto';
+        const hoyIso = formatearFechaLocal(new Date());
+        const ultimo = localStorage.getItem(KEY);
+        let diasDesde = Infinity;
+        if (ultimo) {
+            diasDesde = Math.floor((new Date(hoyIso) - new Date(ultimo)) / 86400000);
+        }
+        if (diasDesde >= 3) {
+            localStorage.setItem(KEY, hoyIso);
+            abrirBurbujaJaime();
+        } else {
+            cerrarBurbujaJaime();
+        }
+    } else if (TIPOS_FELICITACION.includes(data.tipo)) {
         const claveFelic = 'jaime_felic_' + data.tipo + '_' + inicioSemanaLocalFecha();
         if (!localStorage.getItem(claveFelic)) {
             localStorage.setItem(claveFelic, '1');
