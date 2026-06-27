@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=44">
+    <link rel="stylesheet" href="./styles.css?v=45">
 </head>
 <body>
 
@@ -64,20 +64,10 @@
                     <span class="admin-tab-icon" aria-hidden="true">📅</span>
                     <span class="admin-tab-label">Agenda</span>
                 </button>
-                <button class="admin-tab" data-tab="avisos" type="button">
-                    <span class="admin-tab-icon" aria-hidden="true">🔔</span>
-                    <span class="admin-tab-label">Avisos</span>
-                    <span class="admin-tab-badge" id="avisos-badge" hidden aria-label="Avisos sin leer"></span>
-                </button>
-                <button class="admin-tab" data-tab="atencion" type="button">
+                <button class="admin-tab" data-tab="seguimiento" type="button">
                     <span class="admin-tab-icon" aria-hidden="true">👀</span>
-                    <span class="admin-tab-label">Atención</span>
-                    <span class="admin-tab-badge" id="atencion-badge" hidden aria-label="Perros que necesitan atención"></span>
-                </button>
-                <button class="admin-tab" data-tab="actividad" type="button">
-                    <span class="admin-tab-icon" aria-hidden="true">📝</span>
-                    <span class="admin-tab-label">Actividad</span>
-                    <span class="admin-tab-badge" id="actividad-badge" hidden aria-label="Registros sin ver"></span>
+                    <span class="admin-tab-label">Seguimiento</span>
+                    <span class="admin-tab-badge" id="seguimiento-badge" hidden aria-label="Pendientes de seguimiento"></span>
                 </button>
                 <button class="admin-tab" data-tab="clientes" type="button">
                     <span class="admin-tab-icon" aria-hidden="true">👥</span>
@@ -179,55 +169,48 @@
                 </section>
             </section>
 
-            <section class="admin-panel" data-panel="avisos" hidden>
-                <header class="avisos-header">
-                    <h1 class="admin-panel-title">Avisos</h1>
-                    <p class="admin-panel-subtitle">Mensajes, entrenos reportados y novedades de citas. Polling cada 25s + actualización al volver al foco.</p>
-                </header>
-                <div class="avisos-toolbar">
-                    <nav class="avisos-filtros" aria-label="Filtros de avisos">
-                        <button type="button" class="avisos-filtro active" data-filtro="todos">Todos</button>
-                        <button type="button" class="avisos-filtro" data-filtro="no_leidos">No leídos</button>
-                        <button type="button" class="avisos-filtro" data-filtro="cita">Citas</button>
-                        <button type="button" class="avisos-filtro" data-filtro="mensaje">Mensajes</button>
-                        <button type="button" class="avisos-filtro" data-filtro="ejercicio">Entrenos</button>
-                    </nav>
-                    <button type="button" id="btn-avisos-marcar-todos" class="btn-secondary" hidden>Marcar todos leídos</button>
-                </div>
-                <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
-                <ul id="avisos-list" class="avisos-list" role="list"></ul>
-            </section>
-
-            <section class="admin-panel" data-panel="atencion" hidden>
-                <header class="avisos-header">
-                    <h1 class="admin-panel-title">Qué necesita atención</h1>
-                    <p class="admin-panel-subtitle">Perros de clientes activos que necesitan un empujón.</p>
-                </header>
-                <div id="atencion-contenido"></div>
-            </section>
-
-            <section class="admin-panel" data-panel="actividad" hidden>
-                <header class="actividad-header">
-                    <h1 class="admin-panel-title">Actividad</h1>
-                    <p class="admin-panel-subtitle">Lo que los clientes registran al entrenar y quién lleva tiempo sin practicar.</p>
-                    <nav class="actividad-subtabs" aria-label="Sub-secciones de actividad">
-                        <button class="actividad-subtab active" data-subtab="registros" type="button">Registros</button>
-                        <button class="actividad-subtab" data-subtab="sinpractica" type="button">Sin práctica<span class="actividad-subtab-count" id="actividad-sinpractica-count" hidden></span></button>
+            <section class="admin-panel" data-panel="seguimiento" hidden>
+                <header>
+                    <h1 class="admin-panel-title">Seguimiento</h1>
+                    <nav class="seguimiento-subtabs" aria-label="Sub-secciones de seguimiento">
+                        <button class="seguimiento-subtab active" data-subtab="avisos" type="button">
+                            Avisos <span class="seguimiento-subtab-badge" id="avisos-badge" hidden></span>
+                        </button>
+                        <button class="seguimiento-subtab" data-subtab="atencion" type="button">
+                            Atención <span class="seguimiento-subtab-badge" id="atencion-badge" hidden></span>
+                        </button>
+                        <button class="seguimiento-subtab" data-subtab="registros" type="button">
+                            Registros <span class="seguimiento-subtab-badge" id="actividad-badge" hidden></span>
+                        </button>
                     </nav>
                 </header>
 
-                <section class="actividad-subpanel" data-actividad-subpanel="registros">
+                <section class="seguimiento-subpanel" data-seg-subpanel="avisos">
+                    <div class="avisos-toolbar">
+                        <nav class="avisos-filtros" aria-label="Filtros de avisos">
+                            <button type="button" class="avisos-filtro active" data-filtro="todos">Todos</button>
+                            <button type="button" class="avisos-filtro" data-filtro="no_leidos">No leídos</button>
+                            <button type="button" class="avisos-filtro" data-filtro="cita">Citas</button>
+                            <button type="button" class="avisos-filtro" data-filtro="mensaje">Mensajes</button>
+                            <button type="button" class="avisos-filtro" data-filtro="ejercicio">Entrenos</button>
+                        </nav>
+                        <button type="button" id="btn-avisos-marcar-todos" class="btn-secondary" hidden>Marcar todos leídos</button>
+                    </div>
+                    <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
+                    <ul id="avisos-list" class="avisos-list" role="list"></ul>
+                </section>
+
+                <section class="seguimiento-subpanel" data-seg-subpanel="atencion" hidden>
+                    <div id="atencion-contenido"></div>
+                </section>
+
+                <section class="seguimiento-subpanel" data-seg-subpanel="registros" hidden>
                     <nav class="actividad-filtros" aria-label="Filtro de registros">
                         <button type="button" class="actividad-filtro active" data-filtro="pendientes">Pendientes</button>
                         <button type="button" class="actividad-filtro" data-filtro="todos">Todos</button>
                     </nav>
                     <p id="actividad-registros-empty" class="actividad-empty" hidden>Cargando registros…</p>
                     <ul id="actividad-registros-lista" class="actividad-lista" role="list"></ul>
-                </section>
-
-                <section class="actividad-subpanel" data-actividad-subpanel="sinpractica" hidden>
-                    <p id="actividad-sinpractica-empty" class="actividad-empty" hidden>Cargando…</p>
-                    <ul id="actividad-sinpractica-lista" class="actividad-sinpractica-lista" role="list"></ul>
                 </section>
             </section>
 
@@ -834,7 +817,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=64"></script>
+    <script type="module" src="./admin.js?v=65"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {

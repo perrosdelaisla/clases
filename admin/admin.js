@@ -175,22 +175,40 @@ async function afterLogin(session) {
     // 'inicio' está oculto (decisión 08/05) — solo navegamos entre los 4 visibles.
     initSwipeTabs({
         container: document.querySelector('.admin-main'),
-        tabs: ['agenda', 'avisos', 'atencion', 'actividad', 'clientes', 'stats', 'catalogo'],
+        tabs: ['agenda', 'seguimiento', 'clientes', 'stats', 'catalogo'],
         getCurrent: () => document.querySelector('.admin-panel:not([hidden])')?.dataset.panel,
         onChange: (tab) => activarTab(tab),
     });
 
+    // Subtabs de Seguimiento (Avisos | Atención | Registros). Bindeadas al
+    // arranque, igual que el resto de la navegación principal.
+    bindSeguimientoSubtabs();
+
+    // Compatibilidad de hash: notificaciones viejas apuntan a #avisos/#atencion/
+    // #actividad, que ahora son subtabs dentro de 'seguimiento'.
+    const HASH_A_SUBTAB = { avisos: 'avisos', atencion: 'atencion', actividad: 'registros' };
+
     // Tab inicial: prioridad al #hash (notificación, ej. #avisos), si no Agenda.
-    const TABS_VALIDOS = ['agenda', 'avisos', 'atencion', 'actividad', 'clientes', 'stats', 'catalogo'];
+    const TABS_VALIDOS = ['agenda', 'seguimiento', 'clientes', 'stats', 'catalogo'];
     const hashTab = (location.hash || '').replace('#', '');
-    let tabInicial = TABS_VALIDOS.includes(hashTab) ? hashTab : 'agenda';
-    if (tabInicial === 'inicio') tabInicial = 'agenda';
+    let tabInicial = 'agenda';
+    let subtabInicial = null;
+    if (hashTab in HASH_A_SUBTAB) {
+        tabInicial = 'seguimiento';
+        subtabInicial = HASH_A_SUBTAB[hashTab];
+    } else if (hashTab === 'seguimiento') {
+        tabInicial = 'seguimiento';
+        subtabInicial = 'avisos';
+    } else if (TABS_VALIDOS.includes(hashTab) && hashTab !== 'inicio') {
+        tabInicial = hashTab;
+    }
     // Limpiar el #hash de la URL: viene de una notificación y, si no se
     // borra, queda pegado y la PWA reabre en esa pestaña en vez de Agenda.
     if (location.hash) {
         history.replaceState(history.state, '', location.pathname + location.search);
     }
     activarTab(tabInicial);
+    if (subtabInicial) activarSeguimientoSubtab(subtabInicial);
 
     // Navegación desde notificación push (ventana ya abierta):
     // el SW manda {tipo:'pdli_navegar', url}; abrimos el tab del #hash.
@@ -199,7 +217,15 @@ async function afterLogin(session) {
             const d = ev.data || {};
             if (d.tipo === 'pdli_navegar' && typeof d.url === 'string') {
                 const t = (d.url.split('#')[1] || '').trim();
-                if (TABS_VALIDOS.includes(t)) activarTab(t);
+                if (t in HASH_A_SUBTAB) {
+                    activarTab('seguimiento');
+                    activarSeguimientoSubtab(HASH_A_SUBTAB[t]);
+                } else if (t === 'seguimiento') {
+                    activarTab('seguimiento');
+                    activarSeguimientoSubtab('avisos');
+                } else if (TABS_VALIDOS.includes(t)) {
+                    activarTab(t);
+                }
             }
         });
     }
@@ -213,6 +239,36 @@ async function afterLogin(session) {
 
     // Precarga del badge "Actividad" (registros sin ver), mismo criterio.
     precargarBadgeActividad().catch((e) => console.warn('[admin] precarga actividad badge:', e));
+
+    // Badge madre de Seguimiento: suma los 3 sub-badges. Las precargas de arriba
+    // son async; un MutationObserver sobre los 3 sub-badges mantiene el total al
+    // día cuando pintan (y cuando el polling de avisos los actualiza).
+    actualizarBadgeSeguimiento();
+    ['avisos-badge', 'atencion-badge', 'actividad-badge'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const obs = new MutationObserver(() => actualizarBadgeSeguimiento());
+        obs.observe(el, { childList: true, attributes: true, attributeFilter: ['hidden'] });
+    });
+}
+
+// Suma los enteros visibles de los 3 sub-badges y los pinta en #seguimiento-badge.
+function actualizarBadgeSeguimiento() {
+    const madre = document.getElementById('seguimiento-badge');
+    if (!madre) return;
+    let total = 0;
+    ['avisos-badge', 'atencion-badge', 'actividad-badge'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el || el.hidden) return;
+        const n = parseInt(el.textContent, 10);
+        if (Number.isFinite(n)) total += n;
+    });
+    if (total > 0) {
+        madre.textContent = total > 99 ? '99+' : String(total);
+        madre.hidden = false;
+    } else {
+        madre.hidden = true;
+    }
 }
 
 // ---------- Pestañas (SPA) ----------
@@ -234,19 +290,10 @@ function activarTab(tab) {
     if (tab === 'agenda' && !window.__agendaBound) {
         initAgenda();
     }
-    if (tab === 'avisos') {
-        // initAvisos es idempotente: la primera vez bindea y arranca el polling,
-        // las siguientes solo recargan los avisos.
-        initAvisos().catch((e) => console.error('[admin] initAvisos:', e));
-    }
-    if (tab === 'atencion') {
-        // initAtencion es idempotente: bindea una vez y recalcula la foto
-        // en vivo cada vez que se abre la pestaña (sin polling).
-        initAtencion().catch((e) => console.error('[admin] initAtencion:', e));
-    }
-    if (tab === 'actividad' && !window.__actividadLoaded) {
-        cargarActividad();
-        window.__actividadLoaded = true;
+    if (tab === 'seguimiento') {
+        // Reabre la subtab activa (por defecto Avisos) y dispara su carga.
+        const sub = document.querySelector('.seguimiento-subtab.active')?.dataset.subtab || 'avisos';
+        activarSeguimientoSubtab(sub);
     }
     if (tab === 'clientes' && !window.__clientesLoaded) {
         cargarClientes();
@@ -277,7 +324,6 @@ async function handleLogout() {
     document.getElementById('cliente-search').value = '';
     window.__clientesLoaded = false;
     window.__catalogoLoaded = false;
-    window.__actividadLoaded = false;
     try { localStorage.removeItem('pdli_admin_tab'); } catch (e) {}
     showScreen('login');
 }
@@ -426,6 +472,39 @@ function activarAgendaSubtab(sub) {
     if (sub === 'plantilla')      cargarPlantilla();
     else if (sub === 'bloqueos')  cargarBloqueos();
     else if (sub === 'citas')     cargarCitas();
+}
+
+// Subtabs de Seguimiento (Avisos | Atención | Registros) — mismo patrón que
+// bindAgendaSubtabs / activarAgendaSubtab (clic + swipe horizontal).
+function bindSeguimientoSubtabs() {
+    document.querySelectorAll('.seguimiento-subtab').forEach((btn) => {
+        btn.addEventListener('click', () => activarSeguimientoSubtab(btn.dataset.subtab));
+    });
+
+    initSwipeTabs({
+        container: document.querySelector('[data-panel="seguimiento"]'),
+        tabs: ['avisos', 'atencion', 'registros'],
+        getCurrent: () => document.querySelector('.seguimiento-subtab.active')?.dataset.subtab,
+        onChange: (sub) => activarSeguimientoSubtab(sub),
+    });
+}
+
+function activarSeguimientoSubtab(sub) {
+    document.querySelectorAll('.seguimiento-subtab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.subtab === sub);
+    });
+    document.querySelectorAll('[data-seg-subpanel]').forEach((p) => {
+        p.hidden = p.dataset.segSubpanel !== sub;
+    });
+    // Carga idempotente de cada sección.
+    if (sub === 'avisos') {
+        initAvisos().catch((e) => console.error('[admin] initAvisos:', e));
+    } else if (sub === 'atencion') {
+        initAtencion().catch((e) => console.error('[admin] initAtencion:', e));
+    } else if (sub === 'registros') {
+        // cargarActividad bindea una vez (actividadState.bound) y recarga registros.
+        cargarActividad();
+    }
 }
 
 function bindAgendaModals() {
@@ -2916,15 +2995,13 @@ function renderCatalogoCard(ej) {
 }
 
 /* ═══════════════════════════════════════════
-   ACTIVIDAD — Registros de ejercicio reportados por clientes
-   + clientes sin práctica reciente. Lee las vistas
-   actividad_registros_admin y clientes_actividad_admin (RLS es_admin).
+   ACTIVIDAD (subtab "Registros" de Seguimiento) — Registros de ejercicio
+   reportados por clientes. Lee la vista actividad_registros_admin (RLS es_admin).
    El admin marca "visto" / comenta sobre registros_ejercicio (UPDATE).
    ═══════════════════════════════════════════ */
 
 const actividadState = {
     registros: [],
-    sinPractica: [],
     bound: false,
     comentarRegistroId: null,
     filtro: 'pendientes', // 'pendientes' (visto_por_admin=false) | 'todos'
@@ -2948,31 +3025,6 @@ function cargarActividad() {
         actividadState.bound = true;
     }
     cargarRegistrosActividad();
-    cargarSinPractica();
-}
-
-// Subtabs internas de Actividad — mismo patrón que bindAgendaSubtabs /
-// activarAgendaSubtab (clic + swipe horizontal), con clases propias.
-function bindActividadSubtabs() {
-    document.querySelectorAll('.actividad-subtab').forEach((btn) => {
-        btn.addEventListener('click', () => activarActividadSubtab(btn.dataset.subtab));
-    });
-
-    initSwipeTabs({
-        container: document.querySelector('[data-panel="actividad"]'),
-        tabs: ['registros', 'sinpractica'],
-        getCurrent: () => document.querySelector('.actividad-subtab.active')?.dataset.subtab,
-        onChange: (sub) => activarActividadSubtab(sub),
-    });
-}
-
-function activarActividadSubtab(sub) {
-    document.querySelectorAll('.actividad-subtab').forEach((b) => {
-        b.classList.toggle('active', b.dataset.subtab === sub);
-    });
-    document.querySelectorAll('[data-actividad-subpanel]').forEach((p) => {
-        p.hidden = p.dataset.actividadSubpanel !== sub;
-    });
 }
 
 async function cargarRegistrosActividad() {
@@ -3065,68 +3117,6 @@ function renderRegistroActividad(r) {
             ${notaCierre}
             ${videoHTML}
             ${pie}
-        </li>
-    `;
-}
-
-async function cargarSinPractica() {
-    const lista = document.getElementById('actividad-sinpractica-lista');
-    const empty = document.getElementById('actividad-sinpractica-empty');
-    if (!lista) return;
-    lista.innerHTML = '';
-    if (empty) { empty.hidden = false; empty.textContent = 'Cargando…'; }
-    try {
-        const { data, error } = await supabase
-            .from('clientes_actividad_admin')
-            .select('cliente_id, cliente_nombre, perro_id, perro_nombre, ultima_practica, dias_sin_practica, ejercicios_activos')
-            .gt('ejercicios_activos', 0)
-            .or('ultima_practica.is.null,dias_sin_practica.gte.7')
-            .order('ultima_practica', { ascending: true, nullsFirst: true });
-        if (error) throw error;
-        actividadState.sinPractica = data || [];
-        renderSinPractica();
-    } catch (err) {
-        console.error('[actividad] error cargando sin práctica:', err);
-        if (empty) { empty.hidden = false; empty.textContent = 'Error al cargar.'; }
-    }
-}
-
-function renderSinPractica() {
-    const lista = document.getElementById('actividad-sinpractica-lista');
-    const empty = document.getElementById('actividad-sinpractica-empty');
-    if (!lista) return;
-    const items = actividadState.sinPractica;
-    pintarContadorSinPractica(items.length);
-    if (!items.length) {
-        lista.innerHTML = '';
-        if (empty) { empty.hidden = false; empty.textContent = 'Todos los clientes activos registraron hace poco. 🎉'; }
-        return;
-    }
-    if (empty) empty.hidden = true;
-    lista.innerHTML = items.map(renderSinPracticaItem).join('');
-}
-
-// Contador de clientes fríos en la subtab "Sin práctica" (visible sin entrar).
-function pintarContadorSinPractica(n) {
-    const count = document.getElementById('actividad-sinpractica-count');
-    if (!count) return;
-    if (n > 0) {
-        count.textContent = n > 99 ? '99+' : String(n);
-        count.hidden = false;
-    } else {
-        count.hidden = true;
-    }
-}
-
-function renderSinPracticaItem(c) {
-    const nunca = c.ultima_practica == null;
-    const estadoHTML = nunca
-        ? '<span class="actividad-sinpractica-dias actividad-sinpractica-dias--alerta">Nunca registró</span>'
-        : `<span class="actividad-sinpractica-dias">${escapeHTML(String(c.dias_sin_practica))} días sin registrar</span>`;
-    return `
-        <li class="actividad-sinpractica-item">
-            <span class="actividad-quien">${escapeHTML(c.cliente_nombre || '—')} · ${escapeHTML(c.perro_nombre || '—')}</span>
-            ${estadoHTML}
         </li>
     `;
 }
@@ -3228,8 +3218,6 @@ async function onActividadVideoClick(btn) {
 }
 
 function bindActividad() {
-    bindActividadSubtabs();
-
     // Filtro Pendientes / Todos sobre los registros ya cargados en memoria.
     document.querySelectorAll('.actividad-filtro').forEach((btn) => {
         btn.addEventListener('click', () => {

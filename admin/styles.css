@@ -2175,7 +2175,8 @@ body {
     }
 
     .agenda-subtab,
-    .actividad-subtab {
+    .actividad-subtab,
+    .seguimiento-subtab {
         padding: 10px 12px;
         font-size: 12px;
     }
@@ -4711,6 +4712,67 @@ body {
 .actividad-subtab-count[hidden] { display: none; }
 
 .actividad-subpanel {
+    padding-top: 24px;
+}
+
+/* Subtabs de Seguimiento (Avisos | Atención | Registros) — mismo look que las
+   subtabs de Agenda; clase propia para no cruzar bindings. */
+.seguimiento-subtabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.seguimiento-subtab {
+    background: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s ease;
+    min-height: var(--tap);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seguimiento-subtab:hover {
+    color: var(--color-text);
+}
+
+.seguimiento-subtab.active {
+    color: var(--color-red);
+    border-bottom-color: var(--color-red);
+}
+
+/* Badge de pendientes dentro de cada subtab (mismo look que el contador de
+   "Sin práctica" / los badges del nav). */
+.seguimiento-subtab-badge {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--color-red);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.seguimiento-subtab-badge[hidden] { display: none; }
+
+.seguimiento-subpanel {
     padding-top: 24px;
 }
 
