@@ -1198,23 +1198,36 @@ async function cargarAvisoJaime() {
             ctaAccion = () => showTab('mensajes');
             break;
         }
-        case 'sin_entrenar':
-            texto = data.nunca
-                ? `${nombre} aún no tiene ninguna clase registrada. ¿Empezamos hoy?`
-                : `Hace ${data.dias} días que ${nombre} no entrena. Una clase cortita hoy suma un montón.`;
-            ctaLabel = data.nunca ? 'Registrar clase' : 'Entrenar ahora';
-            ctaAccion = () => showTab('rutina');
+        case 'checkin':
+        case 'sin_entrenar':    // compat RPC viejo → tratar como silencio
+        case 'agendar_clase': { // compat RPC viejo → tratar como sin agendar
+            const silencio   = data.tipo === 'sin_entrenar' ? true : !!data.silencio;
+            const sinAgendar = data.tipo === 'agendar_clase' ? true : !!data.sin_agendar;
+            if (silencio && sinAgendar) {
+                texto = `Hace unos días que no tenemos noticias de ${nombre}. ¿Va todo bien? Os queda además una clase por reservar. Si queréis que os echemos una mano con lo que sea, escribidnos. 🐾`;
+                ctaLabel = 'Escríbenos';
+                ctaAccion = () => showTab('mensajes');
+            } else if (sinAgendar) {
+                texto = `¿Va todo bien? Os queda una clase por reservar y aún no tenéis fecha. Cuando queráis elegís el día desde aquí, y si necesitáis algo, nos escribís. 🐾`;
+                ctaLabel = 'Reservar clase';
+                ctaAccion = () => showTab('reservar');
+            } else {
+                texto = `Hace unos días que no tenemos noticias de ${nombre}. ¿Va todo bien? Si os cuesta registrar los entrenos, tenéis dudas o necesitáis cualquier cosa, escribidnos: estamos aquí. 🐾`;
+                ctaLabel = 'Escríbenos';
+                ctaAccion = () => showTab('mensajes');
+            }
             break;
+        }
         case 'flojo':
-            texto = `Esta semana ${nombre} va flojo con '${data.ejercicio}'. Faltan ${data.faltan} para la meta. ¿Le damos?`;
+            texto = `Esta semana '${data.ejercicio}' va con menos práctica de lo habitual. ¿Todo bien con él? Si se os complica o tenéis dudas, escribidnos y lo vemos juntos.`;
             ctaLabel = 'Ir al ejercicio';
             ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'ejercicio');
             break;
         case 'tarea_floja': {
             const tNom = (data.tarea || '').trim();
             texto = tNom
-                ? `Esta semana no registraste '${tNom}' para ${nombre}. ¿La retomamos?`
-                : `Esta semana no registraste esta tarea para ${nombre}. ¿La retomamos?`;
+                ? `Esta semana no hemos visto registros de '${tNom}' para ${nombre}. ¿Va todo bien? Si necesitáis una mano con ella, aquí estamos.`
+                : `Esta semana no hemos visto registros de esta tarea para ${nombre}. ¿Va todo bien? Si necesitáis una mano, aquí estamos.`;
             ctaLabel = 'Ir a la tarea';
             ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'tarea');
             break;
@@ -1244,15 +1257,6 @@ async function cargarAvisoJaime() {
             ctaLabel = '';
             ctaAccion = null;
             break;
-        case 'agendar_clase': {
-            const n = Number(data.pendientes) || 1;
-            texto = n === 1
-                ? `Os queda 1 clase del pack por reservar y todavía no tenéis fecha. Cuando queráis, podéis elegir el día desde aquí. 🐾`
-                : `Os quedan ${n} clases del pack por reservar y todavía no tenéis fecha. Cuando queráis, podéis elegir el día desde aquí. 🐾`;
-            ctaLabel = 'Reservar clase';
-            ctaAccion = () => showTab('reservar');
-            break;
-        }
         default:
             _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
@@ -1268,9 +1272,9 @@ async function cargarAvisoJaime() {
     // · Resto (informe/mensaje/sin_entrenar/flojo/tarea_floja): gate diario
     //   descartadoHoy, exactamente como antes.
     const TIPOS_FELICITACION = ['racha', 'regreso', 'semana_redonda'];
-    if (data.tipo === 'agendar_clase') {
-        // Recordatorio de reserva: reaparece cada 3 días (no machaca a diario).
-        const KEY = 'jaime_agendar_visto';
+    if (data.tipo === 'checkin' || data.tipo === 'sin_entrenar' || data.tipo === 'agendar_clase') {
+        // Check-in "¿va todo bien?": reaparece cada 3 días (no machaca a diario).
+        const KEY = 'jaime_checkin_visto';
         const hoyIso = formatearFechaLocal(new Date());
         const ultimo = localStorage.getItem(KEY);
         let diasDesde = Infinity;
