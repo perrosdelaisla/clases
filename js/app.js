@@ -938,7 +938,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, zona, pack_actual')
+        .select('id, nombre, telefono, email, direccion, zona, pack_actual, clase_extra_habilitada')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -2782,6 +2782,12 @@ function calcularEstadoPack(cliente, citasCliente) {
     const pack = cliente?.pack_actual;
     if (pack == null) return { pack_actual: null };
 
+    // Seña para próxima clase: con el flag habilitado, el cliente tiene 1 cupo
+    // extra. Solo afecta el window y por_reservar; pack_actual sigue siendo el
+    // pack REAL. Flag false → extra=0 → packEf===pack → sin cambios.
+    const extra = cliente?.clase_extra_habilitada ? 1 : 0;
+    const packEf = pack + extra;
+
     const hoyIso = new Date().toISOString().slice(0, 10);
 
     // Citas con numero_clase NOT NULL, orden desc por numero_clase
@@ -2791,7 +2797,7 @@ function calcularEstadoPack(cliente, citasCliente) {
         .sort((a, b) => b.numero_clase - a.numero_clase);
 
     // Las N más recientes son "el pack actual"
-    const enPack = numeradas.slice(0, pack);
+    const enPack = numeradas.slice(0, packEf);
     const nums = enPack.map((c) => c.numero_clase);
     const rangoMin = nums.length ? Math.min(...nums) : null;
     const rangoMax = nums.length ? Math.max(...nums) : null;
@@ -2803,7 +2809,7 @@ function calcularEstadoPack(cliente, citasCliente) {
         else if (c.estado === 'confirmada' && c.fecha >= hoyIso) confirmadasFuturas++;
     });
 
-    const porReservar = Math.max(0, pack - realizadas - confirmadasFuturas);
+    const porReservar = Math.max(0, packEf - realizadas - confirmadasFuturas);
 
     // proximo_numero: si hay una clase CANCELADA cuyo número no fue repuesto,
     // la próxima reserva REPONE el hueco más bajo (no salta adelante). Si no
@@ -2950,6 +2956,16 @@ async function renderTabReservar() {
         return;
     }
     if (pack.por_reservar === 0) {
+        // Terminó el pack y no hay seña recibida (flag false) ni clases futuras
+        // pendientes del pack → cartelito para pedir la seña de la próxima clase.
+        if (!state.cliente?.clase_extra_habilitada && pack.confirmadas_futuras_del_pack === 0) {
+            mensajeBox.innerHTML = `
+                <div class="reservar-aviso reservar-aviso--cuidado">
+                    <h3>Necesitamos la seña de tu próxima clase</h3>
+                    <p>Para reservar tu próxima clase necesitamos la seña. Escríbenos desde Mensajes (o por WhatsApp) y te pasamos los datos del Bizum; en cuanto la confirmemos, podrás elegir la fecha de tu próxima clase. 🐾</p>
+                </div>`;
+            return;
+        }
         mensajeBox.innerHTML = `
             <div class="reservar-aviso reservar-aviso--cuidado">
                 <h3>Tu pack actual está completo</h3>
