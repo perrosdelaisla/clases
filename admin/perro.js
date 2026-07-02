@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initJaime } from './jaime.js?v=9';
+import { initJaime } from './jaime.js?v=10';
 const supabase = getSupabase('admin');
 import {
     estadoChipFrecuencia,

@@ -29,8 +29,197 @@ export function initJaime(context) {
   fabEl.className = 'jm-fab';
   fabEl.setAttribute('aria-label', 'Abrir asistente');
   fabEl.innerHTML = '<img class="jm-img" src="img/jaime.png" alt="Jaime">';
-  fabEl.addEventListener('click', abrir);
   document.body.appendChild(fabEl);
+  setupFabArrastrable();
+}
+
+// ─────────────────── FAB arrastrable + persistencia ───────────────────
+// TAP corto → abre el chat. Mantener ~250ms o desplazar >8px → arrastre
+// (el FAB sigue al puntero por transform, sin reflow). Al soltar, snap al
+// borde lateral más cercano conservando la altura, y se guarda { lado, y }.
+const FAB_POS_KEY = 'pdli_jaime_fab_pos';
+const FAB_MARGEN = 14;
+const FAB_UMBRAL = 8;
+const FAB_LONGPRESS_MS = 250;
+
+let fabX = 0, fabY = 0;            // posición top-left (aplicada vía transform)
+let fabArrastrando = false;
+let fabSupressClick = false;
+// Mientras sea false, el FAB conserva su posición CSS por defecto (right/bottom,
+// responsive). Pasamos a transform solo al restaurar una posición guardada o al
+// empezar un arrastre real — así un simple tap no altera el layout por defecto.
+let fabTransformActivo = false;
+
+function fabAsegurarTransform() {
+  if (fabTransformActivo) return;
+  const r = fabEl.getBoundingClientRect();
+  fabX = r.left; fabY = r.top;
+  fabEl.style.left = '0'; fabEl.style.top = '0'; fabEl.style.right = 'auto'; fabEl.style.bottom = 'auto';
+  fabTransformActivo = true;
+  fabAplicarTransform();
+}
+
+// Lee las safe-areas de iOS resolviendo env(...) sobre un elemento probe.
+function fabSafeAreas() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const sa = { top: parseFloat(cs.paddingTop) || 0, right: parseFloat(cs.paddingRight) || 0, bottom: parseFloat(cs.paddingBottom) || 0, left: parseFloat(cs.paddingLeft) || 0 };
+  probe.remove();
+  return sa;
+}
+
+// Límites válidos para el top-left del FAB: dentro del viewport con margen,
+// sin invadir safe-areas ni la barra/columna de navegación del admin.
+function fabBounds() {
+  const w = fabEl.offsetWidth || 56;
+  const h = fabEl.offsetHeight || 56;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const sa = fabSafeAreas();
+  let leftReserve = 0, bottomReserve = 0;
+  const nav = document.querySelector('.admin-nav');
+  if (nav && getComputedStyle(nav).position === 'fixed' && nav.offsetParent !== null) {
+    const r = nav.getBoundingClientRect();
+    if (r.left <= 1 && r.width < vw && r.height >= vh * 0.7) leftReserve = r.width;        // sidebar izquierdo (desktop)
+    else if (r.bottom >= vh - 1 && r.top >= vh * 0.4) bottomReserve = r.height;            // barra de tabs inferior (mobile)
+  }
+  const minX = leftReserve + sa.left + FAB_MARGEN;
+  const maxX = vw - w - sa.right - FAB_MARGEN;
+  const minY = sa.top + FAB_MARGEN;
+  const maxY = vh - h - sa.bottom - bottomReserve - FAB_MARGEN;
+  return { w, h, vw, vh, minX: Math.min(minX, maxX), maxX, minY: Math.min(minY, maxY), maxY };
+}
+
+function fabAplicarTransform() {
+  fabEl.style.transform = `translate(${Math.round(fabX)}px, ${Math.round(fabY)}px)` + (fabArrastrando ? ' scale(1.08)' : '');
+}
+
+function fabSetPos(x, y, animar) {
+  fabX = x; fabY = y;
+  if (animar) fabEl.classList.add('jm-fab--snap');
+  fabAplicarTransform();
+  if (animar) setTimeout(() => { if (fabEl) fabEl.classList.remove('jm-fab--snap'); }, 300);
+}
+
+function fabLeerPos() {
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (p && (p.lado === 'left' || p.lado === 'right') && typeof p.y === 'number') return p;
+  } catch (e) {}
+  return null;
+}
+
+function fabGuardarPos(lado, y) {
+  try { localStorage.setItem(FAB_POS_KEY, JSON.stringify({ lado, y })); } catch (e) {}
+}
+
+function fabXYdesdeLado(lado, y, b) {
+  return { x: lado === 'left' ? b.minX : b.maxX, y: Math.min(Math.max(y, b.minY), b.maxY) };
+}
+
+function setupFabArrastrable() {
+  // Solo restauramos vía transform si hay posición guardada; si no, el FAB
+  // conserva su posición CSS por defecto (responsive) hasta que se arrastre.
+  requestAnimationFrame(() => {
+    if (!fabEl) return;
+    const saved = fabLeerPos();
+    if (!saved) return;
+    fabAsegurarTransform();
+    const b = fabBounds();
+    const p = fabXYdesdeLado(saved.lado, saved.y, b);
+    fabSetPos(p.x, p.y, false);
+  });
+
+  let pointerId = null, startX = 0, startY = 0, grabDX = 0, grabDY = 0, longTimer = null;
+
+  const entrarArrastre = () => {
+    if (fabArrastrando) return;
+    fabAsegurarTransform();
+    fabArrastrando = true;
+    fabEl.classList.add('jm-fab--drag');
+    fabAplicarTransform();
+  };
+
+  fabEl.addEventListener('pointerdown', (e) => {
+    if (pointerId !== null) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pointerId = e.pointerId;
+    startX = e.clientX; startY = e.clientY;
+    // Offset del puntero respecto al top-left actual del FAB (rect real, sirva
+    // o no transform todavía).
+    const r = fabEl.getBoundingClientRect();
+    grabDX = e.clientX - r.left; grabDY = e.clientY - r.top;
+    fabArrastrando = false;
+    try { fabEl.setPointerCapture(pointerId); } catch (er) {}
+    longTimer = setTimeout(entrarArrastre, FAB_LONGPRESS_MS);
+  });
+
+  fabEl.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== pointerId) return;
+    if (!fabArrastrando) {
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) <= FAB_UMBRAL) return;
+      clearTimeout(longTimer);
+      entrarArrastre();
+    }
+    const b = fabBounds();
+    fabX = Math.min(Math.max(e.clientX - grabDX, b.minX), b.maxX);
+    fabY = Math.min(Math.max(e.clientY - grabDY, b.minY), b.maxY);
+    fabAplicarTransform();
+    e.preventDefault();
+  });
+
+  const soltar = (e) => {
+    if (e.pointerId !== pointerId) return;
+    clearTimeout(longTimer);
+    try { fabEl.releasePointerCapture(pointerId); } catch (er) {}
+    pointerId = null;
+    if (fabArrastrando) {
+      fabArrastrando = false;
+      fabEl.classList.remove('jm-fab--drag');
+      const b = fabBounds();
+      const centro = fabX + b.w / 2;
+      const lado = centro < b.vw / 2 ? 'left' : 'right';
+      const p = fabXYdesdeLado(lado, fabY, b);
+      fabSetPos(p.x, p.y, true);
+      fabGuardarPos(lado, p.y);
+      // El click que sigue al soltar NO debe abrir el chat.
+      fabSupressClick = true;
+      setTimeout(() => { fabSupressClick = false; }, 60);
+    }
+  };
+  fabEl.addEventListener('pointerup', soltar);
+  fabEl.addEventListener('pointercancel', soltar);
+
+  // TAP (o teclado) abre el chat; se ignora el click sintético tras arrastrar.
+  fabEl.addEventListener('click', () => {
+    if (fabSupressClick) { fabSupressClick = false; return; }
+    abrir();
+  });
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(fabReclamp, 120);
+  });
+}
+
+// Re-clamp en resize/rotación: si la posición guardada quedó fuera, se ajusta.
+// Si el FAB sigue en su posición CSS por defecto (nunca se movió), no tocamos
+// nada: el propio CSS ya es responsive.
+function fabReclamp() {
+  if (!fabEl || !fabTransformActivo) return;
+  const b = fabBounds();
+  const saved = fabLeerPos();
+  if (saved) {
+    const p = fabXYdesdeLado(saved.lado, saved.y, b);
+    fabSetPos(p.x, p.y, false);
+    if (p.y !== saved.y) fabGuardarPos(saved.lado, p.y);
+  } else {
+    fabSetPos(Math.min(Math.max(fabX, b.minX), b.maxX), Math.min(Math.max(fabY, b.minY), b.maxY), false);
+  }
 }
 
 function cerrar() {
