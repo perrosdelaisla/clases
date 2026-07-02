@@ -75,6 +75,7 @@ const state = {
     sugerenciaActiva: null,  // sugerencia activa en el modo sugerencia del modal
     modificando: null,       // cita en proceso de modificación: { id, fecha_vieja, hora_vieja, numero_clase }
     rutinaModo: 'rutina',    // 'rutina' | 'progreso' — toggle dentro del tab Rutina
+    veteranoVerHistorial: false,  // veterano viendo su rutina clásica (bypass del guard)
 };
 
 // Token incremental para detectar renders concurrentes de la rutina.
@@ -412,6 +413,17 @@ function bindEventos() {
     document.getElementById('vet-card-bienestar')?.addEventListener('click', () => showTab('salud'));
     document.getElementById('vet-card-reservar')?.addEventListener('click', () => showTab('reservar'));
     // vet-card-manada: deshabilitada ("Muy pronto"), sin acción.
+
+    // "Tu entrenamiento": el veterano ve su rutina clásica (solo-consulta natural).
+    // Bypass del guard veterano vía flag + re-render; el botón "Volver" regresa.
+    document.getElementById('vet-card-historial')?.addEventListener('click', () => {
+        state.veteranoVerHistorial = true;
+        renderRutinaPerroSeleccionado();
+    });
+    document.getElementById('vet-volver-historial')?.addEventListener('click', () => {
+        state.veteranoVerHistorial = false;
+        renderRutinaPerroSeleccionado();
+    });
 
     // Reservar cita (botón confirmar dentro del modal)
     const btnReservarConfirmar = document.getElementById('modal-reservar-confirmar');
@@ -2082,11 +2094,12 @@ function renderVistaVeterano() {
     document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
     document.getElementById('card-guias')?.setAttribute('hidden', '');
     document.getElementById('rutina-loading')?.setAttribute('hidden', '');
+    // El botón "Volver" solo vive en la vista de historial; aquí siempre oculto.
+    document.getElementById('vet-volver-historial')?.setAttribute('hidden', '');
 
     // Textos de la vista veterano.
-    const nombrePila = (document.getElementById('usuario-nombre')?.textContent || '').trim() || 'amigo';
-    setText('vet-nombre', nombrePila);
     setText('vet-perro', perro?.nombre || 'tu perro');
+    setText('vet-historial-perro', perro?.nombre || 'tu perro');
 
     document.getElementById('vista-veterano')?.removeAttribute('hidden');
 }
@@ -2095,10 +2108,18 @@ async function renderRutinaPerroSeleccionado() {
     const myToken = ++_renderRutinaToken;
 
     // Veterano: no tiene rutina activa; mostramos su vista propia y salimos.
-    if (esVeterano()) {
+    // Excepción: si pidió ver "Tu entrenamiento", bypasamos el guard y caemos
+    // al render clásico de la rutina (solo-consulta natural) con botón Volver.
+    if (esVeterano() && !state.veteranoVerHistorial) {
         renderVistaVeterano();
         return;
     }
+    // La vista veterano y el render clásico son excluyentes: al entrar al
+    // historial ocultamos la vista veterano (para el activo ya está oculta).
+    document.getElementById('vista-veterano')?.setAttribute('hidden', '');
+    // Botón "Volver" a la vista veterano: solo cuando un veterano ve su historial.
+    const btnVetVolver = document.getElementById('vet-volver-historial');
+    if (btnVetVolver) btnVetVolver.hidden = !(esVeterano() && state.veteranoVerHistorial);
 
     const hero = document.getElementById('perro-hero');
     const heroNombre = document.getElementById('perro-hero-nombre');

@@ -307,6 +307,10 @@
   border:1px solid var(--c-oliva-line); background:var(--c-oliva-soft);
   border-radius:12px; padding:11px 13px; transition:all .15s ease; text-align:left; width:100%;
 }
+/* El display:flex de arriba pisa el UA [hidden]{display:none}; hace falta el
+   par explícito para que setAttribute('hidden') oculte de verdad (p. ej.
+   #card-guias en la vista veterano). */
+.health[hidden]{ display:none; }
 .home .health:hover{border-color:var(--c-oliva);}
 .home .health .hmark{
   width:30px;height:30px;border-radius:8px;flex:0 0 auto;
@@ -801,8 +805,11 @@
 
 .home .vet-view{ padding:0 18px; display:flex; flex-direction:column; gap:12px; }
 .home .vet-head{ margin:20px 0 4px; }
-.home .vet-hola{ font-family:var(--display,var(--body)); font-size:22px; font-weight:700; color:var(--c-text); margin:0; line-height:1.15; }
 .home .vet-manada{ font-family:var(--body); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--c-oliva); margin:2px 0 0; }
+
+/* Botón "Volver" del historial del veterano (tope del tab Rutina). */
+.home .vet-volver{ display:inline-flex; align-items:center; align-self:flex-start; margin:14px 18px 0; padding:6px 12px; border:1px solid var(--c-oliva-line); background:var(--c-oliva-soft); border-radius:999px; color:var(--c-oliva); font-family:var(--body); font-size:12px; font-weight:600; cursor:pointer; }
+.home .vet-volver[hidden]{ display:none; }
 .home .vet-view .health{ margin:0; }
 .home .vet-card--soon{ opacity:.6; cursor:default; }
 .home .vet-card--soon:hover{ border-color:var(--c-border,rgba(127,127,127,.25)); }
