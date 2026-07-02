@@ -75,7 +75,6 @@ const state = {
     sugerenciaActiva: null,  // sugerencia activa en el modo sugerencia del modal
     modificando: null,       // cita en proceso de modificación: { id, fecha_vieja, hora_vieja, numero_clase }
     rutinaModo: 'rutina',    // 'rutina' | 'progreso' — toggle dentro del tab Rutina
-    veteranoVerHistorial: false,  // veterano viendo su rutina clásica (bypass del guard)
 };
 
 // Token incremental para detectar renders concurrentes de la rutina.
@@ -413,17 +412,6 @@ function bindEventos() {
     document.getElementById('vet-card-bienestar')?.addEventListener('click', () => showTab('salud'));
     document.getElementById('vet-card-reservar')?.addEventListener('click', () => showTab('reservar'));
     // vet-card-manada: deshabilitada ("Muy pronto"), sin acción.
-
-    // "Tu entrenamiento": el veterano ve su rutina clásica (solo-consulta natural).
-    // Bypass del guard veterano vía flag + re-render; el botón "Volver" regresa.
-    document.getElementById('vet-card-historial')?.addEventListener('click', () => {
-        state.veteranoVerHistorial = true;
-        renderRutinaPerroSeleccionado();
-    });
-    document.getElementById('vet-volver-historial')?.addEventListener('click', () => {
-        state.veteranoVerHistorial = false;
-        renderRutinaPerroSeleccionado();
-    });
 
     // Reservar cita (botón confirmar dentro del modal)
     const btnReservarConfirmar = document.getElementById('modal-reservar-confirmar');
@@ -2056,70 +2044,12 @@ function abrirGuias() {
     abrirModal('modal-guias');
 }
 
-// ───────────────────────────────────────────────────────────
-// Vista Veterano (Manada Veterana) — reemplaza la rutina de ejercicios
-// para clientes en estado veterano, que ya no tienen protocolo activo.
-// ───────────────────────────────────────────────────────────
-function renderVistaVeterano() {
-    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId) || state.perros[0] || null;
-
-    // Hero: se mantiene visible (identidad + controles: avatar/logout/tema/selector).
-    const hero = document.getElementById('perro-hero');
-    if (hero) {
-        hero.removeAttribute('hidden');
-        const heroNombre = document.getElementById('perro-hero-nombre');
-        const heroMeta = document.getElementById('perro-hero-meta');
-        const fotoImg = document.getElementById('perro-foto-img');
-        const fotoFallback = document.getElementById('perro-foto-fallback');
-        if (perro) {
-            if (heroNombre) heroNombre.textContent = perro.nombre || 'Tu perro';
-            if (heroMeta) heroMeta.textContent = [perro.raza, formatearEdadPerro(perro)].filter(Boolean).join(' · ');
-            if (perro.foto_url && fotoImg) {
-                fotoImg.src = perro.foto_url;
-                fotoImg.removeAttribute('hidden');
-                fotoFallback?.setAttribute('hidden', '');
-            } else {
-                fotoImg?.setAttribute('hidden', '');
-                if (fotoFallback) {
-                    fotoFallback.removeAttribute('hidden');
-                    fotoFallback.textContent = (perro?.nombre?.[0] || 'P').toUpperCase();
-                }
-            }
-        }
-    }
-
-    // Ocultar todo lo de la rutina de ejercicios (un veterano no tiene protocolo).
-    document.querySelector('#tab-rutina .band')?.setAttribute('hidden', '');
-    document.querySelector('#tab-rutina .work')?.setAttribute('hidden', '');
-    document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
-    document.getElementById('card-guias')?.setAttribute('hidden', '');
-    document.getElementById('rutina-loading')?.setAttribute('hidden', '');
-    // El botón "Volver" solo vive en la vista de historial; aquí siempre oculto.
-    document.getElementById('vet-volver-historial')?.setAttribute('hidden', '');
-
-    // Textos de la vista veterano.
-    setText('vet-perro', perro?.nombre || 'tu perro');
-    setText('vet-historial-perro', perro?.nombre || 'tu perro');
-
-    document.getElementById('vista-veterano')?.removeAttribute('hidden');
-}
-
 async function renderRutinaPerroSeleccionado() {
     const myToken = ++_renderRutinaToken;
 
-    // Veterano: no tiene rutina activa; mostramos su vista propia y salimos.
-    // Excepción: si pidió ver "Tu entrenamiento", bypasamos el guard y caemos
-    // al render clásico de la rutina (solo-consulta natural) con botón Volver.
-    if (esVeterano() && !state.veteranoVerHistorial) {
-        renderVistaVeterano();
-        return;
-    }
-    // La vista veterano y el render clásico son excluyentes: al entrar al
-    // historial ocultamos la vista veterano (para el activo ya está oculta).
-    document.getElementById('vista-veterano')?.setAttribute('hidden', '');
-    // Botón "Volver" a la vista veterano: solo cuando un veterano ve su historial.
-    const btnVetVolver = document.getElementById('vet-volver-historial');
-    if (btnVetVolver) btnVetVolver.hidden = !(esVeterano() && state.veteranoVerHistorial);
+    // El veterano SÍ tiene rutina (la de mantenimiento que se le deja en las
+    // últimas clases): se renderiza igual que para un activo. El bloque "Manada
+    // Veterana" se añade DEBAJO de la rutina (toggle más abajo, aditivo).
 
     const hero = document.getElementById('perro-hero');
     const heroNombre = document.getElementById('perro-hero-nombre');
@@ -2149,6 +2079,8 @@ async function renderRutinaPerroSeleccionado() {
     saldoBox.setAttribute('hidden', '');
     cardSalud?.setAttribute('hidden', '');
     document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
+    // Bloque Manada Veterana: oculto por defecto; se muestra abajo si es veterano.
+    document.getElementById('vista-veterano')?.setAttribute('hidden', '');
     // Bloque de productos recomendados: solo visible en la sub-pestaña Herramientas
     const cardProductosHerr = document.getElementById('card-productos-herramienta');
     if (cardProductosHerr) cardProductosHerr.hidden = (state.rutinaCategoriaActiva !== 'herramienta');
@@ -2178,8 +2110,17 @@ async function renderRutinaPerroSeleccionado() {
         cardSalud.removeAttribute('hidden');
     }
 
-    // Card "Guías para entender a tu perro" (todos los niveles, debajo del hero)
-    document.getElementById('card-guias')?.removeAttribute('hidden');
+    // Card "Guías para entender a tu perro" (debajo del hero). Para veteranos
+    // se mantiene oculta: el bloque Manada Veterana ya trae su propia tarjeta.
+    const esVet = esVeterano();
+    if (esVet) document.getElementById('card-guias')?.setAttribute('hidden', '');
+    else document.getElementById('card-guias')?.removeAttribute('hidden');
+
+    // Bloque Manada Veterana: aditivo, DEBAJO de la rutina. Solo para veteranos.
+    if (esVet) {
+        setText('vet-perro', perro.nombre || 'tu perro');
+        document.getElementById('vista-veterano')?.removeAttribute('hidden');
+    }
 
     // Entrada "Seguimiento de conductas"
     document.getElementById('btn-seguimiento')?.removeAttribute('hidden');
@@ -2262,7 +2203,17 @@ async function renderRutinaPerroSeleccionado() {
             // Si otra llamada ya tomó el control, dejamos que esa pinte.
             if (myToken !== _renderRutinaToken) return;
             loading.setAttribute('hidden', '');
-            empty.removeAttribute('hidden');
+            if (esVet) {
+                // Veterano legacy sin ejercicios en la app: sin estado vacío.
+                // Colapsamos la rutina para que el bloque Manada Veterana quede
+                // directamente debajo del hero (no se ve nada roto).
+                empty.setAttribute('hidden', '');
+                document.querySelector('#tab-rutina .work')?.setAttribute('hidden', '');
+                document.querySelector('#tab-rutina .band')?.setAttribute('hidden', '');
+                document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
+            } else {
+                empty.removeAttribute('hidden');
+            }
             renderAnilloSemana();
             return;
         }

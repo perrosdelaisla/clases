@@ -141,8 +141,6 @@
 
             <!-- ── TAB RUTINA ── -->
 <section class="tab-panel is-active dBp" id="tab-rutina" data-tab="rutina">
-            <!-- Solo visible cuando un veterano entra a "Tu entrenamiento": vuelve a la vista veterano. -->
-            <button type="button" class="vet-volver" id="vet-volver-historial" hidden>← Volver</button>
             <article class="cover" id="perro-hero" hidden>
                 <img class="cover-photo" id="perro-foto-img" alt="" hidden>
                 <span class="cover-fallback" id="perro-foto-fallback" aria-hidden="true">P</span>
@@ -182,58 +180,6 @@
                     <div class="br" id="perro-hero-meta"></div>
                 </div>
             </article>
-
-            <!-- ── VISTA VETERANO (Manada Veterana) — reemplaza la rutina para estado veterano.
-                 Se muestra/oculta desde renderVistaVeterano(). Reusa .health para las tarjetas. ── -->
-            <section class="vet-view" id="vista-veterano" hidden>
-                <header class="vet-head">
-                    <p class="vet-manada">Manada Veterana</p>
-                </header>
-
-                <button type="button" class="health" id="vet-card-bienestar">
-                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
-                    <span class="htx">
-                        <span class="ht">El bienestar de <span id="vet-perro">tu perro</span></span>
-                        <span class="hs">Evaluaciones y salud comportamental</span>
-                    </span>
-                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-                </button>
-
-                <button type="button" class="health" id="vet-card-historial">
-                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
-                    <span class="htx">
-                        <span class="ht">Tu entrenamiento con <span id="vet-historial-perro">tu perro</span></span>
-                        <span class="hs">Todo lo que trabajasteis juntos</span>
-                    </span>
-                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-                </button>
-
-                <button type="button" class="health" id="vet-card-guias">
-                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-                    <span class="htx">
-                        <span class="ht">Guías para entender a tu perro</span>
-                        <span class="hs">Descárgalas y aprende a su lado</span>
-                    </span>
-                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-                </button>
-
-                <button type="button" class="health" id="vet-card-reservar">
-                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>
-                    <span class="htx">
-                        <span class="ht">Reservar una clase</span>
-                        <span class="hs">Vuelve a entrenar con el equipo</span>
-                    </span>
-                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-                </button>
-
-                <button type="button" class="health vet-card--soon" id="vet-card-manada" disabled aria-disabled="true">
-                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-                    <span class="htx">
-                        <span class="ht">Tu Manada <span class="vet-badge">Muy pronto</span></span>
-                        <span class="hs">El espacio de la comunidad veterana</span>
-                    </span>
-                </button>
-            </section>
 
             <div class="band">
                 <div class="proto-row">
@@ -339,6 +285,49 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ── BLOQUE MANADA VETERANA — bloque adicional DEBAJO de la rutina, dentro
+                 del mismo tab. Solo visible para veteranos; lo togglea renderRutinaPerroSeleccionado(). ── -->
+            <section class="vet-view" id="vista-veterano" hidden>
+                <header class="vet-head">
+                    <p class="vet-manada">Manada Veterana</p>
+                </header>
+
+                <button type="button" class="health" id="vet-card-bienestar">
+                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+                    <span class="htx">
+                        <span class="ht">El bienestar de <span id="vet-perro">tu perro</span></span>
+                        <span class="hs">Evaluaciones y salud comportamental</span>
+                    </span>
+                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                </button>
+
+                <button type="button" class="health" id="vet-card-guias">
+                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+                    <span class="htx">
+                        <span class="ht">Guías para entender a tu perro</span>
+                        <span class="hs">Descárgalas y aprende a su lado</span>
+                    </span>
+                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                </button>
+
+                <button type="button" class="health" id="vet-card-reservar">
+                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>
+                    <span class="htx">
+                        <span class="ht">Reservar una clase</span>
+                        <span class="hs">Vuelve a entrenar con el equipo</span>
+                    </span>
+                    <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                </button>
+
+                <button type="button" class="health vet-card--soon" id="vet-card-manada" disabled aria-disabled="true">
+                    <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                    <span class="htx">
+                        <span class="ht">Tu Manada <span class="vet-badge">Muy pronto</span></span>
+                        <span class="hs">El espacio de la comunidad veterana</span>
+                    </span>
+                </button>
+            </section>
             </section>
 
             <!-- ── TAB RESERVAR ── -->
