@@ -938,7 +938,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, zona, pack_actual, clase_extra_habilitada')
+        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -4030,8 +4030,18 @@ const EDIT_CLI_FIELDS = [
     { col: 'telefono',  id: 'edit-cli-telefono',  tipo: 'text' },
     { col: 'email',     id: 'edit-cli-email',     tipo: 'text' },
     { col: 'direccion', id: 'edit-cli-direccion', tipo: 'text' },
+    { col: 'ubicacion_maps', id: 'edit-cli-ubicacion-maps', tipo: 'text' },
     { col: 'zona',      id: 'edit-cli-zona',      tipo: 'text' },
 ];
+
+// Validación suave para enlaces de Maps: si no empieza por http(s), anteponer
+// https://. Los links de Maps tienen mil formatos (maps.app.goo.gl,
+// google.com/maps, goo.gl/maps) — solo garantizamos que sea abrible.
+function normalizarUrlMaps(valor) {
+    const s = (valor || '').trim();
+    if (!s) return s;
+    return /^https?:\/\//i.test(s) ? s : 'https://' + s;
+}
 
 // Campos editables del perro.
 const EDIT_PERRO_FIELDS = [
@@ -4154,6 +4164,10 @@ async function onSubmitEditarMisDatos(ev) {
     if (cambios.email !== undefined && cambios.email !== null && !EMAIL_RE.test(cambios.email)) {
         if (err) { err.textContent = 'El email no parece válido.'; err.hidden = false; }
         return;
+    }
+    // Enlace de Maps: validación suave (anteponer https:// si hace falta).
+    if (cambios.ubicacion_maps) {
+        cambios.ubicacion_maps = normalizarUrlMaps(cambios.ubicacion_maps);
     }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }

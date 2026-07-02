@@ -484,13 +484,13 @@ export async function actualizarCita(citaId, parches) {
  *
  * @throws {Error} Si la query falla.
  *
- * Tabla(s) Supabase: clientes (SELECT id, nombre, telefono, email, direccion, estado)
+ * Tabla(s) Supabase: clientes (SELECT id, nombre, telefono, email, direccion, ubicacion_maps, estado)
  * RLS requerido: es_admin() = true
  */
 export async function obtenerClientesParaAutocomplete() {
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, zona, estado')
+        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, estado')
         .order('nombre', { ascending: true });
     if (error) throw error;
     return data || [];
@@ -720,6 +720,7 @@ export async function crearCitaManual(datos) {
         if (!clienteIdPredefinido) {
             const clienteBody = { nombre: cliente.nombre, telefono: cliente.telefono, estado: 'consulta' };
             if (cliente.direccion) clienteBody.direccion = cliente.direccion;
+            if (cliente.ubicacion_maps) clienteBody.ubicacion_maps = cliente.ubicacion_maps;
             if (cliente.email)     clienteBody.email = cliente.email;
             if (cita.zona)         clienteBody.zona = cita.zona;
             const { data: clienteData, error: errC } = await supabase

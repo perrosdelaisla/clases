@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=12';
+import * as agenda from './agenda/api.js?v=13';
 import * as stats from './stats/api.js?v=4';
 import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -577,6 +577,7 @@ function bindAgendaModals() {
                 nombre: (document.getElementById('cm-nombre')?.value || '').trim(),
                 telefono: (document.getElementById('cm-telefono')?.value || '').trim(),
                 direccion: (document.getElementById('cm-direccion')?.value || '').trim(),
+                ubicacion_maps: normalizarUrlMaps(document.getElementById('cm-ubicacion-maps')?.value || ''),
                 email: (document.getElementById('cm-email')?.value || '').trim(),
             };
 
@@ -645,6 +646,22 @@ function bindAgendaModals() {
                 cmSave.textContent = 'Crear cita';
             }
         });
+    }
+
+    // Botón 📍 "Abrir en Maps": abre el enlace del cliente en pestaña nueva.
+    // Aparece solo cuando cm-ubicacion-maps tiene valor (ver actualizarBotonMapsCm).
+    const cmMapsInput = document.getElementById('cm-ubicacion-maps');
+    const cmMapsBtn = document.getElementById('cm-ubicacion-abrir');
+    if (cmMapsBtn && !cmMapsBtn.__mapsBound) {
+        cmMapsBtn.__mapsBound = true;
+        cmMapsBtn.addEventListener('click', () => {
+            const url = normalizarUrlMaps(cmMapsInput?.value || '');
+            if (url) window.open(url, '_blank');
+        });
+    }
+    if (cmMapsInput && !cmMapsInput.__mapsBound) {
+        cmMapsInput.__mapsBound = true;
+        cmMapsInput.addEventListener('input', actualizarBotonMapsCm);
     }
 
     // Si Charly edita el nombre del perro y diverge del perro cargado,
@@ -1271,9 +1288,26 @@ function showCmError(msg) {
     }
 }
 
+// Validación suave para enlaces de Maps: si no empieza por http(s), anteponer
+// https://. Los links de Maps tienen mil formatos (maps.app.goo.gl,
+// google.com/maps, goo.gl/maps) — solo garantizamos que sea abrible.
+function normalizarUrlMaps(valor) {
+    const s = (valor || '').trim();
+    if (!s) return s;
+    return /^https?:\/\//i.test(s) ? s : 'https://' + s;
+}
+
+// Muestra el botón 📍 "Abrir en Maps" solo si cm-ubicacion-maps tiene valor.
+function actualizarBotonMapsCm() {
+    const input = document.getElementById('cm-ubicacion-maps');
+    const btn = document.getElementById('cm-ubicacion-abrir');
+    if (!btn) return;
+    btn.hidden = !((input?.value || '').trim());
+}
+
 function resetCmForm() {
     const ids = [
-        'cm-nombre', 'cm-telefono', 'cm-direccion', 'cm-email', 'cm-cliente-id',
+        'cm-nombre', 'cm-telefono', 'cm-direccion', 'cm-ubicacion-maps', 'cm-email', 'cm-cliente-id',
         'cm-perro', 'cm-perro-id', 'cm-raza', 'cm-edad', 'cm-peso',
         'cm-fecha', 'cm-hora', 'cm-modalidad', 'cm-zona', 'cm-notas',
         'cm-numero-clase',
@@ -1282,6 +1316,7 @@ function resetCmForm() {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
+    actualizarBotonMapsCm();
     const ppp = document.getElementById('cm-ppp');
     if (ppp) ppp.checked = false;
     const errBox = document.getElementById('cm-error');
@@ -1371,12 +1406,15 @@ function setupAutocompleteCmCliente() {
             // Datos del cliente
             const tel  = document.getElementById('cm-telefono');
             const dir  = document.getElementById('cm-direccion');
+            const maps = document.getElementById('cm-ubicacion-maps');
             const mail = document.getElementById('cm-email');
             const zona = document.getElementById('cm-zona');
             if (tel)  tel.value  = c.telefono  || '';
             if (dir)  dir.value  = c.direccion || '';
+            if (maps) maps.value = c.ubicacion_maps || '';
             if (mail) mail.value = c.email     || '';
             if (zona) zona.value = c.zona      || '';
+            actualizarBotonMapsCm();
 
             // Limpiar perro antes de cargar — evita arrastrar datos de un cliente previo
             aplicarDatosPerroAlForm(null);
