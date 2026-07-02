@@ -1839,7 +1839,9 @@ function renderUnificado(items) {
                     <span class="cita-estado ${escapeHTML(estado)}">${escapeHTML(estado)}</span>
                 </div>
                 <div class="cita-cliente">
-                    <strong>${escapeHTML(cliente)}</strong>${telefono ? ' · ' + escapeHTML(telefono) : ''}${zona ? ' · ' + escapeHTML(zona) : ''}${c.modalidad ? ' · ' + escapeHTML(c.modalidad) : ''}
+                    ${c.cliente_id
+                        ? `<a class="cita-cliente-link" href="./cliente.html?id=${encodeURIComponent(c.cliente_id)}"><strong>${escapeHTML(cliente)}</strong></a>`
+                        : `<strong>${escapeHTML(cliente)}</strong>`}${telefono ? ' · ' + escapeHTML(telefono) : ''}${zona ? ' · ' + escapeHTML(zona) : ''}${c.modalidad ? ' · ' + escapeHTML(c.modalidad) : ''}
                 </div>
                 <div class="cita-perro">${escapeHTML(perrosTexto)}</div>
                 ${bloqueProtocolo}

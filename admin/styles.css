@@ -1919,6 +1919,23 @@ body {
     font-size: 15px;
 }
 
+/* Nombre del cliente enlazado a su ficha. Hereda color; subrayado rojo sutil
+   como affordance. Padding + margen negativo → área táctil cómoda sin mover
+   el layout. */
+.cita-cliente-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--color-red);
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+    display: inline-block;
+    padding: 4px 2px;
+    margin: -4px -2px;
+}
+.cita-cliente-link:hover {
+    color: var(--color-red);
+}
+
 .cita-perro {
     color: var(--color-muted);
     font-size: 13px;
