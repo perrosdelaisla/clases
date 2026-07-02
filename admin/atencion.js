@@ -22,6 +22,51 @@ const state = {
     cargando: false,
 };
 
+// Marca de "visto" por DISPOSITIVO (localStorage). El RPC get_atencion_admin
+// NO trae fecha/created_at fiable por ítem (solo 'dias', un contador que cambia
+// a diario, y 'generado_en', que es la hora de la consulta). Por eso usamos la
+// estrategia de CLAVES ESTABLES: al abrir la pestaña guardamos el conjunto de
+// claves de los ítems vistos; el badge cuenta los ítems cuya clave no esté en
+// ese conjunto (= novedades posteriores a la última visita).
+const VISTO_KEY = 'pdli_atencion_visto';
+
+// Clave estable de un ítem: identifica "este motivo para este perro (y tarea)"
+// sin incluir 'dias' (que cambia a diario y re-alertaría en falso).
+function itemKey(it) {
+    return `${it?.motivo ?? ''}|${it?.perro_id ?? ''}|${it?.tarea ?? ''}`;
+}
+
+// Devuelve el Set de claves vistas, o null si nunca se marcó en este dispositivo.
+function leerVisto() {
+    try {
+        const raw = localStorage.getItem(VISTO_KEY);
+        if (raw == null) return null;
+        const arr = JSON.parse(raw);
+        return new Set(Array.isArray(arr) ? arr : []);
+    } catch (e) {
+        return null;
+    }
+}
+
+// Guarda como "vistas" las claves de los ítems actuales (snapshot de la visita).
+function guardarVisto(items) {
+    try {
+        const keys = (Array.isArray(items) ? items : []).map(itemKey);
+        localStorage.setItem(VISTO_KEY, JSON.stringify(keys));
+    } catch (e) { /* localStorage lleno o bloqueado: el badge caerá a total */ }
+}
+
+// Cuenta las novedades: ítems cuya clave no esté en la marca. Si nunca se
+// marcó (primer uso en el dispositivo), todo es novedad → cuenta el total.
+function contarNuevos(items) {
+    const arr = Array.isArray(items) ? items : [];
+    const visto = leerVisto();
+    if (visto === null) return arr.length;
+    let n = 0;
+    for (const it of arr) if (!visto.has(itemKey(it))) n++;
+    return n;
+}
+
 // Orden y etiqueta de cada motivo de atención.
 const GRUPOS = [
     { motivo: 'nunca_empezo',     titulo: 'Nunca empezó',     icono: '🚦' },
@@ -158,8 +203,11 @@ async function recargar() {
         const { data, error } = await supabase.rpc('get_atencion_admin');
         if (error) throw error;
         const d = data || {};
+        const items = Array.isArray(d.atencion) ? d.atencion : [];
         render(d);
-        renderBadge(Number(d.total) || 0);
+        // Abrir la pestaña = ver todo: registramos lo visto y apagamos el badge.
+        guardarVisto(items);
+        renderBadge(0);
     } catch (e) {
         console.error('[atencion] error rpc:', e);
         if (cont) cont.innerHTML = `<p class="avisos-empty">No se pudo cargar ahora mismo.</p>`;
@@ -188,6 +236,9 @@ export async function initAtencion() {
         bindContenido();
         state.bound = true;
     }
+    // El badge se apaga de inmediato al abrir; recargar() confirma la marca
+    // con los ítems frescos una vez que responde el RPC.
+    renderBadge(0);
     await recargar();
 }
 
@@ -200,7 +251,9 @@ export async function precargarBadgeAtencion() {
             console.warn('[atencion] precarga badge falló:', error.message);
             return;
         }
-        renderBadge(Number(data && data.total) || 0);
+        // Solo novedades desde la última visita (no el total).
+        const items = Array.isArray(data && data.atencion) ? data.atencion : [];
+        renderBadge(contarNuevos(items));
     } catch (e) {
         console.warn('[atencion] precarga crash:', e);
     }
