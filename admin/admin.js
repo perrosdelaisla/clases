@@ -15,7 +15,7 @@ import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
 import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=2';
-import { initJaime } from './jaime.js?v=10';
+import { initJaime } from './jaime.js?v=11';
 const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;

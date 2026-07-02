@@ -54,6 +54,9 @@ function fabAsegurarTransform() {
   if (fabTransformActivo) return;
   const r = fabEl.getBoundingClientRect();
   fabX = r.left; fabY = r.top;
+  // Cortamos cualquier animación de entrada (jmFabIn) que con fill-mode both
+  // pisaría permanentemente el transform inline y dejaría el FAB en 0,0.
+  fabEl.style.animation = 'none';
   fabEl.style.left = '0'; fabEl.style.top = '0'; fabEl.style.right = 'auto'; fabEl.style.bottom = 'auto';
   fabTransformActivo = true;
   fabAplicarTransform();
