@@ -406,6 +406,13 @@ function bindEventos() {
         document.querySelectorAll('.modal-pdli:not([hidden])').forEach((m) => cerrarModal(m.id));
     });
 
+    // Guías (tarjeta cliente activo + tarjeta veterano) y navegación de la vista veterano.
+    document.getElementById('card-guias')?.addEventListener('click', abrirGuias);
+    document.getElementById('vet-card-guias')?.addEventListener('click', abrirGuias);
+    document.getElementById('vet-card-bienestar')?.addEventListener('click', () => showTab('salud'));
+    document.getElementById('vet-card-reservar')?.addEventListener('click', () => showTab('reservar'));
+    // vet-card-manada: deshabilitada ("Muy pronto"), sin acción.
+
     // Reservar cita (botón confirmar dentro del modal)
     const btnReservarConfirmar = document.getElementById('modal-reservar-confirmar');
     if (btnReservarConfirmar) btnReservarConfirmar.addEventListener('click', confirmarReserva);
@@ -806,6 +813,14 @@ function esPrincipal() {
     return state.usuarioCliente?.rol === 'principal';
 }
 
+// Un cliente "veterano" (Manada Veterana) terminó su protocolo y ya no tiene
+// rutina activa. En la BD el valor real de clientes.estado es 'veterano' (el
+// CHECK de la tabla NO admite 'mantenimiento'); aceptamos ambos por robustez.
+function esVeterano() {
+    const e = state.cliente?.estado;
+    return e === 'veterano' || e === 'mantenimiento';
+}
+
 async function abrirModalFamilia() {
     cerrarMenuAvatar();
     await cargarYRenderMiembros();
@@ -938,7 +953,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, zona, pack_actual, clase_extra_habilitada')
+        .select('id, nombre, telefono, email, direccion, zona, pack_actual, clase_extra_habilitada, estado')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -1966,8 +1981,124 @@ function renderSelectorPerros() {
 // Se recarga al pintar la rutina del perro (registros_tarea de esta semana).
 let _diasTareaSemana = {};
 
+// ───────────────────────────────────────────────────────────
+// Guías para entender a tu perro (catálogo hardcodeado, sin tablas nuevas)
+// Rutas relativas a /clases/ (la app se sirve desde ahí).
+// ───────────────────────────────────────────────────────────
+const GUIAS_CATALOGO = [
+    { titulo: 'Tu perro te habla (y no lo estás escuchando)', portada: 'guias/covers/guia_tu-perro-te-habla.png', tipo: 'gratis', pdf: 'guias/guia_tu-perro-te-habla.pdf' },
+    { titulo: 'Educar sin miedo',                              portada: 'guias/covers/guia_educar-sin-miedo.png',   tipo: 'gratis', pdf: 'guias/guia_educar-sin-miedo.pdf' },
+    // PAGO: al go-live se cablearán los enlaces de compra Lemon Squeezy en el
+    // campo `lemon` de cada guía; mientras tanto muestran badge "Próximamente".
+    { titulo: 'Mi cachorro muerde',            portada: 'guias/covers/guia_cachorro-muerde.png',    tipo: 'pago' /* , lemon: '' */ },
+    { titulo: 'Mi perro ladra a otros perros', portada: 'guias/covers/guia_ladra-otros-perros.png', tipo: 'pago' /* , lemon: '' */ },
+    { titulo: 'Mi perro llora cuando me voy',  portada: 'guias/covers/guia_llora-cuando-me-voy.png', tipo: 'pago' /* , lemon: '' */ },
+    { titulo: 'Mi perro tiene miedo',          portada: 'guias/covers/guia_tiene-miedo.png',        tipo: 'pago' /* , lemon: '' */ },
+];
+
+function renderGuiasGrid() {
+    const grid = document.getElementById('guias-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    GUIAS_CATALOGO.forEach((g) => {
+        const card = document.createElement('div');
+        card.className = 'guia-card';
+
+        const img = document.createElement('img');
+        img.className = 'guia-card__cover';
+        img.src = g.portada;
+        img.alt = g.titulo;
+        img.loading = 'lazy';
+        card.appendChild(img);
+
+        const tit = document.createElement('div');
+        tit.className = 'guia-card__titulo';
+        tit.textContent = g.titulo;
+        card.appendChild(tit);
+
+        const accion = document.createElement('div');
+        accion.className = 'guia-card__accion';
+        if (g.tipo === 'gratis') {
+            const a = document.createElement('a');
+            a.className = 'guia-card__btn';
+            a.href = g.pdf;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = 'Descargar';
+            accion.appendChild(a);
+        } else {
+            const badge = document.createElement('span');
+            badge.className = 'guia-card__badge';
+            badge.textContent = 'Próximamente';
+            accion.appendChild(badge);
+            // TODO go-live: sustituir el badge por <a class="guia-card__btn"
+            // href="{g.lemon}" target="_blank" rel="noopener">Conseguir</a>.
+        }
+        card.appendChild(accion);
+        grid.appendChild(card);
+    });
+}
+
+function abrirGuias() {
+    renderGuiasGrid();
+    abrirModal('modal-guias');
+}
+
+// ───────────────────────────────────────────────────────────
+// Vista Veterano (Manada Veterana) — reemplaza la rutina de ejercicios
+// para clientes en estado veterano, que ya no tienen protocolo activo.
+// ───────────────────────────────────────────────────────────
+function renderVistaVeterano() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId) || state.perros[0] || null;
+
+    // Hero: se mantiene visible (identidad + controles: avatar/logout/tema/selector).
+    const hero = document.getElementById('perro-hero');
+    if (hero) {
+        hero.removeAttribute('hidden');
+        const heroNombre = document.getElementById('perro-hero-nombre');
+        const heroMeta = document.getElementById('perro-hero-meta');
+        const fotoImg = document.getElementById('perro-foto-img');
+        const fotoFallback = document.getElementById('perro-foto-fallback');
+        if (perro) {
+            if (heroNombre) heroNombre.textContent = perro.nombre || 'Tu perro';
+            if (heroMeta) heroMeta.textContent = [perro.raza, formatearEdadPerro(perro)].filter(Boolean).join(' · ');
+            if (perro.foto_url && fotoImg) {
+                fotoImg.src = perro.foto_url;
+                fotoImg.removeAttribute('hidden');
+                fotoFallback?.setAttribute('hidden', '');
+            } else {
+                fotoImg?.setAttribute('hidden', '');
+                if (fotoFallback) {
+                    fotoFallback.removeAttribute('hidden');
+                    fotoFallback.textContent = (perro?.nombre?.[0] || 'P').toUpperCase();
+                }
+            }
+        }
+    }
+
+    // Ocultar todo lo de la rutina de ejercicios (un veterano no tiene protocolo).
+    document.querySelector('#tab-rutina .band')?.setAttribute('hidden', '');
+    document.querySelector('#tab-rutina .work')?.setAttribute('hidden', '');
+    document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
+    document.getElementById('card-guias')?.setAttribute('hidden', '');
+    document.getElementById('rutina-loading')?.setAttribute('hidden', '');
+
+    // Textos de la vista veterano.
+    const nombrePila = (document.getElementById('usuario-nombre')?.textContent || '').trim() || 'amigo';
+    setText('vet-nombre', nombrePila);
+    setText('vet-perro', perro?.nombre || 'tu perro');
+
+    document.getElementById('vista-veterano')?.removeAttribute('hidden');
+}
+
 async function renderRutinaPerroSeleccionado() {
     const myToken = ++_renderRutinaToken;
+
+    // Veterano: no tiene rutina activa; mostramos su vista propia y salimos.
+    if (esVeterano()) {
+        renderVistaVeterano();
+        return;
+    }
 
     const hero = document.getElementById('perro-hero');
     const heroNombre = document.getElementById('perro-hero-nombre');
@@ -2025,6 +2156,9 @@ async function renderRutinaPerroSeleccionado() {
         if (cardSaludNombre) cardSaludNombre.textContent = perro.nombre || 'tu perro';
         cardSalud.removeAttribute('hidden');
     }
+
+    // Card "Guías para entender a tu perro" (todos los niveles, debajo del hero)
+    document.getElementById('card-guias')?.removeAttribute('hidden');
 
     // Entrada "Seguimiento de conductas"
     document.getElementById('btn-seguimiento')?.removeAttribute('hidden');

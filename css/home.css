@@ -791,3 +791,28 @@
 .home[data-theme="claro"] .dA .hero{
   box-shadow:0 1px 3px rgba(26,26,26,0.08),0 1px 2px rgba(26,26,26,0.04);
 }
+/* ═══════════════════════════════════════════════════════════════════
+   Guías + Vista Veterano (Manada Veterana)
+   Reutiliza .health para las tarjetas. Aquí solo lo mínimo: la cabecera
+   y estados de la vista veterano, y el grid de portadas de las guías
+   (2 columnas en móvil) dentro del modal. Vars ya definidas por .health.
+   ═══════════════════════════════════════════════════════════════════ */
+.home #card-guias{ margin:14px 18px 0; }
+
+.home .vet-view{ padding:0 18px; display:flex; flex-direction:column; gap:12px; }
+.home .vet-head{ margin:20px 0 4px; }
+.home .vet-hola{ font-family:var(--display,var(--body)); font-size:22px; font-weight:700; color:var(--c-text); margin:0; line-height:1.15; }
+.home .vet-manada{ font-family:var(--body); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--c-oliva); margin:2px 0 0; }
+.home .vet-view .health{ margin:0; }
+.home .vet-card--soon{ opacity:.6; cursor:default; }
+.home .vet-card--soon:hover{ border-color:var(--c-border,rgba(127,127,127,.25)); }
+.home .vet-badge{ display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; background:var(--c-oliva); color:#fff; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; vertical-align:middle; }
+
+/* Grid de guías (dentro del modal) — 2 columnas en móvil */
+.guias-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:8px; }
+.guia-card{ display:flex; flex-direction:column; gap:8px; }
+.guia-card__cover{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:10px; background:rgba(127,127,127,.12); display:block; }
+.guia-card__titulo{ font-family:var(--body); font-size:12px; font-weight:600; color:var(--c-text); line-height:1.25; }
+.guia-card__accion{ margin-top:auto; }
+.guia-card__btn{ display:inline-block; width:100%; box-sizing:border-box; text-align:center; padding:8px 10px; border-radius:8px; background:var(--c-oliva); color:#fff; font-family:var(--body); font-size:12px; font-weight:600; text-decoration:none; border:none; cursor:pointer; }
+.guia-card__badge{ display:inline-block; width:100%; box-sizing:border-box; text-align:center; padding:8px 10px; border-radius:8px; background:transparent; border:1px dashed var(--c-border,rgba(127,127,127,.35)); color:var(--c-text-3); font-family:var(--body); font-size:11px; font-weight:600; }
