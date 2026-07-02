@@ -34,6 +34,7 @@ async function bootstrap() {
     showScreen('loading');
     bindInvitarUI();
     bindWidgetPack();
+    bindMapsUbicacion();
     bindEstadoSelector();
     bindBackNavigation();
 
@@ -146,6 +147,9 @@ function renderCliente(c, tieneUsuario) {
     // Checkbox "habilitar próxima clase" — refleja clase_extra_habilitada
     const extraCheck = document.getElementById('cli-clase-extra');
     if (extraCheck) extraCheck.checked = !!c.clase_extra_habilitada;
+
+    // Ubicación (Google Maps): botones Abrir/Editar o Añadir según el valor.
+    renderMapsUbicacion(c.ubicacion_maps);
 
     document.title = `${c.nombre || 'Cliente'} — Admin PDLI`;
 
@@ -397,6 +401,85 @@ async function guardarPackActual() {
     } finally {
         btn.disabled = false;
         btn.textContent = labelPrevio;
+    }
+}
+
+// ===================== Ubicación (Google Maps) =====================
+
+// Validación suave: si el enlace no empieza por http(s), anteponer https://.
+// Los links de Maps tienen mil formatos (maps.app.goo.gl, google.com/maps,
+// goo.gl/maps) — solo garantizamos que sea abrible.
+function normalizarUrlMaps(valor) {
+    const s = (valor || '').trim();
+    if (!s) return s;
+    return /^https?:\/\//i.test(s) ? s : 'https://' + s;
+}
+
+// Estado de solo-vista según haya enlace o no. Oculta siempre el editor inline.
+function renderMapsUbicacion(valor) {
+    const tiene = !!((valor || '').trim());
+    document.getElementById('cli-maps-view')?.removeAttribute('hidden');
+    document.getElementById('cli-maps-edit')?.setAttribute('hidden', '');
+    const abrir  = document.getElementById('cli-maps-abrir');
+    const editar = document.getElementById('cli-maps-editar');
+    const anadir = document.getElementById('cli-maps-anadir');
+    if (abrir)  abrir.hidden  = !tiene;
+    if (editar) editar.hidden = !tiene;
+    if (anadir) anadir.hidden = tiene;
+}
+
+function bindMapsUbicacion() {
+    const view = document.getElementById('cli-maps-view');
+    const edit = document.getElementById('cli-maps-edit');
+    const input = document.getElementById('cli-maps-input');
+
+    document.getElementById('cli-maps-abrir')?.addEventListener('click', () => {
+        const url = normalizarUrlMaps(state.cliente?.ubicacion_maps || '');
+        if (url) window.open(url, '_blank');
+    });
+
+    // Editar / Añadir → editor inline con el valor actual.
+    const mostrarEdicion = () => {
+        if (input) input.value = state.cliente?.ubicacion_maps || '';
+        view?.setAttribute('hidden', '');
+        edit?.removeAttribute('hidden');
+        input?.focus();
+    };
+    document.getElementById('cli-maps-editar')?.addEventListener('click', mostrarEdicion);
+    document.getElementById('cli-maps-anadir')?.addEventListener('click', mostrarEdicion);
+
+    // Cancelar → descartar cambios, volver a la vista con el valor guardado.
+    document.getElementById('cli-maps-cancelar')?.addEventListener('click', () => {
+        renderMapsUbicacion(state.cliente?.ubicacion_maps || '');
+    });
+
+    document.getElementById('cli-maps-guardar')?.addEventListener('click', guardarUbicacionMaps);
+}
+
+// Persiste SOLO ubicacion_maps (mismo contrato que agenda/api.js: vacío
+// explícito = null). Reusa el patrón de UPDATE de este archivo.
+async function guardarUbicacionMaps() {
+    if (!state.clienteId) return;
+    const input = document.getElementById('cli-maps-input');
+    const btn = document.getElementById('cli-maps-guardar');
+    const raw = input?.value || '';
+    const valor = raw.trim() ? normalizarUrlMaps(raw) : null;
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update({ ubicacion_maps: valor })
+            .eq('id', state.clienteId);
+        if (error) throw error;
+        if (state.cliente) state.cliente.ubicacion_maps = valor;
+        renderMapsUbicacion(valor);
+        toast('Ubicación guardada');
+    } catch (err) {
+        console.error('[cliente] error guardando ubicacion_maps:', err);
+        toast('No se pudo guardar', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     }
 }
 

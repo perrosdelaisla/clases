@@ -73,6 +73,23 @@
                         <dd id="cliente-zona">—</dd>
                     </div>
                     <div class="campo">
+                        <dt>Ubicación (Google Maps)</dt>
+                        <dd>
+                            <div id="cli-maps-view" style="display:flex;gap:8px;flex-wrap:wrap">
+                                <button type="button" class="btn-secondary" id="cli-maps-abrir" hidden>📍 Abrir en Maps</button>
+                                <button type="button" class="btn-secondary" id="cli-maps-editar" hidden>Editar</button>
+                                <button type="button" class="btn-secondary" id="cli-maps-anadir" hidden>Añadir enlace</button>
+                            </div>
+                            <div id="cli-maps-edit" hidden>
+                                <input type="text" id="cli-maps-input" maxlength="500" placeholder="Pega aquí el enlace de Compartir de Google Maps" style="width:100%;box-sizing:border-box">
+                                <div style="margin-top:8px;display:flex;gap:8px">
+                                    <button type="button" class="btn-secondary" id="cli-maps-guardar">Guardar</button>
+                                    <button type="button" class="btn-secondary" id="cli-maps-cancelar">Cancelar</button>
+                                </div>
+                            </div>
+                        </dd>
+                    </div>
+                    <div class="campo">
                         <dt>Cliente desde</dt>
                         <dd id="cliente-desde">—</dd>
                     </div>
@@ -162,6 +179,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./cliente.js?v=23"></script>
+    <script type="module" src="./cliente.js?v=24"></script>
 </body>
 </html>
