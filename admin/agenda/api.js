@@ -497,6 +497,29 @@ export async function obtenerClientesParaAutocomplete() {
 }
 
 /**
+ * Actualiza SOLO la columna ubicacion_maps de un cliente existente. Pensada
+ * para el botón "Guardar enlace" del modal de cita manual: no toca ningún
+ * otro dato del cliente (whitelist de una sola columna, como el INSERT).
+ * `ubicacion_maps` puede ser null para vaciar el enlace de forma explícita.
+ *
+ * @param {string} clienteId
+ * @param {string|null} ubicacionMaps  Valor ya normalizado, o null para limpiar.
+ * @returns {Promise<{ok:boolean, error?:string}>}
+ *
+ * Tabla(s) Supabase: clientes (UPDATE ubicacion_maps)
+ * RLS requerido: es_admin() = true
+ */
+export async function actualizarUbicacionMapsCliente(clienteId, ubicacionMaps) {
+    if (!clienteId) return { ok: false, error: 'Falta el id del cliente' };
+    const { error } = await supabase
+        .from('clientes')
+        .update({ ubicacion_maps: ubicacionMaps })
+        .eq('id', clienteId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+}
+
+/**
  * Trae los perros asociados a un cliente. Pensada para que el form
  * crear cita pueda autollenar los datos del perro (nombre, raza, edad,
  * peso, ppp) al elegir un cliente. NO crea ni modifica nada — sólo

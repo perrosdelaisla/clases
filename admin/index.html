@@ -442,6 +442,7 @@
                             <input type="text" id="cm-ubicacion-maps" maxlength="500" autocomplete="off" placeholder="Pega aquí el enlace de Compartir de Google Maps">
                         </label>
                         <button type="button" id="cm-ubicacion-abrir" class="btn-secondary" hidden title="Abrir en Google Maps">📍 Abrir</button>
+                        <button type="button" id="cm-ubicacion-guardar" class="btn-secondary" hidden title="Guardar el enlace en la ficha del cliente">Guardar enlace</button>
                     </div>
                 </fieldset>
 
@@ -824,7 +825,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=66"></script>
+    <script type="module" src="./admin.js?v=67"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {

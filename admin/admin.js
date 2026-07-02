@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=13';
+import * as agenda from './agenda/api.js?v=14';
 import * as stats from './stats/api.js?v=4';
 import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -664,6 +664,37 @@ function bindAgendaModals() {
         cmMapsInput.addEventListener('input', actualizarBotonMapsCm);
     }
 
+    // "Guardar enlace": persiste SOLO ubicacion_maps del cliente existente
+    // seleccionado (no toca el resto de sus datos). Guardado explícito → si el
+    // campo quedó vacío, limpia el enlace (null); si no, lo normaliza.
+    const cmMapsSave = document.getElementById('cm-ubicacion-guardar');
+    if (cmMapsSave && !cmMapsSave.__mapsBound) {
+        cmMapsSave.__mapsBound = true;
+        cmMapsSave.addEventListener('click', async () => {
+            const clienteId = (document.getElementById('cm-cliente-id')?.value || '').trim();
+            if (!clienteId) return;
+            const raw = cmMapsInput?.value || '';
+            const valor = raw.trim() ? normalizarUrlMaps(raw) : null;
+            const labelPrevio = cmMapsSave.textContent;
+            cmMapsSave.disabled = true;
+            cmMapsSave.textContent = 'Guardando…';
+            try {
+                const res = await agenda.actualizarUbicacionMapsCliente(clienteId, valor);
+                if (res && res.ok === false) throw new Error(res.error || 'update falló');
+                // Reflejar el valor normalizado en el input y refrescar el 📍.
+                if (cmMapsInput) cmMapsInput.value = valor || '';
+                actualizarBotonMapsCm();
+                toast('Enlace guardado');
+            } catch (err) {
+                console.error('[cm] error guardando ubicacion_maps:', err);
+                alert('No se pudo guardar el enlace. Probá de nuevo.');
+            } finally {
+                cmMapsSave.disabled = false;
+                cmMapsSave.textContent = labelPrevio;
+            }
+        });
+    }
+
     // Si Charly edita el nombre del perro y diverge del perro cargado,
     // limpiamos cm-perro-id para que crearCitaManual haga INSERT en lugar
     // de UPDATE — señal explícita: "es un perro distinto al cargado".
@@ -1297,12 +1328,18 @@ function normalizarUrlMaps(valor) {
     return /^https?:\/\//i.test(s) ? s : 'https://' + s;
 }
 
-// Muestra el botón 📍 "Abrir en Maps" solo si cm-ubicacion-maps tiene valor.
+// Botones del campo de Maps en el modal de cita manual:
+//  · 📍 "Abrir": visible solo si el campo tiene valor.
+//  · "Guardar enlace": visible solo con un cliente EXISTENTE seleccionado
+//    (cm-cliente-id). El cliente nuevo persiste su enlace al crear la cita.
 function actualizarBotonMapsCm() {
     const input = document.getElementById('cm-ubicacion-maps');
-    const btn = document.getElementById('cm-ubicacion-abrir');
-    if (!btn) return;
-    btn.hidden = !((input?.value || '').trim());
+    const tieneValor = !!((input?.value || '').trim());
+    const clienteId = (document.getElementById('cm-cliente-id')?.value || '').trim();
+    const abrir = document.getElementById('cm-ubicacion-abrir');
+    const guardar = document.getElementById('cm-ubicacion-guardar');
+    if (abrir) abrir.hidden = !tieneValor;
+    if (guardar) guardar.hidden = !clienteId;
 }
 
 function resetCmForm() {
@@ -1463,6 +1500,8 @@ function setupAutocompleteCmCliente() {
             state.perrosClienteCache = [];
             const elPerroId = document.getElementById('cm-perro-id');
             if (elPerroId) elPerroId.value = '';
+            // Se rompió el vínculo con cliente existente → ocultar "Guardar enlace".
+            actualizarBotonMapsCm();
         },
     });
 }
