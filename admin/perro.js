@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initJaime } from './jaime.js?v=8';
+import { initJaime } from './jaime.js?v=9';
 const supabase = getSupabase('admin');
 import {
     estadoChipFrecuencia,
@@ -146,6 +146,7 @@ async function cargarYRenderPerro(perroId) {
     renderPerro(data);
     showScreen('perro');
     initJaime({
+        pantalla: 'perro',
         perroId: state.perroId,
         clienteId: data.clientes?.id ?? data.cliente_id ?? null,
         nombre: data.nombre || '',

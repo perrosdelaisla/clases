@@ -51,6 +51,202 @@ Respondés SIEMPRE y SOLO con este JSON, sin texto antes ni después, sin markdo
   ]
 }`;
 
+// ─────────────────────────────────────────────────────────────
+// MODO CONVERSACIÓN (Entrega 1) — Jaime como asistente de chat interno del
+// admin, con HERRAMIENTAS de SOLO LECTURA (tool-calling acotado, máx 5
+// iteraciones). El modelo NUNCA genera SQL: cada herramienta es una consulta
+// predefinida contra tablas reales. Reusa el mismo proveedor/modelo/API key.
+// ─────────────────────────────────────────────────────────────
+const CHAT_MAX_TOKENS = 1024;
+const MAX_TOOL_ITERS = 5;
+
+const SYSTEM_PROMPT_CHAT = `Eres Jaime, el asistente interno del panel de administración de Perros de la Isla (escuela de adiestramiento canino en Mallorca). Hablas SOLO con el equipo interno, nunca con clientes. Idioma: castellano peninsular, profesional y directo. Respuestas concisas y al grano.
+
+Dispones de HERRAMIENTAS de SOLO LECTURA para consultar la base de datos. Úsalas siempre que necesites un dato concreto; no respondas de memoria.
+
+REGLAS INNEGOCIABLES:
+- Responde ÚNICAMENTE con datos que devuelvan las herramientas. Si un dato no aparece, o la herramienta no lo trae, dilo con claridad ("no tengo ese dato", "no consta").
+- PROHIBIDO inventar nombres, fechas, teléfonos, direcciones, cifras o resultados. Nada de suposiciones ni de rellenar huecos.
+- Para identificar a un cliente por nombre usa buscar_cliente. Si hay varias coincidencias, enuméralas y pide que se aclare cuál.
+- No generas SQL ni describes la estructura interna de la base de datos.
+- Si el contexto de la pantalla trae cliente_id o perro_id, "este cliente" / "este perro" se refieren a esos identificadores: úsalos directamente sin volver a buscar.
+- Ante una pregunta que no puedas responder con las herramientas, dilo; no rellenes con conjeturas.`;
+
+const TOOLS = [
+  { name: 'buscar_cliente', description: 'Busca clientes por coincidencia parcial de nombre. Devuelve id, nombre, teléfono, email, dirección, zona, enlace de ubicación en Google Maps, estado y pack actual.', input_schema: { type: 'object', properties: { nombre_parcial: { type: 'string', description: 'Parte del nombre del cliente a buscar' } }, required: ['nombre_parcial'] } },
+  { name: 'perros_de_cliente', description: 'Lista los perros de un cliente con sus datos básicos (nombre, raza, edad en meses, peso, si es PPP, problemática, protocolo).', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' } }, required: ['cliente_id'] } },
+  { name: 'citas_de_cliente', description: 'Últimas citas de un cliente: fecha, hora, modalidad, estado, número de clase y resumen.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de citas a devolver (por defecto 10)' } }, required: ['cliente_id'] } },
+  { name: 'entrenos_de_perro', description: 'Últimos entrenos registrados de un perro (fecha, ejercicio, tranquilidad, nota del cliente). Para responder "¿cuándo hizo X por última vez?", pasa el nombre del ejercicio en el parámetro ejercicio.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, ejercicio: { type: 'string', description: 'Filtra por nombre de ejercicio (opcional)' }, limite: { type: 'integer', description: 'Máximo de entrenos (por defecto 15)' } }, required: ['perro_id'] } },
+  { name: 'rutina_de_perro', description: 'Ejercicios activos en la rutina de un perro, con código, nombre, categoría, posición y progresión (progresa_de). No incluye rachas: se calculan en la app, no en la base.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' } }, required: ['perro_id'] } },
+  { name: 'bienestar_de_perro', description: 'Última evaluación de Salud Comportamental de un perro: scores por dimensión (física, emocional, social, cognitiva), score total, bandera roja y fecha.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' } }, required: ['perro_id'] } },
+  { name: 'resumenes_de_clase', description: 'Resúmenes de clase de un cliente (o del cliente dueño de un perro, si pasas perro_id). Devuelve fecha, número de clase y el texto del resumen.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, perro_id: { type: 'string' }, limite: { type: 'integer' } } } },
+];
+
+function clampLimite(v: unknown, def: number, max: number): number {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return def;
+  return Math.min(Math.floor(n), max);
+}
+
+function nombreEjercicioTool(row: any): string {
+  const ea = row?.ejercicios_asignados;
+  const e = Array.isArray(ea) ? ea[0]?.ejercicios : ea?.ejercicios;
+  const ej = Array.isArray(e) ? e[0] : e;
+  return ej?.nombre ?? '';
+}
+
+// Ejecuta UNA herramienta del set cerrado. Devuelve siempre un objeto
+// JSON-serializable; nunca lanza (los errores van dentro del objeto).
+async function ejecutarHerramienta(admin: any, nombre: string, input: any): Promise<any> {
+  try {
+    switch (nombre) {
+      case 'buscar_cliente': {
+        const q = String(input?.nombre_parcial ?? '').trim();
+        if (!q) return { error: 'Falta nombre_parcial' };
+        const { data, error } = await admin.from('clientes')
+          .select('id, nombre, telefono, email, direccion, zona, ubicacion_maps, estado, pack_actual')
+          .ilike('nombre', `%${q}%`).order('nombre', { ascending: true }).limit(10);
+        if (error) return { error: error.message };
+        return { clientes: data ?? [] };
+      }
+      case 'perros_de_cliente': {
+        const cid = String(input?.cliente_id ?? '');
+        if (!UUID_RE.test(cid)) return { error: 'cliente_id inválido' };
+        const { data, error } = await admin.from('perros')
+          .select('id, nombre, raza, edad_meses, peso_kg, es_ppp, problematica, descripcion, protocolo_principal, caso_complejo')
+          .eq('cliente_id', cid).order('created_at', { ascending: true });
+        if (error) return { error: error.message };
+        return { perros: data ?? [] };
+      }
+      case 'citas_de_cliente': {
+        const cid = String(input?.cliente_id ?? '');
+        if (!UUID_RE.test(cid)) return { error: 'cliente_id inválido' };
+        const limite = clampLimite(input?.limite, 10, 50);
+        const { data, error } = await admin.from('citas')
+          .select('fecha, hora, modalidad, estado, numero_clase, resumen_cliente')
+          .eq('cliente_id', cid).order('fecha', { ascending: false }).limit(limite);
+        if (error) return { error: error.message };
+        return { citas: data ?? [] };
+      }
+      case 'entrenos_de_perro': {
+        const pid = String(input?.perro_id ?? '');
+        if (!UUID_RE.test(pid)) return { error: 'perro_id inválido' };
+        const limite = clampLimite(input?.limite, 15, 50);
+        // Traemos un lote amplio y filtramos por nombre de ejercicio en memoria
+        // (el filtro opcional es por texto, no por id).
+        const { data, error } = await admin.from('registros_ejercicio')
+          .select('registrado_en, tranquilidad, nota, ejercicios_asignados!inner(perro_id, ejercicios(nombre, codigo))')
+          .eq('ejercicios_asignados.perro_id', pid)
+          .order('registrado_en', { ascending: false }).limit(200);
+        if (error) return { error: error.message };
+        let filas = (data ?? []).map((r: any) => ({ fecha: r.registrado_en, tranquilidad: r.tranquilidad ?? null, nota: r.nota ?? null, ejercicio: nombreEjercicioTool(r) }));
+        const filtro = String(input?.ejercicio ?? '').trim().toLowerCase();
+        if (filtro) filas = filas.filter((r: any) => (r.ejercicio ?? '').toLowerCase().includes(filtro));
+        return { entrenos: filas.slice(0, limite) };
+      }
+      case 'rutina_de_perro': {
+        const pid = String(input?.perro_id ?? '');
+        if (!UUID_RE.test(pid)) return { error: 'perro_id inválido' };
+        const { data, error } = await admin.from('ejercicios_asignados')
+          .select('id, posicion_rutina, progresa_de, min_semanal, estado_cliente, ejercicios:ejercicio_id(codigo, nombre, categoria)')
+          .eq('perro_id', pid).eq('activo', true).order('posicion_rutina', { ascending: true });
+        if (error) return { error: error.message };
+        const rutina = (data ?? []).map((a: any) => ({
+          asignado_id: a.id,
+          codigo: a.ejercicios?.codigo ?? null,
+          nombre: a.ejercicios?.nombre ?? null,
+          categoria: a.ejercicios?.categoria ?? null,
+          posicion: a.posicion_rutina ?? null,
+          progresa_de: a.progresa_de ?? null,
+          min_semanal: a.min_semanal ?? null,
+          estado_cliente: a.estado_cliente ?? null,
+        }));
+        return { rutina, nota: 'Las rachas no están incluidas: se calculan en la app, no en la base.' };
+      }
+      case 'bienestar_de_perro': {
+        const pid = String(input?.perro_id ?? '');
+        if (!UUID_RE.test(pid)) return { error: 'perro_id inválido' };
+        const { data, error } = await admin.from('evaluaciones_isla')
+          .select('score_fisica, score_emocional, score_social, score_cognitiva, score_total, bandera_roja, created_at')
+          .eq('perro_id', pid).eq('completada', true)
+          .order('created_at', { ascending: false }).limit(1);
+        if (error) return { error: error.message };
+        const ev = (data ?? [])[0];
+        return { evaluacion: ev ?? null };
+      }
+      case 'resumenes_de_clase': {
+        let cid = String(input?.cliente_id ?? '');
+        const pid = String(input?.perro_id ?? '');
+        // Los resúmenes viven en citas (a nivel cliente); si dan perro_id,
+        // resolvemos su cliente_id.
+        if (!UUID_RE.test(cid) && UUID_RE.test(pid)) {
+          const { data: p } = await admin.from('perros').select('cliente_id').eq('id', pid).maybeSingle();
+          cid = p?.cliente_id ?? '';
+        }
+        if (!UUID_RE.test(cid)) return { error: 'Falta cliente_id o perro_id válido' };
+        const limite = clampLimite(input?.limite, 10, 30);
+        const { data, error } = await admin.from('citas')
+          .select('fecha, numero_clase, resumen_cliente')
+          .eq('cliente_id', cid).not('resumen_cliente', 'is', null)
+          .order('fecha', { ascending: false }).limit(limite);
+        if (error) return { error: error.message };
+        return { resumenes: data ?? [] };
+      }
+      default:
+        return { error: `Herramienta desconocida: ${nombre}` };
+    }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+async function handleConversacion(admin: any, body: any, apiKey: string, json: (p: unknown, s?: number) => Response): Promise<Response> {
+  const contexto = body?.contexto ?? {};
+  const messages: any[] = (Array.isArray(body?.mensajes) ? body.mensajes : [])
+    .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string' && m.content.trim())
+    .map((m: any) => ({ role: m.role, content: m.content }))
+    .slice(-24);
+  if (!messages.length || messages[messages.length - 1].role !== 'user') {
+    return json({ ok: false, error: 'No hay un mensaje del usuario' }, 400);
+  }
+
+  const sys = SYSTEM_PROMPT_CHAT + '\n\nCONTEXTO DE LA PANTALLA ACTUAL: ' + JSON.stringify({
+    pantalla: contexto?.pantalla ?? null,
+    cliente_id: UUID_RE.test(String(contexto?.cliente_id ?? '')) ? contexto.cliente_id : null,
+    perro_id: UUID_RE.test(String(contexto?.perro_id ?? '')) ? contexto.perro_id : null,
+  });
+
+  for (let iter = 0; iter < MAX_TOOL_ITERS; iter++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, max_tokens: CHAT_MAX_TOKENS, system: sys, tools: TOOLS, messages }),
+    });
+    if (!res.ok) {
+      const detalle = (await res.text().catch(() => '')).slice(0, 300);
+      return json({ ok: false, error: `Error de la IA (${res.status})`, detalle }, 502);
+    }
+    const data = await res.json();
+    const content = Array.isArray(data?.content) ? data.content : [];
+    const toolUses = content.filter((b: any) => b.type === 'tool_use');
+
+    if (data?.stop_reason === 'tool_use' && toolUses.length) {
+      messages.push({ role: 'assistant', content });
+      const results: any[] = [];
+      for (const tu of toolUses) {
+        const out = await ejecutarHerramienta(admin, tu.name, tu.input);
+        results.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(out) });
+      }
+      messages.push({ role: 'user', content: results });
+      continue;
+    }
+
+    const reply = content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('').trim();
+    return json({ ok: true, reply: reply || 'No tengo una respuesta para eso ahora mismo.' });
+  }
+  return json({ ok: true, reply: 'He hecho varias consultas y no consigo cerrar la respuesta. Prueba a reformular la pregunta.' });
+}
+
 function buildCors(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? '';
   const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -177,6 +373,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!adminRow) return json({ ok: false, error: 'Solo un administrador puede usar el asistente' }, 403);
 
     const body = await req.json().catch(() => null);
+
+    // Modo conversación (Entrega 1): si llega historial de mensajes, Jaime
+    // responde en lenguaje natural con herramientas de solo lectura. Si no,
+    // cae al modo INFORME clásico (perro_id sin mensajes), intacto.
+    if (Array.isArray(body?.mensajes)) {
+      return await handleConversacion(admin, body, ANTHROPIC_API_KEY, json);
+    }
+
     const perroId = String(body?.perro_id ?? '').trim();
     const clienteId = String(body?.cliente_id ?? '').trim();
     if (!UUID_RE.test(perroId)) return json({ ok: false, error: 'Falta el perro' }, 400);

@@ -4,13 +4,19 @@ const supabase = getSupabase('admin');
 const MALLORCA_D = 'M59.5,77.3 L51.9,65.9 L35.6,63.3 L32.6,58.7 L34.1,46.6 L28.4,40.9 L24.6,40.2 L16.3,43.9 L12.5,50.8 L9.8,48.1 L9.1,42.0 L3.4,41.7 L0.0,37.5 L0.0,34.5 L15.5,24.2 L21.6,22.7 L40.5,8.3 L54.9,3.0 L68.6,2.3 L73.9,0.0 L73.1,2.3 L67.4,4.9 L69.3,9.8 L76.5,8.7 L74.6,12.9 L69.7,13.3 L70.5,18.6 L78.4,25.8 L83.7,25.0 L89.8,20.5 L100.0,28.4 L97.7,35.2 L92.4,39.0 L91.7,44.3 L82.6,52.7 L76.5,66.3 L59.5,77.3 Z';
 const LOAD_STEPS = ['Leyendo evaluación SC', 'Revisando ejercicios asignados', 'Eligiendo del catálogo'];
 
-let ctx = { perroId: null, clienteId: null, nombre: '' };
+let ctx = { pantalla: null, perroId: null, clienteId: null, nombre: '' };
 let fabEl = null;
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let casoActual = null;
 let notasCargadas = null;
 let recog = null, dictando = false, stopManual = false;
+
+// Historial de la conversación EN MEMORIA de la sesión del navegador. Se
+// conserva mientras la pestaña siga abierta (aunque se cierre el panel) y se
+// pierde al recargar. Persistencia real: Entrega 2.
+let chatHist = [];   // [{ role:'user'|'assistant', content:string }]
+let enviando = false;
 
 function svgMallorca(size, color) {
   return `<svg width="${size}" height="${size * 77.3 / 100}" viewBox="0 0 100 77.3" fill="${color}" aria-hidden="true" style="display:block"><path d="${MALLORCA_D}"/></svg>`;
@@ -35,6 +41,7 @@ function cerrar() {
 
 function abrir() {
   if (fabEl) fabEl.hidden = true;
+  const sub = ctx.nombre ? `Sobre ${escapeHtml(ctx.nombre)}` : 'Asistente del panel';
   const overlay = document.createElement('div');
   overlay.id = 'jm-overlay';
   overlay.innerHTML = `
@@ -45,19 +52,129 @@ function abrir() {
         <div class="jm-avatar"><img class="jm-img" src="img/jaime.png" alt="Jaime"></div>
         <div style="flex:1">
           <div class="jm-name">Jaime</div>
-          <div class="jm-sub">Asistente · ${ctx.nombre || ''}</div>
+          <div class="jm-sub">${sub}</div>
         </div>
         <button class="jm-x" data-close aria-label="Cerrar"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3 L11 11 M11 3 L3 11"/></svg></button>
       </div>
-      <div class="jm-tabs" id="jm-tabs" hidden>
-        <button class="jm-tab active" data-tab="sugerencias">Sugerencias</button>
-        <button class="jm-tab" data-tab="notas">Notas</button>
-      </div>
-      <div class="jm-body" id="jm-body"></div>
+      <div class="jm-view" id="jm-view"></div>
     </div>`;
   overlay.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', cerrar));
-  overlay.querySelectorAll('.jm-tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
   document.body.appendChild(overlay);
+  renderChatView();
+}
+
+// ─────────────────────────── CHAT ───────────────────────────
+
+function saludoInicial() {
+  if (ctx.perroId) return `Estoy sobre el caso de ${escapeHtml(ctx.nombre || 'este perro')}. Pregúntame por su rutina, entrenos, bienestar o resúmenes de clase. También puedes abrir el informe del caso.`;
+  if (ctx.clienteId) return `Estoy sobre ${escapeHtml(ctx.nombre || 'este cliente')}. Pregúntame por sus perros, citas, resúmenes de clase o datos de contacto.`;
+  return 'Soy Jaime, tu asistente del panel. Pregúntame por cualquier cliente o perro; puedo buscarlos por nombre y consultar sus datos, rutinas, entrenos y más.';
+}
+
+function renderChatView() {
+  const view = document.getElementById('jm-view');
+  if (!view) return;
+  const chip = ctx.perroId
+    ? `<div class="jm-chip-row"><button type="button" class="jm-chip" id="jm-chip-informe">📋 Informe del caso</button></div>`
+    : '';
+  view.innerHTML = `
+    <div class="jm-chat-list" id="jm-chat-list"></div>
+    <div class="jm-chat-foot">
+      ${chip}
+      <div class="jm-chat-input">
+        <textarea id="jm-chat-ta" class="jm-chat-ta" rows="1" placeholder="Escribe tu pregunta…"></textarea>
+        <button class="jm-send" id="jm-chat-send" aria-label="Enviar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 L11 13 M22 2 L15 22 L11 13 L2 9 Z"/></svg>
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('jm-chip-informe')?.addEventListener('click', abrirInforme);
+  const ta = document.getElementById('jm-chat-ta');
+  const send = document.getElementById('jm-chat-send');
+  send?.addEventListener('click', enviarMensaje);
+  ta?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensaje(); }
+  });
+  ta?.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  });
+  renderChat();
+  ta?.focus();
+}
+
+function renderChat() {
+  const list = document.getElementById('jm-chat-list');
+  if (!list) return;
+  let html = `<div class="jm-msg jaime"><div class="jm-bubble">${escapeHtml(saludoInicial())}</div></div>`;
+  html += chatHist.map((m) =>
+    `<div class="jm-msg ${m.role === 'user' ? 'user' : 'jaime'}"><div class="jm-bubble">${escapeHtml(m.content)}</div></div>`
+  ).join('');
+  list.innerHTML = html;
+  list.scrollTop = list.scrollHeight;
+}
+
+async function enviarMensaje() {
+  const ta = document.getElementById('jm-chat-ta');
+  const texto = (ta?.value || '').trim();
+  if (!texto || enviando) return;
+  enviando = true;
+  chatHist.push({ role: 'user', content: texto });
+  if (ta) { ta.value = ''; ta.style.height = 'auto'; }
+  renderChat();
+
+  const list = document.getElementById('jm-chat-list');
+  if (list) {
+    list.insertAdjacentHTML('beforeend', '<div class="jm-msg jaime" id="jm-typing"><div class="jm-bubble jm-typing"><span></span><span></span><span></span></div></div>');
+    list.scrollTop = list.scrollHeight;
+  }
+  const send = document.getElementById('jm-chat-send');
+  if (send) send.disabled = true;
+
+  try {
+    const { data, error } = await supabase.functions.invoke('asistente-admin', {
+      body: {
+        mensajes: chatHist,
+        contexto: { pantalla: ctx.pantalla, cliente_id: ctx.clienteId, perro_id: ctx.perroId },
+      },
+    });
+    let res = data;
+    if (error?.context && typeof error.context.json === 'function') {
+      res = await error.context.json().catch(() => null);
+    }
+    const reply = (res && res.ok && typeof res.reply === 'string')
+      ? res.reply
+      : (res?.error || 'No he podido responder ahora mismo. Inténtalo de nuevo.');
+    chatHist.push({ role: 'assistant', content: reply });
+  } catch (e) {
+    console.error('[jaime] chat error:', e);
+    chatHist.push({ role: 'assistant', content: 'No he podido responder ahora mismo. Inténtalo de nuevo.' });
+  } finally {
+    enviando = false;
+    document.getElementById('jm-typing')?.remove();
+    renderChat();
+    const s = document.getElementById('jm-chat-send');
+    if (s) s.disabled = false;
+    document.getElementById('jm-chat-ta')?.focus();
+  }
+}
+
+// ─────────────────────── INFORME (modo clásico) ───────────────────────
+// Solo accesible desde el chip "Informe del caso" cuando hay perro en
+// contexto (perro.html). Mantiene el flujo y el render de siempre.
+
+function abrirInforme() {
+  const view = document.getElementById('jm-view');
+  if (!view) return;
+  view.innerHTML = `
+    <button class="jm-back" id="jm-back-chat">‹ Volver al chat</button>
+    <div class="jm-tabs" id="jm-tabs" hidden>
+      <button class="jm-tab active" data-tab="sugerencias">Sugerencias</button>
+      <button class="jm-tab" data-tab="notas">Notas</button>
+    </div>
+    <div class="jm-body" id="jm-body"></div>`;
+  document.getElementById('jm-back-chat')?.addEventListener('click', renderChatView);
+  view.querySelectorAll('.jm-tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
   renderLoader();
   cargarYrender();
 }
@@ -81,7 +198,7 @@ async function cargarYrender() {
   }
   const espera = Math.max(0, MIN_LOADER - (Date.now() - t0));
   setTimeout(() => {
-    if (!document.getElementById('jm-body')) return; // el panel se cerró
+    if (!document.getElementById('jm-body')) return; // el panel se cerró o volvió al chat
     if (payload) {
       casoActual = payload;
       const tabs = document.getElementById('jm-tabs');

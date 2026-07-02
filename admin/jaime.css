@@ -109,6 +109,31 @@
 .jm-step.on .t{color:var(--jm-txt);font-weight:600}
 .jm-step.done .t{color:var(--jm-txt2)}
 
+/* ---- Vista + Chat conversacional ---- */
+.jm-view{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.jm-chat-list{flex:1;min-height:46vh;overflow-y:auto;padding:18px 18px 8px;display:flex;flex-direction:column;gap:10px}
+.jm-chat-list::-webkit-scrollbar{width:0}
+.jm-msg{display:flex;max-width:86%}
+.jm-msg.user{align-self:flex-end;justify-content:flex-end}
+.jm-msg.jaime{align-self:flex-start}
+.jm-bubble{padding:10px 14px;border-radius:15px;font-family:var(--font-body);font-size:14.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
+.jm-msg.jaime .jm-bubble{background:var(--jm-surface);border:1px solid var(--jm-line);color:var(--jm-txt);border-bottom-left-radius:5px}
+.jm-msg.user .jm-bubble{background:var(--jm-rojo);color:var(--jm-crema);border-bottom-right-radius:5px}
+.jm-bubble.jm-typing{display:flex;gap:5px;align-items:center;padding:13px 16px}
+.jm-bubble.jm-typing span{width:6px;height:6px;border-radius:50%;background:var(--jm-txt3);animation:jmDot 1.1s ease-in-out infinite}
+.jm-bubble.jm-typing span:nth-child(2){animation-delay:.18s}
+.jm-bubble.jm-typing span:nth-child(3){animation-delay:.36s}
+.jm-chat-foot{flex-shrink:0;border-top:1px solid var(--jm-line-soft);padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 12px)}
+.jm-chip-row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+.jm-chip{background:var(--jm-chip);border:1px solid var(--jm-line);border-radius:999px;padding:7px 13px;font-family:var(--font-body);font-size:12.5px;font-weight:600;color:var(--jm-txt2);cursor:pointer}
+.jm-chip:active{transform:scale(.97)}
+.jm-chat-input{display:flex;gap:9px;align-items:flex-end}
+.jm-chat-ta{flex:1;resize:none;max-height:120px;min-height:44px;padding:11px 14px;border-radius:13px;border:1px solid var(--jm-line);background:var(--jm-surface);color:var(--jm-txt);font-family:var(--font-body);font-size:14.5px;line-height:1.4;box-sizing:border-box}
+.jm-chat-ta:focus{outline:none;border-color:var(--jm-rojo)}
+.jm-send{flex-shrink:0;width:44px;height:44px;border-radius:50%;border:none;background:var(--jm-rojo);color:var(--jm-crema);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.jm-send:disabled{opacity:.5;cursor:default}
+.jm-back{background:none;border:none;cursor:pointer;color:var(--jm-txt2);font-family:var(--font-body);font-size:13px;font-weight:600;padding:12px 22px 2px;text-align:left}
+
 /* ---- Pestañas + vista Notas ---- */
 .jm-tabs{display:flex;gap:24px;padding:12px 22px 0;border-bottom:1px solid var(--jm-line-soft);flex-shrink:0}
 .jm-tab{background:none;border:none;cursor:pointer;font-family:var(--font-display);font-size:18px;letter-spacing:.5px;color:var(--jm-txt2);padding-bottom:10px;border-bottom:2px solid transparent}

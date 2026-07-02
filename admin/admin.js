@@ -15,6 +15,7 @@ import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
 import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=1';
+import { initJaime } from './jaime.js?v=9';
 const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
@@ -170,6 +171,10 @@ async function afterLogin(session) {
     showScreen('app');
     bindTabs();
     bindBackNavigation();
+
+    // Asistente Jaime (chat global): FAB en toda la pantalla del admin, sin
+    // contexto de cliente/perro (los resuelve por nombre con sus herramientas).
+    initJaime({ pantalla: 'index' });
 
     // Swipe horizontal entre tabs principales del admin.
     // 'inicio' está oculto (decisión 08/05) — solo navegamos entre los 4 visibles.

@@ -10,6 +10,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
+import { initJaime } from './jaime.js?v=9';
 const supabase = getSupabase('admin');
 
 const SCREENS = {
@@ -158,6 +159,9 @@ function renderCliente(c, tieneUsuario) {
 
     // Quién puede entrar a la app (principal + familiares) — solo lectura.
     cargarMiembros(c.id);
+
+    // Asistente Jaime (chat) con el cliente en contexto: "este cliente" resuelve solo.
+    initJaime({ pantalla: 'cliente', clienteId: c.id, nombre: c.nombre || '' });
 }
 
 // El texto del botón depende de si el cliente YA fue invitado, es decir,
