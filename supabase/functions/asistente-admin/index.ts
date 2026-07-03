@@ -70,9 +70,12 @@ REGLAS INNEGOCIABLES:
 - Para identificar a un cliente por nombre usa buscar_cliente. Si hay varias coincidencias, enuméralas y pide que se aclare cuál.
 - No generas SQL ni describes la estructura interna de la base de datos.
 - Si el contexto de la pantalla trae cliente_id o perro_id, "este cliente" / "este perro" se refieren a esos identificadores: úsalos directamente sin volver a buscar.
+- Antes de decir que no puedes o de pedir un dato al equipo, INTENTA encadenar herramientas. Ejemplos: para "¿qué clases tengo hoy/mañana?" usa agenda_del_dia (sin fecha = hoy; con fecha YYYY-MM-DD para otro día). Para "¿con quién es la clase siguiente?" usa agenda_del_dia de hoy, localiza la próxima cita por hora respecto a la hora actual y, si necesitas más detalle del cliente o su perro, encadena con perros_de_cliente o citas_de_cliente usando el cliente_id (y perro_id) que devuelve la agenda. Pedir información al equipo es el ÚLTIMO recurso, nunca el primero.
+- Si una herramienta no devuelve datos (por ejemplo, la agenda del día viene vacía), dilo tal cual ("no hay clases ese día", "no consta"); JAMÁS rellenes con citas, horas, clientes o perros inventados.
 - Ante una pregunta que no puedas responder con las herramientas, dilo; no rellenes con conjeturas.`;
 
 const TOOLS = [
+  { name: 'agenda_del_dia', description: 'Agenda de un día concreto: TODAS las citas (clases) de ese día ordenadas por hora, con hora, estado, modalidad, zona, cliente (nombre) y su perro si el cliente tiene uno solo (si tiene varios, vienen todos en "perros"). Incluye cliente_id y perro_id para encadenar con las otras herramientas. Sin el parámetro fecha, usa HOY en Mallorca (Europe/Madrid). Úsala para "¿qué clases hay hoy/mañana?", "¿cuál es la clase siguiente?", "¿con quién es la próxima?", etc.', input_schema: { type: 'object', properties: { fecha: { type: 'string', description: 'Día a consultar en formato YYYY-MM-DD. Si se omite, HOY en Mallorca.' } } } },
   { name: 'buscar_cliente', description: 'Busca clientes por coincidencia parcial de nombre. Devuelve id, nombre, teléfono, email, dirección, zona, enlace de ubicación en Google Maps, estado y pack actual.', input_schema: { type: 'object', properties: { nombre_parcial: { type: 'string', description: 'Parte del nombre del cliente a buscar' } }, required: ['nombre_parcial'] } },
   { name: 'perros_de_cliente', description: 'Lista los perros de un cliente con sus datos básicos (nombre, raza, edad en meses, peso, si es PPP, problemática, protocolo).', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' } }, required: ['cliente_id'] } },
   { name: 'citas_de_cliente', description: 'Últimas citas de un cliente: fecha, hora, modalidad, estado, número de clase y resumen.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de citas a devolver (por defecto 10)' } }, required: ['cliente_id'] } },
@@ -88,6 +91,24 @@ function clampLimite(v: unknown, def: number, max: number): number {
   return Math.min(Math.floor(n), max);
 }
 
+// Fecha y hora actuales en Mallorca (Europe/Madrid), resueltas con la zona
+// horaria real (incluye horario de verano). fecha en 'YYYY-MM-DD', hora en
+// 'HH:MM' 24h, y el día de la semana en castellano. Es la única fuente de
+// "hoy/ahora" del asistente: nunca dependemos de la hora UTC del servidor.
+function fechaHoraMadrid(d: Date = new Date()): { fecha: string; hora: string; diaSemana: string } {
+  const fmt = new Intl.DateTimeFormat('es-ES', {
+    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'long',
+  });
+  const p: Record<string, string> = {};
+  for (const part of fmt.formatToParts(d)) p[part.type] = part.value;
+  return {
+    fecha: `${p.year}-${p.month}-${p.day}`,
+    hora: `${p.hour === '24' ? '00' : p.hour}:${p.minute}`,
+    diaSemana: p.weekday ?? '',
+  };
+}
+
 function nombreEjercicioTool(row: any): string {
   const ea = row?.ejercicios_asignados;
   const e = Array.isArray(ea) ? ea[0]?.ejercicios : ea?.ejercicios;
@@ -100,6 +121,36 @@ function nombreEjercicioTool(row: any): string {
 async function ejecutarHerramienta(admin: any, nombre: string, input: any): Promise<any> {
   try {
     switch (nombre) {
+      case 'agenda_del_dia': {
+        // Sin fecha (o fecha inválida) → HOY en Mallorca. Las citas son a nivel
+        // CLIENTE (no hay perro_id en citas): el perro se deriva de los perros
+        // del cliente. Si tiene uno solo, lo exponemos como perro/perro_id;
+        // si tiene varios, van todos en "perros" para que el modelo elija.
+        let fecha = String(input?.fecha ?? '').trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) fecha = fechaHoraMadrid().fecha;
+        const { data, error } = await admin.from('citas')
+          .select('id, hora, estado, modalidad, zona, cliente_id, clientes(nombre, perros(id, nombre))')
+          .eq('fecha', fecha)
+          .order('hora', { ascending: true });
+        if (error) return { error: error.message };
+        const citas = (data ?? []).map((c: any) => {
+          const cli = Array.isArray(c.clientes) ? c.clientes[0] : c.clientes;
+          const perros = Array.isArray(cli?.perros) ? cli.perros.map((p: any) => ({ id: p.id, nombre: p.nombre })) : [];
+          const uno = perros.length === 1 ? perros[0] : null;
+          return {
+            hora: String(c.hora ?? '').slice(0, 5),
+            estado: c.estado ?? null,
+            modalidad: c.modalidad ?? null,
+            zona: c.zona ?? null,
+            cliente: cli?.nombre ?? null,
+            cliente_id: c.cliente_id ?? null,
+            perro: uno?.nombre ?? null,
+            perro_id: uno?.id ?? null,
+            perros,
+          };
+        });
+        return { fecha, citas };
+      }
       case 'buscar_cliente': {
         const q = String(input?.nombre_parcial ?? '').trim();
         if (!q) return { error: 'Falta nombre_parcial' };
@@ -210,7 +261,10 @@ async function handleConversacion(admin: any, body: any, apiKey: string, json: (
     return json({ ok: false, error: 'No hay un mensaje del usuario' }, 400);
   }
 
-  const sys = SYSTEM_PROMPT_CHAT + '\n\nCONTEXTO DE LA PANTALLA ACTUAL: ' + JSON.stringify({
+  const ahora = fechaHoraMadrid();
+  const sys = SYSTEM_PROMPT_CHAT
+    + `\n\nCONTEXTO TEMPORAL (Mallorca, Europe/Madrid): hoy es ${ahora.diaSemana} ${ahora.fecha} y son las ${ahora.hora}. Resuelve "hoy", "mañana", "esta tarde", "la siguiente/próxima", etc. respecto a este momento. "Mañana" es el día siguiente a ${ahora.fecha}.`
+    + '\n\nCONTEXTO DE LA PANTALLA ACTUAL: ' + JSON.stringify({
     pantalla: contexto?.pantalla ?? null,
     cliente_id: UUID_RE.test(String(contexto?.cliente_id ?? '')) ? contexto.cliente_id : null,
     perro_id: UUID_RE.test(String(contexto?.perro_id ?? '')) ? contexto.perro_id : null,
