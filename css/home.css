@@ -807,15 +807,12 @@
 
 /* — cabecera de club — */
 .home .mn-head{padding:18px 0 4px;}
-.home .mn-head__top{display:flex;align-items:center;gap:10px;}
+.home .mn-head__top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .home .mn-logo{
   width:30px;height:30px;flex:0 0 auto;border-radius:999px;
   background-image:url("../img/logo-ucm.png");background-size:cover;background-position:center;
   box-shadow:0 0 0 1px var(--c-hair-2);
 }
-.home .mn-hello{display:flex;flex-direction:column;line-height:1;flex:1 1 auto;min-width:0;}
-.home .mn-hello__pre{font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--c-text-3);}
-.home .mn-hello__nom{font-family:var(--display);font-size:30px;letter-spacing:1px;text-transform:uppercase;color:var(--c-text);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .home .mn-badge{font-family:var(--body);font-weight:800;border:0;border-radius:999px;}
 .home .mn-badge--vet{flex:0 0 auto;font-size:10px;letter-spacing:1.4px;padding:6px 12px;background:var(--c-rojo);color:#fff;cursor:pointer;animation:mnPulse 2.4s ease-out infinite;}
 @keyframes mnPulse{0%{box-shadow:0 0 0 0 rgba(200,16,46,.45);}70%{box-shadow:0 0 0 9px rgba(200,16,46,0);}100%{box-shadow:0 0 0 0 rgba(200,16,46,0);}}
@@ -895,6 +892,10 @@
   border-radius:999px;padding:5px 11px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
 }
 .home .dBp .cover .cbot .hero-cat-chip:hover{border-color:rgba(245,239,224,0.6);}
+/* Respetar el atributo hidden: sin esto, el display:inline-block de arriba pisa
+   el [hidden] del UA y el chip no se oculta nunca (se veía "ACTIVO" hasta en el
+   veterano, que no debe llevar chip). */
+.home .dBp .cover .cbot .hero-cat-chip[hidden]{display:none;}
 
 @media (prefers-reduced-motion: reduce){
   .home .mn-chapa__swing{animation:none;}

@@ -49,21 +49,6 @@ const SCREENS = {
 function esVeterano() { return state.cliente?.estado === 'veterano'; }
 function esExCliente() { return state.cliente?.estado === 'ex_cliente'; }
 
-// Nombre de pila del tutor (misma heurística que el saludo del hero: saltea
-// palabras genéricas de altas de prueba).
-function nombrePilaTutor() {
-    const nombreCompleto = (state.usuarioCliente?.nombre || state.usuarioCliente?.nombre_visible || '').trim();
-    const GEN = ['cliente', 'prueba', 'test', 'usuario', 'demo'];
-    const palabras = nombreCompleto.split(/\s+/).filter(Boolean);
-    return palabras.find((p) => !GEN.includes(p.toLowerCase())) || palabras[0] || 'amigo';
-}
-
-// "BIENVENIDA," si el nombre de pila termina en 'a'; si no, "BIENVENIDO,".
-// Heurística simple a propósito (sin diccionario de nombres).
-function saludoBienvenida() {
-    return /a$/i.test(nombrePilaTutor()) ? 'BIENVENIDA,' : 'BIENVENIDO,';
-}
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STORAGE_PERRO_KEY = 'pdli.perroSeleccionadoId';
 const TELEFONO_PUBLICO = '622 922 173';
@@ -2076,10 +2061,6 @@ function renderManada() {
         <header class="mn-head">
             <div class="mn-head__top">
                 <span class="mn-logo" aria-hidden="true"></span>
-                <div class="mn-hello">
-                    <span class="mn-hello__pre">${saludoBienvenida()}</span>
-                    <span class="mn-hello__nom">${escapeHTML(nombrePilaTutor())}</span>
-                </div>
                 <button type="button" class="mn-badge mn-badge--vet" id="mn-badge-veterano" aria-label="Ver tu categoría">VETERANO</button>
             </div>
 
