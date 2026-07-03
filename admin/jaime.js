@@ -306,6 +306,29 @@ function abrir() {
   overlay.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', cerrar));
   document.body.appendChild(overlay);
   renderChatView();
+  quizasParteDelDia();
+}
+
+// Parte del día automático: SOLO en la pantalla index del admin, la primera vez
+// que se abre el chat en el día. Dispara internamente "Dame el parte del día"
+// (mensaje oculto: se pinta solo la respuesta de Jaime, como si te recibiera
+// hablando) y guarda la fecha para no repetir hasta mañana.
+const PARTE_FECHA_KEY = 'pdli_jaime_parte_fecha';
+
+function hoyLocalISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function quizasParteDelDia() {
+  if (ctx.pantalla !== 'index') return;   // ni cliente.html ni perro.html
+  if (chatHist.length) return;            // no interrumpir una conversación en curso
+  let ultima = null;
+  try { ultima = localStorage.getItem(PARTE_FECHA_KEY); } catch (_e) { /* noop */ }
+  const hoy = hoyLocalISO();
+  if (ultima === hoy) return;
+  try { localStorage.setItem(PARTE_FECHA_KEY, hoy); } catch (_e) { /* noop */ }
+  mandarMensaje('Dame el parte del día', true);
 }
 
 // ─────────────────────────── CHAT ───────────────────────────
@@ -319,9 +342,13 @@ function saludoInicial() {
 function renderChatView() {
   const view = document.getElementById('jm-view');
   if (!view) return;
+  // Chip contextual: informe del caso (pantalla de perro) o parte del día
+  // (pantalla index del admin).
   const chip = ctx.perroId
     ? `<div class="jm-chip-row"><button type="button" class="jm-chip" id="jm-chip-informe">📋 Informe del caso</button></div>`
-    : '';
+    : (ctx.pantalla === 'index'
+        ? `<div class="jm-chip-row"><button type="button" class="jm-chip" id="jm-chip-parte">📋 Parte del día</button></div>`
+        : '');
   view.innerHTML = `
     <div class="jm-chat-list" id="jm-chat-list"></div>
     <div class="jm-chat-foot">
@@ -334,6 +361,7 @@ function renderChatView() {
       </div>
     </div>`;
   document.getElementById('jm-chip-informe')?.addEventListener('click', abrirInforme);
+  document.getElementById('jm-chip-parte')?.addEventListener('click', () => mandarMensaje('Dame el parte del día', false));
   const ta = document.getElementById('jm-chat-ta');
   const send = document.getElementById('jm-chat-send');
   send?.addEventListener('click', enviarMensaje);
@@ -352,7 +380,7 @@ function renderChat() {
   const list = document.getElementById('jm-chat-list');
   if (!list) return;
   let html = `<div class="jm-msg jaime"><div class="jm-bubble">${escapeHtml(saludoInicial())}</div></div>`;
-  html += chatHist.map((m) =>
+  html += chatHist.filter((m) => !m.hidden).map((m) =>
     `<div class="jm-msg ${m.role === 'user' ? 'user' : 'jaime'}"><div class="jm-bubble">${escapeHtml(m.content)}</div></div>`
   ).join('');
   list.innerHTML = html;
@@ -363,9 +391,17 @@ async function enviarMensaje() {
   const ta = document.getElementById('jm-chat-ta');
   const texto = (ta?.value || '').trim();
   if (!texto || enviando) return;
-  enviando = true;
-  chatHist.push({ role: 'user', content: texto });
   if (ta) { ta.value = ''; ta.style.height = 'auto'; }
+  await mandarMensaje(texto, false);
+}
+
+// Envía un mensaje al asistente. hidden=true: el turno del usuario NO se pinta
+// (lo usa el parte del día automático), pero SÍ va en el historial para que la
+// conversación siga siendo válida (empieza por 'user').
+async function mandarMensaje(texto, hidden) {
+  if (!texto || enviando) return;
+  enviando = true;
+  chatHist.push({ role: 'user', content: texto, hidden: !!hidden });
   renderChat();
 
   const list = document.getElementById('jm-chat-list');
@@ -380,7 +416,7 @@ async function enviarMensaje() {
   try {
     const { data, error } = await supabase.functions.invoke('asistente-admin', {
       body: {
-        mensajes: chatHist,
+        mensajes: chatHist.map((m) => ({ role: m.role, content: m.content })),
         contexto: { pantalla: ctx.pantalla, cliente_id: ctx.clienteId, perro_id: ctx.perroId },
       },
     });

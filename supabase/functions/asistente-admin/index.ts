@@ -57,8 +57,10 @@ Respondés SIEMPRE y SOLO con este JSON, sin texto antes ni después, sin markdo
 // iteraciones). El modelo NUNCA genera SQL: cada herramienta es una consulta
 // predefinida contra tablas reales. Reusa el mismo proveedor/modelo/API key.
 // ─────────────────────────────────────────────────────────────
-const CHAT_MAX_TOKENS = 1024;
-const MAX_TOOL_ITERS = 5;
+const CHAT_MAX_TOKENS = 1536;
+// El parte del día encadena agenda + detalle por cliente + atención: sube el
+// tope de iteraciones de tool-calling para que quepa la cadena completa.
+const MAX_TOOL_ITERS = 10;
 
 const SYSTEM_PROMPT_CHAT = `Eres Jaime, el asistente interno del panel de administración de Perros de la Isla (escuela de adiestramiento canino en Mallorca). Hablas SOLO con el equipo interno, nunca con clientes. Idioma: castellano peninsular, profesional y directo. Respuestas concisas y al grano.
 
@@ -72,7 +74,20 @@ REGLAS INNEGOCIABLES:
 - Si el contexto de la pantalla trae cliente_id o perro_id, "este cliente" / "este perro" se refieren a esos identificadores: úsalos directamente sin volver a buscar.
 - Antes de decir que no puedes o de pedir un dato al equipo, INTENTA encadenar herramientas. Ejemplos: para "¿qué clases tengo hoy/mañana?" usa agenda_del_dia (sin fecha = hoy; con fecha YYYY-MM-DD para otro día). Para "¿con quién es la clase siguiente?" usa agenda_del_dia de hoy, localiza la próxima cita por hora respecto a la hora actual y, si necesitas más detalle del cliente o su perro, encadena con perros_de_cliente o citas_de_cliente usando el cliente_id (y perro_id) que devuelve la agenda. Pedir información al equipo es el ÚLTIMO recurso, nunca el primero.
 - Si una herramienta no devuelve datos (por ejemplo, la agenda del día viene vacía), dilo tal cual ("no hay clases ese día", "no consta"); JAMÁS rellenes con citas, horas, clientes o perros inventados.
-- Ante una pregunta que no puedas responder con las herramientas, dilo; no rellenes con conjeturas.`;
+- Ante una pregunta que no puedas responder con las herramientas, dilo; no rellenes con conjeturas.
+
+EL PARTE DEL DÍA: cuando el equipo te lo pida ("el parte", "el parte del día") o al recibir el mensaje "Dame el parte del día", compón un briefing CONCISO del día de HOY, SIEMPRE con datos de las herramientas:
+1. Llama a agenda_del_dia (sin fecha = hoy).
+2. Por cada cita, si aporta, encadena: citas_de_cliente(cliente_id) para saber qué se trabajó en la última clase de ese cliente (su último resumen), y la actividad del perro con entrenos_de_perro o rutina_de_perro cuando ayude a ver la constancia.
+3. Cierra con atencion_pendiente() para las alertas de seguimiento.
+Formato (TEXTO PLANO, sin markdown, sin viñetas de asterisco): una línea de saludo; luego una entrada por clase con la hora, cliente·perro, qué se trabajó la última vez, la constancia si hay datos, y la zona/ubicación; y al final un bloque "Atención:" SOLO si atencion_pendiente devuelve ítems. Si no hay clases hoy, dilo en una línea y muestra igualmente "Atención" si hay ítems. Todo con datos de herramientas: si un dato no está, se omite; nada inventado.
+
+MEMORIA DEL EQUIPO (notas privadas por perro):
+- Guarda una nota con guardar_nota_perro SOLO cuando el equipo lo pida claramente ("anotá que…", "guardate que…", "recordá que…"). NUNCA por iniciativa propia.
+- Si el perro se nombra por su nombre, resuélvelo antes con buscar_perro. Si hay varios perros con ese nombre o cualquier ambigüedad, PREGUNTA cuál antes de guardar; no adivines el perro_id.
+- Tras guardar, confirma citando el texto guardado (por ejemplo: "Anotado para Hermes: le asusta el ascensor.").
+- Las notas son PRIVADAS del equipo interno: nunca las trates como información para el tutor ni las mezcles con datos del cliente.
+- Cuando te pregunten qué se sabe de un perro o algo sobre él ("¿qué le asustaba a Hermes?", "¿qué sabemos de X?"), consulta también notas_de_perro además del resto de herramientas.`;
 
 const TOOLS = [
   { name: 'agenda_del_dia', description: 'Agenda de un día concreto: TODAS las citas (clases) de ese día ordenadas por hora, con hora, estado, modalidad, zona, cliente (nombre) y su perro si el cliente tiene uno solo (si tiene varios, vienen todos en "perros"). Incluye cliente_id y perro_id para encadenar con las otras herramientas. Sin el parámetro fecha, usa HOY en Mallorca (Europe/Madrid). Úsala para "¿qué clases hay hoy/mañana?", "¿cuál es la clase siguiente?", "¿con quién es la próxima?", etc.', input_schema: { type: 'object', properties: { fecha: { type: 'string', description: 'Día a consultar en formato YYYY-MM-DD. Si se omite, HOY en Mallorca.' } } } },
@@ -83,6 +98,10 @@ const TOOLS = [
   { name: 'rutina_de_perro', description: 'Ejercicios activos en la rutina de un perro, con código, nombre, categoría, posición y progresión (progresa_de). No incluye rachas: se calculan en la app, no en la base.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' } }, required: ['perro_id'] } },
   { name: 'bienestar_de_perro', description: 'Última evaluación de Salud Comportamental de un perro: scores por dimensión (física, emocional, social, cognitiva), score total, bandera roja y fecha.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' } }, required: ['perro_id'] } },
   { name: 'resumenes_de_clase', description: 'Resúmenes de clase de un cliente (o del cliente dueño de un perro, si pasas perro_id). Devuelve fecha, número de clase y el texto del resumen.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, perro_id: { type: 'string' }, limite: { type: 'integer' } } } },
+  { name: 'atencion_pendiente', description: 'Alertas de seguimiento del equipo: perros activos que nunca empezaron la rutina, que se enfriaron (varios días sin entrenar) o con una tarea abandonada. Devuelve total y una lista de ítems (motivo, perro, perro_id, cliente, cliente_id, dias, tarea). Solo lectura. Úsala para cerrar el parte del día o cuando pregunten qué requiere atención.', input_schema: { type: 'object', properties: {} } },
+  { name: 'buscar_perro', description: 'Busca perros por coincidencia parcial de nombre. Devuelve perro_id, nombre, raza y su cliente (nombre, cliente_id). Úsala para resolver un perro nombrado por su nombre (por ejemplo antes de guardar o leer una nota); si hay varias coincidencias, hay que desambiguar.', input_schema: { type: 'object', properties: { nombre_parcial: { type: 'string', description: 'Parte del nombre del perro a buscar' } }, required: ['nombre_parcial'] } },
+  { name: 'notas_de_perro', description: 'Notas privadas del equipo sobre un perro, de la más reciente a la más antigua (fecha y texto). Solo lectura. Consúltala cuando pregunten qué se sabe de un perro o para recordar algo anotado.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de notas (por defecto 10)' } }, required: ['perro_id'] } },
+  { name: 'guardar_nota_perro', description: 'Guarda una nota privada del equipo sobre un perro (memoria interna). ÚNICA herramienta de escritura. Úsala SOLO cuando el equipo lo pida explícitamente ("anotá que…", "guardate que…"). El texto se guarda tal cual, máximo 1000 caracteres. Requiere el perro_id exacto (resuélvelo antes con buscar_perro si te dan un nombre).', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, texto: { type: 'string', description: 'La nota a guardar, hasta 1000 caracteres' } }, required: ['perro_id', 'texto'] } },
 ];
 
 function clampLimite(v: unknown, def: number, max: number): number {
@@ -118,7 +137,9 @@ function nombreEjercicioTool(row: any): string {
 
 // Ejecuta UNA herramienta del set cerrado. Devuelve siempre un objeto
 // JSON-serializable; nunca lanza (los errores van dentro del objeto).
-async function ejecutarHerramienta(admin: any, nombre: string, input: any): Promise<any> {
+// `admin` = service role (lecturas + la única escritura, notas_perro).
+// `userClient` = cliente con el JWT del admin (para RPCs con es_admin()).
+async function ejecutarHerramienta(admin: any, userClient: any, nombre: string, input: any): Promise<any> {
   try {
     switch (nombre) {
       case 'agenda_del_dia': {
@@ -243,6 +264,61 @@ async function ejecutarHerramienta(admin: any, nombre: string, input: any): Prom
         if (error) return { error: error.message };
         return { resumenes: data ?? [] };
       }
+      case 'atencion_pendiente': {
+        // El RPC es SECURITY DEFINER y valida es_admin() con auth.uid(): hay
+        // que llamarlo con el cliente autenticado del admin, no con service role.
+        const { data, error } = await userClient.rpc('get_atencion_admin');
+        if (error) return { error: error.message };
+        const atencion = Array.isArray(data?.atencion) ? data.atencion.map((a: any) => ({
+          motivo: a.motivo ?? null,
+          perro: a.perro ?? null,
+          perro_id: a.perro_id ?? null,
+          cliente: a.cliente ?? null,
+          cliente_id: a.cliente_id ?? null,
+          dias: a.dias ?? null,
+          tarea: a.tarea ?? null,
+        })) : [];
+        return { total: data?.total ?? atencion.length, atencion };
+      }
+      case 'buscar_perro': {
+        const q = String(input?.nombre_parcial ?? '').trim();
+        if (!q) return { error: 'Falta nombre_parcial' };
+        const { data, error } = await admin.from('perros')
+          .select('id, nombre, raza, cliente_id, clientes:cliente_id(nombre)')
+          .ilike('nombre', `%${q}%`).order('nombre', { ascending: true }).limit(10);
+        if (error) return { error: error.message };
+        const perros = (data ?? []).map((p: any) => {
+          const cli = Array.isArray(p.clientes) ? p.clientes[0] : p.clientes;
+          return { perro_id: p.id, nombre: p.nombre, raza: p.raza ?? null, cliente: cli?.nombre ?? null, cliente_id: p.cliente_id ?? null };
+        });
+        return { perros };
+      }
+      case 'notas_de_perro': {
+        const pid = String(input?.perro_id ?? '');
+        if (!UUID_RE.test(pid)) return { error: 'perro_id inválido' };
+        const limite = clampLimite(input?.limite, 10, 50);
+        const { data, error } = await admin.from('notas_perro')
+          .select('texto, creado_en').eq('perro_id', pid)
+          .order('creado_en', { ascending: false }).limit(limite);
+        if (error) return { error: error.message };
+        return { notas: (data ?? []).map((n: any) => ({ fecha: n.creado_en, texto: n.texto })) };
+      }
+      case 'guardar_nota_perro': {
+        // ÚNICA escritura del asistente: acotada a notas_perro y nada más.
+        const pid = String(input?.perro_id ?? '');
+        if (!UUID_RE.test(pid)) return { error: 'perro_id inválido' };
+        let texto = String(input?.texto ?? '').trim();
+        if (!texto) return { error: 'La nota está vacía' };
+        if (texto.length > 1000) texto = texto.slice(0, 1000);
+        // Validar que el perro existe antes de insertar.
+        const { data: perro, error: pErr } = await admin.from('perros').select('id, nombre').eq('id', pid).maybeSingle();
+        if (pErr) return { error: pErr.message };
+        if (!perro) return { error: 'No existe un perro con ese perro_id' };
+        const { data, error } = await admin.from('notas_perro')
+          .insert({ perro_id: pid, texto }).select('id, creado_en').single();
+        if (error) return { error: error.message };
+        return { ok: true, guardada: { id: data.id, perro_id: pid, perro: perro.nombre, texto, creado_en: data.creado_en } };
+      }
       default:
         return { error: `Herramienta desconocida: ${nombre}` };
     }
@@ -251,7 +327,7 @@ async function ejecutarHerramienta(admin: any, nombre: string, input: any): Prom
   }
 }
 
-async function handleConversacion(admin: any, body: any, apiKey: string, json: (p: unknown, s?: number) => Response): Promise<Response> {
+async function handleConversacion(admin: any, userClient: any, body: any, apiKey: string, json: (p: unknown, s?: number) => Response): Promise<Response> {
   const contexto = body?.contexto ?? {};
   const messages: any[] = (Array.isArray(body?.mensajes) ? body.mensajes : [])
     .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string' && m.content.trim())
@@ -288,7 +364,7 @@ async function handleConversacion(admin: any, body: any, apiKey: string, json: (
       messages.push({ role: 'assistant', content });
       const results: any[] = [];
       for (const tu of toolUses) {
-        const out = await ejecutarHerramienta(admin, tu.name, tu.input);
+        const out = await ejecutarHerramienta(admin, userClient, tu.name, tu.input);
         results.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(out) });
       }
       messages.push({ role: 'user', content: results });
@@ -408,6 +484,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ ok: false, error: 'Función mal configurada (Supabase)' }, 500);
   if (!ANTHROPIC_API_KEY) return json({ ok: false, error: 'Función mal configurada (Anthropic)' }, 500);
@@ -429,10 +506,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const body = await req.json().catch(() => null);
 
     // Modo conversación (Entrega 1): si llega historial de mensajes, Jaime
-    // responde en lenguaje natural con herramientas de solo lectura. Si no,
-    // cae al modo INFORME clásico (perro_id sin mensajes), intacto.
+    // responde en lenguaje natural con herramientas de solo lectura (+ la
+    // escritura acotada de notas_perro). Si no, cae al modo INFORME clásico
+    // (perro_id sin mensajes), intacto.
     if (Array.isArray(body?.mensajes)) {
-      return await handleConversacion(admin, body, ANTHROPIC_API_KEY, json);
+      // Cliente con el JWT del admin: para RPCs que validan es_admin() por
+      // auth.uid() (get_atencion_admin). El resto usa el service role.
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      return await handleConversacion(admin, userClient, body, ANTHROPIC_API_KEY, json);
     }
 
     const perroId = String(body?.perro_id ?? '').trim();
