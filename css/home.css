@@ -846,7 +846,9 @@
 }
 .home .mn-card[role="button"]{cursor:pointer;}
 .home .mn-card[role="button"]:hover{border-color:var(--c-hair-2);}
-.home .mn-card[role="button"]:active{transform:scale(.99);}
+/* La tarjeta NO debe encogerse mientras tiene el desplegable abierto: el scale
+   desplazaría el ítem bajo el puntero y el click se re-dirige al ancestro. */
+.home .mn-card[role="button"]:active:not(:has(.mn-chip-menu)){transform:scale(.99);}
 .home .mn-card--accion{border-color:var(--c-rojo);}
 .home .mn-card__ic{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--c-field);color:var(--c-text-2);}
 .home .mn-card__ic svg{width:20px;height:20px;}

@@ -397,20 +397,26 @@ function bindEventos() {
     // menú del avatar: ignora el toggle (el chip) y el propio menú, así el mismo
     // toque que abre no lo cierra.
     const manadaHome = document.getElementById('manada-home');
-    if (manadaHome) manadaHome.addEventListener('click', (e) => {
+    // La SELECCIÓN de un ítem se resuelve en POINTERDOWN, no en click: el
+    // pointerdown se dispara ANTES del scale:active de la tarjeta y de cualquier
+    // re-render, así que es inmune al re-targeting que redirigía el click al
+    // ancestro común (por eso antes "no seleccionaba"). El flag evita el doble
+    // proceso con el click sintético posterior.
+    let itemSelPointer = false;
+    if (manadaHome) manadaHome.addEventListener('pointerdown', (e) => {
         const item = e.target.closest('.mn-chip-menu__it');
-        if (item) {
-            const id = item.dataset.perroId;
-            cerrarMenusManada();
-            if (id && id !== state.perroSeleccionadoId) {
-                state.perroSeleccionadoId = id;
-                sessionStorage.setItem(STORAGE_PERRO_KEY, id);
-                renderSelectorPerros();
-                renderRutinaPerroSeleccionado();
-                renderManada();
-            }
-            return;
-        }
+        if (!item) return;
+        e.preventDefault();
+        itemSelPointer = true;
+        seleccionarPerroManada(item.dataset.perroId);
+    });
+    if (manadaHome) manadaHome.addEventListener('click', (e) => {
+        // Ítem del desplegable: ya procesado en pointerdown → no-op.
+        if (itemSelPointer) { itemSelPointer = false; return; }
+        if (e.target.closest('.mn-chip-menu__it')) return;
+        // Guard anti-navegación fantasma: un click re-dirigido u originado dentro
+        // del menú jamás debe disparar la acción de la tarjeta que lo contiene.
+        if (e.target.closest('.mn-chip-menu')) return;
         const chip = e.target.closest('[data-mn-chip]');
         if (chip) {
             if (chip.dataset.single) return;   // un solo perro: chip sin desplegable
@@ -422,6 +428,7 @@ function bindEventos() {
         const card = e.target.closest('[data-mn-card]');
         if (card) onManadaCard(card.dataset.mnCard);
     });
+    // Cierre al tocar fuera (patrón del menú avatar): ignora el toggle y el menú.
     document.addEventListener('click', (e) => {
         if (!document.querySelector('.mn-chip-menu')) return;
         if (e.target.closest('.mn-chip-menu') || e.target.closest('[data-mn-chip]')) return;
@@ -2198,6 +2205,19 @@ function onManadaCard(kind) {
 // Cierra cualquier desplegable de perro abierto en la Manada.
 function cerrarMenusManada() {
     document.querySelectorAll('.mn-chip-menu').forEach((m) => m.remove());
+}
+
+// Aplica la selección de perro desde el desplegable de la Manada: cierra el
+// menú y, si cambió, re-renderiza selector + rutina + Manada (la chapa y los
+// chips pasan al perro elegido). La lógica de selección ya estaba verificada.
+function seleccionarPerroManada(id) {
+    cerrarMenusManada();
+    if (!id || id === state.perroSeleccionadoId) return;
+    state.perroSeleccionadoId = id;
+    sessionStorage.setItem(STORAGE_PERRO_KEY, id);
+    renderSelectorPerros();
+    renderRutinaPerroSeleccionado();
+    renderManada();
 }
 
 // Abre el desplegable de perro de un chip (solo construye el menú; la selección
