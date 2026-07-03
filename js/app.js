@@ -391,6 +391,43 @@ function bindEventos() {
     document.getElementById('hero-editar-manada')?.addEventListener('click', abrirModalEditarMisDatos);
     document.getElementById('rutina-volver-manada')?.addEventListener('click', volverAManada);
 
+    // Manada: un ÚNICO handler DELEGADO para tarjetas, chips de perro y sus
+    // desplegables (bound una sola vez; sobrevive a los re-render de renderManada
+    // sin acumular listeners). El cierre al tocar fuera va aparte, calcando el
+    // menú del avatar: ignora el toggle (el chip) y el propio menú, así el mismo
+    // toque que abre no lo cierra.
+    const manadaHome = document.getElementById('manada-home');
+    if (manadaHome) manadaHome.addEventListener('click', (e) => {
+        const item = e.target.closest('.mn-chip-menu__it');
+        if (item) {
+            const id = item.dataset.perroId;
+            cerrarMenusManada();
+            if (id && id !== state.perroSeleccionadoId) {
+                state.perroSeleccionadoId = id;
+                sessionStorage.setItem(STORAGE_PERRO_KEY, id);
+                renderSelectorPerros();
+                renderRutinaPerroSeleccionado();
+                renderManada();
+            }
+            return;
+        }
+        const chip = e.target.closest('[data-mn-chip]');
+        if (chip) {
+            if (chip.dataset.single) return;   // un solo perro: chip sin desplegable
+            const abierto = chip.parentElement.querySelector('.mn-chip-menu');
+            cerrarMenusManada();
+            if (!abierto) abrirDropdownPerroManada(chip);
+            return;
+        }
+        const card = e.target.closest('[data-mn-card]');
+        if (card) onManadaCard(card.dataset.mnCard);
+    });
+    document.addEventListener('click', (e) => {
+        if (!document.querySelector('.mn-chip-menu')) return;
+        if (e.target.closest('.mn-chip-menu') || e.target.closest('[data-mn-chip]')) return;
+        cerrarMenusManada();
+    });
+
     const fotoInput = document.getElementById('foto-input');
     if (fotoInput) fotoInput.addEventListener('change', onFotoSeleccionada);
 
@@ -2136,21 +2173,17 @@ function renderManada() {
         <div class="mn-foot">TU PERRO MERECE SER FELIZ <span class="mn-foot__hoy">HOY</span></div>
     `;
 
+    // Nota: los clicks de tarjetas y de los chips de perro se gestionan con
+    // handlers DELEGADOS bound una sola vez sobre #manada-home (ver bindEventos),
+    // no aquí — así renderManada puede re-ejecutarse sin acumular listeners ni
+    // romper el desplegable.
     cont.querySelectorAll('[data-mn-card]').forEach((el) => {
-        const go = (ev) => {
-            if (ev.target.closest('[data-mn-chip]') || ev.target.closest('.mn-chip-menu')) return;
-            onManadaCard(el.dataset.mnCard);
-        };
-        el.addEventListener('click', go);
         el.addEventListener('keydown', (ev) => {
-            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(ev); }
-        });
-    });
-    cont.querySelectorAll('[data-mn-chip]').forEach((chipEl) => {
-        chipEl.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            if (chipEl.dataset.single) return;   // un solo perro: chip sin desplegable
-            abrirDropdownPerroManada(chipEl);
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                if (ev.target.closest('[data-mn-chip]') || ev.target.closest('.mn-chip-menu')) return;
+                onManadaCard(el.dataset.mnCard);
+            }
         });
     });
 }
@@ -2162,34 +2195,22 @@ function onManadaCard(kind) {
     if (kind === 'guias') return abrirModal('modal-guias');
 }
 
-// Dropdown para cambiar de perro desde el chip de una tarjeta (si hay varios).
-function abrirDropdownPerroManada(chipEl) {
+// Cierra cualquier desplegable de perro abierto en la Manada.
+function cerrarMenusManada() {
     document.querySelectorAll('.mn-chip-menu').forEach((m) => m.remove());
+}
+
+// Abre el desplegable de perro de un chip (solo construye el menú; la selección
+// y el cierre los gobiernan los handlers delegados de bindEventos, calcando el
+// patrón del menú del avatar).
+function abrirDropdownPerroManada(chipEl) {
+    cerrarMenusManada();
     const menu = document.createElement('div');
     menu.className = 'mn-chip-menu';
     menu.innerHTML = state.perros.map((p) => `
         <button type="button" class="mn-chip-menu__it${p.id === state.perroSeleccionadoId ? ' is-active' : ''}" data-perro-id="${escapeHTML(p.id)}">${escapeHTML(p.nombre || 'Perro')}</button>
     `).join('');
     chipEl.parentElement.appendChild(menu);
-    menu.querySelectorAll('[data-perro-id]').forEach((b) => {
-        b.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            const id = b.dataset.perroId;
-            menu.remove();
-            if (!id || id === state.perroSeleccionadoId) return;
-            state.perroSeleccionadoId = id;
-            sessionStorage.setItem(STORAGE_PERRO_KEY, id);
-            renderSelectorPerros();
-            renderRutinaPerroSeleccionado();
-            renderManada();
-        });
-    });
-    setTimeout(() => {
-        const off = (e) => {
-            if (!menu.contains(e.target) && e.target !== chipEl) { menu.remove(); document.removeEventListener('click', off); }
-        };
-        document.addEventListener('click', off);
-    }, 0);
 }
 
 // ── Modal "Tu categoría" (todos los niveles salvo ex cliente) ──
