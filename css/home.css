@@ -608,7 +608,7 @@
    y de los modales (200). */
 .home .jaime-fab{
   position:fixed; right:16px; bottom:calc(env(safe-area-inset-bottom,0px) + 76px);
-  z-index:45; width:56px; height:56px; padding:0; border:0; cursor:pointer;
+  z-index:45; width:64px; height:64px; padding:0; border:0; cursor:pointer;
   background:transparent; filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));
   display:flex; align-items:center; justify-content:center;
   transition:transform .12s ease;

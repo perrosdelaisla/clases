@@ -28,9 +28,54 @@ export function initJaime(context) {
   fabEl = document.createElement('button');
   fabEl.className = 'jm-fab';
   fabEl.setAttribute('aria-label', 'Abrir asistente');
-  fabEl.innerHTML = '<img class="jm-img" src="img/jaime.png" alt="Jaime">';
+  fabEl.innerHTML = '<img class="jm-img" src="img/jaime.png" alt="Jaime"><span class="jm-zzz" aria-hidden="true"><span>z</span><span>z</span><span>z</span></span>';
   document.body.appendChild(fabEl);
   setupFabArrastrable();
+  bindInactividad();
+}
+
+// ─────────────────── Caritas de estado (solo front) ───────────────────
+// Calcado del cliente (js/app.js): swap del src de la imagen del FAB y, si el
+// panel está abierto, del avatar de la cabecera. Nunca toca left/top/transform
+// del FAB arrastrable (fix 1344f4f): solo reescribe el src y togglea is-durmiendo.
+const JM_CARAS = {
+  normal: 'img/jaime.png',
+  durmiendo: 'img/jaime-durmiendo.png',
+  pensando: 'img/jaime-pensando.png',
+};
+let jmEstado = 'normal';
+let jmInactivTimer = null;
+
+function setJmCara(estado) {
+  if (!JM_CARAS[estado]) estado = 'normal';
+  jmEstado = estado;
+  const src = JM_CARAS[estado];
+  const fabImg = fabEl && fabEl.querySelector('.jm-img');
+  if (fabImg && fabImg.getAttribute('src') !== src) fabImg.setAttribute('src', src);
+  // El "zzz" flotante solo se ve dormido.
+  if (fabEl) fabEl.classList.toggle('is-durmiendo', estado === 'durmiendo');
+  // Si el panel está abierto, la carita de la cabecera también.
+  const cabImg = document.querySelector('#jm-overlay .jm-avatar .jm-img');
+  if (cabImg && cabImg.getAttribute('src') !== src) cabImg.setAttribute('src', src);
+}
+
+// Inactividad: 45s sin interacción → 'durmiendo' (mismo umbral que el cliente).
+// Cualquier interacción despierta. No duerme con el panel abierto ni pensando.
+function reiniciarInactividad() {
+  if (jmInactivTimer) clearTimeout(jmInactivTimer);
+  if (jmEstado === 'durmiendo') setJmCara('normal');
+  jmInactivTimer = setTimeout(() => {
+    const panelAbierto = !!document.getElementById('jm-overlay');
+    if (jmEstado === 'pensando' || panelAbierto) return;
+    setJmCara('durmiendo');
+  }, 45000);
+}
+
+function bindInactividad() {
+  ['pointerdown', 'keydown', 'scroll'].forEach((ev) => {
+    document.addEventListener(ev, reiniciarInactividad, { passive: true });
+  });
+  reiniciarInactividad();   // arranca el conteo
 }
 
 // ─────────────────── FAB arrastrable + persistencia ───────────────────
@@ -76,8 +121,8 @@ function fabSafeAreas() {
 // Límites válidos para el top-left del FAB: dentro del viewport con margen,
 // sin invadir safe-areas ni la barra/columna de navegación del admin.
 function fabBounds() {
-  const w = fabEl.offsetWidth || 56;
-  const h = fabEl.offsetHeight || 56;
+  const w = fabEl.offsetWidth || 64;
+  const h = fabEl.offsetHeight || 64;
   const vw = window.innerWidth, vh = window.innerHeight;
   const sa = fabSafeAreas();
   let leftReserve = 0, bottomReserve = 0;
@@ -322,6 +367,7 @@ async function enviarMensaje() {
   }
   const send = document.getElementById('jm-chat-send');
   if (send) send.disabled = true;
+  setJmCara('pensando');
 
   try {
     const { data, error } = await supabase.functions.invoke('asistente-admin', {
@@ -343,6 +389,7 @@ async function enviarMensaje() {
     chatHist.push({ role: 'assistant', content: 'No he podido responder ahora mismo. Inténtalo de nuevo.' });
   } finally {
     enviando = false;
+    setJmCara('normal');
     document.getElementById('jm-typing')?.remove();
     renderChat();
     const s = document.getElementById('jm-chat-send');
@@ -375,6 +422,7 @@ async function cargarYrender() {
   const MIN_LOADER = 1860;
   const t0 = Date.now();
   let payload = null, errMsg = null;
+  setJmCara('pensando');
   try {
     const { data, error } = await supabase.functions.invoke('asistente-admin', {
       body: { perro_id: ctx.perroId, cliente_id: ctx.clienteId },
@@ -390,6 +438,7 @@ async function cargarYrender() {
   }
   const espera = Math.max(0, MIN_LOADER - (Date.now() - t0));
   setTimeout(() => {
+    setJmCara('normal');
     if (!document.getElementById('jm-body')) return; // el panel se cerró o volvió al chat
     if (payload) {
       casoActual = payload;

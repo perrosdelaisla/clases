@@ -19,7 +19,7 @@
 
 /* FAB (arrastrable: la posición se aplica por transform desde jaime.js) */
 .jm-fab{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:50;
-  width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:transparent;
+  width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;background:transparent;
   display:flex;align-items:center;justify-content:center;touch-action:none;will-change:transform;
   box-shadow:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));
   transition:opacity .2s ease;animation:jmFabIn .3s ease both}
@@ -28,6 +28,22 @@
 .jm-fab.jm-fab--drag{transition:none;opacity:.9;cursor:grabbing}
 /* Al soltar: snap animado al borde. */
 .jm-fab.jm-fab--snap{transition:transform .28s cubic-bezier(.22,1,.36,1)}
+
+/* "zzz" flotante: decorativo, solo en estado dormido. Nunca intercepta clicks.
+   Animación aislada al propio span; jamás toca el transform del FAB (fix 1344f4f). */
+.jm-zzz{position:absolute;top:-6px;right:-4px;pointer-events:none;display:none;line-height:1}
+.jm-fab.is-durmiendo .jm-zzz{display:block}
+.jm-zzz span{position:absolute;bottom:0;right:0;font-family:var(--font-body);font-weight:700;font-style:italic;color:var(--jm-oliva);opacity:0;animation:jmZzz 2.7s ease-in-out infinite}
+.jm-zzz span:nth-child(1){font-size:11px;animation-delay:0s}
+.jm-zzz span:nth-child(2){font-size:14px;animation-delay:.9s}
+.jm-zzz span:nth-child(3){font-size:17px;animation-delay:1.8s}
+@keyframes jmZzz{0%{opacity:0;transform:translate(0,0) scale(.8)}20%{opacity:.85}100%{opacity:0;transform:translate(8px,-22px) scale(1.1)}}
+@media (prefers-reduced-motion: reduce){
+  .jm-zzz span{animation:none;opacity:.85}
+  .jm-zzz span:nth-child(1){transform:translate(0,0)}
+  .jm-zzz span:nth-child(2){transform:translate(-5px,-11px)}
+  .jm-zzz span:nth-child(3){transform:translate(-11px,-22px)}
+}
 
 /* overlay + sheet */
 .jm-overlay{position:fixed;inset:0;z-index:70;background:var(--jm-backdrop);animation:jmFadeIn .25s ease both}
