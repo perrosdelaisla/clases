@@ -383,9 +383,12 @@ function bindEventos() {
     const vermasBtn = document.getElementById('perro-protocolo-vermas');
     if (vermasBtn) vermasBtn.addEventListener('click', abrirModalFichaProtocolo);
 
-    // Manada: acceso al modal de categorías (chip del hero) y vuelta a la Manada
-    // desde la rutina clásica del veterano.
+    // Manada: acceso al modal de categorías (chip del hero para no-veteranos y
+    // badge VETERANO en la barra Manada), edición de mis datos discreta en esa
+    // barra, y vuelta a la Manada desde la rutina clásica del veterano.
     document.getElementById('hero-categoria-chip')?.addEventListener('click', abrirModalCategoria);
+    document.getElementById('hero-badge-veterano')?.addEventListener('click', abrirModalCategoria);
+    document.getElementById('hero-editar-manada')?.addEventListener('click', abrirModalEditarMisDatos);
     document.getElementById('rutina-volver-manada')?.addEventListener('click', volverAManada);
 
     const fotoInput = document.getElementById('foto-input');
@@ -2001,9 +2004,13 @@ const IC_COMUNIDAD= '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const IC_NEWS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>';
 const IC_ONLINE   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
 
-// Alterna entre la Manada (veterano) y el home clásico (resto). El hero de
-// arriba (con todos sus controles) queda intacto en ambos casos.
+// Alterna entre la Manada (veterano) y el home clásico (resto). En la Manada el
+// hero clásico se colapsa a una barra de controles (clase is-manada): se ocultan
+// foto de portada, "Hola, X", raza/edad y cámara; los controles (tema, selector,
+// avatar/logout) y el badge/edición discretos siguen en esa barra. Al entrar a
+// "Tu entrenamiento" el hero vuelve completo.
 function aplicarModoManada() {
+    const hero = document.getElementById('perro-hero');
     const manada = document.getElementById('manada-home');
     const clasica = document.getElementById('rutina-clasica');
     const backBar = document.getElementById('rutina-volver-manada');
@@ -2011,19 +2018,24 @@ function aplicarModoManada() {
     if (!manada || !clasica) return;
     if (esVeterano()) {
         renderManada();
+        hero?.classList.add('is-manada');
         manada.hidden = false;
         clasica.hidden = true;      // el veterano entra por la Manada
     } else {
+        hero?.classList.remove('is-manada');
         manada.hidden = true;
         clasica.hidden = false;
     }
 }
 
-// Veterano → abre la rutina clásica completa del perro elegido, con vuelta.
+// Veterano → abre la rutina clásica completa del perro elegido (hero entero de
+// siempre), con vuelta a la Manada.
 function entrarRutinaClasica() {
+    const hero = document.getElementById('perro-hero');
     const manada = document.getElementById('manada-home');
     const clasica = document.getElementById('rutina-clasica');
     const backBar = document.getElementById('rutina-volver-manada');
+    hero?.classList.remove('is-manada');
     if (manada) manada.hidden = true;
     if (clasica) clasica.hidden = false;
     if (backBar) backBar.hidden = false;
@@ -2032,11 +2044,13 @@ function entrarRutinaClasica() {
 }
 
 function volverAManada() {
+    const hero = document.getElementById('perro-hero');
     const manada = document.getElementById('manada-home');
     const clasica = document.getElementById('rutina-clasica');
     const backBar = document.getElementById('rutina-volver-manada');
     if (backBar) backBar.hidden = true;
     if (clasica) clasica.hidden = true;
+    hero?.classList.add('is-manada');
     if (manada) { manada.hidden = false; renderManada(); }
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -2059,11 +2073,6 @@ function renderManada() {
 
     cont.innerHTML = `
         <header class="mn-head">
-            <div class="mn-head__top">
-                <span class="mn-logo" aria-hidden="true"></span>
-                <button type="button" class="mn-badge mn-badge--vet" id="mn-badge-veterano" aria-label="Ver tu categoría">VETERANO</button>
-            </div>
-
             <div class="mn-chapa" role="img" aria-label="${escapeHTML(nombrePerro)}">
                 <span class="mn-chapa__hook" aria-hidden="true"></span>
                 <span class="mn-chapa__swing">
@@ -2127,7 +2136,6 @@ function renderManada() {
         <div class="mn-foot">TU PERRO MERECE SER FELIZ <span class="mn-foot__hoy">HOY</span></div>
     `;
 
-    document.getElementById('mn-badge-veterano')?.addEventListener('click', abrirModalCategoria);
     cont.querySelectorAll('[data-mn-card]').forEach((el) => {
         const go = (ev) => {
             if (ev.target.closest('[data-mn-chip]') || ev.target.closest('.mn-chip-menu')) return;
