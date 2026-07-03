@@ -23,6 +23,7 @@ PUEDES:
 - Explicar en palabras sencillas que pide cada ejercicio de SU rutina (solo los que tiene asignados), sin tecnicismos.
 - Explicar COMO SE HACE un ejercicio de su rutina usando el texto "como_se_hace" de ese ejercicio (viene en los datos de su rutina, mas abajo). Puedes resumirlo o adaptarlo a la conversacion, pero NO inventes ni agregues pasos que no esten en ese texto. Si el tutor pregunta como se hace un ejercicio y ese ejercicio NO tiene "como_se_hace" cargado (viene vacio o null), no improvises: dile con calidez que para el detalle de como hacerlo es mejor que le escriba a su adiestrador desde la pestana Mensajes.
 - Contarle como viene su perro segun sus datos reales: si entrena con constancia, cuando fue su ultimo entreno, si va al dia con las metas de la semana. Animale con eso.
+- Contarle que se trabajo en sus clases y recordarle las pautas que dejo el adiestrador, usando el texto de los RESUMENES DE CLASE (vienen en los datos, mas abajo). Puedes citarlos o resumirlos con fidelidad, pero NO anadas pautas ni cosas trabajadas que no esten en esos resumenes.
 - Recordarle que puede escribir a su adiestrador desde la pestana Mensajes para cualquier duda concreta.
 
 NUNCA:
@@ -30,6 +31,7 @@ NUNCA:
 - Nombrar protocolos, metodologias ni marcas de formacion.
 - Dar consejos de conducta, adiestramiento clinico o de salud que correspondan al criterio del adiestrador.
 - Inventar o recomendar ejercicios que no esten en SU rutina asignada, ni inventar funciones de la app que no esten en la guia, ni inventar pasos de como se hace un ejercicio que no esten en su "como_se_hace".
+- Inventar pautas o cosas trabajadas en clase: si algo no consta en los RESUMENES DE CLASE ni en su rutina, no lo inventes y deriva a Mensajes. Los resumenes son palabra del adiestrador: jamas los contradigas.
 - Contradecir a su adiestrador.
 - Hablar de precios, pagos ni temas medicos.
 
@@ -139,6 +141,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .gte('registrado_en', new Date(Date.now() - 14 * 86400000).toISOString())
       .order('registrado_en', { ascending: false });
 
+    // --- Resumenes de clase CURADOS del cliente (version editorial que
+    //     escribe/aprueba el adiestrador; NUNCA las transcripciones crudas de
+    //     escuchas_clase). Son palabra del adiestrador para el tutor.
+    const { data: resumenesClase } = await admin
+      .from('citas')
+      .select('fecha, resumen_cliente')
+      .eq('cliente_id', uc.cliente_id)
+      .not('resumen_cliente', 'is', null)
+      .order('fecha', { ascending: false })
+      .limit(4);
+
     const ahora = Date.now();
     let ultimoEntreno: string | null = null;
     const conteo7d = new Map<string, number>();
@@ -180,7 +193,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         nunca_entreno: ultimoEntreno == null,
       },
       rutina_asignada: rutina,
-      nota: 'hechos_ultimos_7_dias vs veces_por_semana_minimo indica si va al dia con cada ejercicio esta semana. como_se_hace es el instructivo de ese ejercicio (como realizarlo): usalo textualmente si el tutor pregunta como se hace; si es null, no inventes y deriva a Mensajes.',
+      resumenes_de_clase: (resumenesClase ?? []).map((c: any) => ({ fecha: c.fecha, resumen: c.resumen_cliente })),
+      nota: 'hechos_ultimos_7_dias vs veces_por_semana_minimo indica si va al dia con cada ejercicio esta semana. como_se_hace es el instructivo de ese ejercicio (como realizarlo): usalo textualmente si el tutor pregunta como se hace; si es null, no inventes y deriva a Mensajes. resumenes_de_clase son los resumenes que el adiestrador dejo al tutor sobre sus clases (lo mas reciente primero): usalos para contar que se trabajo y recordar pautas, con fidelidad y sin inventar.',
     };
 
     const system = `${SYSTEM_PROMPT}\n\nDATOS DEL PERRO Y SU ACTIVIDAD (JSON):\n${JSON.stringify(contexto)}`;
