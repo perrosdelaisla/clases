@@ -24,6 +24,15 @@ MODO ESCUCHAS: el material de origen son TRANSCRIPCIONES automáticas de lo que 
 - Ignora muletillas, titubeos, cortes y ruido irrelevante de la transcripción; quédate con lo que se trabajó y lo que hay que practicar.
 - Todo lo que en la escucha sea una instrucción del adiestrador al tutor conviértelo en una PAUTA clara y accionable (por ejemplo: "practicad la llamada a diario, 5 repeticiones de 2 minutos"). Concreta repeticiones, duración y frecuencia cuando el adiestrador las haya dicho; no las inventes si no constan.`;
 
+// Addendum adicional para el modo INCREMENTAL (flujo por rondas): hay un
+// resumen ya redactado y llegan transcripciones nuevas de la siguiente ronda.
+const ADDENDUM_INCREMENTAL = `
+
+MODO INCREMENTAL: te paso un RESUMEN ACTUAL ya redactado y NUEVAS transcripciones de la siguiente ronda de la MISMA clase. Devuelve el resumen COMPLETO y actualizado como un ÚNICO texto fluido:
+- Conserva el contenido del RESUMEN ACTUAL tal cual, respetando cualquier corrección o cambio de redacción que ya se haya hecho: no lo reescribas ni cambies su estilo, solo enlaza con naturalidad la parte nueva.
+- Integra lo trabajado en las nuevas transcripciones en el punto que corresponda, sin repetir lo que ya estaba dicho.
+- No dupliques saludos, introducciones ni cierres: una sola apertura y una sola firma final ('El equipo de Perros de la Isla').`;
+
 const SYSTEM_PROMPT = `Eres el redactor de Perros de la Isla, empresa de adiestramiento canino en Mallorca (método cognitivo-emocional: vínculo y comunicación, no obediencia). Recibes el dictado del adiestrador, que habla en español rioplatense con sus propias palabras sobre lo trabajado en una clase. Tu tarea es convertir ese dictado en un resumen ESCRITO dirigido al tutor del perro.
 
 Reglas obligatorias:
@@ -86,32 +95,53 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // el resto del flujo (llamada a la IA, validación, respuesta) es común.
     let userMessage = '';
     let system = SYSTEM_PROMPT;
+    // IDs de las escuchas que alimentan este borrador; el front las marca como
+    // incorporadas tras generar con éxito. Vacío en el modo dictado.
+    let escuchasUsadas: string[] = [];
 
     if (desdeEscuchas) {
-      // MODO ESCUCHAS: leemos las transcripciones ya listas de la cita y
-      // redactamos el borrador. Service role: no dependemos de RLS del caller.
+      // MODO ESCUCHAS (flujo por rondas): leemos las transcripciones de la cita
+      // con service role. Por defecto solo las NO incorporadas (la ronda nueva);
+      // con regenerarTodo, TODAS desde cero. Si hay resumen actual, el modelo lo
+      // conserva e integra la parte nueva (modo incremental).
       const citaId = String(body?.cita_id ?? '').trim();
       if (!UUID_RE.test(citaId)) return json({ ok: false, error: 'Falta la cita' }, 400);
+      const regenerarTodo = body?.regenerarTodo === true;
+      const resumenActual = String(body?.resumenActual ?? '').trim();
 
-      const { data: escuchas, error: escErr } = await admin
+      let q = admin
         .from('escuchas_clase')
-        .select('transcripcion, creado_en')
+        .select('id, transcripcion, creado_en')
         .eq('cita_id', citaId).eq('estado', 'transcrita')
         .order('creado_en', { ascending: true });
+      if (!regenerarTodo) q = q.eq('incorporada', false);
+      const { data: escuchas, error: escErr } = await q;
       if (escErr) return json({ ok: false, error: 'No se pudieron leer las escuchas' }, 500);
 
-      const trans = (escuchas ?? [])
-        .map((e: any) => String(e?.transcripcion ?? '').trim())
-        .filter(Boolean);
-      if (!trans.length) return json({ ok: false, error: 'No hay escuchas transcritas de esta clase todavía.' }, 400);
+      const usables = (escuchas ?? []).filter((e: any) => String(e?.transcripcion ?? '').trim());
+      if (!usables.length) {
+        return json({ ok: false, error: regenerarTodo
+          ? 'No hay escuchas transcritas de esta clase todavía.'
+          : 'No hay escuchas nuevas para incorporar (todas están ya en el resumen).' }, 400);
+      }
+      escuchasUsadas = usables.map((e: any) => e.id);
 
-      const bloques = trans.map((t: string, i: number) => `Escucha ${i + 1}:\n${t}`).join('\n\n');
-      const lineas: string[] = [`Transcripciones de lo que el adiestrador dijo en voz alta durante la clase (en orden):\n${bloques}`];
+      const bloques = usables.map((e: any, i: number) => `Escucha ${i + 1}:\n${String(e.transcripcion).trim()}`).join('\n\n');
+      // Incremental solo si NO es regenerar-todo y ya hay un resumen escrito.
+      const incremental = !regenerarTodo && !!resumenActual;
+
+      const lineas: string[] = [];
+      if (incremental) {
+        lineas.push(`RESUMEN ACTUAL (ya redactado, puede incluir correcciones del adiestrador; consérvalo tal cual):\n${resumenActual}`);
+        lineas.push(`NUEVAS TRANSCRIPCIONES de la siguiente ronda de la clase (intégralas al resumen):\n${bloques}`);
+      } else {
+        lineas.push(`Transcripciones de lo que el adiestrador dijo en voz alta durante la clase (en orden):\n${bloques}`);
+      }
       if (ctx?.numeroClase != null && ctx.numeroClase !== '') lineas.push(`Nº de clase: ${ctx.numeroClase}`);
       if (ctx?.modalidad) lineas.push(`Modalidad: ${ctx.modalidad}`);
       if (ctx?.nombrePerro) lineas.push(`Nombre del perro: ${ctx.nombrePerro}`);
       userMessage = lineas.join('\n');
-      system = SYSTEM_PROMPT + ADDENDUM_ESCUCHAS;
+      system = SYSTEM_PROMPT + ADDENDUM_ESCUCHAS + (incremental ? ADDENDUM_INCREMENTAL : '');
     } else {
       // MODO DICTADO (el de siempre): texto crudo hablado por el adiestrador.
       const textoCrudo = String(body?.textoCrudo ?? '').trim();
@@ -140,7 +170,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (!resumen) return json({ ok: false, error: 'La IA no devolvió texto' }, 502);
 
-    return json({ resumen });
+    return json({ resumen, escuchas_usadas: escuchasUsadas });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return json({ ok: false, error: `Error inesperado: ${msg}` }, 500);

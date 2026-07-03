@@ -2340,12 +2340,19 @@ function setupResumenClase(cita) {
     actualizarBotonGrabar(false);
 
     // Modo escucha (grabar la clase). Bindeo único + estado inicial limpio y
-    // lista de escuchas de esta cita (con botón de borrador si hay transcritas).
+    // lista de escuchas de esta cita (con botones de borrador/regenerar si
+    // corresponde). El dictado paso a paso arranca replegado.
     bindEscuchaClase();
     escuchaAviso('', false);
     actualizarBotonEscucha(false);
     const borrador = document.getElementById('rc-borrador');
     if (borrador) borrador.hidden = true;
+    const regenerar = document.getElementById('rc-regenerar');
+    if (regenerar) regenerar.hidden = true;
+    const dictPanel = document.getElementById('rc-dictado-panel');
+    if (dictPanel) dictPanel.hidden = true;
+    const dictToggle = document.getElementById('rc-dictado-toggle');
+    if (dictToggle) dictToggle.setAttribute('aria-expanded', 'false');
     refrescarEscuchas();
 }
 
@@ -2381,6 +2388,18 @@ function bindResumenClase() {
 
     if (generarBtn) generarBtn.addEventListener('click', generarResumenClase);
     if (guardarBtn) guardarBtn.addEventListener('click', guardarResumenClase);
+
+    // Dictado paso a paso: enlace discreto que despliega/repliega el panel
+    // fallback (la lógica del dictado sigue intacta como paracaídas).
+    const dictToggle = document.getElementById('rc-dictado-toggle');
+    const dictPanel = document.getElementById('rc-dictado-panel');
+    if (dictToggle && dictPanel) {
+        dictToggle.addEventListener('click', () => {
+            const abrir = dictPanel.hidden;
+            dictPanel.hidden = !abrir;
+            dictToggle.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+        });
+    }
 
     window.__resumenClaseBound = true;
 }
@@ -2443,6 +2462,15 @@ function detenerGrabacion(){
   else { resumenClaseCtx.grabando=false; actualizarBotonGrabar(false); }
 }
 
+// Confirmación efímera en un botón: muestra "… ✓" 2s (deshabilitado) y luego
+// restaura la etiqueta y lo rehabilita. Anti-doble-toque + feedback de éxito.
+function botonOk(btn, labelOk, labelDefault) {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = labelOk;
+    setTimeout(() => { if (btn) { btn.textContent = labelDefault; btn.disabled = false; } }, 2000);
+}
+
 async function generarResumenClase() {
     const crudoEl = document.getElementById('rc-crudo');
     const resumenEl = document.getElementById('rc-resumen');
@@ -2469,13 +2497,14 @@ async function generarResumenClase() {
         if (res?.resumen) {
             if (resumenEl) resumenEl.value = res.resumen;
             if (msg) msg.textContent = 'Resumen generado. Revisalo y guardá.';
+            botonOk(generarBtn, 'Generado ✓', 'Generar resumen');
         } else {
             if (msg) msg.textContent = res?.error || error?.message || 'No se pudo generar el resumen.';
+            if (generarBtn) { generarBtn.textContent = 'Generar resumen'; generarBtn.disabled = !(crudoEl?.value || '').trim(); }
         }
     } catch (err) {
         console.error('Error generarResumenClase:', err);
         if (msg) msg.textContent = 'No se pudo generar el resumen.';
-    } finally {
         if (generarBtn) { generarBtn.textContent = 'Generar resumen'; generarBtn.disabled = !(crudoEl?.value || '').trim(); }
     }
 }
@@ -2501,11 +2530,11 @@ async function guardarResumenClase() {
         // Reflejamos en memoria para que al reabrir el modal precargue.
         cita.resumen_cliente = texto || null;
         cita.resumen_creado_en = texto ? ahora : null;
-        if (msg) msg.textContent = 'Guardado.';
+        if (msg) msg.textContent = '';
+        botonOk(guardarBtn, 'Guardado ✓', 'Guardar resumen');
     } catch (err) {
         console.error('Error guardarResumenClase:', err);
         if (msg) msg.textContent = err?.message || 'No se pudo guardar el resumen.';
-    } finally {
         if (guardarBtn) { guardarBtn.disabled = false; guardarBtn.textContent = 'Guardar resumen'; }
     }
 }
@@ -2562,6 +2591,8 @@ function bindEscuchaClase() {
         else iniciarEscucha();
     });
     if (borrador) borrador.addEventListener('click', generarBorradorEscuchas);
+    const regenerar = document.getElementById('rc-regenerar');
+    if (regenerar) regenerar.addEventListener('click', regenerarTodoEscuchas);
     // Reintentar transcripción (delegado sobre la lista).
     if (lista) lista.addEventListener('click', (ev) => {
         const btn = ev.target.closest('.rc-escucha-reintentar');
@@ -2744,20 +2775,32 @@ async function onStopEscucha() {
         .catch((e) => { console.warn('[escucha] fallo invocando transcripción:', e); refrescarEscuchas(); });
 }
 
-function etiquetaEstadoEscucha(estado) {
-    if (estado === 'transcrita') return '✓ Transcrita';
-    if (estado === 'error') return '⚠ Error';
-    return '⏳ Procesando';
+// Estado visible de cada escucha: clase CSS + etiqueta. Distingue transcritas
+// pendientes (verde) de las ya incorporadas al resumen (gris).
+function infoEstadoEscucha(f) {
+    if (f.estado === 'error') return { clase: 'rc-escucha-estado--error', txt: '⚠ Error' };
+    if (f.estado === 'transcrita') {
+        return f.incorporada
+            ? { clase: 'rc-escucha-estado--incorporada', txt: '✓ Incorporada' }
+            : { clase: 'rc-escucha-estado--transcrita', txt: '✓ Transcrita' };
+    }
+    return { clase: 'rc-escucha-estado--grabada', txt: '⏳ Procesando' };
 }
 
 async function refrescarEscuchas() {
     const lista = document.getElementById('rc-escucha-lista');
     const borrador = document.getElementById('rc-borrador');
+    const regenerar = document.getElementById('rc-regenerar');
     const cita = resumenClaseCtx.cita;
     if (!lista) return;
-    if (!cita?.id) { lista.innerHTML = ''; if (borrador) borrador.hidden = true; return; }
+    if (!cita?.id) {
+        lista.innerHTML = '';
+        if (borrador) borrador.hidden = true;
+        if (regenerar) regenerar.hidden = true;
+        return;
+    }
     const { data, error } = await supabase.from('escuchas_clase')
-        .select('id, estado, duracion_seg, creado_en')
+        .select('id, estado, duracion_seg, incorporada, creado_en')
         .eq('cita_id', cita.id)
         .order('creado_en', { ascending: true });
     if (error) { console.warn('[escucha] no se pudo leer la lista:', error); return; }
@@ -2767,30 +2810,54 @@ async function refrescarEscuchas() {
     } else {
         lista.innerHTML = filas.map((f, i) => {
             const dur = f.duracion_seg != null ? fmtMMSS(f.duracion_seg) : '—';
+            const est = infoEstadoEscucha(f);
             const reint = f.estado === 'error'
                 ? `<button type="button" class="rc-escucha-reintentar btn-secondary" data-id="${f.id}">Reintentar</button>`
                 : '';
-            return `<li class="rc-escucha-item"><span class="rc-escucha-n">Escucha ${i + 1}</span><span class="rc-escucha-dur">${dur}</span><span class="rc-escucha-estado rc-escucha-estado--${f.estado}">${etiquetaEstadoEscucha(f.estado)}</span>${reint}</li>`;
+            return `<li class="rc-escucha-item"><span class="rc-escucha-n">Escucha ${i + 1}</span><span class="rc-escucha-dur">${dur}</span><span class="rc-escucha-estado ${est.clase}">${est.txt}</span>${reint}</li>`;
         }).join('');
     }
-    if (borrador) borrador.hidden = !filas.some((f) => f.estado === 'transcrita');
+    // Borrador: solo si hay transcritas NUEVAS (no incorporadas). Regenerar
+    // todo: si hay al menos una transcrita (la red de seguridad).
+    const pendientes = filas.some((f) => f.estado === 'transcrita' && !f.incorporada);
+    const hayTranscritas = filas.some((f) => f.estado === 'transcrita');
+    if (borrador) borrador.hidden = !pendientes;
+    if (regenerar) regenerar.hidden = !hayTranscritas;
 }
 
+// Contexto de la cita para resumir-clase (nº de clase, modalidad, perro).
+function contextoResumen(cita) {
+    return {
+        numeroClase: parseIntOrNull(document.getElementById('ce-numero-clase')?.value),
+        modalidad: document.getElementById('ce-modalidad')?.value || undefined,
+        nombrePerro: cita?.clientes?.perros?.[0]?.nombre || undefined,
+    };
+}
+
+// Marca como incorporadas las escuchas que alimentaron el borrador, para que
+// la próxima ronda solo sume las nuevas.
+async function marcarIncorporadas(ids) {
+    if (!Array.isArray(ids) || !ids.length) return;
+    const { error } = await supabase.from('escuchas_clase').update({ incorporada: true }).in('id', ids);
+    if (error) console.warn('[escucha] no se pudieron marcar incorporadas:', error);
+}
+
+// Generación INCREMENTAL: toma el resumen actual + las escuchas nuevas (no
+// incorporadas) y devuelve el resumen completo actualizado. Primera ronda
+// (resumen vacío) = comportamiento normal.
 async function generarBorradorEscuchas() {
     const cita = resumenClaseCtx.cita;
     const resumenEl = document.getElementById('rc-resumen');
     const borrador = document.getElementById('rc-borrador');
     const msg = document.getElementById('rc-msg');
     if (!cita?.id) return;
-    const numeroClase = parseIntOrNull(document.getElementById('ce-numero-clase')?.value);
-    const modalidad = document.getElementById('ce-modalidad')?.value || undefined;
-    const nombrePerro = cita?.clientes?.perros?.[0]?.nombre || undefined;
+    const resumenActual = (resumenEl?.value || '').trim();
 
     if (borrador) { borrador.disabled = true; borrador.textContent = 'Generando borrador…'; }
     if (msg) msg.textContent = '';
     try {
         const { data, error } = await supabase.functions.invoke('resumir-clase', {
-            body: { cita_id: cita.id, desdeEscuchas: true, contexto: { numeroClase, modalidad, nombrePerro } },
+            body: { cita_id: cita.id, desdeEscuchas: true, resumenActual, contexto: contextoResumen(cita) },
         });
         let res = data;
         if (error?.context && typeof error.context.json === 'function') {
@@ -2798,15 +2865,55 @@ async function generarBorradorEscuchas() {
         }
         if (res?.resumen) {
             if (resumenEl) resumenEl.value = res.resumen;
-            if (msg) msg.textContent = 'Borrador generado con las escuchas. Revisalo y guardá.';
+            await marcarIncorporadas(res.escuchas_usadas);
+            if (msg) msg.textContent = 'Borrador actualizado con las escuchas nuevas. Revisalo y guardá.';
+            botonOk(borrador, 'Generado ✓', 'Generar borrador con las escuchas');
+            await refrescarEscuchas();
         } else {
             if (msg) msg.textContent = res?.error || error?.message || 'No se pudo generar el borrador.';
+            if (borrador) { borrador.disabled = false; borrador.textContent = 'Generar borrador con las escuchas'; }
         }
     } catch (err) {
         console.error('Error generarBorradorEscuchas:', err);
         if (msg) msg.textContent = 'No se pudo generar el borrador.';
-    } finally {
         if (borrador) { borrador.disabled = false; borrador.textContent = 'Generar borrador con las escuchas'; }
+    }
+}
+
+// Red de seguridad: reconstruye el resumen desde cero con TODAS las
+// transcripciones, pisando el texto actual (con confirmación).
+async function regenerarTodoEscuchas() {
+    const cita = resumenClaseCtx.cita;
+    const resumenEl = document.getElementById('rc-resumen');
+    const btn = document.getElementById('rc-regenerar');
+    const msg = document.getElementById('rc-msg');
+    if (!cita?.id) return;
+    if (!window.confirm('Esto reescribe el resumen desde cero con TODAS las escuchas y pisa el texto actual. ¿Seguir?')) return;
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Regenerando…'; }
+    if (msg) msg.textContent = '';
+    try {
+        const { data, error } = await supabase.functions.invoke('resumir-clase', {
+            body: { cita_id: cita.id, desdeEscuchas: true, regenerarTodo: true, contexto: contextoResumen(cita) },
+        });
+        let res = data;
+        if (error?.context && typeof error.context.json === 'function') {
+            res = await error.context.json().catch(() => null);
+        }
+        if (res?.resumen) {
+            if (resumenEl) resumenEl.value = res.resumen;
+            await marcarIncorporadas(res.escuchas_usadas);
+            if (msg) msg.textContent = 'Resumen regenerado con todas las escuchas. Revisalo y guardá.';
+            botonOk(btn, 'Regenerado ✓', 'Regenerar todo');
+            await refrescarEscuchas();
+        } else {
+            if (msg) msg.textContent = res?.error || error?.message || 'No se pudo regenerar el resumen.';
+            if (btn) { btn.disabled = false; btn.textContent = 'Regenerar todo'; }
+        }
+    } catch (err) {
+        console.error('Error regenerarTodoEscuchas:', err);
+        if (msg) msg.textContent = 'No se pudo regenerar el resumen.';
+        if (btn) { btn.disabled = false; btn.textContent = 'Regenerar todo'; }
     }
 }
 
