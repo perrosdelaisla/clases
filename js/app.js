@@ -39,8 +39,30 @@ const SCREENS = {
     'login-sent': document.getElementById('screen-login-sent'),
     'error-vinculo': document.getElementById('screen-error-vinculo'),
     welcome: document.getElementById('screen-welcome'),
+    'ex-cliente': document.getElementById('screen-ex-cliente'),
     app: document.getElementById('screen-app'),
 };
+
+// Nivel del cliente (clientes.estado). La app solo cambia de verdad para el
+// veterano (pantalla Manada) y el ex cliente (bloqueo). Consulta e inactivo ven
+// la app igual que un activo, salvo el acceso al modal de categorías.
+function esVeterano() { return state.cliente?.estado === 'veterano'; }
+function esExCliente() { return state.cliente?.estado === 'ex_cliente'; }
+
+// Nombre de pila del tutor (misma heurística que el saludo del hero: saltea
+// palabras genéricas de altas de prueba).
+function nombrePilaTutor() {
+    const nombreCompleto = (state.usuarioCliente?.nombre || state.usuarioCliente?.nombre_visible || '').trim();
+    const GEN = ['cliente', 'prueba', 'test', 'usuario', 'demo'];
+    const palabras = nombreCompleto.split(/\s+/).filter(Boolean);
+    return palabras.find((p) => !GEN.includes(p.toLowerCase())) || palabras[0] || 'amigo';
+}
+
+// "BIENVENIDA," si el nombre de pila termina en 'a'; si no, "BIENVENIDO,".
+// Heurística simple a propósito (sin diccionario de nombres).
+function saludoBienvenida() {
+    return /a$/i.test(nombrePilaTutor()) ? 'BIENVENIDA,' : 'BIENVENIDO,';
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STORAGE_PERRO_KEY = 'pdli.perroSeleccionadoId';
@@ -177,13 +199,22 @@ async function onSesionLista(session) {
         }
         state.usuarioCliente = usuarioCliente;
 
-        // Datos en paralelo: cliente + perros + citas
-        const [cliente, perros, citas] = await Promise.all([
-            cargarCliente(usuarioCliente.cliente_id),
+        // Primero el cliente: necesitamos su ESTADO antes de decidir qué cargar.
+        state.cliente = await cargarCliente(usuarioCliente.cliente_id);
+
+        // EX CLIENTE: portada mínima de bloqueo. No se carga la app ni se hace
+        // ninguna consulta de datos más allá del estado.
+        if (esExCliente()) {
+            await esperarIntro();
+            showScreen('ex-cliente');
+            return;
+        }
+
+        // Resto de datos en paralelo: perros + citas
+        const [perros, citas] = await Promise.all([
             cargarPerros(),
             cargarCitasCliente(),
         ]);
-        state.cliente = cliente;
         state.perros = perros;
         state.citas = citas;
 
@@ -197,7 +228,9 @@ async function onSesionLista(session) {
 
         renderHeader();
         renderSelectorPerros();
+        renderCategoriaAcceso();
         await renderRutinaPerroSeleccionado();
+        aplicarModoManada();
         actualizarBadgeMensajes();
 
         // Tras la intro, el cliente entra directo al perfil. El mensaje
@@ -364,6 +397,11 @@ function bindEventos() {
 
     const vermasBtn = document.getElementById('perro-protocolo-vermas');
     if (vermasBtn) vermasBtn.addEventListener('click', abrirModalFichaProtocolo);
+
+    // Manada: acceso al modal de categorías (chip del hero) y vuelta a la Manada
+    // desde la rutina clásica del veterano.
+    document.getElementById('hero-categoria-chip')?.addEventListener('click', abrirModalCategoria);
+    document.getElementById('rutina-volver-manada')?.addEventListener('click', volverAManada);
 
     const fotoInput = document.getElementById('foto-input');
     if (fotoInput) fotoInput.addEventListener('change', onFotoSeleccionada);
@@ -938,7 +976,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada')
+        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -1953,6 +1991,7 @@ function renderSelectorPerros() {
             sessionStorage.setItem(STORAGE_PERRO_KEY, id);
             renderSelectorPerros();
             renderRutinaPerroSeleccionado();
+            if (esVeterano()) renderManada();
         });
     });
 
@@ -1960,6 +1999,247 @@ function renderSelectorPerros() {
     if (btnAdd) {
         btnAdd.addEventListener('click', abrirModalAgregarPerro);
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MANADA VETERANA (Fase 1) — pantalla de club que reemplaza el home del tab
+// Rutina para el cliente veterano. El resto de tabs quedan intactos. Activo,
+// inactivo y consulta NO ven nada de esto (solo el acceso al modal categorías).
+// ═══════════════════════════════════════════════════════════════════
+
+const IC_ARROW    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+const IC_ENTRENO  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12h2M2 12h2M6.5 6.5l0 11M17.5 6.5l0 11M6.5 12h11"/></svg>';
+const IC_BIENESTAR= '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+const IC_RESERVAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>';
+const IC_GUIAS    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+const IC_COMUNIDAD= '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+const IC_NEWS     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>';
+const IC_ONLINE   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+
+// Alterna entre la Manada (veterano) y el home clásico (resto). El hero de
+// arriba (con todos sus controles) queda intacto en ambos casos.
+function aplicarModoManada() {
+    const manada = document.getElementById('manada-home');
+    const clasica = document.getElementById('rutina-clasica');
+    const backBar = document.getElementById('rutina-volver-manada');
+    if (backBar) backBar.hidden = true;
+    if (!manada || !clasica) return;
+    if (esVeterano()) {
+        renderManada();
+        manada.hidden = false;
+        clasica.hidden = true;      // el veterano entra por la Manada
+    } else {
+        manada.hidden = true;
+        clasica.hidden = false;
+    }
+}
+
+// Veterano → abre la rutina clásica completa del perro elegido, con vuelta.
+function entrarRutinaClasica() {
+    const manada = document.getElementById('manada-home');
+    const clasica = document.getElementById('rutina-clasica');
+    const backBar = document.getElementById('rutina-volver-manada');
+    if (manada) manada.hidden = true;
+    if (clasica) clasica.hidden = false;
+    if (backBar) backBar.hidden = false;
+    renderRutinaPerroSeleccionado();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function volverAManada() {
+    const manada = document.getElementById('manada-home');
+    const clasica = document.getElementById('rutina-clasica');
+    const backBar = document.getElementById('rutina-volver-manada');
+    if (backBar) backBar.hidden = true;
+    if (clasica) clasica.hidden = true;
+    if (manada) { manada.hidden = false; renderManada(); }
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function renderManada() {
+    const cont = document.getElementById('manada-home');
+    if (!cont) return;
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId) || state.perros[0] || null;
+    const nombrePerro = perro?.nombre || 'tu perro';
+    const varios = state.perros.length > 1;
+
+    const chip = (kind) => `
+        <button type="button" class="mn-chip" data-mn-chip="${kind}"${varios ? '' : ' data-single="1"'} aria-label="Perro: ${escapeHTML(nombrePerro)}">
+            <span class="mn-chip__nom">${escapeHTML(nombrePerro)}</span>${varios ? '<span class="mn-chip__car" aria-hidden="true">▾</span>' : ''}
+        </button>`;
+
+    const fotoChapa = perro?.foto_url
+        ? `<img class="mn-chapa__foto" src="${escapeHTML(perro.foto_url)}" alt="">`
+        : `<span class="mn-chapa__foto mn-chapa__foto--fb" style="--perro-color:${colorParaPerro(perro?.id || '')}">${escapeHTML((nombrePerro[0] || 'P').toUpperCase())}</span>`;
+
+    cont.innerHTML = `
+        <header class="mn-head">
+            <div class="mn-head__top">
+                <span class="mn-logo" aria-hidden="true"></span>
+                <div class="mn-hello">
+                    <span class="mn-hello__pre">${saludoBienvenida()}</span>
+                    <span class="mn-hello__nom">${escapeHTML(nombrePilaTutor())}</span>
+                </div>
+                <button type="button" class="mn-badge mn-badge--vet" id="mn-badge-veterano" aria-label="Ver tu categoría">VETERANO</button>
+            </div>
+
+            <div class="mn-chapa" role="img" aria-label="${escapeHTML(nombrePerro)}">
+                <span class="mn-chapa__hook" aria-hidden="true"></span>
+                <span class="mn-chapa__swing">
+                    <span class="mn-chapa__disc">
+                        ${fotoChapa}
+                        <span class="mn-chapa__nombre">${escapeHTML(nombrePerro)}</span>
+                    </span>
+                </span>
+            </div>
+
+            <div class="mn-club">
+                <div class="mn-club__t">MANADA</div>
+                <div class="mn-club__s">PERROS DE LA ISLA</div>
+                <span class="mn-club__u" aria-hidden="true"></span>
+            </div>
+        </header>
+
+        <div class="mn-cards">
+            <div class="mn-card" role="button" tabindex="0" data-mn-card="entreno">
+                <span class="mn-card__ic">${IC_ENTRENO}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">Tu entrenamiento</span><span class="mn-card__s">Todo lo que trabajasteis juntos</span></span>
+                ${chip('entreno')}
+            </div>
+            <div class="mn-card" role="button" tabindex="0" data-mn-card="bienestar">
+                <span class="mn-card__ic">${IC_BIENESTAR}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">El bienestar</span><span class="mn-card__s">Cómo está hoy y su evolución</span></span>
+                ${chip('bienestar')}
+            </div>
+            <div class="mn-card mn-card--accion" role="button" tabindex="0" data-mn-card="reservar">
+                <span class="mn-card__ic mn-card__ic--rojo">${IC_RESERVAR}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">Reservar una clase</span><span class="mn-card__s">Vuelve a entrenar con el equipo</span></span>
+                <span class="mn-card__arr" aria-hidden="true">${IC_ARROW}</span>
+            </div>
+            <div class="mn-card" role="button" tabindex="0" data-mn-card="guias">
+                <span class="mn-card__ic">${IC_GUIAS}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">Guías para entender a tu perro</span><span class="mn-card__s">Las gratuitas, y ventaja de la Manada en el resto</span></span>
+                <span class="mn-card__arr" aria-hidden="true">${IC_ARROW}</span>
+            </div>
+        </div>
+
+        <div class="mn-sep"><span class="mn-sep__l"></span><span class="mn-sep__t">Incluido · Acceso de lanzamiento</span><span class="mn-sep__l"></span></div>
+
+        <div class="mn-cards mn-cards--soon">
+            <div class="mn-card mn-card--soon">
+                <span class="mn-card__ic">${IC_COMUNIDAD}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">Manada de la Isla</span><span class="mn-card__s">La comunidad de tutores y perros</span></span>
+                <span class="mn-badge mn-badge--soon">PRÓXIMAMENTE</span>
+            </div>
+            <div class="mn-card mn-card--soon">
+                <span class="mn-card__ic">${IC_NEWS}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">Tu newsletter mensual</span><span class="mn-card__s">Personalizado para ${escapeHTML(nombrePerro)}</span></span>
+                <span class="mn-badge mn-badge--soon">PRÓXIMAMENTE</span>
+            </div>
+            <div class="mn-card mn-card--soon">
+                <span class="mn-card__ic">${IC_ONLINE}</span>
+                <span class="mn-card__tx"><span class="mn-card__t">Clase online de mantenimiento</span><span class="mn-card__s">Una cada tres meses, incluida</span></span>
+                <span class="mn-badge mn-badge--soon">PRÓXIMAMENTE</span>
+            </div>
+        </div>
+
+        <div class="mn-foot">TU PERRO MERECE SER FELIZ <span class="mn-foot__hoy">HOY</span></div>
+    `;
+
+    document.getElementById('mn-badge-veterano')?.addEventListener('click', abrirModalCategoria);
+    cont.querySelectorAll('[data-mn-card]').forEach((el) => {
+        const go = (ev) => {
+            if (ev.target.closest('[data-mn-chip]') || ev.target.closest('.mn-chip-menu')) return;
+            onManadaCard(el.dataset.mnCard);
+        };
+        el.addEventListener('click', go);
+        el.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(ev); }
+        });
+    });
+    cont.querySelectorAll('[data-mn-chip]').forEach((chipEl) => {
+        chipEl.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            if (chipEl.dataset.single) return;   // un solo perro: chip sin desplegable
+            abrirDropdownPerroManada(chipEl);
+        });
+    });
+}
+
+function onManadaCard(kind) {
+    if (kind === 'entreno') return entrarRutinaClasica();
+    if (kind === 'bienestar') return showTab('salud');
+    if (kind === 'reservar') return showTab('reservar');
+    if (kind === 'guias') return abrirModal('modal-guias');
+}
+
+// Dropdown para cambiar de perro desde el chip de una tarjeta (si hay varios).
+function abrirDropdownPerroManada(chipEl) {
+    document.querySelectorAll('.mn-chip-menu').forEach((m) => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'mn-chip-menu';
+    menu.innerHTML = state.perros.map((p) => `
+        <button type="button" class="mn-chip-menu__it${p.id === state.perroSeleccionadoId ? ' is-active' : ''}" data-perro-id="${escapeHTML(p.id)}">${escapeHTML(p.nombre || 'Perro')}</button>
+    `).join('');
+    chipEl.parentElement.appendChild(menu);
+    menu.querySelectorAll('[data-perro-id]').forEach((b) => {
+        b.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const id = b.dataset.perroId;
+            menu.remove();
+            if (!id || id === state.perroSeleccionadoId) return;
+            state.perroSeleccionadoId = id;
+            sessionStorage.setItem(STORAGE_PERRO_KEY, id);
+            renderSelectorPerros();
+            renderRutinaPerroSeleccionado();
+            renderManada();
+        });
+    });
+    setTimeout(() => {
+        const off = (e) => {
+            if (!menu.contains(e.target) && e.target !== chipEl) { menu.remove(); document.removeEventListener('click', off); }
+        };
+        document.addEventListener('click', off);
+    }, 0);
+}
+
+// ── Modal "Tu categoría" (todos los niveles salvo ex cliente) ──
+const CATEGORIA_PASOS = [
+    { key: 'consulta', t: 'CONSULTAS', s: 'Aún sin clase asignada' },
+    { key: 'activo',   t: 'ACTIVO',    s: 'En clases con el equipo' },
+    { key: 'inactivo', t: 'INACTIVO',  s: 'Protocolo a medias — se puede retomar' },
+    { key: 'veterano', t: 'VETERANO',  s: 'Protocolo completado. Bienvenido a la Manada' },
+];
+const CATEGORIA_LABEL_CLIENTE = { consulta: 'Consulta', activo: 'Activo', inactivo: 'Inactivo', veterano: 'Veterano' };
+
+function abrirModalCategoria() {
+    const actual = state.cliente?.estado || 'activo';
+    const cont = document.getElementById('modal-categoria-camino');
+    if (cont) {
+        cont.innerHTML = CATEGORIA_PASOS.map((p) => {
+            const on = p.key === actual;
+            return `
+                <div class="cat-step${on ? ' is-now' : ''}">
+                    <span class="cat-step__dot" aria-hidden="true"></span>
+                    <span class="cat-step__tx">
+                        <span class="cat-step__t">${p.t}${on ? ' <span class="cat-step__now">AHORA</span>' : ''}</span>
+                        <span class="cat-step__s">${p.s}</span>
+                    </span>
+                </div>`;
+        }).join('');
+    }
+    abrirModal('modal-categoria');
+}
+
+// Acceso discreto al modal categorías para activo/inactivo/consulta: chip en el
+// hero. El veterano lo abre desde su badge; el ex cliente ni siquiera entra.
+function renderCategoriaAcceso() {
+    const chip = document.getElementById('hero-categoria-chip');
+    if (!chip) return;
+    const est = state.cliente?.estado;
+    if (esVeterano() || esExCliente() || !est) { chip.hidden = true; return; }
+    chip.textContent = CATEGORIA_LABEL_CLIENTE[est] || 'Tu categoría';
+    chip.hidden = false;
 }
 
 // Días de uso de cada tarea en la semana actual: { ejercicio_asignado_id -> dias }.

@@ -791,3 +791,112 @@
 .home[data-theme="claro"] .dA .hero{
   box-shadow:0 1px 3px rgba(26,26,26,0.08),0 1px 2px rgba(26,26,26,0.04);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MANADA VETERANA (Fase 1) — cabecera de club, chapa, tarjetas.
+   Scopeado bajo .home; reemplaza el home clásico solo para el veterano.
+   ═══════════════════════════════════════════════════════════════════ */
+.home #manada-home{padding:2px 18px 30px;}
+.home .rutina-volver{
+  display:inline-flex;align-items:center;gap:4px;margin:12px 0 2px;
+  background:transparent;border:0;cursor:pointer;padding:6px 2px;
+  font-family:var(--body);font-size:12px;font-weight:700;letter-spacing:.4px;
+  text-transform:uppercase;color:var(--c-text-2);
+}
+.home .rutina-volver:hover{color:var(--c-rojo);}
+
+/* — cabecera de club — */
+.home .mn-head{padding:18px 0 4px;}
+.home .mn-head__top{display:flex;align-items:center;gap:10px;}
+.home .mn-logo{
+  width:30px;height:30px;flex:0 0 auto;border-radius:999px;
+  background-image:url("../img/logo-ucm.png");background-size:cover;background-position:center;
+  box-shadow:0 0 0 1px var(--c-hair-2);
+}
+.home .mn-hello{display:flex;flex-direction:column;line-height:1;flex:1 1 auto;min-width:0;}
+.home .mn-hello__pre{font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--c-text-3);}
+.home .mn-hello__nom{font-family:var(--display);font-size:30px;letter-spacing:1px;text-transform:uppercase;color:var(--c-text);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.home .mn-badge{font-family:var(--body);font-weight:800;border:0;border-radius:999px;}
+.home .mn-badge--vet{flex:0 0 auto;font-size:10px;letter-spacing:1.4px;padding:6px 12px;background:var(--c-rojo);color:#fff;cursor:pointer;animation:mnPulse 2.4s ease-out infinite;}
+@keyframes mnPulse{0%{box-shadow:0 0 0 0 rgba(200,16,46,.45);}70%{box-shadow:0 0 0 9px rgba(200,16,46,0);}100%{box-shadow:0 0 0 0 rgba(200,16,46,0);}}
+
+/* — la chapa colgante — */
+.home .mn-chapa{display:flex;flex-direction:column;align-items:center;margin:10px 0 2px;}
+.home .mn-chapa__hook{width:2px;height:14px;background:var(--c-hair-2);border-radius:2px;}
+.home .mn-chapa__swing{transform-origin:top center;animation:mnSwing 3.2s ease-in-out infinite;}
+@keyframes mnSwing{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+.home .mn-chapa__disc{
+  position:relative;display:flex;align-items:flex-end;justify-content:center;
+  width:150px;height:150px;border-radius:999px;overflow:hidden;
+  background:var(--c-field);border:3px solid var(--c-rojo);
+  box-shadow:0 8px 22px rgba(0,0,0,.22), inset 0 0 0 2px rgba(255,255,255,.06);
+}
+.home .mn-chapa__foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.home .mn-chapa__foto--fb{display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:64px;color:#fff;background:var(--perro-color,#6B7A3A);}
+.home .mn-chapa__nombre{
+  position:relative;z-index:2;width:100%;text-align:center;
+  font-family:var(--display);font-size:22px;letter-spacing:1px;text-transform:uppercase;color:#fff;
+  padding:14px 6px 8px;background:linear-gradient(180deg,rgba(10,9,6,0) 0%,rgba(10,9,6,.74) 62%);
+}
+
+/* — MANADA + PERROS DE LA ISLA — */
+.home .mn-club{text-align:center;margin-top:12px;}
+.home .mn-club__t{font-family:var(--display);font-size:40px;letter-spacing:2px;color:var(--c-text);line-height:.9;}
+.home .mn-club__s{font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:4px;color:var(--c-text-3);margin-top:4px;}
+.home .mn-club__u{display:block;width:34px;height:3px;background:var(--c-rojo);border-radius:2px;margin:10px auto 0;}
+
+/* — tarjetas — */
+.home .mn-cards{display:flex;flex-direction:column;gap:10px;margin-top:20px;}
+.home .mn-card{
+  display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  background:var(--c-surface);border:1px solid var(--c-hair);border-radius:15px;padding:15px;
+  color:var(--c-text);transition:border-color .15s ease, transform .08s ease;
+}
+.home .mn-card[role="button"]{cursor:pointer;}
+.home .mn-card[role="button"]:hover{border-color:var(--c-hair-2);}
+.home .mn-card[role="button"]:active{transform:scale(.99);}
+.home .mn-card--accion{border-color:var(--c-rojo);}
+.home .mn-card__ic{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--c-field);color:var(--c-text-2);}
+.home .mn-card__ic svg{width:20px;height:20px;}
+.home .mn-card__ic--rojo{background:var(--c-rojo);color:#fff;}
+.home .mn-card__tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.home .mn-card__t{font-family:var(--body);font-size:15px;font-weight:700;color:var(--c-text);}
+.home .mn-card__s{font-family:var(--body);font-size:12px;color:var(--c-text-3);line-height:1.35;}
+.home .mn-card__arr{flex:0 0 auto;color:var(--c-text-3);display:flex;}
+.home .mn-card__arr svg{width:20px;height:20px;}
+
+/* — chip de perro en la tarjeta — */
+.home .mn-chip{position:relative;flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;background:var(--c-field);border:1px solid var(--c-hair);border-radius:999px;padding:6px 11px;cursor:pointer;color:var(--c-text);}
+.home .mn-chip[data-single]{cursor:default;}
+.home .mn-chip__nom{font-family:var(--body);font-size:12px;font-weight:700;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.home .mn-chip__car{font-size:10px;color:var(--c-text-3);}
+.home .mn-chip-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:20;min-width:140px;display:flex;flex-direction:column;gap:2px;padding:5px;background:var(--c-surface);border:1px solid var(--c-hair-2);border-radius:12px;box-shadow:0 10px 26px rgba(0,0,0,.3);}
+.home .mn-chip-menu__it{text-align:left;background:transparent;border:0;cursor:pointer;padding:9px 11px;border-radius:8px;font-family:var(--body);font-size:13px;color:var(--c-text);}
+.home .mn-chip-menu__it:hover{background:var(--c-field);}
+.home .mn-chip-menu__it.is-active{color:var(--c-rojo);font-weight:700;}
+
+/* — separador INCLUIDO + tarjetas PRÓXIMAMENTE — */
+.home .mn-sep{display:flex;align-items:center;gap:12px;margin:26px 2px 4px;}
+.home .mn-sep__l{flex:1 1 auto;height:1px;background:var(--c-hair);}
+.home .mn-sep__t{font-family:var(--body);font-size:9.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--c-text-3);white-space:nowrap;}
+.home .mn-cards--soon{margin-top:12px;}
+.home .mn-card--soon{opacity:.6;}
+.home .mn-badge--soon{flex:0 0 auto;font-size:9px;letter-spacing:1.2px;padding:5px 9px;background:var(--c-oliva-soft);color:var(--c-oliva);border:1px solid var(--c-oliva-line);}
+
+/* — pie — */
+.home .mn-foot{text-align:center;font-family:var(--display);font-size:22px;letter-spacing:1.5px;color:var(--c-text-2);margin:26px 0 6px;}
+.home .mn-foot__hoy{color:var(--c-rojo);}
+
+/* — chip de categoría en el hero (activo/inactivo/consulta) — */
+.home .dBp .cover .cbot .hero-cat-chip{
+  margin-top:9px;display:inline-block;cursor:pointer;
+  font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:#F5EFE0;background:rgba(20,18,12,0.42);border:1px solid rgba(245,239,224,0.34);
+  border-radius:999px;padding:5px 11px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.home .dBp .cover .cbot .hero-cat-chip:hover{border-color:rgba(245,239,224,0.6);}
+
+@media (prefers-reduced-motion: reduce){
+  .home .mn-chapa__swing{animation:none;}
+  .home .mn-badge--vet{animation:none;}
+}

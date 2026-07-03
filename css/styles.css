@@ -4701,3 +4701,47 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
        movimiento"; solo quitamos el brillo barrido, que es lo más intenso. */
     .intro-ucm__logo::after { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MANADA — modal "Tu categoría" (camino) + portada de ex cliente.
+   Colores neutros (gris translúcido) para funcionar en claro y oscuro.
+   ═══════════════════════════════════════════════════════════════════ */
+.cat-camino { display: flex; flex-direction: column; margin: 8px 0 4px; }
+.cat-step { position: relative; display: flex; gap: 14px; padding: 11px 0 11px 4px; }
+.cat-step::before {
+    content: ""; position: absolute; left: 9px; top: 27px; bottom: -1px; width: 2px;
+    background: rgba(128, 128, 128, 0.28);
+}
+.cat-step:last-child::before { display: none; }
+.cat-step__dot {
+    position: relative; z-index: 1; flex: 0 0 auto; width: 14px; height: 14px; margin-top: 4px;
+    border-radius: 999px; background: transparent; border: 2px solid rgba(128, 128, 128, 0.5);
+}
+.cat-step.is-now .cat-step__dot {
+    background: #C8102E; border-color: #C8102E; box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.18);
+}
+.cat-step__tx { display: flex; flex-direction: column; gap: 3px; }
+.cat-step__t {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-display, 'Bebas Neue'), sans-serif;
+    font-size: 18px; letter-spacing: 0.8px; color: inherit; opacity: 0.5;
+}
+.cat-step.is-now .cat-step__t { opacity: 1; }
+.cat-step__now {
+    font-family: var(--font-body, 'Inter'), sans-serif;
+    font-size: 9px; font-weight: 800; letter-spacing: 1px; color: #fff;
+    background: #C8102E; border-radius: 999px; padding: 2px 7px;
+}
+.cat-step__s { font-size: 12.5px; line-height: 1.4; opacity: 0.68; }
+.cat-nota { margin-top: 14px; font-size: 11.5px; line-height: 1.5; opacity: 0.55; }
+.cat-soon { font-size: 15px; }
+
+/* Portada de ex cliente */
+.ex-cli .ex-cli__t { margin-top: 8px; }
+.ex-cli .ex-cli__p { opacity: 0.8; }
+.btn-wa {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    background: #25D366; color: #073d20; font-weight: 700; border: 0;
+}
+.btn-wa:hover { background: #1ebe5a; }
+.btn-wa__ic { width: 20px; height: 20px; flex: 0 0 auto; }

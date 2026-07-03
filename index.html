@@ -14,8 +14,8 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=67">
-    <link rel="stylesheet" href="./css/home.css?v=23">
+    <link rel="stylesheet" href="./css/styles.css?v=68">
+    <link rel="stylesheet" href="./css/home.css?v=24">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
 </head>
@@ -136,6 +136,26 @@
         </main>
     </section>
 
+    <!-- ── EX CLIENTE: portada mínima de bloqueo (sin app, sin datos) ── -->
+    <section class="screen" id="screen-ex-cliente" hidden>
+        <main class="centered centered--narrow ex-cli">
+            <div class="brand brand--splash">
+                <div class="logo-circle">
+                    <img src="./img/logo.png" alt="" class="logo-circle__img">
+                </div>
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                </div>
+            </div>
+            <h2 class="title-display ex-cli__t">Tu acceso a la app no está activo.</h2>
+            <p class="lead ex-cli__p">Si crees que es un error o quieres retomar, escríbenos.</p>
+            <a class="btn btn-wa" href="https://wa.me/34622922173" target="_blank" rel="noopener">
+                <svg class="btn-wa__ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.6.2-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.6-1.5-.9-2.1-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4 0 1.4 1 2.8 1.2 3 .1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.3c-1.5 0-3-.4-4.3-1.2l-.3-.2-3.1.8.8-3-.2-.3c-.8-1.3-1.3-2.9-1.3-4.5C3.7 7.5 7.5 3.7 12 3.7S20.3 7.5 20.3 12 16.5 20.3 12 20.3z"/></svg>
+                Escríbenos por WhatsApp
+            </a>
+        </main>
+    </section>
+
     <section class="screen home" id="screen-app" data-theme="claro" hidden>
         <main class="app-main">
 
@@ -178,8 +198,14 @@
                         </button>
                     </div>
                     <div class="br" id="perro-hero-meta"></div>
+                    <button type="button" class="hero-cat-chip" id="hero-categoria-chip" hidden aria-label="Ver tu categoría">Activo</button>
                 </div>
             </article>
+
+            <div id="manada-home" hidden></div>
+
+            <div id="rutina-clasica">
+            <button type="button" class="rutina-volver" id="rutina-volver-manada" hidden>‹ Volver a la Manada</button>
 
             <div class="band">
                 <div class="proto-row">
@@ -274,6 +300,7 @@
                         <ul id="progreso-lista" class="progreso-lista" hidden></ul>
                     </div>
                 </div>
+            </div>
             </div>
             </section>
 
@@ -536,6 +563,32 @@
     </section>
 
     <!-- ── MODAL: subir foto del perro ── -->
+    <!-- ── Modal "Tu categoría" (camino de niveles) ── -->
+    <div class="modal-pdli" id="modal-categoria" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-categoria-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+            <h2 id="modal-categoria-titulo">Tu categoría</h2>
+            <p class="modal-pdli__lead">Así entendemos el vínculo contigo.</p>
+            <div class="cat-camino" id="modal-categoria-camino"></div>
+            <p class="cat-nota">Si dejas de ser cliente, tu acceso a la app se pausa. Siempre puedes volver: escríbenos y lo retomamos.</p>
+        </div>
+    </div>
+
+    <!-- ── Modal "Guías" (placeholder Fase 1) ── -->
+    <div class="modal-pdli" id="modal-guias" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-guias-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+            <h2 id="modal-guias-titulo">Guías para entender a tu perro</h2>
+            <p class="modal-pdli__lead cat-soon">Muy pronto aquí.</p>
+        </div>
+    </div>
+
     <div class="modal-pdli" id="modal-foto" hidden aria-hidden="true">
         <div class="modal-pdli__overlay" data-close></div>
         <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-foto-titulo">
@@ -1174,6 +1227,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=3"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=117"></script>
+    <script type="module" src="./js/app.js?v=118"></script>
 </body>
 </html>
