@@ -13,6 +13,16 @@ import { createClient } from '@supabase/supabase-js';
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1500;
 const ALLOWED_ORIGINS = ['https://perrosdelaisla.github.io', 'http://localhost:5500'];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Addendum de sistema solo para el modo "borrador desde escuchas": el material
+// de origen son transcripciones de lo que el adiestrador dijo en voz alta
+// durante la clase, no un dictado pensado como resumen.
+const ADDENDUM_ESCUCHAS = `
+
+MODO ESCUCHAS: el material de origen son TRANSCRIPCIONES automáticas de lo que el adiestrador dijo en voz alta durante la clase (pueden incluir instrucciones que le dio al tutor, cortes, repeticiones y muletillas). Redacta igualmente un resumen dirigido al tutor. Reglas extra para este modo:
+- Ignora muletillas, titubeos, cortes y ruido irrelevante de la transcripción; quédate con lo que se trabajó y lo que hay que practicar.
+- Todo lo que en la escucha sea una instrucción del adiestrador al tutor conviértelo en una PAUTA clara y accionable (por ejemplo: "practicad la llamada a diario, 5 repeticiones de 2 minutos"). Concreta repeticiones, duración y frecuencia cuando el adiestrador las haya dicho; no las inventes si no constan.`;
 
 const SYSTEM_PROMPT = `Eres el redactor de Perros de la Isla, empresa de adiestramiento canino en Mallorca (método cognitivo-emocional: vínculo y comunicación, no obediencia). Recibes el dictado del adiestrador, que habla en español rioplatense con sus propias palabras sobre lo trabajado en una clase. Tu tarea es convertir ese dictado en un resumen ESCRITO dirigido al tutor del perro.
 
@@ -69,20 +79,55 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!adminRow) return json({ ok: false, error: 'Solo un administrador puede usar el redactor' }, 403);
 
     const body = await req.json().catch(() => null);
-    const textoCrudo = String(body?.textoCrudo ?? '').trim();
-    if (!textoCrudo) return json({ ok: false, error: 'Falta el dictado' }, 400);
-
     const ctx = body?.contexto ?? {};
-    const lineas: string[] = [`Dictado:\n${textoCrudo}`];
-    if (ctx?.numeroClase != null && ctx.numeroClase !== '') lineas.push(`Nº de clase: ${ctx.numeroClase}`);
-    if (ctx?.modalidad) lineas.push(`Modalidad: ${ctx.modalidad}`);
-    if (ctx?.nombrePerro) lineas.push(`Nombre del perro: ${ctx.nombrePerro}`);
-    const userMessage = lineas.join('\n');
+    const desdeEscuchas = body?.desdeEscuchas === true;
+
+    // El mensaje de usuario y el system se arman distinto según el modo, pero
+    // el resto del flujo (llamada a la IA, validación, respuesta) es común.
+    let userMessage = '';
+    let system = SYSTEM_PROMPT;
+
+    if (desdeEscuchas) {
+      // MODO ESCUCHAS: leemos las transcripciones ya listas de la cita y
+      // redactamos el borrador. Service role: no dependemos de RLS del caller.
+      const citaId = String(body?.cita_id ?? '').trim();
+      if (!UUID_RE.test(citaId)) return json({ ok: false, error: 'Falta la cita' }, 400);
+
+      const { data: escuchas, error: escErr } = await admin
+        .from('escuchas_clase')
+        .select('transcripcion, creado_en')
+        .eq('cita_id', citaId).eq('estado', 'transcrita')
+        .order('creado_en', { ascending: true });
+      if (escErr) return json({ ok: false, error: 'No se pudieron leer las escuchas' }, 500);
+
+      const trans = (escuchas ?? [])
+        .map((e: any) => String(e?.transcripcion ?? '').trim())
+        .filter(Boolean);
+      if (!trans.length) return json({ ok: false, error: 'No hay escuchas transcritas de esta clase todavía.' }, 400);
+
+      const bloques = trans.map((t: string, i: number) => `Escucha ${i + 1}:\n${t}`).join('\n\n');
+      const lineas: string[] = [`Transcripciones de lo que el adiestrador dijo en voz alta durante la clase (en orden):\n${bloques}`];
+      if (ctx?.numeroClase != null && ctx.numeroClase !== '') lineas.push(`Nº de clase: ${ctx.numeroClase}`);
+      if (ctx?.modalidad) lineas.push(`Modalidad: ${ctx.modalidad}`);
+      if (ctx?.nombrePerro) lineas.push(`Nombre del perro: ${ctx.nombrePerro}`);
+      userMessage = lineas.join('\n');
+      system = SYSTEM_PROMPT + ADDENDUM_ESCUCHAS;
+    } else {
+      // MODO DICTADO (el de siempre): texto crudo hablado por el adiestrador.
+      const textoCrudo = String(body?.textoCrudo ?? '').trim();
+      if (!textoCrudo) return json({ ok: false, error: 'Falta el dictado' }, 400);
+
+      const lineas: string[] = [`Dictado:\n${textoCrudo}`];
+      if (ctx?.numeroClase != null && ctx.numeroClase !== '') lineas.push(`Nº de clase: ${ctx.numeroClase}`);
+      if (ctx?.modalidad) lineas.push(`Modalidad: ${ctx.modalidad}`);
+      if (ctx?.nombrePerro) lineas.push(`Nombre del perro: ${ctx.nombrePerro}`);
+      userMessage = lineas.join('\n');
+    }
 
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system, messages: [{ role: 'user', content: userMessage }] }),
     });
     if (!claudeRes.ok) {
       const detalle = (await claudeRes.text().catch(() => '')).slice(0, 300);

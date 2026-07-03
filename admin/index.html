@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=46">
+    <link rel="stylesheet" href="./styles.css?v=47">
     <link rel="stylesheet" href="./jaime.css?v=8">
 </head>
 <body>
@@ -621,7 +621,21 @@
 
                 <fieldset class="form-fieldset">
                     <legend>Resumen de la clase · b60</legend>
-                    <p class="form-hint">Dicta tu repaso de la clase. Si haces una pausa larga el dictado se detiene; toca Grabar otra vez para continuar (lo anterior se mantiene).</p>
+
+                    <div class="rc-escucha">
+                        <p class="form-hint">Mientras explicas el ejercicio en clase, deja que Jaime escuche. Al terminar, corta: se transcribe solo y luego puedes generar el borrador del resumen.</p>
+                        <div class="rc-escucha-row">
+                            <button id="rc-escucha-toggle" class="btn-secondary rc-escucha-btn" type="button">🎙 Jaime, escucha</button>
+                            <span id="rc-escucha-timer" class="rc-escucha-timer" hidden>00:00</span>
+                        </div>
+                        <p id="rc-escucha-aviso" class="form-hint rc-escucha-aviso" hidden></p>
+                        <ul id="rc-escucha-lista" class="rc-escucha-lista"></ul>
+                        <button id="rc-borrador" class="btn-secondary" type="button" hidden>Generar borrador con las escuchas</button>
+                    </div>
+
+                    <hr class="rc-sep">
+
+                    <p class="form-hint">O dicta tu repaso a mano. Si haces una pausa larga el dictado se detiene; toca Grabar otra vez para continuar (lo anterior se mantiene).</p>
                     <div class="rc-grabar-row">
                         <button id="rc-grabar" class="btn-secondary" type="button">🎙 Grabar</button>
                         <span id="rc-indicador" class="rc-indicador" hidden>🎙 Grabando…</span>
@@ -826,7 +840,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=72"></script>
+    <script type="module" src="./admin.js?v=73"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {

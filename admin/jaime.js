@@ -78,6 +78,14 @@ function bindInactividad() {
   reiniciarInactividad();   // arranca el conteo
 }
 
+// API externa mínima: el modo "escucha" del admin (grabar la clase) pone a
+// Jaime en 'pensando' mientras graba, y así tampoco se duerme por inactividad.
+// Al cortar, vuelve a 'normal'. Solo cambia la carita (src + is-durmiendo);
+// no toca la posición/transform del FAB arrastrable.
+export function jaimeEscuchando(on) {
+  setJmCara(on ? 'pensando' : 'normal');
+}
+
 // ─────────────────── FAB arrastrable + persistencia ───────────────────
 // TAP corto → abre el chat. Mantener ~250ms o desplazar >8px → arrastre
 // (el FAB sigue al puntero por transform, sin reflow). Al soltar, snap al

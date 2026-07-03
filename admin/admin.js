@@ -15,7 +15,7 @@ import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
 import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=2';
-import { initJaime } from './jaime.js?v=12';
+import { initJaime, jaimeEscuchando } from './jaime.js?v=13';
 const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
@@ -2338,6 +2338,15 @@ function setupResumenClase(cita) {
     if (generar) generar.disabled = true;
 
     actualizarBotonGrabar(false);
+
+    // Modo escucha (grabar la clase). Bindeo único + estado inicial limpio y
+    // lista de escuchas de esta cita (con botón de borrador si hay transcritas).
+    bindEscuchaClase();
+    escuchaAviso('', false);
+    actualizarBotonEscucha(false);
+    const borrador = document.getElementById('rc-borrador');
+    if (borrador) borrador.hidden = true;
+    refrescarEscuchas();
 }
 
 // Bindeo único de los tres botones + el input del crudo. Idempotente.
@@ -2504,6 +2513,11 @@ async function guardarResumenClase() {
 // Limpieza al cerrar el modal: corta la grabación y vacía los campos.
 function resetResumenClase() {
     detenerGrabacion();
+    // Si había una escucha grabando, la cortamos: detenerEscucha dispara la
+    // subida (la escucha se captura con su cita_id propio, así no se pierde
+    // aunque se cierre el modal). Si no, liberamos recursos igual.
+    if (escuchaCtx.grabando) detenerEscucha();
+    else { liberarWakeLock(); if (escuchaCtx.timer) { clearInterval(escuchaCtx.timer); escuchaCtx.timer = null; } }
     resumenClaseCtx.cita = null;
     resumenClaseCtx.textoBase = '';
     resumenClaseCtx.rec = null;
@@ -2515,6 +2529,285 @@ function resetResumenClase() {
     if (resumen) resumen.value = '';
     if (msg) msg.textContent = '';
     if (generar) generar.disabled = true;
+    const lista = document.getElementById('rc-escucha-lista');
+    if (lista) lista.innerHTML = '';
+    escuchaAviso('', false);
+    actualizarBotonEscucha(false);
+    const borrador = document.getElementById('rc-borrador');
+    if (borrador) borrador.hidden = true;
+}
+
+/* ═══════════════════════════════════════════
+   JAIME ESCUCHA LA CLASE (Fase 1)
+   Graba con MediaRecorder mientras el adiestrador explica → sube el audio al
+   bucket privado escuchas-clase → inserta fila en escuchas_clase → invoca
+   transcribir-escucha (fire-and-forget). Luego "Generar borrador con las
+   escuchas" llama a resumir-clase en modo desdeEscuchas y llena el resumen.
+   ═══════════════════════════════════════════ */
+
+const ESCUCHA_BUCKET = 'escuchas-clase';
+const ESCUCHA_AVISO_MIN_SEG = 600;  // límite blando: avisar a los 10 min
+
+// citaId/clienteId se capturan al empezar a grabar, para que la subida no
+// dependa de que el modal siga abierto (no perder un audio ya grabado).
+const escuchaCtx = { rec: null, chunks: [], grabando: false, wakeLock: null, t0: 0, timer: null, avisado: false, mime: '', citaId: null, clienteId: null };
+
+function bindEscuchaClase() {
+    if (window.__escuchaClaseBound) return;
+    const toggle = document.getElementById('rc-escucha-toggle');
+    const borrador = document.getElementById('rc-borrador');
+    const lista = document.getElementById('rc-escucha-lista');
+    if (toggle) toggle.addEventListener('click', () => {
+        if (escuchaCtx.grabando) detenerEscucha();
+        else iniciarEscucha();
+    });
+    if (borrador) borrador.addEventListener('click', generarBorradorEscuchas);
+    // Reintentar transcripción (delegado sobre la lista).
+    if (lista) lista.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.rc-escucha-reintentar');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (!id) return;
+        btn.disabled = true;
+        btn.textContent = 'Reintentando…';
+        supabase.functions.invoke('transcribir-escucha', { body: { escucha_id: id } })
+            .then(() => refrescarEscuchas())
+            .catch(() => refrescarEscuchas());
+    });
+    window.__escuchaClaseBound = true;
+}
+
+function fmtMMSS(seg) {
+    const s = Math.max(0, Math.floor(seg));
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+
+function escuchaAviso(txt, esError) {
+    const el = document.getElementById('rc-escucha-aviso');
+    if (!el) return;
+    el.textContent = txt || '';
+    el.hidden = !txt;
+    el.classList.toggle('rc-escucha-aviso--error', !!esError);
+}
+
+function actualizarBotonEscucha(grabando) {
+    const btn = document.getElementById('rc-escucha-toggle');
+    if (btn) {
+        btn.textContent = grabando ? '⏹ Cortar' : '🎙 Jaime, escucha';
+        btn.classList.toggle('rc-escucha-on', grabando);
+    }
+    const t = document.getElementById('rc-escucha-timer');
+    if (t && !grabando) t.hidden = true;
+}
+
+function pickMimeEscucha() {
+    if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
+    for (const c of ['audio/webm;codecs=opus', 'audio/webm']) {
+        try { if (MediaRecorder.isTypeSupported(c)) return c; } catch (_e) { /* noop */ }
+    }
+    return '';
+}
+
+function liberarWakeLock() {
+    if (escuchaCtx.wakeLock) {
+        try { escuchaCtx.wakeLock.release(); } catch (_e) { /* noop */ }
+        escuchaCtx.wakeLock = null;
+    }
+}
+
+async function iniciarEscucha() {
+    if (escuchaCtx.grabando) return;
+    const cita = resumenClaseCtx.cita;
+    if (!cita?.id) { escuchaAviso('Abrí una cita antes de grabar.', true); return; }
+    if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        escuchaAviso('Este navegador no permite grabar audio. Usá el dictado de abajo.', true);
+        return;
+    }
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+        escuchaAviso('No pudimos acceder al micrófono. Revisá los permisos del navegador y probá de nuevo.', true);
+        return;
+    }
+    const mime = pickMimeEscucha();
+    let rec;
+    try {
+        rec = mime
+            ? new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 32000 })
+            : new MediaRecorder(stream, { audioBitsPerSecond: 32000 });
+    } catch (_e) {
+        try { rec = new MediaRecorder(stream); } catch (_e2) {
+            stream.getTracks().forEach((t) => t.stop());
+            escuchaAviso('No se pudo iniciar la grabación en este navegador.', true);
+            return;
+        }
+    }
+    escuchaCtx.rec = rec;
+    escuchaCtx.chunks = [];
+    escuchaCtx.mime = rec.mimeType || mime || 'audio/webm';
+    escuchaCtx.grabando = true;
+    escuchaCtx.avisado = false;
+    escuchaCtx.t0 = Date.now();
+    escuchaCtx.citaId = cita.id;
+    escuchaCtx.clienteId = cita.cliente_id || null;
+
+    rec.ondataavailable = (ev) => { if (ev.data && ev.data.size) escuchaCtx.chunks.push(ev.data); };
+    rec.onstop = () => { try { stream.getTracks().forEach((t) => t.stop()); } catch (_e) {} onStopEscucha(); };
+
+    try { rec.start(); } catch (_e) {
+        escuchaCtx.grabando = false;
+        stream.getTracks().forEach((t) => t.stop());
+        escuchaAviso('No se pudo iniciar la grabación.', true);
+        return;
+    }
+
+    // WakeLock para que la pantalla no duerma la grabación (best-effort).
+    try { if (navigator.wakeLock?.request) escuchaCtx.wakeLock = await navigator.wakeLock.request('screen'); } catch (_e) { /* noop */ }
+    try { jaimeEscuchando(true); } catch (_e) { /* noop */ }
+    actualizarBotonEscucha(true);
+    escuchaAviso('', false);
+    escuchaCtx.timer = setInterval(tickEscucha, 1000);
+    tickEscucha();
+}
+
+function tickEscucha() {
+    const seg = Math.floor((Date.now() - escuchaCtx.t0) / 1000);
+    const t = document.getElementById('rc-escucha-timer');
+    if (t) { t.hidden = false; t.textContent = fmtMMSS(seg); }
+    if (seg >= ESCUCHA_AVISO_MIN_SEG && !escuchaCtx.avisado) {
+        escuchaCtx.avisado = true;
+        escuchaAviso('Llevás 10 minutos grabando. Cuando termines de explicar, tocá Cortar.', false);
+    }
+}
+
+function detenerEscucha() {
+    const rec = escuchaCtx.rec;
+    escuchaCtx.grabando = false;
+    if (escuchaCtx.timer) { clearInterval(escuchaCtx.timer); escuchaCtx.timer = null; }
+    liberarWakeLock();
+    try { jaimeEscuchando(false); } catch (_e) { /* noop */ }
+    actualizarBotonEscucha(false);
+    if (rec && rec.state !== 'inactive') { try { rec.stop(); } catch (_e) { /* noop */ } }  // dispara onstop → onStopEscucha
+    else { escuchaCtx.rec = null; }
+}
+
+// Se dispara al parar el MediaRecorder: arma el blob, lo SUBE (antes de
+// insertar, para no perder el audio), inserta la fila y lanza la transcripción.
+async function onStopEscucha() {
+    const chunks = escuchaCtx.chunks;
+    escuchaCtx.chunks = [];
+    escuchaCtx.rec = null;
+    const citaId = escuchaCtx.citaId;
+    const clienteId = escuchaCtx.clienteId;
+    const dur = Math.max(1, Math.round((Date.now() - escuchaCtx.t0) / 1000));
+    if (!chunks.length) { escuchaAviso('No se grabó audio. Probá de nuevo.', true); return; }
+    if (!citaId) { escuchaAviso('No se pudo asociar la escucha a una cita.', true); return; }
+
+    const blob = new Blob(chunks, { type: escuchaCtx.mime || 'audio/webm' });
+    const path = `${citaId}/${Date.now()}.webm`;
+
+    escuchaAviso('Subiendo la escucha…', false);
+    // 1) SUBIR primero. Si falla, el audio no llegó a la nube: avisamos claro.
+    const { error: upErr } = await supabase.storage.from(ESCUCHA_BUCKET)
+        .upload(path, blob, { contentType: 'audio/webm', upsert: false });
+    if (upErr) {
+        console.error('[escucha] error subiendo audio:', upErr);
+        escuchaAviso('No se pudo subir la escucha. Volvé a intentarlo (el audio no se guardó).', true);
+        return;
+    }
+
+    // 2) INSERT de la fila (con un reintento). Si el audio subió pero el insert
+    //    falla, damos la ruta para que no se pierda.
+    const payload = { cita_id: citaId, cliente_id: clienteId, audio_path: path, duracion_seg: dur, estado: 'grabada' };
+    let ins = await supabase.from('escuchas_clase').insert(payload).select('id').single();
+    if (ins.error) ins = await supabase.from('escuchas_clase').insert(payload).select('id').single();
+    if (ins.error) {
+        console.error('[escucha] error insertando fila:', ins.error);
+        escuchaAviso('El audio se subió pero no se registró. Guardá esta ruta para recuperarlo: ' + path, true);
+        return;
+    }
+
+    const escuchaId = ins.data.id;
+    escuchaAviso('Escucha subida. Jaime la está transcribiendo…', false);
+    refrescarEscuchas();
+
+    // 3) Transcribir sin bloquear la UI; refrescamos el estado al terminar.
+    supabase.functions.invoke('transcribir-escucha', { body: { escucha_id: escuchaId } })
+        .then(({ data, error }) => {
+            const res = data;
+            if (error || (res && res.ok === false)) {
+                console.warn('[escucha] transcripción con error:', error || res?.error);
+            }
+            refrescarEscuchas();
+        })
+        .catch((e) => { console.warn('[escucha] fallo invocando transcripción:', e); refrescarEscuchas(); });
+}
+
+function etiquetaEstadoEscucha(estado) {
+    if (estado === 'transcrita') return '✓ Transcrita';
+    if (estado === 'error') return '⚠ Error';
+    return '⏳ Procesando';
+}
+
+async function refrescarEscuchas() {
+    const lista = document.getElementById('rc-escucha-lista');
+    const borrador = document.getElementById('rc-borrador');
+    const cita = resumenClaseCtx.cita;
+    if (!lista) return;
+    if (!cita?.id) { lista.innerHTML = ''; if (borrador) borrador.hidden = true; return; }
+    const { data, error } = await supabase.from('escuchas_clase')
+        .select('id, estado, duracion_seg, creado_en')
+        .eq('cita_id', cita.id)
+        .order('creado_en', { ascending: true });
+    if (error) { console.warn('[escucha] no se pudo leer la lista:', error); return; }
+    const filas = data || [];
+    if (!filas.length) {
+        lista.innerHTML = '<li class="rc-escucha-vacia">Todavía no hay escuchas de esta clase.</li>';
+    } else {
+        lista.innerHTML = filas.map((f, i) => {
+            const dur = f.duracion_seg != null ? fmtMMSS(f.duracion_seg) : '—';
+            const reint = f.estado === 'error'
+                ? `<button type="button" class="rc-escucha-reintentar btn-secondary" data-id="${f.id}">Reintentar</button>`
+                : '';
+            return `<li class="rc-escucha-item"><span class="rc-escucha-n">Escucha ${i + 1}</span><span class="rc-escucha-dur">${dur}</span><span class="rc-escucha-estado rc-escucha-estado--${f.estado}">${etiquetaEstadoEscucha(f.estado)}</span>${reint}</li>`;
+        }).join('');
+    }
+    if (borrador) borrador.hidden = !filas.some((f) => f.estado === 'transcrita');
+}
+
+async function generarBorradorEscuchas() {
+    const cita = resumenClaseCtx.cita;
+    const resumenEl = document.getElementById('rc-resumen');
+    const borrador = document.getElementById('rc-borrador');
+    const msg = document.getElementById('rc-msg');
+    if (!cita?.id) return;
+    const numeroClase = parseIntOrNull(document.getElementById('ce-numero-clase')?.value);
+    const modalidad = document.getElementById('ce-modalidad')?.value || undefined;
+    const nombrePerro = cita?.clientes?.perros?.[0]?.nombre || undefined;
+
+    if (borrador) { borrador.disabled = true; borrador.textContent = 'Generando borrador…'; }
+    if (msg) msg.textContent = '';
+    try {
+        const { data, error } = await supabase.functions.invoke('resumir-clase', {
+            body: { cita_id: cita.id, desdeEscuchas: true, contexto: { numeroClase, modalidad, nombrePerro } },
+        });
+        let res = data;
+        if (error?.context && typeof error.context.json === 'function') {
+            res = await error.context.json().catch(() => null);
+        }
+        if (res?.resumen) {
+            if (resumenEl) resumenEl.value = res.resumen;
+            if (msg) msg.textContent = 'Borrador generado con las escuchas. Revisalo y guardá.';
+        } else {
+            if (msg) msg.textContent = res?.error || error?.message || 'No se pudo generar el borrador.';
+        }
+    } catch (err) {
+        console.error('Error generarBorradorEscuchas:', err);
+        if (msg) msg.textContent = 'No se pudo generar el borrador.';
+    } finally {
+        if (borrador) { borrador.disabled = false; borrador.textContent = 'Generar borrador con las escuchas'; }
+    }
 }
 
 /* ═══════════════════════════════════════════
