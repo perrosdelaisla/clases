@@ -416,7 +416,7 @@
 }
 .home .dB .cover .ctop{
   position:absolute; top:0; left:0; right:0; padding:14px 18px;
-  display:flex; align-items:center; justify-content:space-between; z-index:2;
+  display:flex; align-items:center; justify-content:space-between; z-index:5;
 }
 .home .dB .cover .ctop .logo{
   width:32px;height:32px;border-radius:999px;
@@ -539,7 +539,7 @@
   background:linear-gradient(180deg,rgba(10,9,6,0.46) 0%,rgba(10,9,6,0) 30%,rgba(10,9,6,0) 44%,rgba(10,9,6,0.86) 100%);
 }
 .home .dBp .cover .ctop{
-  position:absolute; top:0; left:0; right:0; padding:calc(14px + env(safe-area-inset-top, 0px)) 18px 14px; z-index:2;
+  position:absolute; top:0; left:0; right:0; padding:calc(14px + env(safe-area-inset-top, 0px)) 18px 14px; z-index:5;
   display:flex; align-items:center; justify-content:space-between;
 }
 .home .dBp .cover .ctop .logo{
