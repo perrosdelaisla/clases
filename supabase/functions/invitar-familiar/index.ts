@@ -19,8 +19,10 @@ import { createClient } from '@supabase/supabase-js';
 const APP_URL = 'https://perrosdelaisla.github.io/clases/';
 const LOGO_URL = 'https://perrosdelaisla.github.io/clases/img/icon-192.png';
 const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
-const MAIL_FROM = 'clasesperrosdelaisla@gmail.com';
+const MAIL_FROM = 'hola@perrosdelaisla.es';
 const MAIL_FROM_NAME = 'Perros de la Isla';
+// hola@ no tiene buzón: si alguien responde, la respuesta va al Gmail del equipo.
+const MAIL_REPLY_TO = { email: 'clasesperrosdelaisla@gmail.com', name: 'Perros de la Isla' };
 
 // Orígenes permitidos para CORS (producción + servidor local de pruebas).
 const ALLOWED_ORIGINS = [
@@ -342,6 +344,7 @@ async function enviarCorreo(email: string, nombre: string, codigo: string): Prom
         },
         body: JSON.stringify({
             sender: { email: MAIL_FROM, name: MAIL_FROM_NAME },
+            replyTo: MAIL_REPLY_TO,
             to: [{ email }],
             subject: 'Tu código de acceso — Perros de la Isla',
             textContent,
