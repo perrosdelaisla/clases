@@ -337,12 +337,26 @@ function bindEventos() {
     const avatarBtn = document.getElementById('avatar-btn');
     if (avatarBtn) avatarBtn.addEventListener('click', toggleMenuAvatar);
 
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) logoutBtn.addEventListener('click', cerrarSesion);
-
-    // Mi familia (solo principal)
-    const familiaBtn = document.getElementById('familia-btn');
-    if (familiaBtn) familiaBtn.addEventListener('click', abrirModalFamilia);
+    // Ítems del menú del avatar (Mi familia / Cerrar sesión): se resuelven en
+    // POINTERDOWN con handler delegado — mismo endurecimiento que los chips de
+    // perro (518ce26) contra la carrera táctil (pointerdown/up en distinto
+    // elemento → click re-dirigido al ancestro). El flag deja el click en no-op.
+    const avatarMenu = document.getElementById('avatar-menu');
+    let avatarItemPointer = false;
+    if (avatarMenu) {
+        avatarMenu.addEventListener('pointerdown', (e) => {
+            const item = e.target.closest('.avatar-menu__item');
+            if (!item) return;
+            e.preventDefault();
+            avatarItemPointer = true;
+            ejecutarItemAvatar(item.id);
+        });
+        avatarMenu.addEventListener('click', (e) => {
+            if (avatarItemPointer) { avatarItemPointer = false; return; }
+            const item = e.target.closest('.avatar-menu__item');
+            if (item) ejecutarItemAvatar(item.id);
+        });
+    }
 
     const familiaInvitar = document.getElementById('familia-invitar');
     if (familiaInvitar) familiaInvitar.addEventListener('click', enviarInvitacionFamiliar);
@@ -868,6 +882,13 @@ function cerrarMenuAvatar() {
     const btn = document.getElementById('avatar-btn');
     menu?.setAttribute('hidden', '');
     btn?.setAttribute('aria-expanded', 'false');
+}
+
+// Acción de un ítem del menú del avatar por id (la invocan los handlers
+// delegados de pointerdown/click). abrirModalFamilia ya cierra el menú.
+function ejecutarItemAvatar(id) {
+    if (id === 'familia-btn') abrirModalFamilia();
+    else if (id === 'logout-btn') cerrarSesion();
 }
 
 // ===================== Mi familia (cliente principal) =====================
