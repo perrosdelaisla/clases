@@ -20,7 +20,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const APP_URL = 'https://perrosdelaisla.github.io/clases/';
+const APP_URL = 'https://app.perrosdelaisla.es/clases/';
 const LOGO_URL = 'https://perrosdelaisla.github.io/clases/img/icon-192.png';
 const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
 const MAIL_FROM = 'hola@perrosdelaisla.es';
