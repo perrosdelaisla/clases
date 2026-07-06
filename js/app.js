@@ -2105,7 +2105,7 @@ function entrarRutinaClasica() {
     hero?.classList.remove('is-manada');
     if (manada) manada.hidden = true;
     if (clasica) clasica.hidden = false;
-    if (backBar) backBar.hidden = false;
+    if (backBar) backBar.hidden = !esVeterano();
     renderRutinaPerroSeleccionado();
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
