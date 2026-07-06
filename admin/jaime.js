@@ -305,8 +305,11 @@ function abrir() {
     </div>`;
   overlay.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', cerrar));
   document.body.appendChild(overlay);
+  // Decidir el parte ANTES de pintar: si dispara, su respuesta hace de saludo
+  // y no mostramos el saludo estático encima (un solo "hola").
+  parteAutoActivo = debeDispararParte();
   renderChatView();
-  quizasParteDelDia();
+  if (parteAutoActivo) dispararParteDelDia();
 }
 
 // Parte del día automático: SOLO en la pantalla index del admin, la primera vez
@@ -314,20 +317,38 @@ function abrir() {
 // (mensaje oculto: se pinta solo la respuesta de Jaime, como si te recibiera
 // hablando) y guarda la fecha para no repetir hasta mañana.
 const PARTE_FECHA_KEY = 'pdli_jaime_parte_fecha';
+// Marca de que Jaime ya se presentó en el panel (luego saluda breve, sin
+// volver a presentarse).
+const JAIME_ADMIN_PRESENTADO_KEY = 'pdli_jaime_admin_presentado';
+
+// Cuando el parte auto-dispara, el propio parte hace de saludo: no mostramos el
+// saludo estático encima (evita el doble "hola"). Se decide al abrir el chat.
+let parteAutoActivo = false;
+// Saludo calculado UNA sola vez por apertura, para que no cambie entre renders
+// (saludoInicial tiene efecto: marca "presentado" la primera vez).
+let saludoCache = '';
 
 function hoyLocalISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function quizasParteDelDia() {
-  if (ctx.pantalla !== 'index') return;   // ni cliente.html ni perro.html
-  if (chatHist.length) return;            // no interrumpir una conversación en curso
+function primerNombreAdmin() {
+  const n = (ctx.adminNombre || '').trim();
+  return n ? n.split(/\s+/)[0] : '';
+}
+
+// ¿Toca disparar el parte del día? (index, sin conversación en curso, 1ª del día)
+function debeDispararParte() {
+  if (ctx.pantalla !== 'index') return false;   // ni cliente.html ni perro.html
+  if (chatHist.length) return false;            // no interrumpir una conversación
   let ultima = null;
   try { ultima = localStorage.getItem(PARTE_FECHA_KEY); } catch (_e) { /* noop */ }
-  const hoy = hoyLocalISO();
-  if (ultima === hoy) return;
-  try { localStorage.setItem(PARTE_FECHA_KEY, hoy); } catch (_e) { /* noop */ }
+  return ultima !== hoyLocalISO();
+}
+
+function dispararParteDelDia() {
+  try { localStorage.setItem(PARTE_FECHA_KEY, hoyLocalISO()); } catch (_e) { /* noop */ }
   mandarMensaje('Dame el parte del día', true);
 }
 
@@ -336,7 +357,16 @@ function quizasParteDelDia() {
 function saludoInicial() {
   if (ctx.perroId) return `Estoy sobre el caso de ${escapeHtml(ctx.nombre || 'este perro')}. Pregúntame por su rutina, entrenos, bienestar o resúmenes de clase. También puedes abrir el informe del caso.`;
   if (ctx.clienteId) return `Estoy sobre ${escapeHtml(ctx.nombre || 'este cliente')}. Pregúntame por sus perros, citas, resúmenes de clase o datos de contacto.`;
-  return 'Soy Jaime, tu asistente del panel. Pregúntame por cualquier cliente o perro; puedo buscarlos por nombre y consultar sus datos, rutinas, entrenos y más.';
+  // Panel general: saluda por el nombre; se presenta solo la primera vez.
+  const nombre = primerNombreAdmin();
+  const hola = nombre ? `¡Hola, ${escapeHtml(nombre)}!` : '¡Hola!';
+  let presentado = false;
+  try { presentado = localStorage.getItem(JAIME_ADMIN_PRESENTADO_KEY) === '1'; } catch (_e) { /* noop */ }
+  if (!presentado) {
+    try { localStorage.setItem(JAIME_ADMIN_PRESENTADO_KEY, '1'); } catch (_e) { /* noop */ }
+    return `${hola} Soy Jaime, tu asistente del panel. Pregúntame por cualquier cliente o perro; puedo buscarlos por nombre y consultar sus datos, rutinas, entrenos y más.`;
+  }
+  return `${hola} ¿Qué necesitas?`;
 }
 
 function renderChatView() {
@@ -372,6 +402,9 @@ function renderChatView() {
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   });
+  // Saludo calculado una vez por apertura. Si el parte auto-dispara, no hay
+  // saludo estático (el parte hace de saludo → un solo "hola").
+  saludoCache = parteAutoActivo ? '' : saludoInicial();
   renderChat();
   ta?.focus();
 }
@@ -379,7 +412,9 @@ function renderChatView() {
 function renderChat() {
   const list = document.getElementById('jm-chat-list');
   if (!list) return;
-  let html = `<div class="jm-msg jaime"><div class="jm-bubble">${escapeHtml(saludoInicial())}</div></div>`;
+  let html = saludoCache
+    ? `<div class="jm-msg jaime"><div class="jm-bubble">${escapeHtml(saludoCache)}</div></div>`
+    : '';
   html += chatHist.filter((m) => !m.hidden).map((m) =>
     `<div class="jm-msg ${m.role === 'user' ? 'user' : 'jaime'}"><div class="jm-bubble">${escapeHtml(m.content)}</div></div>`
   ).join('');

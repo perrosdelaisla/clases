@@ -1502,9 +1502,11 @@ function sembrarSaludoJaime() {
     if (_jaimeChatHist.length > 0) return;
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     const nombre = perro?.nombre || 'tu perro';
+    const nomTutor = primerNombreTutor();
+    const hola = nomTutor ? `¡Hola, ${nomTutor}!` : '¡Hola!';
     const primer = (_jaimeAvisoActual && _jaimeAvisoActual.texto)
         ? _jaimeAvisoActual.texto
-        : `¡Hola! Soy Jaime. ¿Te ayudo con la app o con la rutina de ${nombre}?`;
+        : `${hola} ¿Te ayudo con la app o con la rutina de ${nombre}?`;
     _jaimeChatHist.push({ role: 'assistant', content: primer });
     pintarMsgJaime('assistant', primer);
     // Chat fresco (saludo, sin historial): ofrecemos chips de preguntas frecuentes.
