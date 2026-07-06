@@ -363,10 +363,12 @@ body {
 
 .chips {
     display: flex;
+    flex-wrap: nowrap;
     gap: 0.5rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 0.25rem;
+    padding-right: 0.5rem;
     scrollbar-width: none;
 }
 
