@@ -3037,12 +3037,14 @@ body {
 /* Color por estado al estar activo */
 .estado-pill[data-estado="consulta"].is-active { color: #E8B62D; }
 .estado-pill[data-estado="activo"].is-active { color: #9CB64B; }
+.estado-pill[data-estado="inactivo"].is-active { color: #C77D3E; }
 .estado-pill[data-estado="veterano"].is-active { color: #4A7DD4; }
 .estado-pill[data-estado="ex_cliente"].is-active { color: #8E8A82; }
 
 /* Punto coloreado siempre (incluso inactivo, sutil) */
 .estado-pill[data-estado="consulta"] .estado-pill__dot { background: #E8B62D; }
 .estado-pill[data-estado="activo"] .estado-pill__dot { background: #9CB64B; }
+.estado-pill[data-estado="inactivo"] .estado-pill__dot { background: #C77D3E; }
 .estado-pill[data-estado="veterano"] .estado-pill__dot { background: #4A7DD4; }
 .estado-pill[data-estado="ex_cliente"] .estado-pill__dot { background: #8E8A82; }
 
