@@ -1176,6 +1176,8 @@ function pintarBurbujaJaime() {
 function abrirBurbujaJaime() {
     pintarBurbujaJaime();
     document.getElementById('jaime-burbuja')?.removeAttribute('hidden');
+    // Ya visible (medible): la anclamos a la posición actual del FAB por si se movió.
+    anclarBurbujaAlFab();
 }
 
 function cerrarBurbujaJaime() {
@@ -1217,12 +1219,241 @@ function irAItemRutina(asignadoId, categoria) {
     }));
 }
 
+// ─────────────────── FAB de Jaime: arrastrable + persistencia ───────────────────
+// Calca el patrón probado del admin (admin/jaime.js): TAP corto (<250ms, sin
+// desplazarse) → togglea la burbuja como siempre; mantener ~250ms o mover >8px
+// → arrastre (el FAB sigue al dedo por transform, sin reflow). Al soltar, snap
+// al borde lateral más cercano conservando la altura, y se guarda { lado, y } en
+// una clave separada de la del admin.
+const JAIME_FAB_POS_KEY = 'pdli_jaime_fab_pos_cliente';
+const JAIME_FAB_MARGEN = 14;
+const JAIME_FAB_UMBRAL = 8;
+const JAIME_FAB_LONGPRESS_MS = 250;
+
+let _jfabX = 0, _jfabY = 0;         // top-left aplicado vía transform
+let _jfabArrastrando = false;
+let _jfabSupressClick = false;      // ignora el click sintético tras arrastrar
+let _jfabTransformActivo = false;   // false = conserva su posición CSS por defecto
+let _jfabDragBound = false;
+
+function _jfabGet() { return document.getElementById('jaime-fab'); }
+
+function jfabAsegurarTransform() {
+    const fab = _jfabGet();
+    if (!fab || _jfabTransformActivo) return;
+    const r = fab.getBoundingClientRect();
+    _jfabX = r.left; _jfabY = r.top;
+    // Por si algún día el FAB tuviera animación de entrada con fill: la cortamos
+    // para que no pise el transform inline (lección 1344f4f).
+    fab.style.animation = 'none';
+    fab.style.left = '0'; fab.style.top = '0'; fab.style.right = 'auto'; fab.style.bottom = 'auto';
+    _jfabTransformActivo = true;
+    jfabAplicarTransform();
+}
+
+// Lee las safe-areas de iOS resolviendo env(...) sobre un elemento probe.
+function jfabSafeAreas() {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const sa = { top: parseFloat(cs.paddingTop) || 0, right: parseFloat(cs.paddingRight) || 0, bottom: parseFloat(cs.paddingBottom) || 0, left: parseFloat(cs.paddingLeft) || 0 };
+    probe.remove();
+    return sa;
+}
+
+// Límites válidos para el top-left del FAB: dentro del viewport con margen, sin
+// invadir safe-areas ni la barra de tabs inferior del cliente (.bottom-nav).
+function jfabBounds() {
+    const fab = _jfabGet();
+    const w = (fab && fab.offsetWidth) || 64;
+    const h = (fab && fab.offsetHeight) || 64;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const sa = jfabSafeAreas();
+    let bottomReserve = 0;
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) {
+        const cs = getComputedStyle(nav);
+        if (cs.display !== 'none' && cs.visibility !== 'hidden') {
+            const r = nav.getBoundingClientRect();
+            // Barra fija pegada abajo que ocupa el ancho: reservamos su alto.
+            if (r.height > 0 && r.bottom >= vh - 1.5 && r.top >= vh * 0.4) bottomReserve = r.height;
+        }
+    }
+    const minX = sa.left + JAIME_FAB_MARGEN;
+    const maxX = vw - w - sa.right - JAIME_FAB_MARGEN;
+    const minY = sa.top + JAIME_FAB_MARGEN;
+    const maxY = vh - h - sa.bottom - bottomReserve - JAIME_FAB_MARGEN;
+    return { w, h, vw, vh, minX: Math.min(minX, maxX), maxX, minY: Math.min(minY, maxY), maxY };
+}
+
+function jfabAplicarTransform() {
+    const fab = _jfabGet();
+    if (!fab) return;
+    fab.style.transform = `translate(${Math.round(_jfabX)}px, ${Math.round(_jfabY)}px)` + (_jfabArrastrando ? ' scale(1.08)' : '');
+}
+
+function jfabSetPos(x, y, animar) {
+    const fab = _jfabGet();
+    if (!fab) return;
+    _jfabX = x; _jfabY = y;
+    if (animar) fab.classList.add('jaime-fab--snap');
+    jfabAplicarTransform();
+    if (animar) setTimeout(() => { const f = _jfabGet(); if (f) f.classList.remove('jaime-fab--snap'); }, 300);
+}
+
+function jfabLeerPos() {
+    try {
+        const raw = localStorage.getItem(JAIME_FAB_POS_KEY);
+        if (!raw) return null;
+        const p = JSON.parse(raw);
+        if (p && (p.lado === 'left' || p.lado === 'right') && typeof p.y === 'number') return p;
+    } catch (e) {}
+    return null;
+}
+
+function jfabGuardarPos(lado, y) {
+    try { localStorage.setItem(JAIME_FAB_POS_KEY, JSON.stringify({ lado, y })); } catch (e) {}
+}
+
+function jfabXYdesdeLado(lado, y, b) {
+    return { x: lado === 'left' ? b.minX : b.maxX, y: Math.min(Math.max(y, b.minY), b.maxY) };
+}
+
+// Ancla la burbuja proactiva al FAB: si el FAB se movió de su esquina por
+// defecto, la burbuja se coloca junto a él (inline left/top) y se oculta la
+// colita fija; si sigue en su sitio, se restauran los estilos CSS por defecto.
+function anclarBurbujaAlFab() {
+    const fab = _jfabGet();
+    const b = document.getElementById('jaime-burbuja');
+    if (!fab || !b || b.hasAttribute('hidden')) return;
+    if (!_jfabTransformActivo) {
+        b.style.left = ''; b.style.right = ''; b.style.top = ''; b.style.bottom = '';
+        b.classList.remove('jaime-burbuja--libre');
+        return;
+    }
+    const r = fab.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const bw = b.offsetWidth, bh = b.offsetHeight;
+    const gap = 10;
+    let top = r.top - bh - gap;
+    if (top < 8) top = Math.min(r.bottom + gap, vh - bh - 8);   // si no entra arriba, va debajo
+    const centro = r.left + r.width / 2;
+    let left = centro < vw / 2 ? r.left : r.right - bw;         // alinea al lado del FAB
+    left = Math.min(Math.max(left, 8), vw - bw - 8);
+    b.style.left = left + 'px'; b.style.right = 'auto';
+    b.style.top = top + 'px'; b.style.bottom = 'auto';
+    b.classList.add('jaime-burbuja--libre');
+}
+
+function setupJaimeFabArrastrable() {
+    if (_jfabDragBound) return;
+    const fab = _jfabGet();
+    if (!fab) return;
+    _jfabDragBound = true;
+
+    // Restaurar posición guardada (si la hay) tras el primer layout. Si no hay,
+    // el FAB conserva su posición CSS por defecto hasta que se arrastre.
+    requestAnimationFrame(() => {
+        const saved = jfabLeerPos();
+        if (!saved) return;
+        jfabAsegurarTransform();
+        const b = jfabBounds();
+        const p = jfabXYdesdeLado(saved.lado, saved.y, b);
+        jfabSetPos(p.x, p.y, false);
+    });
+
+    let pointerId = null, startX = 0, startY = 0, grabDX = 0, grabDY = 0, longTimer = null;
+
+    const entrarArrastre = () => {
+        if (_jfabArrastrando) return;
+        jfabAsegurarTransform();
+        _jfabArrastrando = true;
+        fab.classList.add('jaime-fab--drag');
+        jfabAplicarTransform();
+    };
+
+    fab.addEventListener('pointerdown', (e) => {
+        if (pointerId !== null) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        pointerId = e.pointerId;
+        startX = e.clientX; startY = e.clientY;
+        const r = fab.getBoundingClientRect();
+        grabDX = e.clientX - r.left; grabDY = e.clientY - r.top;
+        _jfabArrastrando = false;
+        try { fab.setPointerCapture(pointerId); } catch (er) {}
+        longTimer = setTimeout(entrarArrastre, JAIME_FAB_LONGPRESS_MS);
+    });
+
+    fab.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== pointerId) return;
+        if (!_jfabArrastrando) {
+            if (Math.hypot(e.clientX - startX, e.clientY - startY) <= JAIME_FAB_UMBRAL) return;
+            clearTimeout(longTimer);
+            entrarArrastre();
+        }
+        const b = jfabBounds();
+        _jfabX = Math.min(Math.max(e.clientX - grabDX, b.minX), b.maxX);
+        _jfabY = Math.min(Math.max(e.clientY - grabDY, b.minY), b.maxY);
+        jfabAplicarTransform();
+        e.preventDefault();
+    });
+
+    const soltar = (e) => {
+        if (e.pointerId !== pointerId) return;
+        clearTimeout(longTimer);
+        try { fab.releasePointerCapture(pointerId); } catch (er) {}
+        pointerId = null;
+        if (_jfabArrastrando) {
+            _jfabArrastrando = false;
+            fab.classList.remove('jaime-fab--drag');
+            const b = jfabBounds();
+            const centro = _jfabX + b.w / 2;
+            const lado = centro < b.vw / 2 ? 'left' : 'right';
+            const p = jfabXYdesdeLado(lado, _jfabY, b);
+            jfabSetPos(p.x, p.y, true);
+            jfabGuardarPos(lado, p.y);
+            anclarBurbujaAlFab();  // si la burbuja está abierta, la reubica junto al FAB
+            // El click que sigue al soltar NO debe togglear la burbuja.
+            _jfabSupressClick = true;
+            setTimeout(() => { _jfabSupressClick = false; }, 60);
+        }
+    };
+    fab.addEventListener('pointerup', soltar);
+    fab.addEventListener('pointercancel', soltar);
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(jfabReclamp, 120);
+    });
+}
+
+// Re-clamp en resize/rotación. Si el FAB nunca se movió, no tocamos nada (su
+// CSS por defecto ya es responsive).
+function jfabReclamp() {
+    if (!_jfabTransformActivo) return;
+    const b = jfabBounds();
+    const saved = jfabLeerPos();
+    if (saved) {
+        const p = jfabXYdesdeLado(saved.lado, saved.y, b);
+        jfabSetPos(p.x, p.y, false);
+        if (p.y !== saved.y) jfabGuardarPos(saved.lado, p.y);
+    } else {
+        jfabSetPos(Math.min(Math.max(_jfabX, b.minX), b.maxX), Math.min(Math.max(_jfabY, b.minY), b.maxY), false);
+    }
+    anclarBurbujaAlFab();
+}
+
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
     if (!fab) return;
+    setupJaimeFabArrastrable(); // arrastre + persistencia (idempotente)
 
-    // Bind del FAB (toggle) y del ✕ — idempotente (onclick reasignado).
+    // Bind del FAB (toggle) y del ✕ — idempotente (onclick reasignado). Si el
+    // click viene de soltar un arrastre, se ignora (no togglea la burbuja).
     fab.onclick = () => {
+        if (_jfabSupressClick) { _jfabSupressClick = false; return; }
         const b = document.getElementById('jaime-burbuja');
         if (!b) return;
         if (b.hasAttribute('hidden')) abrirBurbujaJaime();
@@ -1487,6 +1718,10 @@ function bindJaimeChat() {
 function abrirChatJaime() {
     const panel = document.getElementById('jaime-chat');
     if (!panel) return;
+    // El FAB se oculta mientras el chat está abierto (como hasta ahora). Ahora
+    // que puede estar en cualquier posición, lo ocultamos explícitamente en vez
+    // de fiarnos del solapamiento por z-index.
+    document.getElementById('jaime-fab')?.setAttribute('hidden', '');
     panel.removeAttribute('hidden');
     // Primera apertura de la sesión (historial vacío) → cargar la conversación
     // guardada del perro. Reapertura (ya hay mensajes) → mostrar lo que hay.
@@ -1590,6 +1825,8 @@ async function cargarHistorialJaime() {
 function cerrarChatJaime() {
     // No borra el historial: al reabrir sigue la charla de la sesión.
     document.getElementById('jaime-chat')?.setAttribute('hidden', '');
+    // Devolvemos el FAB (conserva su posición arrastrada, guardada en el transform).
+    document.getElementById('jaime-fab')?.removeAttribute('hidden');
 }
 
 function pintarMsgJaime(role, texto) {
