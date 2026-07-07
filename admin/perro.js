@@ -197,10 +197,12 @@ function formatearEdadMeses(meses) {
     if (meses == null) return null;
     const n = Number(meses);
     if (!Number.isFinite(n) || n < 0) return null;
-    if (n < 24) return `${n} ${n === 1 ? 'mes' : 'meses'}`;
-    const anios = n / 12;
-    if (Number.isInteger(anios)) return `${anios} ${anios === 1 ? 'año' : 'años'}`;
-    return `${anios.toFixed(1).replace('.', ',')} años`;
+    if (n < 12) return `${n} ${n === 1 ? 'mes' : 'meses'}`;
+    const anios = Math.floor(n / 12);
+    const rem = n % 12;
+    const parteAnios = `${anios} ${anios === 1 ? 'año' : 'años'}`;
+    if (rem === 0) return parteAnios;
+    return `${parteAnios} y ${rem} ${rem === 1 ? 'mes' : 'meses'}`;
 }
 
 function formatearPesoKg(kg) {

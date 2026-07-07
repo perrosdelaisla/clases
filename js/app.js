@@ -5155,7 +5155,9 @@ function formatearEdadPerro(perro) {
         const m = perro.edad_meses;
         if (m < 12) return `${m} ${m === 1 ? 'mes' : 'meses'}`;
         const años = Math.floor(m / 12);
-        return `${años} ${años === 1 ? 'año' : 'años'}`;
+        const rem = m % 12;
+        const parteAnios = `${años} ${años === 1 ? 'año' : 'años'}`;
+        return rem === 0 ? parteAnios : `${parteAnios} y ${rem} ${rem === 1 ? 'mes' : 'meses'}`;
     }
     return perro.edad || '';
 }
