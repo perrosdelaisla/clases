@@ -1246,7 +1246,11 @@ function jfabAsegurarTransform() {
     // Por si algún día el FAB tuviera animación de entrada con fill: la cortamos
     // para que no pise el transform inline (lección 1344f4f).
     fab.style.animation = 'none';
-    fab.style.left = '0'; fab.style.top = '0'; fab.style.right = 'auto'; fab.style.bottom = 'auto';
+    // Reanclaje a top-left (0,0) VÍA CLASE (no inline): así translate(_jfabX,_jfabY)
+    // con coords de viewport posiciona bien, en vez de sumarse sobre el right/bottom
+    // del CSS por defecto y salirse de pantalla. El clamp de jfabBounds/jfabXYdesdeLado
+    // ya trabaja en coords absolutas de viewport, que encajan con esta base (0,0).
+    fab.classList.add('jaime-fab--libre');
     _jfabTransformActivo = true;
     jfabAplicarTransform();
 }

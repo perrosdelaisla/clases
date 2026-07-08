@@ -621,6 +621,13 @@
    arriba, así que no interfiere. Al soltar: snap animado al borde. */
 .home .jaime-fab.jaime-fab--drag{ transition:none; opacity:.9; cursor:grabbing; }
 .home .jaime-fab.jaime-fab--snap{ transition:transform .28s cubic-bezier(.22,1,.36,1); }
+/* Modo posicionable: reanclamos el FAB a top-left (0,0) para que el
+   transform:translate() en coordenadas de viewport lo coloque bien. Sin esta
+   clase, ese translate se sumaría SOBRE el anclaje right/bottom del CSS por
+   defecto y mandaría el FAB fuera de pantalla → el clamp lo devolvía siempre
+   al borde derecho (bug del snap que no persistía). Especificidad (0,3,0) para
+   ganarle al anclaje base sin depender de estilos inline. */
+.home .jaime-fab.jaime-fab--libre{ left:0; top:0; right:auto; bottom:auto; }
 .home .jaime-fab img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 /* "zzz" flotante: decorativo, solo en estado dormido. Nunca intercepta clicks. */
