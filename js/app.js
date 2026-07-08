@@ -1356,23 +1356,23 @@ function setupJaimeFabArrastrable() {
     if (!fab) return;
     _jfabDragBound = true;
 
-    // Restaurar posición guardada (si la hay) tras el primer layout. Si no hay,
-    // el FAB conserva su posición CSS por defecto hasta que se arrastre.
-    requestAnimationFrame(() => {
-        const saved = jfabLeerPos();
-        if (saved) {
-            jfabAsegurarTransform();
-            const b = jfabBounds();
-            const p = jfabXYdesdeLado(saved.lado, saved.y, b);
-            jfabSetPos(p.x, p.y, false);
-        }
-        // Si la burbuja/bienvenida ya está visible al cargar, la re-anclamos a la
-        // posición YA restaurada del FAB. Ataca la carrera: antes se anclaba antes
-        // de la restauración y quedaba en la esquina vieja. Sin posición guardada,
-        // anclarBurbujaAlFab restaura los estilos por defecto (burbuja pegada al
-        // FAB en su sitio de siempre), así que el caso HOME sigue igual.
-        anclarBurbujaAlFab();
-    });
+    // Restaurar la posición guardada de forma SÍNCRONA (no en rAF): así
+    // _jfabTransformActivo y el transform del FAB quedan listos ANTES de que se
+    // muestre/ancle cualquier burbuja (mostrarBienvenidaJaime corre justo después
+    // del setup). Evita la carrera por la que la bienvenida se pintaba en la
+    // esquina por defecto. Si no hay posición guardada, el FAB conserva su anclaje
+    // CSS por defecto hasta que se arrastre (caso HOME intacto).
+    const saved = jfabLeerPos();
+    if (saved) {
+        fab.getBoundingClientRect();   // fuerza layout por si offsetWidth diera 0
+        jfabAsegurarTransform();
+        const b = jfabBounds();
+        const p = jfabXYdesdeLado(saved.lado, saved.y, b);
+        jfabSetPos(p.x, p.y, false);
+    }
+    // Fallback: si la burbuja se muestra un instante después, re-anclarla ya
+    // sobre la posición restaurada (early-return si está oculta).
+    requestAnimationFrame(anclarBurbujaAlFab);
 
     let pointerId = null, startX = 0, startY = 0, grabDX = 0, grabDY = 0, longTimer = null;
 
