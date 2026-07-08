@@ -1234,7 +1234,6 @@ let _jfabX = 0, _jfabY = 0;         // top-left aplicado vía transform
 let _jfabArrastrando = false;
 let _jfabSupressClick = false;      // ignora el click sintético tras arrastrar
 let _jfabTransformActivo = false;   // false = conserva su posición CSS por defecto
-let _jfabMovidoPorUsuario = false;  // true solo si el usuario arrastró el FAB en ESTA sesión
 let _jfabDragBound = false;
 
 function _jfabGet() { return document.getElementById('jaime-fab'); }
@@ -1325,39 +1324,31 @@ function jfabXYdesdeLado(lado, y, b) {
     return { x: lado === 'left' ? b.minX : b.maxX, y: Math.min(Math.max(y, b.minY), b.maxY) };
 }
 
-// Ancla la burbuja proactiva al FAB: si el FAB se movió de su esquina por
-// defecto, la burbuja se coloca junto a él (inline left/top) y se oculta la
-// colita fija; si sigue en su sitio, se restauran los estilos CSS por defecto.
+// Ancla la burbuja al FAB SIEMPRE que se muestra: la coloca DEBAJO del FAB, con
+// la colita hacia arriba apuntando al botón (esté el FAB movido o en su sitio).
+// Si no entra debajo (FAB muy abajo), cae ENCIMA con la colita hacia abajo.
 function anclarBurbujaAlFab() {
     const fab = _jfabGet();
     const b = document.getElementById('jaime-burbuja');
     if (!fab || !b || b.hasAttribute('hidden')) return;
-    // Solo anclamos con left/top inline si el usuario ARRASTRÓ el FAB en ESTA
-    // sesión. Al cargar (aunque haya posición guardada y _jfabTransformActivo sea
-    // true por la restauración), la bienvenida respeta su CSS (right:16px → derecha).
-    if (!_jfabMovidoPorUsuario) {
-        // Quitamos TODO estilo inline del modo libre para que vuelva a mandar el
-        // CSS. removeProperty (no asignar '') garantiza que el right del CSS se
-        // reaplique en vez de quedar un valor resuelto pegado.
-        b.style.removeProperty('left');
-        b.style.removeProperty('top');
-        b.style.removeProperty('right');
-        b.style.removeProperty('bottom');
-        b.classList.remove('jaime-burbuja--libre');
-        return;
-    }
     const r = fab.getBoundingClientRect();
     const vw = window.innerWidth, vh = window.innerHeight;
     const bw = b.offsetWidth, bh = b.offsetHeight;
-    const gap = 10;
-    let top = r.top - bh - gap;
-    if (top < 8) top = Math.min(r.bottom + gap, vh - bh - 8);   // si no entra arriba, va debajo
-    const centro = r.left + r.width / 2;
-    let left = centro < vw / 2 ? r.left : r.right - bw;         // alinea al lado del FAB
+    const gap = 8;
+    // Preferimos la burbuja DEBAJO del FAB (colita hacia arriba).
+    let abajo = true;
+    let top = r.bottom + gap;
+    if (top + bh > vh - 8) {                 // no entra debajo → fallback: encima
+        abajo = false;
+        top = Math.max(r.top - bh - gap, 8);
+    }
+    // Alineamos el borde derecho de la burbuja con el del FAB; clamp al viewport.
+    let left = r.right - bw;
     left = Math.min(Math.max(left, 8), vw - bw - 8);
     b.style.left = left + 'px'; b.style.right = 'auto';
     b.style.top = top + 'px'; b.style.bottom = 'auto';
-    b.classList.add('jaime-burbuja--libre');
+    // Colita: hacia arriba si la burbuja quedó debajo del FAB; hacia abajo si encima.
+    b.classList.toggle('jaime-burbuja--arriba', abajo);
 }
 
 function setupJaimeFabArrastrable() {
@@ -1432,7 +1423,6 @@ function setupJaimeFabArrastrable() {
         pointerId = null;
         if (_jfabArrastrando) {
             _jfabArrastrando = false;
-            _jfabMovidoPorUsuario = true;   // el usuario movió el FAB: la burbuja ya se ancla a él
             fab.classList.remove('jaime-fab--drag');
             const b = jfabBounds();
             const centro = _jfabX + b.w / 2;

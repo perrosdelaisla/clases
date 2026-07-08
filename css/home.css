@@ -670,11 +670,9 @@
   padding:14px 14px 13px; display:flex; flex-direction:column; gap:9px;
 }
 .home .jaime-burbuja[hidden]{ display:none; }
-/* Cuando el FAB se ha arrastrado, la burbuja se ancla dinámicamente junto a él
-   (left/top inline); la colita fija ya no apunta bien, así que se oculta. */
-.home .jaime-burbuja--libre::after,
-.home .jaime-burbuja--libre::before{ display:none; }
-/* Colita: triángulo apuntando hacia abajo-derecha (al FAB). */
+/* Colita por defecto: triángulo en el borde INFERIOR apuntando hacia abajo (para
+   la burbuja colocada ENCIMA del FAB — caso fallback). La burbuja se ancla por su
+   borde derecho al FAB, así que la colita va cerca del borde derecho. */
 .home .jaime-burbuja::after{
   content:''; position:absolute; right:24px; bottom:-8px;
   width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent;
@@ -684,6 +682,17 @@
   content:''; position:absolute; right:23px; bottom:-10px;
   width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent;
   border-top:9px solid var(--c-hair-2);
+}
+/* Burbuja anclada por JS DEBAJO del FAB: la colita pasa al borde SUPERIOR,
+   apuntando hacia ARRIBA (al FAB que queda encima). Especificidad mayor que la
+   base, así que gana sin importar el orden. */
+.home .jaime-burbuja--arriba::after{
+  top:-8px; bottom:auto;
+  border-top:none; border-bottom:8px solid var(--c-surface);
+}
+.home .jaime-burbuja--arriba::before{
+  top:-10px; bottom:auto;
+  border-top:none; border-bottom:9px solid var(--c-hair-2);
 }
 .home .jaime-burbuja__texto{
   margin:0; padding-right:18px; font-family:var(--body); font-size:14px; line-height:1.5; color:var(--c-text);
