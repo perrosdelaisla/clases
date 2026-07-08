@@ -1332,7 +1332,14 @@ function anclarBurbujaAlFab() {
     const b = document.getElementById('jaime-burbuja');
     if (!fab || !b || b.hasAttribute('hidden')) return;
     if (!_jfabTransformActivo) {
-        b.style.left = ''; b.style.right = ''; b.style.top = ''; b.style.bottom = '';
+        // FAB en su posición por defecto: quitamos TODO estilo inline del modo
+        // libre para que vuelva a mandar el CSS (right:16px → burbuja a la derecha,
+        // junto al FAB). removeProperty (no asignar '') garantiza que el valor
+        // resuelto no quede pegado y el right del CSS se reaplique.
+        b.style.removeProperty('left');
+        b.style.removeProperty('top');
+        b.style.removeProperty('right');
+        b.style.removeProperty('bottom');
         b.classList.remove('jaime-burbuja--libre');
         return;
     }
