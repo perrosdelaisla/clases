@@ -1360,11 +1360,18 @@ function setupJaimeFabArrastrable() {
     // el FAB conserva su posición CSS por defecto hasta que se arrastre.
     requestAnimationFrame(() => {
         const saved = jfabLeerPos();
-        if (!saved) return;
-        jfabAsegurarTransform();
-        const b = jfabBounds();
-        const p = jfabXYdesdeLado(saved.lado, saved.y, b);
-        jfabSetPos(p.x, p.y, false);
+        if (saved) {
+            jfabAsegurarTransform();
+            const b = jfabBounds();
+            const p = jfabXYdesdeLado(saved.lado, saved.y, b);
+            jfabSetPos(p.x, p.y, false);
+        }
+        // Si la burbuja/bienvenida ya está visible al cargar, la re-anclamos a la
+        // posición YA restaurada del FAB. Ataca la carrera: antes se anclaba antes
+        // de la restauración y quedaba en la esquina vieja. Sin posición guardada,
+        // anclarBurbujaAlFab restaura los estilos por defecto (burbuja pegada al
+        // FAB en su sitio de siempre), así que el caso HOME sigue igual.
+        anclarBurbujaAlFab();
     });
 
     let pointerId = null, startX = 0, startY = 0, grabDX = 0, grabDY = 0, longTimer = null;
