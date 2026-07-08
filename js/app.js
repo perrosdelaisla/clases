@@ -1176,8 +1176,11 @@ function pintarBurbujaJaime() {
 function abrirBurbujaJaime() {
     pintarBurbujaJaime();
     document.getElementById('jaime-burbuja')?.removeAttribute('hidden');
-    // Ya visible (medible): la anclamos a la posición actual del FAB por si se movió.
-    anclarBurbujaAlFab();
+    // Anclamos en un doble rAF: recién quitado el hidden, la burbuja aún no tiene
+    // layout recalculado y offsetWidth daría 0/valor viejo → left = fab.right -
+    // offsetWidth la descolocaría a la izquierda. El doble rAF garantiza que corra
+    // tras el pintado, con offsetWidth real.
+    requestAnimationFrame(() => requestAnimationFrame(() => anclarBurbujaAlFab()));
 }
 
 function cerrarBurbujaJaime() {
