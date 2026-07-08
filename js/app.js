@@ -1377,6 +1377,10 @@ function setupJaimeFabArrastrable() {
         jfabAplicarTransform();
     };
 
+    // pointerdown se queda en el FAB (arranca el gesto). El seguimiento
+    // (pointermove) y el fin (pointerup/cancel) van en DOCUMENT, así el arrastre
+    // sigue al cursor aunque el puntero salga del FAB, sin depender de
+    // setPointerCapture (frágil según el hijo que reciba el evento).
     fab.addEventListener('pointerdown', (e) => {
         if (pointerId !== null) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -1385,12 +1389,14 @@ function setupJaimeFabArrastrable() {
         const r = fab.getBoundingClientRect();
         grabDX = e.clientX - r.left; grabDY = e.clientY - r.top;
         _jfabArrastrando = false;
-        try { fab.setPointerCapture(pointerId); } catch (er) {}
         longTimer = setTimeout(entrarArrastre, JAIME_FAB_LONGPRESS_MS);
     });
 
-    fab.addEventListener('pointermove', (e) => {
-        if (e.pointerId !== pointerId) return;
+    // Listeners en document: registrados una sola vez (todo setupJaimeFabArrastrable
+    // corre una vez, gracias al guard _jfabDragBound). Filtran por pointerId, así
+    // que solo actúan durante un arrastre iniciado sobre el FAB.
+    document.addEventListener('pointermove', (e) => {
+        if (pointerId === null || e.pointerId !== pointerId) return;
         if (!_jfabArrastrando) {
             if (Math.hypot(e.clientX - startX, e.clientY - startY) <= JAIME_FAB_UMBRAL) return;
             clearTimeout(longTimer);
@@ -1404,9 +1410,8 @@ function setupJaimeFabArrastrable() {
     });
 
     const soltar = (e) => {
-        if (e.pointerId !== pointerId) return;
+        if (pointerId === null || e.pointerId !== pointerId) return;
         clearTimeout(longTimer);
-        try { fab.releasePointerCapture(pointerId); } catch (er) {}
         pointerId = null;
         if (_jfabArrastrando) {
             _jfabArrastrando = false;
@@ -1423,8 +1428,8 @@ function setupJaimeFabArrastrable() {
             setTimeout(() => { _jfabSupressClick = false; }, 60);
         }
     };
-    fab.addEventListener('pointerup', soltar);
-    fab.addEventListener('pointercancel', soltar);
+    document.addEventListener('pointerup', soltar);
+    document.addEventListener('pointercancel', soltar);
 
     let resizeTimer = null;
     window.addEventListener('resize', () => {

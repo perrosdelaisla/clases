@@ -616,6 +616,9 @@
 }
 .home .jaime-fab:active{ transform:scale(.93); }
 .home .jaime-fab[hidden]{ display:none; }
+/* Los hijos NO capturan el puntero: así el pointerdown siempre cae en el
+   <button> (setPointerCapture es frágil si lo recibe un hijo). */
+.home .jaime-fab img, .home .jaime-zzz{ pointer-events:none; }
 /* Arrastrable: durante el arrastre, seguimiento instantáneo (sin transición) y
    feedback leve. El transform inline (translate + scale) pisa el :active de
    arriba, así que no interfiere. Al soltar: snap animado al borde. */
