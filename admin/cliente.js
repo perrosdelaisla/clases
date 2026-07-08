@@ -194,11 +194,24 @@ function renderPerroCard(p) {
     const edad = formatearEdadMeses(p.edad_meses);
     const meta = [raza, edad].filter(Boolean).join(' · ') || 'Sin datos';
 
+    // Miniatura circular: la inicial vive siempre de fondo; si hay foto_url la
+    // imagen la tapa. onerror la quita si falla → nunca queda imagen rota.
+    const foto = (p.foto_url || '').trim();
+    const inicial = escapeHTML((p.nombre || '').trim().charAt(0).toUpperCase() || '🐶');
+    const miniatura = `
+        <span class="perro-foto" aria-hidden="true">
+            <span class="perro-foto__ini">${inicial}</span>
+            ${foto ? `<img src="${escapeHTML(foto)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+        </span>`;
+
     return `
         <li>
             <a class="perro-card" href="./perro.html?id=${escapeHTML(p.id)}">
-                <span class="perro-nombre">${nombre}</span>
-                <span class="perro-meta">${meta}</span>
+                ${miniatura}
+                <span class="perro-card__texto">
+                    <span class="perro-nombre">${nombre}</span>
+                    <span class="perro-meta">${meta}</span>
+                </span>
             </a>
         </li>
     `;
@@ -832,9 +845,14 @@ async function renderAdminMensajes(clienteId) {
         }
     }
 
+    // El textarea + botón sirven para INICIAR la conversación, no solo responder:
+    // los enlazamos siempre, antes del posible return del caso vacío.
+    bindAdminResponder(clienteId);
+
     if (mensajes.length === 0) {
         feed.innerHTML = `
-            <p style="color: var(--pdli-tinta-3); font-style: italic; padding: 12px 0;">Este cliente aún no ha enviado ningún mensaje.</p>
+            <p style="color: var(--pdli-tinta-3); font-style: italic; padding: 12px 0 4px;">Este cliente aún no ha enviado ningún mensaje.</p>
+            <p style="color: var(--pdli-tinta-3); padding: 0 0 12px;">Puedes escribirle tú primero.</p>
         `;
         return;
     }
@@ -905,24 +923,27 @@ async function renderAdminMensajes(clienteId) {
         });
     }
 
-    const respBtn = document.getElementById('admin-responder-btn');
-    const respTxt = document.getElementById('admin-responder-texto');
-    if (respBtn && respTxt) {
-        respBtn.onclick = async () => {
-            const texto = respTxt.value.trim();
-            if (!texto) return;
-            respBtn.disabled = true;
-            const ok = await responderMensaje(clienteId, texto);
-            respBtn.disabled = false;
-            if (ok) {
-                respTxt.value = '';
-                renderAdminMensajes(clienteId);
-            }
-        };
-    }
-
     requestAnimationFrame(() => {
         const fEl = document.getElementById('admin-mensajes-feed');
         if (fEl) fEl.scrollTop = fEl.scrollHeight;
     });
+}
+
+// Enlaza el textarea + botón de envío. Se llama SIEMPRE (haya o no hilo previo)
+// para que el admin pueda iniciar la conversación, no solo responder.
+function bindAdminResponder(clienteId) {
+    const respBtn = document.getElementById('admin-responder-btn');
+    const respTxt = document.getElementById('admin-responder-texto');
+    if (!respBtn || !respTxt) return;
+    respBtn.onclick = async () => {
+        const texto = respTxt.value.trim();
+        if (!texto) return;
+        respBtn.disabled = true;
+        const ok = await responderMensaje(clienteId, texto);
+        respBtn.disabled = false;
+        if (ok) {
+            respTxt.value = '';
+            renderAdminMensajes(clienteId);
+        }
+    };
 }
