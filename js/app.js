@@ -1234,6 +1234,7 @@ let _jfabX = 0, _jfabY = 0;         // top-left aplicado vía transform
 let _jfabArrastrando = false;
 let _jfabSupressClick = false;      // ignora el click sintético tras arrastrar
 let _jfabTransformActivo = false;   // false = conserva su posición CSS por defecto
+let _jfabMovidoPorUsuario = false;  // true solo si el usuario arrastró el FAB en ESTA sesión
 let _jfabDragBound = false;
 
 function _jfabGet() { return document.getElementById('jaime-fab'); }
@@ -1331,11 +1332,13 @@ function anclarBurbujaAlFab() {
     const fab = _jfabGet();
     const b = document.getElementById('jaime-burbuja');
     if (!fab || !b || b.hasAttribute('hidden')) return;
-    if (!_jfabTransformActivo) {
-        // FAB en su posición por defecto: quitamos TODO estilo inline del modo
-        // libre para que vuelva a mandar el CSS (right:16px → burbuja a la derecha,
-        // junto al FAB). removeProperty (no asignar '') garantiza que el valor
-        // resuelto no quede pegado y el right del CSS se reaplique.
+    // Solo anclamos con left/top inline si el usuario ARRASTRÓ el FAB en ESTA
+    // sesión. Al cargar (aunque haya posición guardada y _jfabTransformActivo sea
+    // true por la restauración), la bienvenida respeta su CSS (right:16px → derecha).
+    if (!_jfabMovidoPorUsuario) {
+        // Quitamos TODO estilo inline del modo libre para que vuelva a mandar el
+        // CSS. removeProperty (no asignar '') garantiza que el right del CSS se
+        // reaplique en vez de quedar un valor resuelto pegado.
         b.style.removeProperty('left');
         b.style.removeProperty('top');
         b.style.removeProperty('right');
@@ -1429,6 +1432,7 @@ function setupJaimeFabArrastrable() {
         pointerId = null;
         if (_jfabArrastrando) {
             _jfabArrastrando = false;
+            _jfabMovidoPorUsuario = true;   // el usuario movió el FAB: la burbuja ya se ancla a él
             fab.classList.remove('jaime-fab--drag');
             const b = jfabBounds();
             const centro = _jfabX + b.w / 2;
