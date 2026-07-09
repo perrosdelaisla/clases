@@ -1663,6 +1663,20 @@ function formatearFechaCorta(fechaISO) {
     return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]} ${y}`;
 }
 
+// Edad en años/meses (misma versión que admin/cliente.js y admin/perro.js):
+// <12 → "N meses"; ≥12 → "X años" exacto o "X años y M meses". null si inválido.
+function formatearEdadMeses(meses) {
+    if (meses == null) return null;
+    const n = Number(meses);
+    if (!Number.isFinite(n) || n < 0) return null;
+    if (n < 12) return `${n} ${n === 1 ? 'mes' : 'meses'}`;
+    const anios = Math.floor(n / 12);
+    const rem = n % 12;
+    const parteAnios = `${anios} ${anios === 1 ? 'año' : 'años'}`;
+    if (rem === 0) return parteAnios;
+    return `${parteAnios} y ${rem} ${rem === 1 ? 'mes' : 'meses'}`;
+}
+
 async function cargarCitas() {
     const list = document.getElementById('citas-list');
     if (!list) return;
@@ -1791,7 +1805,7 @@ function renderUnificado(items) {
             : perros.map((p) => {
                 const partes = [p.nombre];
                 if (p.raza) partes.push(p.raza);
-                if (p.edad_meses != null) partes.push(`${p.edad_meses} m`);
+                { const e = formatearEdadMeses(p.edad_meses); if (e) partes.push(e); }
                 if (p.problematica) partes.push(`— ${p.problematica}`);
                 return partes.join(' · ');
             }).join(' / ');
@@ -1876,7 +1890,7 @@ function renderItemLlamada(ll) {
     const perroPartes = [];
     if (ll.perro_nombre)             perroPartes.push(ll.perro_nombre);
     if (ll.perro_raza)               perroPartes.push(ll.perro_raza);
-    if (ll.perro_edad_meses != null) perroPartes.push(`${ll.perro_edad_meses} m`);
+    { const e = formatearEdadMeses(ll.perro_edad_meses); if (e) perroPartes.push(e); }
     if (ll.perro_peso_kg != null)    perroPartes.push(`${ll.perro_peso_kg} kg`);
     const perroTexto = perroPartes.length ? perroPartes.join(' · ') : '(sin datos de perro)';
 
@@ -1940,7 +1954,7 @@ function abrirModalLlamada(llamadaId) {
     const perroPartes = [];
     if (ll.perro_nombre)             perroPartes.push(ll.perro_nombre);
     if (ll.perro_raza)               perroPartes.push(ll.perro_raza);
-    if (ll.perro_edad_meses != null) perroPartes.push(`${ll.perro_edad_meses} meses`);
+    { const e = formatearEdadMeses(ll.perro_edad_meses); if (e) perroPartes.push(e); }
     if (ll.perro_peso_kg != null)    perroPartes.push(`${ll.perro_peso_kg} kg`);
     document.getElementById('ml-perro').textContent = perroPartes.length ? perroPartes.join(' · ') : '—';
 
