@@ -23,6 +23,7 @@ import {
     textoChipFrecuencia,
     textoObjetivoBajoNombre,
 } from './frecuencia.js?v=1';
+import { activarNotificaciones, estadoNotificaciones } from './push-cliente.js?v=1';
 
 // Intro UCM: duración mínima del telón de arranque para que la animación se
 // vea entera aunque los datos carguen rápido.
@@ -2375,7 +2376,22 @@ function cambiarSaludModo(modo) {
         b.classList.toggle('is-active', activo);
         b.setAttribute('aria-selected', activo ? 'true' : 'false');
     });
-    if (modo === 'susalud') cargarSuSalud();
+    if (modo === 'susalud') {
+        cargarSuSalud();
+        actualizarAvisoPush();
+    }
+}
+
+// Muestra el aviso para activar notificaciones si aún no están activas.
+async function actualizarAvisoPush() {
+    const aviso = document.getElementById('susalud-aviso-push');
+    if (!aviso) return;
+    try {
+        const estado = await estadoNotificaciones();
+        aviso.hidden = (estado === 'activo');
+    } catch (e) {
+        aviso.hidden = true;
+    }
 }
 
 async function cargarSuSalud() {
@@ -2689,6 +2705,23 @@ function bindSuSalud() {
     ['susalud-add', 'susalud-empty-add'].forEach((id) => {
         const btn = document.getElementById(id);
         if (btn) btn.addEventListener('click', () => abrirSheetEvento(null));
+    });
+
+    // Activar notificaciones push desde el aviso de Su salud.
+    document.getElementById('susalud-aviso-activar')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try {
+            await activarNotificaciones();
+            const aviso = document.getElementById('susalud-aviso-push');
+            if (aviso) aviso.hidden = true;
+            mostrarToastSusalud('Notificaciones activadas');
+        } catch (err) {
+            console.error('[push-cliente] activar:', err);
+            mostrarToastSusalud(err.message || 'No se pudieron activar');
+        } finally {
+            btn.disabled = false;
+        }
     });
 
     // Cierre de la hoja.

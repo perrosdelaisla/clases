@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=70">
+    <link rel="stylesheet" href="./css/styles.css?v=71">
     <link rel="stylesheet" href="./css/home.css?v=33">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
@@ -420,6 +420,17 @@
 
                 <!-- ── PANEL SU SALUD (vacunas, medicación, citas, paseos…) ── -->
                 <div class="rutina-modo-panel" id="salud-susalud-vista" hidden>
+                    <div class="susalud-aviso" id="susalud-aviso-push" hidden>
+                        <span class="susalud-aviso__ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+                        </span>
+                        <div class="susalud-aviso__txt">
+                            <p class="susalud-aviso__titulo">Activa las notificaciones</p>
+                            <p class="susalud-aviso__sub">Para no perderte los recordatorios de salud de tu perro.</p>
+                        </div>
+                        <button type="button" class="susalud-aviso__btn" id="susalud-aviso-activar">Activar</button>
+                    </div>
+
                     <div id="susalud-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
 
                     <div id="susalud-empty" class="susalud-empty" hidden>
@@ -1329,6 +1340,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=138"></script>
+    <script type="module" src="./js/app.js?v=139"></script>
 </body>
 </html>
