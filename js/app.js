@@ -2383,15 +2383,68 @@ function cambiarSaludModo(modo) {
 }
 
 // Muestra el aviso para activar notificaciones si aún no están activas.
+// Copys del aviso de notificaciones según el estado / el error de activación.
+const AVISO_PUSH_COPY = {
+    prompt: {
+        titulo: 'Activa las notificaciones',
+        sub: 'Para no perderte los recordatorios de salud de tu perro.',
+        btn: 'Activar',
+    },
+    blocked_push: {
+        titulo: 'Notificaciones bloqueadas',
+        sub: "Tu navegador está bloqueando las notificaciones. Si usas Brave, actívalas en Configuración → Privacidad → 'Usar los servicios de Google para la mensajería push', o abre la app en Chrome.",
+        btn: 'Reintentar',
+    },
+    denied: {
+        titulo: 'Notificaciones bloqueadas',
+        sub: 'Has bloqueado las notificaciones para este sitio. Actívalas desde los ajustes del navegador (icono del candado junto a la dirección).',
+        btn: 'Reintentar',
+    },
+    error: {
+        titulo: 'No se pudieron activar',
+        sub: 'No se han podido activar las notificaciones. Inténtalo de nuevo más tarde.',
+        btn: 'Reintentar',
+    },
+};
+
+function pintarAvisoPush(kind) {
+    const copy = AVISO_PUSH_COPY[kind] || AVISO_PUSH_COPY.prompt;
+    const t = document.getElementById('susalud-aviso-titulo');
+    const s = document.getElementById('susalud-aviso-sub');
+    const b = document.getElementById('susalud-aviso-activar');
+    if (t) t.textContent = copy.titulo;
+    if (s) s.textContent = copy.sub;
+    if (b) b.textContent = copy.btn;
+}
+
+// Clasifica el fallo de activarNotificaciones() para elegir el copy de ayuda.
+function clasificarErrorPush(err) {
+    // Permiso denegado: lo comprobamos por el estado real, no por el mensaje.
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return 'denied';
+    const name = (err && err.name) || '';
+    const msg = (err && err.message) || '';
+    if (name === 'AbortError' || /push service|Registration failed/i.test(msg)) return 'blocked_push';
+    return 'error';
+}
+
 async function actualizarAvisoPush() {
     const aviso = document.getElementById('susalud-aviso-push');
     if (!aviso) return;
+    let estado;
     try {
-        const estado = await estadoNotificaciones();
-        aviso.hidden = (estado === 'activo');
+        estado = await estadoNotificaciones();
     } catch (e) {
         aviso.hidden = true;
+        return;
     }
+    if (estado === 'activo') {
+        // Ya está suscrito: nada que hacer, no mostramos el aviso.
+        aviso.hidden = true;
+        return;
+    }
+    // 'inactivo' / 'no-soportado' → CTA normal; 'bloqueado' → ayuda de permiso.
+    pintarAvisoPush(estado === 'bloqueado' ? 'denied' : 'prompt');
+    aviso.hidden = false;
 }
 
 async function cargarSuSalud() {
@@ -2717,8 +2770,11 @@ function bindSuSalud() {
             if (aviso) aviso.hidden = true;
             mostrarToastSusalud('Notificaciones activadas');
         } catch (err) {
+            // El usuario tiene que VER el motivo: reemplazamos el copy del
+            // propio aviso (no un alert ni solo consola). El aviso ya está
+            // visible; el botón queda disponible para reintentar.
             console.error('[push-cliente] activar:', err);
-            mostrarToastSusalud(err.message || 'No se pudieron activar');
+            pintarAvisoPush(clasificarErrorPush(err));
         } finally {
             btn.disabled = false;
         }
