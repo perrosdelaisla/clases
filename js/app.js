@@ -1605,6 +1605,37 @@ async function cargarAvisoJaime() {
             ctaLabel = '';
             ctaAccion = null;
             break;
+        case 'cita_salud': {
+            // Recordatorio de un evento de salud (vacuna, veterinario, etc.) de hoy o mañana.
+            const ETIQUETA_EVENTO = {
+                vacuna: 'la vacuna',
+                desparasitacion: 'la desparasitación',
+                medicacion: 'la medicación',
+                cita_vet: 'la cita con el veterinario',
+                peluqueria: 'la peluquería',
+                paseo: 'el paseo',
+            };
+            const titulo = (data.titulo || '').trim();
+            const hora = data.hora || '';
+            const tieneHora = !!hora && hora !== '00:00';
+            // 'otro' (o tipo desconocido) no tiene etiqueta fija: el título ES la descripción.
+            const et = ETIQUETA_EVENTO[data.tipo_evento] || null;
+            const nucleo = et || titulo || 'una cita de salud';
+            const detalle = (titulo && et) ? `: ${titulo}` : '';
+
+            if (data.cuando === 'hoy') {
+                texto = tieneHora
+                    ? `Hoy a las ${hora}, ${nombre} tiene ${nucleo}${detalle}. 🐾`
+                    : `Hoy ${nombre} tiene ${nucleo}${detalle}. 🐾`;
+            } else {
+                texto = tieneHora
+                    ? `Mañana a las ${hora}, ${nombre} tiene ${nucleo}${detalle}.`
+                    : `Mañana ${nombre} tiene ${nucleo}${detalle}.`;
+            }
+            ctaLabel = 'Ver en Su salud';
+            ctaAccion = () => { showTab('salud'); cambiarSaludModo('susalud'); };
+            break;
+        }
         default:
             _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
@@ -1616,6 +1647,8 @@ async function cargarAvisoJaime() {
     // · Felicitaciones (racha/regreso/semana_redonda): auto-abren UNA VEZ POR
     //   SEMANA por tipo (flag semanal en localStorage). Si ya saltaron esta
     //   semana, no vuelven a saltar solas (siguen visibles tocando la carita).
+    // · cita_salud (recordatorio de salud): auto-abre UNA VEZ AL DÍA (flag
+    //   diario propio en localStorage).
     // · al_dia: nunca auto-abre.
     // · Resto (informe/mensaje/sin_entrenar/flojo/tarea_floja): gate diario
     //   descartadoHoy, exactamente como antes.
@@ -1639,6 +1672,15 @@ async function cargarAvisoJaime() {
         const claveFelic = 'jaime_felic_' + data.tipo + '_' + inicioSemanaLocalFecha();
         if (!localStorage.getItem(claveFelic)) {
             localStorage.setItem(claveFelic, '1');
+            abrirBurbujaJaime();
+        } else {
+            cerrarBurbujaJaime();
+        }
+    } else if (data.tipo === 'cita_salud') {
+        // Recordatorio de salud: auto-abre sola UNA VEZ AL DÍA (gate diario propio).
+        const claveCita = 'jaime_cita_salud_' + formatearFechaLocal(new Date());
+        if (!localStorage.getItem(claveCita)) {
+            localStorage.setItem(claveCita, '1');
             abrirBurbujaJaime();
         } else {
             cerrarBurbujaJaime();
