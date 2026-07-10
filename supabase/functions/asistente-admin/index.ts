@@ -13,7 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1500;
-const ALLOWED_ORIGINS = ['https://perrosdelaisla.github.io', 'http://localhost:5500'];
+const ALLOWED_ORIGINS = ['https://perrosdelaisla.github.io', 'https://app.perrosdelaisla.es', 'http://localhost:5500'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SYSTEM_PROMPT = `Sos el asistente interno de Charly, adiestrador de Perros de la Isla, dentro de su panel de administración. Te llamás Jaime. Le hablás SOLO a él, en español rioplatense informal (vos, tenés, mirá). Nunca te ve un cliente.

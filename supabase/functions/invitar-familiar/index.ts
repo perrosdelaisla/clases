@@ -27,6 +27,7 @@ const MAIL_REPLY_TO = { email: 'clasesperrosdelaisla@gmail.com', name: 'Perros d
 // Orígenes permitidos para CORS (producción + servidor local de pruebas).
 const ALLOWED_ORIGINS = [
     'https://perrosdelaisla.github.io',
+    'https://app.perrosdelaisla.es',
     'http://localhost:5500',
 ];
 

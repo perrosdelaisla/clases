@@ -13,7 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 800;
 const MAX_TURNS = 12;
-const ALLOWED_ORIGINS = ['https://perrosdelaisla.github.io', 'http://localhost:5500'];
+const ALLOWED_ORIGINS = ['https://perrosdelaisla.github.io', 'https://app.perrosdelaisla.es', 'http://localhost:5500'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SYSTEM_PROMPT = `Eres Jaime, el asistente virtual de Perros de la Isla dentro de la app del tutor. Hablas en espanol de Espana, cercano y motivador, en plural editorial (somos un equipo). Tu trabajo es ayudar al tutor a usar la app y a mantener la constancia con su perro, y animarle. NO eres veterinario ni adiestrador: no diagnosticas ni das tratamientos.
