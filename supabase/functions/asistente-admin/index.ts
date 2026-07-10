@@ -73,6 +73,7 @@ REGLAS INNEGOCIABLES:
 - No generas SQL ni describes la estructura interna de la base de datos.
 - Si el contexto de la pantalla trae cliente_id o perro_id, "este cliente" / "este perro" se refieren a esos identificadores: úsalos directamente sin volver a buscar.
 - Antes de decir que no puedes o de pedir un dato al equipo, INTENTA encadenar herramientas. Ejemplos: para "¿qué clases tengo hoy/mañana?" usa agenda_del_dia (sin fecha = hoy; con fecha YYYY-MM-DD para otro día). Para "¿con quién es la clase siguiente?" usa agenda_del_dia de hoy, localiza la próxima cita por hora respecto a la hora actual y, si necesitas más detalle del cliente o su perro, encadena con perros_de_cliente o citas_de_cliente usando el cliente_id (y perro_id) que devuelve la agenda. Pedir información al equipo es el ÚLTIMO recurso, nunca el primero.
+- Para la agenda de salud física del perro (citas veterinarias, vacunas, medicación, desparasitaciones, peluquería, paseos) usa salud_de_perro: recúrrela cuando pregunten por la salud, los tratamientos, las vacunas, la medicación o las próximas citas veterinarias de un perro.
 - Si una herramienta no devuelve datos (por ejemplo, la agenda del día viene vacía), dilo tal cual ("no hay clases ese día", "no consta"); JAMÁS rellenes con citas, horas, clientes o perros inventados.
 - Ante una pregunta que no puedas responder con las herramientas, dilo; no rellenes con conjeturas.
 
@@ -101,6 +102,7 @@ const TOOLS = [
   { name: 'atencion_pendiente', description: 'Alertas de seguimiento del equipo: perros activos que nunca empezaron la rutina, que se enfriaron (varios días sin entrenar) o con una tarea abandonada. Devuelve total y una lista de ítems (motivo, perro, perro_id, cliente, cliente_id, dias, tarea). Solo lectura. Úsala para cerrar el parte del día o cuando pregunten qué requiere atención.', input_schema: { type: 'object', properties: {} } },
   { name: 'buscar_perro', description: 'Busca perros por coincidencia parcial de nombre. Devuelve perro_id, nombre, raza y su cliente (nombre, cliente_id). Úsala para resolver un perro nombrado por su nombre (por ejemplo antes de guardar o leer una nota); si hay varias coincidencias, hay que desambiguar.', input_schema: { type: 'object', properties: { nombre_parcial: { type: 'string', description: 'Parte del nombre del perro a buscar' } }, required: ['nombre_parcial'] } },
   { name: 'notas_de_perro', description: 'Notas privadas del equipo sobre un perro, de la más reciente a la más antigua (fecha y texto). Solo lectura. Consúltala cuando pregunten qué se sabe de un perro o para recordar algo anotado.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de notas (por defecto 10)' } }, required: ['perro_id'] } },
+  { name: 'salud_de_perro', description: 'Agenda de salud física de un perro: próximas citas del veterinario, vacunas, desparasitaciones, medicación, peluquería y paseos, con su fecha y si ya se realizaron. Úsala cuando pregunten por la salud, los tratamientos, las vacunas, la medicación o las próximas citas veterinarias de un perro.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de eventos (por defecto 20)' } }, required: ['perro_id'] } },
   { name: 'guardar_nota_perro', description: 'Guarda una nota privada del equipo sobre un perro (memoria interna). ÚNICA herramienta de escritura. Úsala SOLO cuando el equipo lo pida explícitamente ("anotá que…", "guardate que…"). El texto se guarda tal cual, máximo 1000 caracteres. Requiere el perro_id exacto (resuélvelo antes con buscar_perro si te dan un nombre).', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, texto: { type: 'string', description: 'La nota a guardar, hasta 1000 caracteres' } }, required: ['perro_id', 'texto'] } },
 ];
 
@@ -302,6 +304,25 @@ async function ejecutarHerramienta(admin: any, userClient: any, nombre: string, 
           .order('creado_en', { ascending: false }).limit(limite);
         if (error) return { error: error.message };
         return { notas: (data ?? []).map((n: any) => ({ fecha: n.creado_en, texto: n.texto })) };
+      }
+      case 'salud_de_perro': {
+        const pid = String(input?.perro_id ?? '');
+        if (!UUID_RE.test(pid)) return { error: 'perro_id inválido' };
+        const limite = clampLimite(input?.limite, 20, 50);
+        const { data, error } = await admin.from('salud_eventos')
+          .select('tipo, titulo, detalle, fecha, realizado, recordatorio_dias_antes')
+          .eq('perro_id', pid)
+          .order('fecha', { ascending: true })
+          .limit(limite);
+        if (error) return { error: error.message };
+        const eventos = (data ?? []).map((e) => ({
+          tipo: e.tipo,
+          titulo: e.titulo,
+          detalle: e.detalle ?? null,
+          fecha: e.fecha,
+          realizado: e.realizado,
+        }));
+        return { eventos };
       }
       case 'guardar_nota_perro': {
         // ÚNICA escritura del asistente: acotada a notas_perro y nada más.
