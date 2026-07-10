@@ -350,7 +350,7 @@ function activarTab(tabRaw, { updateUrl } = {}) {
         activarSubtab(DEFAULT_SUBTAB);
     }
 
-    if (tab === 'salud') renderSaludPerro();
+    if (tab === 'salud') { renderSaludPerro(); cargarSaludPerro(state.perroId); }
     if (tab === 'herramientas') renderHerramientas();
     if (tab === 'historico' && !state.historicoCargado) cargarHistorico();
     if (tab === 'notas' && !state.notasCargado) cargarNotas();
@@ -2185,6 +2185,119 @@ async function renderSaludPerro() {
     `).join('');
 
     contentEl.removeAttribute('hidden');
+}
+
+// ===================== Agenda de salud física (solo lectura) =====================
+//
+// Lista los eventos de salud (salud_eventos) que el TUTOR gestiona desde la app
+// cliente. En el admin es SOLO LECTURA: no se crea, edita ni borra nada aquí.
+
+const SALUD_TIPO_LABEL = {
+    vacuna: 'Vacuna',
+    desparasitacion: 'Desparasitación',
+    medicacion: 'Medicación',
+    cita_vet: 'Cita veterinario',
+    peluqueria: 'Peluquería',
+    paseo: 'Paseo',
+    otro: 'Otro',
+};
+
+function fmtFechaSaludEvento(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const hora = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return `${fecha} · ${hora}`;
+}
+
+function filaSaludEvento(ev) {
+    const tipo = ev.tipo || 'otro';
+    const label = SALUD_TIPO_LABEL[tipo] || 'Otro';
+    const detalle = ev.detalle
+        ? `<div class="salud-ev__detalle">${escapeHTML(ev.detalle)}</div>`
+        : '';
+    return `
+        <li class="salud-ev">
+            <span class="salud-ev__tipo salud-ev__tipo--${tipo}">${label}</span>
+            <div class="salud-ev__main">
+                <div class="salud-ev__titulo">${escapeHTML(ev.titulo || label)}</div>
+                ${detalle}
+            </div>
+            <span class="salud-ev__fecha">${fmtFechaSaludEvento(ev.fecha)}</span>
+        </li>`;
+}
+
+// Token incremental, mismo patrón que _renderSaludToken: evita flicker si se
+// reentra al tab antes de que resuelva la query.
+let _cargarSaludPerroToken = 0;
+
+async function cargarSaludPerro(perroId) {
+    const myToken = ++_cargarSaludPerroToken;
+
+    const loadingEl = document.getElementById('salud-perro-loading');
+    const emptyEl = document.getElementById('salud-perro-empty');
+    const listaEl = document.getElementById('salud-perro-lista');
+    if (!loadingEl || !emptyEl || !listaEl) return;
+
+    loadingEl.removeAttribute('hidden');
+    emptyEl.setAttribute('hidden', '');
+    listaEl.setAttribute('hidden', '');
+
+    if (!perroId) {
+        loadingEl.setAttribute('hidden', '');
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    const { data, error } = await supabase
+        .from('salud_eventos')
+        .select('tipo, titulo, detalle, fecha, realizado')
+        .eq('perro_id', perroId)
+        .order('fecha', { ascending: true });
+
+    if (myToken !== _cargarSaludPerroToken) return;
+
+    loadingEl.setAttribute('hidden', '');
+
+    if (error) {
+        console.error('[admin/perro] error cargando salud_eventos:', error);
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    const eventos = data || [];
+    if (!eventos.length) {
+        emptyEl.removeAttribute('hidden');
+        return;
+    }
+
+    // Hoy a las 00:00 (hora local del equipo): un evento de hoy cuenta como próximo.
+    const hoy0 = new Date();
+    hoy0.setHours(0, 0, 0, 0);
+
+    // Próximos/pendientes: no realizados y con fecha de hoy en adelante (asc).
+    const proximos = eventos.filter((e) => !e.realizado && new Date(e.fecha) >= hoy0);
+    // Realizados/pasados: el resto, del más reciente al más antiguo.
+    const pasados = eventos
+        .filter((e) => e.realizado || new Date(e.fecha) < hoy0)
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    let html = '';
+    if (proximos.length) {
+        html += `<div class="salud-ev-grupo">
+            <div class="salud-ev-grupo__tit">Próximos</div>
+            <ul class="salud-ev-lista">${proximos.map(filaSaludEvento).join('')}</ul>
+        </div>`;
+    }
+    if (pasados.length) {
+        html += `<div class="salud-ev-grupo salud-ev-grupo--pasados">
+            <div class="salud-ev-grupo__tit">Realizados</div>
+            <ul class="salud-ev-lista">${pasados.map(filaSaludEvento).join('')}</ul>
+        </div>`;
+    }
+
+    listaEl.innerHTML = html;
+    listaEl.removeAttribute('hidden');
 }
 
 async function cargarNotas() {

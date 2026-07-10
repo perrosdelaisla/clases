@@ -3375,6 +3375,56 @@ body {
     font-size: 1.05rem;
 }
 
+/* Agenda de salud física (admin/perro, solo lectura) */
+.admin-salud-eventos { margin-top: 1.6rem; }
+.salud-ev-grupo { margin-bottom: 1.1rem; }
+.salud-ev-grupo:last-child { margin-bottom: 0; }
+.salud-ev-grupo__tit {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+}
+.salud-ev-grupo--pasados { opacity: 0.72; }
+
+.salud-ev-lista { list-style: none; padding: 0; margin: 0; }
+.salud-ev {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.7rem;
+    align-items: start;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.85rem;
+}
+.salud-ev:last-child { border-bottom: 0; }
+
+.salud-ev__tipo {
+    align-self: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    white-space: nowrap;
+}
+.salud-ev__tipo--vacuna,
+.salud-ev__tipo--desparasitacion { border-color: #9CB64B; color: #9CB64B; }
+.salud-ev__tipo--medicacion,
+.salud-ev__tipo--cita_vet { border-color: var(--color-red); color: var(--color-red); }
+.salud-ev__tipo--peluqueria,
+.salud-ev__tipo--paseo { border-color: #C4922A; color: #C4922A; }
+
+.salud-ev__main { min-width: 0; }
+.salud-ev__titulo { color: var(--color-text); font-weight: 500; }
+.salud-ev__detalle { color: var(--color-muted); font-size: 0.8rem; margin-top: 0.15rem; }
+.salud-ev__fecha { align-self: center; color: var(--color-muted); white-space: nowrap; font-size: 0.8rem; }
+
 /* ===================== Hidden attribute guard =====================
    Reglas con display: flex/grid (como .placeholder, .empty-ejercicios)
    pisan el atributo HTML `hidden` y dejan los elementos visibles aunque
