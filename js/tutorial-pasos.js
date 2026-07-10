@@ -104,7 +104,7 @@ window.PDLI_TUTORIAL_PASOS = [
         id: 'tab-salud',
         tab: 'rutina',
         selector: '[data-tab-target="salud"]',
-        titulo: 'Salud comportamental',
+        titulo: 'Bienestar y felicidad',
         texto: 'Una evaluación de cinco minutos que nos ayuda a entender mejor a tu perro y a cuidar su bienestar.',
         posicion: 'top',
     },

@@ -384,7 +384,7 @@ function bindEventos() {
     // (El CTA "Reservar próxima clase" se eliminó porque ya está la tab
     // "Reservar" en el bottom-nav — quitado en este PR.)
 
-    // CTA "Empezar →" de la card de evaluación de salud comportamental.
+    // CTA "Empezar →" de la card de evaluación de bienestar y felicidad.
     // Abre La Isla en pestaña nueva con perro_id, cliente_id y origen.
     document.getElementById('btn-iniciar-evaluacion')?.addEventListener('click', abrirLaIsla);
     document.getElementById('btn-iniciar-evaluacion-empty')?.addEventListener('click', abrirLaIsla);
@@ -2165,7 +2165,7 @@ function showTab(name) {
     }
 }
 
-// ===================== Salud comportamental → La Isla =====================
+// ===================== Bienestar y felicidad → La Isla =====================
 
 function abrirLaIsla() {
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
@@ -2610,7 +2610,7 @@ async function renderRutinaPerroSeleccionado() {
     const partesMeta = [perro.raza, formatearEdadPerro(perro)].filter(Boolean);
     heroMeta.textContent = partesMeta.join(' · ');
 
-    // Card "Evalúa la salud comportamental"
+    // Card "Evalúa el bienestar y la felicidad"
     if (cardSalud) {
         if (cardSaludNombre) cardSaludNombre.textContent = perro.nombre || 'tu perro';
         cardSalud.removeAttribute('hidden');

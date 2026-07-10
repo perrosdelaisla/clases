@@ -568,7 +568,7 @@ function bloqueSC(sc) {
   if (!sc || !sc.tiene) {
     return `<div class="jm-pad jm-fade"><div class="jm-eyebrow">Lectura SC</div>
       <div class="jm-noeval"><div class="t">Sin evaluación todavía.</div>
-      <div class="d">No hay evaluación de Salud Comportamental cargada. Cuando la subas, la leo y ajusto las sugerencias.</div></div></div>`;
+      <div class="d">No hay evaluación de bienestar y felicidad cargada. Cuando la subas, la leo y ajusto las sugerencias.</div></div></div>`;
   }
   const flag = sc.bandera ? `<div class="jm-flag"><svg width="11" height="14" viewBox="0 0 11 14"><rect x="0.6" y="0" width="1.6" height="14" fill="var(--jm-rojo)"/><path d="M2.2 0.6 H10 L7.6 3.4 L10 6.2 H2.2 Z" fill="var(--jm-rojo)"/></svg><span>Bandera roja</span></div>` : '';
   const dims = sc.dims.map(d => `

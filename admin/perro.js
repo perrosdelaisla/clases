@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initJaime } from './jaime.js?v=12';
+import { initJaime } from './jaime.js?v=13';
 const supabase = getSupabase('admin');
 import {
     estadoChipFrecuencia,
@@ -2119,7 +2119,7 @@ function escapeHTML(str) {
         .replace(/'/g, '&#39;');
 }
 
-// ===================== Tab Salud Comportamental =====================
+// ===================== Tab Bienestar y felicidad =====================
 
 // Token incremental — mismo patrón que _renderEjerciciosToken: si entre el
 // await del RPC y la pintada llegó otra llamada (cambio de tab rápido,

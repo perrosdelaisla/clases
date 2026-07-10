@@ -1876,7 +1876,7 @@ body {
     margin-top: 0;
 }
 
-/* ===================== Card "Evalúa la salud comportamental" ===================== */
+/* ===================== Card "Evalúa el bienestar y la felicidad" ===================== */
 
 .card-salud {
     background: var(--color-surface);
@@ -1942,7 +1942,7 @@ body {
     background: var(--pdli-oliva-claro);
 }
 
-/* ===================== Tab Salud Comportamental ===================== */
+/* ===================== Tab Bienestar y felicidad ===================== */
 
 .tab-header { margin-bottom: 1rem; }
 .tab-subtitle {
