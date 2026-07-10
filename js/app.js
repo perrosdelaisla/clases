@@ -478,6 +478,7 @@ function bindEventos() {
     bindRutinaModo();
 
     // Toggle Bienestar / Su salud + CRUD de eventos de salud.
+    bindSaludModo();
     bindSuSalud();
 
     // Seguimiento de conductas (calendario-semáforo dentro del perfil).
@@ -2681,7 +2682,7 @@ function mostrarToastSusalud(msg) {
 }
 
 function bindSuSalud() {
-    bindSaludModo();
+    // bindSaludModo() se llama aparte, desde bindEventos (junto a bindRutinaModo).
     susaludRenderChips();
 
     // Abrir hoja de alta.
@@ -3481,6 +3482,9 @@ function renderAnilloSemana() {
 
 function bindRutinaModo() {
     document.querySelectorAll('.rutina-modo__btn').forEach((btn) => {
+        // El toggle de Salud reusa la clase .rutina-modo__btn pero tiene su
+        // propio bind (bindSaludModo). No enganchar sus botones aquí.
+        if (btn.closest('.salud-modo')) return;
         btn.addEventListener('click', () => {
             const modo = btn.dataset.modo;
             if (!modo || state.rutinaModo === modo) return;
@@ -3508,7 +3512,9 @@ function cambiarRutinaModo(modo) {
     if (progresoPanel) progresoPanel.hidden = (modo !== 'progreso');
 
     // 3) Toggle de pills al final, en el mismo frame que el contenido.
+    //    Solo los botones del toggle de Rutina (los de Salud comparten clase).
     document.querySelectorAll('.rutina-modo__btn').forEach((b) => {
+        if (b.closest('.salud-modo')) return;
         const activo = b.dataset.modo === modo;
         b.classList.toggle('is-active', activo);
         b.setAttribute('aria-selected', activo ? 'true' : 'false');
