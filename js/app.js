@@ -82,6 +82,7 @@ const state = {
     sugerenciaActiva: null,  // sugerencia activa en el modo sugerencia del modal
     modificando: null,       // cita en proceso de modificación: { id, fecha_vieja, hora_vieja, numero_clase }
     rutinaModo: 'rutina',    // 'rutina' | 'progreso' — toggle dentro del tab Rutina
+    saludModo: 'bienestar',  // 'bienestar' | 'susalud' — toggle dentro del tab Salud
 };
 
 // Token incremental para detectar renders concurrentes de la rutina.
@@ -475,6 +476,9 @@ function bindEventos() {
 
     // Toggle Rutina / Mi progreso dentro del tab Rutina.
     bindRutinaModo();
+
+    // Toggle Bienestar / Su salud + CRUD de eventos de salud.
+    bindSuSalud();
 
     // Seguimiento de conductas (calendario-semáforo dentro del perfil).
     bindSeguimiento();
@@ -2178,6 +2182,9 @@ function abrirLaIsla() {
 }
 
 async function cargarTabSalud() {
+    // Al (re)entrar al tab Salud, arrancar siempre en Bienestar.
+    if (state.saludModo !== 'bienestar') cambiarSaludModo('bienestar');
+
     const loadingEl = document.getElementById('salud-loading');
     const emptyEl = document.getElementById('salud-empty');
     const contentEl = document.getElementById('salud-content');
@@ -2240,6 +2247,493 @@ function formatearFechaSalud(iso) {
     const fecha = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
     const hora = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     return `${fecha} · ${hora}`;
+}
+
+// ===================== Su salud (eventos de salud) =====================
+//
+// Vista CRUD de eventos de salud del perro (tabla public.salud_eventos).
+// Segundo modo del tab Salud, junto a "Bienestar". Usa el cliente supabase
+// autenticado normal: la RLS filtra por los perros del cliente.
+
+const SUSALUD_TIPOS = [
+    { id: 'vacuna',          label: 'Vacuna' },
+    { id: 'desparasitacion', label: 'Desparasitación' },
+    { id: 'medicacion',      label: 'Medicación' },
+    { id: 'cita_vet',        label: 'Cita veterinaria' },
+    { id: 'peluqueria',      label: 'Peluquería' },
+    { id: 'paseo',           label: 'Paseo' },
+    { id: 'otro',            label: 'Otro' },
+];
+const SUSALUD_TIPO_LABEL = Object.fromEntries(SUSALUD_TIPOS.map((t) => [t.id, t.label]));
+
+// Iconos SVG outline (Lucide) por tipo. Solo el contenido interno del <svg>.
+const SUSALUD_ICONOS = {
+    vacuna: '<path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/>',
+    desparasitacion: '<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>',
+    medicacion: '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
+    cita_vet: '<path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
+    peluqueria: '<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>',
+    paseo: '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
+    otro: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>',
+};
+function susaludIcono(tipo) {
+    const inner = SUSALUD_ICONOS[tipo] || SUSALUD_ICONOS.otro;
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+
+const SUSALUD_AVISOS = [
+    { id: 0, label: 'El mismo día' },
+    { id: 1, label: '1 día antes' },
+    { id: 3, label: '3 días antes' },
+    { id: 7, label: '7 días antes' },
+];
+
+let _susaludCache = [];
+let _susaludEditId = null;     // id del evento en edición, o null (alta)
+let _susaludSheetTipo = 'vacuna';
+let _susaludSheetAviso = 1;
+let _susaludBorrarArmed = false;
+let _susaludToastTimer = null;
+
+function susaludEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+}
+
+// --- Fechas en zona Europe/Madrid ---
+function susaludMadridYMD(date) {
+    // 'YYYY-MM-DD' en Europe/Madrid.
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(date);
+}
+function susaludHora(date) {
+    // 'HH:MM' 24h en Europe/Madrid.
+    return new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(date);
+}
+function susaludDiasDesdeHoy(iso) {
+    const hoy = susaludMadridYMD(new Date());
+    const dia = susaludMadridYMD(new Date(iso));
+    return Math.round((Date.parse(dia + 'T00:00:00Z') - Date.parse(hoy + 'T00:00:00Z')) / 86400000);
+}
+function susaludFechaRelativa(iso) {
+    const d = susaludDiasDesdeHoy(iso);
+    const hora = susaludHora(new Date(iso));
+    if (d === 0) return `Hoy · ${hora}`;
+    if (d === 1) return `Mañana · ${hora}`;
+    if (d >= 2 && d <= 6) return `En ${d} días · ${hora}`;
+    if (d === -1) return `Ayer`;
+    return susaludFechaAbsoluta(iso);
+}
+function susaludFechaAbsoluta(iso) {
+    const anioHoy = susaludMadridYMD(new Date()).slice(0, 4);
+    const anioEv = susaludMadridYMD(new Date(iso)).slice(0, 4);
+    return new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid', day: 'numeric', month: 'short',
+        ...(anioEv !== anioHoy ? { year: 'numeric' } : {}),
+    }).format(new Date(iso)).replace('.', '');
+}
+// Componer un timestamptz (ISO/UTC) a partir de fecha+hora en hora de Madrid,
+// respetando el offset (CET/CEST) que corresponde a ese día.
+function susaludComponerIso(fecha, hora) {
+    const [Y, M, D] = fecha.split('-').map(Number);
+    const [h, mi] = (hora || '09:00').split(':').map(Number);
+    const asUTC = Date.UTC(Y, M - 1, D, h, mi, 0);
+    // Hora de pared en Madrid para ese instante candidato → deducir el offset.
+    const p = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(new Date(asUTC));
+    const g = (t) => Number(p.find((x) => x.type === t).value);
+    const madridAsUTC = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute'), 0);
+    const offset = madridAsUTC - asUTC;
+    return new Date(asUTC - offset).toISOString();
+}
+
+// --- Toggle Bienestar / Su salud ---
+function bindSaludModo() {
+    document.querySelectorAll('[data-salud-modo]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const modo = btn.dataset.saludModo;
+            if (!modo || state.saludModo === modo) return;
+            cambiarSaludModo(modo);
+        });
+    });
+}
+function cambiarSaludModo(modo) {
+    state.saludModo = modo;
+    const bienestar = document.getElementById('salud-bienestar-vista');
+    const susalud = document.getElementById('salud-susalud-vista');
+    if (bienestar) bienestar.hidden = (modo !== 'bienestar');
+    if (susalud) susalud.hidden = (modo !== 'susalud');
+    document.querySelectorAll('[data-salud-modo]').forEach((b) => {
+        const activo = b.dataset.saludModo === modo;
+        b.classList.toggle('is-active', activo);
+        b.setAttribute('aria-selected', activo ? 'true' : 'false');
+    });
+    if (modo === 'susalud') cargarSuSalud();
+}
+
+async function cargarSuSalud() {
+    const loading = document.getElementById('susalud-loading');
+    const empty = document.getElementById('susalud-empty');
+    const content = document.getElementById('susalud-content');
+    if (!loading || !empty || !content) return;
+
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+
+    loading.hidden = false;
+    empty.hidden = true;
+    content.hidden = true;
+
+    if (!perro) {
+        loading.hidden = true;
+        document.getElementById('susalud-empty-perro').textContent = 'tu perro';
+        empty.hidden = false;
+        return;
+    }
+
+    const { data, error } = await supabase
+        .from('salud_eventos')
+        .select('*')
+        .eq('perro_id', perro.id)
+        .order('fecha', { ascending: true });
+
+    loading.hidden = true;
+
+    if (error) {
+        console.error('[susalud] error cargando:', error);
+        _susaludCache = [];
+        document.getElementById('susalud-empty-perro').textContent = perro.nombre || 'tu perro';
+        empty.hidden = false;
+        return;
+    }
+
+    _susaludCache = data || [];
+    renderSuSalud(perro);
+}
+
+function renderSuSalud(perro) {
+    const eventos = _susaludCache;
+    const empty = document.getElementById('susalud-empty');
+    const content = document.getElementById('susalud-content');
+
+    if (!eventos.length) {
+        document.getElementById('susalud-empty-perro').textContent = (perro && perro.nombre) || 'tu perro';
+        empty.hidden = false;
+        content.hidden = true;
+        return;
+    }
+    empty.hidden = true;
+    content.hidden = false;
+
+    const esHoy = (ev) => susaludDiasDesdeHoy(ev.fecha) === 0;
+
+    // HOY: eventos de hoy pendientes, sin medicación (la medicación va aparte).
+    const hoy = eventos.filter((e) => !e.realizado && esHoy(e) && e.tipo !== 'medicacion');
+    // MEDICACIÓN activa: tomas de hoy pendientes.
+    const meds = eventos.filter((e) => !e.realizado && e.tipo === 'medicacion' && esHoy(e));
+    // PRÓXIMOS: días futuros, pendientes (excluye hoy, que ya está arriba).
+    const proximos = eventos
+        .filter((e) => !e.realizado && susaludDiasDesdeHoy(e.fecha) >= 1)
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    // REALIZADOS: más reciente primero.
+    const realizados = eventos
+        .filter((e) => e.realizado)
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    // HOY
+    const hoySec = document.getElementById('susalud-hoy');
+    if (hoy.length) {
+        hoySec.hidden = false;
+        document.getElementById('susalud-hoy-lista').innerHTML = hoy.map((ev) => `
+            <li class="susalud-hoy__item" data-susalud-id="${ev.id}">
+                <span class="susalud-row__ic">${susaludIcono(ev.tipo)}</span>
+                <span class="susalud-row__main">
+                    <span class="susalud-row__titulo">${susaludEsc(ev.titulo || SUSALUD_TIPO_LABEL[ev.tipo])}</span>
+                    <span class="susalud-row__fecha">${susaludHora(new Date(ev.fecha))}</span>
+                </span>
+                <span class="susalud-chip-tipo">${SUSALUD_TIPO_LABEL[ev.tipo] || 'Otro'}</span>
+            </li>`).join('');
+    } else {
+        hoySec.hidden = true;
+    }
+
+    // MEDICACIÓN
+    const medSec = document.getElementById('susalud-medic');
+    if (meds.length) {
+        medSec.hidden = false;
+        document.getElementById('susalud-medic-lista').innerHTML = meds.map((ev) => `
+            <li class="susalud-med" data-susalud-id="${ev.id}">
+                <button type="button" class="susalud-check" data-susalud-check="${ev.id}" aria-label="Marcar como dada">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
+                <span class="susalud-med__main">
+                    <span class="susalud-row__titulo">${susaludEsc(ev.titulo || 'Medicación')}</span>
+                    <span class="susalud-row__fecha">${susaludHora(new Date(ev.fecha))}</span>
+                </span>
+            </li>`).join('');
+    } else {
+        medSec.hidden = true;
+    }
+
+    // PRÓXIMOS
+    const proxSec = document.getElementById('susalud-proximos-sec');
+    if (proximos.length) {
+        proxSec.hidden = false;
+        document.getElementById('susalud-proximos-lista').innerHTML = proximos.map((ev) => susaludRowHtml(ev, false)).join('');
+    } else {
+        proxSec.hidden = true;
+    }
+
+    // REALIZADOS
+    const realSec = document.getElementById('susalud-realizados');
+    if (realizados.length) {
+        realSec.hidden = false;
+        document.getElementById('susalud-realizados-count').textContent = String(realizados.length);
+        document.getElementById('susalud-realizados-lista').innerHTML = realizados.map((ev) => susaludRowHtml(ev, true)).join('');
+    } else {
+        realSec.hidden = true;
+    }
+}
+
+function susaludRowHtml(ev, absoluta) {
+    const label = SUSALUD_TIPO_LABEL[ev.tipo] || 'Otro';
+    const fechaTxt = absoluta ? susaludFechaAbsoluta(ev.fecha) : susaludFechaRelativa(ev.fecha);
+    return `<li class="susalud-row" data-susalud-id="${ev.id}">
+        <span class="susalud-row__ic">${susaludIcono(ev.tipo)}</span>
+        <span class="susalud-row__main">
+            <span class="susalud-row__titulo">${susaludEsc(ev.titulo || label)}</span>
+            <span class="susalud-row__fecha">${fechaTxt}</span>
+        </span>
+        <span class="susalud-chip-tipo">${label}</span>
+    </li>`;
+}
+
+// --- Hoja Nuevo evento / detalle ---
+function susaludRenderChips() {
+    const tipos = document.getElementById('susalud-sheet-tipos');
+    if (tipos) tipos.innerHTML = SUSALUD_TIPOS.map((t) => `
+        <button type="button" class="susalud-chip" data-tipo="${t.id}" role="radio" aria-checked="false">
+            <span class="susalud-chip__ic">${susaludIcono(t.id)}</span>${t.label}
+        </button>`).join('');
+    const aviso = document.getElementById('susalud-sheet-aviso');
+    if (aviso) aviso.innerHTML = SUSALUD_AVISOS.map((a) => `
+        <button type="button" class="susalud-chip susalud-chip--sm" data-aviso="${a.id}" role="radio" aria-checked="false">${a.label}</button>`).join('');
+}
+function susaludSetTipo(tipo) {
+    _susaludSheetTipo = tipo;
+    document.querySelectorAll('#susalud-sheet-tipos .susalud-chip').forEach((c) => {
+        const on = c.dataset.tipo === tipo;
+        c.classList.toggle('is-active', on);
+        c.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+}
+function susaludSetAviso(dias) {
+    _susaludSheetAviso = dias;
+    document.querySelectorAll('#susalud-sheet-aviso .susalud-chip').forEach((c) => {
+        const on = Number(c.dataset.aviso) === dias;
+        c.classList.toggle('is-active', on);
+        c.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+}
+function abrirSheetEvento(evento) {
+    _susaludEditId = evento ? evento.id : null;
+    _susaludBorrarArmed = false;
+    const borrarBtn = document.getElementById('susalud-sheet-borrar');
+    if (borrarBtn) borrarBtn.textContent = 'Borrar';
+
+    document.getElementById('susalud-sheet-title').textContent = evento ? 'Editar evento' : 'Nuevo evento';
+    document.getElementById('susalud-sheet-edit-actions').hidden = !evento;
+
+    const titulo = document.getElementById('susalud-sheet-titulo');
+    const fecha = document.getElementById('susalud-sheet-fecha');
+    const hora = document.getElementById('susalud-sheet-hora');
+    const notas = document.getElementById('susalud-sheet-notas');
+
+    if (evento) {
+        susaludSetTipo(evento.tipo || 'otro');
+        titulo.value = evento.titulo || '';
+        fecha.value = susaludMadridYMD(new Date(evento.fecha));
+        hora.value = susaludHora(new Date(evento.fecha));
+        notas.value = evento.detalle || '';
+        susaludSetAviso(Number(evento.recordatorio_dias_antes) || 0);
+        document.getElementById('susalud-sheet-realizado').hidden = !!evento.realizado;
+    } else {
+        susaludSetTipo('vacuna');
+        titulo.value = '';
+        fecha.value = susaludMadridYMD(new Date());
+        hora.value = '09:00';
+        notas.value = '';
+        susaludSetAviso(1);
+    }
+    abrirSusaludSheet();
+}
+function abrirSusaludSheet() {
+    const scrim = document.getElementById('susalud-sheet-scrim');
+    const sheet = document.getElementById('susalud-sheet');
+    scrim.hidden = false;
+    sheet.hidden = false;
+    requestAnimationFrame(() => {
+        scrim.classList.add('is-open');
+        sheet.classList.add('is-open');
+    });
+    document.body.style.overflow = 'hidden';
+}
+function cerrarSusaludSheet() {
+    const scrim = document.getElementById('susalud-sheet-scrim');
+    const sheet = document.getElementById('susalud-sheet');
+    scrim.classList.remove('is-open');
+    sheet.classList.remove('is-open');
+    document.body.style.overflow = '';
+    setTimeout(() => { scrim.hidden = true; sheet.hidden = true; }, 260);
+}
+
+async function susaludGuardar() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    if (!perro) return;
+
+    const tituloEl = document.getElementById('susalud-sheet-titulo');
+    const fechaEl = document.getElementById('susalud-sheet-fecha');
+    const horaEl = document.getElementById('susalud-sheet-hora');
+    const titulo = tituloEl.value.trim();
+    const fecha = fechaEl.value;
+    const hora = horaEl.value || '09:00';
+    const notas = document.getElementById('susalud-sheet-notas').value.trim();
+
+    if (!titulo) { mostrarToastSusalud('Ponle un título'); tituloEl.focus(); return; }
+    if (!fecha) { mostrarToastSusalud('Elige una fecha'); fechaEl.focus(); return; }
+
+    const payload = {
+        tipo: _susaludSheetTipo,
+        titulo,
+        detalle: notas || null,
+        fecha: susaludComponerIso(fecha, hora),
+        recordatorio_dias_antes: _susaludSheetAviso,
+    };
+
+    const guardarBtn = document.getElementById('susalud-sheet-guardar');
+    guardarBtn.disabled = true;
+
+    let error;
+    if (_susaludEditId) {
+        ({ error } = await supabase.from('salud_eventos').update(payload).eq('id', _susaludEditId));
+    } else {
+        ({ error } = await supabase.from('salud_eventos').insert({
+            ...payload, perro_id: perro.id, creado_por: 'cliente', realizado: false,
+        }));
+    }
+
+    guardarBtn.disabled = false;
+    if (error) {
+        console.error('[susalud] guardar:', error);
+        mostrarToastSusalud('No se pudo guardar');
+        return;
+    }
+    cerrarSusaludSheet();
+    await cargarSuSalud();
+}
+
+async function susaludMarcarRealizado(id) {
+    const { error } = await supabase.from('salud_eventos').update({ realizado: true }).eq('id', id);
+    if (error) {
+        console.error('[susalud] marcar realizado:', error);
+        mostrarToastSusalud('No se pudo actualizar');
+        return;
+    }
+    await cargarSuSalud();
+}
+
+async function susaludBorrar() {
+    if (!_susaludEditId) return;
+    // Confirmación en dos toques (evita borrados accidentales).
+    const borrarBtn = document.getElementById('susalud-sheet-borrar');
+    if (!_susaludBorrarArmed) {
+        _susaludBorrarArmed = true;
+        borrarBtn.textContent = '¿Seguro? Pulsa para borrar';
+        return;
+    }
+    const { error } = await supabase.from('salud_eventos').delete().eq('id', _susaludEditId);
+    if (error) {
+        console.error('[susalud] borrar:', error);
+        mostrarToastSusalud('No se pudo borrar');
+        return;
+    }
+    cerrarSusaludSheet();
+    await cargarSuSalud();
+}
+
+function mostrarToastSusalud(msg) {
+    let el = document.getElementById('susalud-toast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'susalud-toast';
+        el.className = 'susalud-toast';
+        document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('is-open');
+    clearTimeout(_susaludToastTimer);
+    _susaludToastTimer = setTimeout(() => el.classList.remove('is-open'), 2200);
+}
+
+function bindSuSalud() {
+    bindSaludModo();
+    susaludRenderChips();
+
+    // Abrir hoja de alta.
+    ['susalud-add', 'susalud-empty-add'].forEach((id) => {
+        const btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', () => abrirSheetEvento(null));
+    });
+
+    // Cierre de la hoja.
+    document.getElementById('susalud-sheet-x')?.addEventListener('click', cerrarSusaludSheet);
+    document.getElementById('susalud-sheet-scrim')?.addEventListener('click', cerrarSusaludSheet);
+
+    // Selección de chips (tipo / aviso) por delegación.
+    document.getElementById('susalud-sheet-tipos')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-tipo]');
+        if (chip) susaludSetTipo(chip.dataset.tipo);
+    });
+    document.getElementById('susalud-sheet-aviso')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-aviso]');
+        if (chip) susaludSetAviso(Number(chip.dataset.aviso));
+    });
+
+    // Guardar / realizado / borrar.
+    document.getElementById('susalud-sheet-guardar')?.addEventListener('click', susaludGuardar);
+    document.getElementById('susalud-sheet-realizado')?.addEventListener('click', () => {
+        if (!_susaludEditId) return;
+        const id = _susaludEditId;
+        cerrarSusaludSheet();
+        susaludMarcarRealizado(id);
+    });
+    document.getElementById('susalud-sheet-borrar')?.addEventListener('click', susaludBorrar);
+
+    // Filas del contenido: check de medicación o abrir detalle.
+    document.getElementById('susalud-content')?.addEventListener('click', (e) => {
+        const check = e.target.closest('[data-susalud-check]');
+        if (check) { susaludMarcarRealizado(check.dataset.susaludCheck); return; }
+        const row = e.target.closest('[data-susalud-id]');
+        if (row) {
+            const ev = _susaludCache.find((x) => x.id === row.dataset.susaludId);
+            if (ev) abrirSheetEvento(ev);
+        }
+    });
+
+    // Colapsable de realizados.
+    document.getElementById('susalud-realizados-toggle')?.addEventListener('click', () => {
+        const lista = document.getElementById('susalud-realizados-lista');
+        const btn = document.getElementById('susalud-realizados-toggle');
+        const abrir = lista.hidden;
+        lista.hidden = !abrir;
+        btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+        btn.classList.toggle('is-open', abrir);
+    });
 }
 
 // ===================== Tab Rutina =====================

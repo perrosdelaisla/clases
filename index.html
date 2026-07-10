@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=69">
+    <link rel="stylesheet" href="./css/styles.css?v=70">
     <link rel="stylesheet" href="./css/home.css?v=33">
     <link rel="stylesheet" href="./css/home-bridge.css?v=18">
     <link rel="stylesheet" href="./css/seguimiento.css?v=2">
@@ -365,49 +365,147 @@
                 </div>
             </section>
 
-            <!-- ── TAB BIENESTAR Y FELICIDAD ── -->
+            <!-- ── TAB SALUD (toggle: Bienestar | Su salud) ── -->
             <section class="tab-panel" id="tab-salud" data-tab="salud" hidden>
-                <header class="tab-header tab-header--centrado">
-                    <img class="salud-hero-logo" src="https://i.ibb.co/3YNrs9tM/Dise-o-con-cambio-de-negro-a-blanco.png" alt="" loading="lazy" width="64" height="64">
-                    <h2 class="rutina-titulo">Bienestar y felicidad</h2>
-                    <p class="tab-subtitle" id="salud-subtitle">Evaluaciones de tu perro</p>
-                </header>
 
-                <div id="salud-loading" class="placeholder placeholder--soft">
-                    <p>Cargando evaluaciones…</p>
+                <!-- Toggle de modo dentro del tab Salud -->
+                <div class="rutina-modo salud-modo" role="tablist" aria-label="Vista de salud">
+                    <button type="button" class="rutina-modo__btn is-active" data-salud-modo="bienestar" role="tab" aria-selected="true">Bienestar</button>
+                    <button type="button" class="rutina-modo__btn" data-salud-modo="susalud" role="tab" aria-selected="false">Su salud</button>
                 </div>
 
-                <div id="salud-empty" class="empty-salud" hidden>
-                    <p class="empty-msg">Aún no hay evaluaciones de <span id="salud-empty-perro">tu perro</span>.</p>
-                    <button type="button" class="btn-cta" id="btn-iniciar-evaluacion-empty">
-                        Hacer primera evaluación
-                    </button>
-                </div>
+                <!-- ── PANEL BIENESTAR (evaluación existente, sin rediseñar) ── -->
+                <div class="rutina-modo-panel" id="salud-bienestar-vista">
+                    <header class="tab-header tab-header--centrado">
+                        <img class="salud-hero-logo" src="https://i.ibb.co/3YNrs9tM/Dise-o-con-cambio-de-negro-a-blanco.png" alt="" loading="lazy" width="64" height="64">
+                        <h2 class="rutina-titulo">Bienestar y felicidad</h2>
+                        <p class="tab-subtitle" id="salud-subtitle">Evaluaciones de tu perro</p>
+                    </header>
 
-                <div id="salud-content" class="salud-content" hidden>
-                    <section class="salud-card salud-ultima">
-                        <h3 class="salud-card__title">Última evaluación</h3>
-                        <p class="salud-card__fecha" id="salud-ultima-fecha"></p>
-                        <div class="salud-scores" id="salud-ultima-scores"></div>
-                        <p class="salud-card__total">Score total: <strong id="salud-ultima-total">—</strong></p>
+                    <div id="salud-loading" class="placeholder placeholder--soft">
+                        <p>Cargando evaluaciones…</p>
+                    </div>
+
+                    <div id="salud-empty" class="empty-salud" hidden>
+                        <p class="empty-msg">Aún no hay evaluaciones de <span id="salud-empty-perro">tu perro</span>.</p>
+                        <button type="button" class="btn-cta" id="btn-iniciar-evaluacion-empty">
+                            Hacer primera evaluación
+                        </button>
+                    </div>
+
+                    <div id="salud-content" class="salud-content" hidden>
+                        <section class="salud-card salud-ultima">
+                            <h3 class="salud-card__title">Última evaluación</h3>
+                            <p class="salud-card__fecha" id="salud-ultima-fecha"></p>
+                            <div class="salud-scores" id="salud-ultima-scores"></div>
+                            <p class="salud-card__total">Score total: <strong id="salud-ultima-total">—</strong></p>
+                        </section>
+
+                        <section class="salud-card salud-historico">
+                            <h3 class="salud-card__title">Histórico</h3>
+                            <ul class="salud-historico-lista" id="salud-historico-lista"></ul>
+                        </section>
+
+                        <button type="button" class="btn-cta btn-cta--secondary" id="btn-nueva-evaluacion">
+                            Hacer nueva evaluación
+                        </button>
+                    </div>
+
+                    <section class="salud-card" style="text-align:center;margin-top:20px">
+                        <h3 class="salud-card__title">Material recomendado</h3>
+                        <p style="color:var(--color-muted);font-size:14px;margin:8px 0 16px">Los productos que usamos y recomendamos para el bienestar de tu perro: arneses, juguetes, masticables y más.</p>
+                        <a class="btn-cta" href="https://perrosdelaisla.es/recomendados.html" target="_blank" rel="noopener" style="display:block;text-decoration:none;text-align:center">Ver productos recomendados</a>
                     </section>
-
-                    <section class="salud-card salud-historico">
-                        <h3 class="salud-card__title">Histórico</h3>
-                        <ul class="salud-historico-lista" id="salud-historico-lista"></ul>
-                    </section>
-
-                    <button type="button" class="btn-cta btn-cta--secondary" id="btn-nueva-evaluacion">
-                        Hacer nueva evaluación
-                    </button>
                 </div>
 
-                <section class="salud-card" style="text-align:center;margin-top:20px">
-                    <h3 class="salud-card__title">Material recomendado</h3>
-                    <p style="color:var(--color-muted);font-size:14px;margin:8px 0 16px">Los productos que usamos y recomendamos para el bienestar de tu perro: arneses, juguetes, masticables y más.</p>
-                    <a class="btn-cta" href="https://perrosdelaisla.es/recomendados.html" target="_blank" rel="noopener" style="display:block;text-decoration:none;text-align:center">Ver productos recomendados</a>
-                </section>
+                <!-- ── PANEL SU SALUD (vacunas, medicación, citas, paseos…) ── -->
+                <div class="rutina-modo-panel" id="salud-susalud-vista" hidden>
+                    <div id="susalud-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
+
+                    <div id="susalud-empty" class="susalud-empty" hidden>
+                        <div class="susalud-empty__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        </div>
+                        <p class="susalud-empty__msg">Aquí vivirá la salud de <span id="susalud-empty-perro">tu perro</span>: vacunas, medicación, citas del veterinario, peluquería y paseos. Nada se te olvidará.</p>
+                        <button type="button" class="btn-cta" id="susalud-empty-add">Añadir primer evento</button>
+                    </div>
+
+                    <div id="susalud-content" hidden>
+                        <!-- HOY -->
+                        <section class="susalud-hoy" id="susalud-hoy" hidden>
+                            <h3 class="susalud-hoy__title">Hoy</h3>
+                            <ul class="susalud-hoy__lista" id="susalud-hoy-lista"></ul>
+                        </section>
+
+                        <!-- MEDICACIÓN ACTIVA -->
+                        <section class="susalud-sec" id="susalud-medic" hidden>
+                            <h3 class="susalud-sec__title">Medicación activa</h3>
+                            <ul class="susalud-medic-lista" id="susalud-medic-lista"></ul>
+                        </section>
+
+                        <!-- PRÓXIMOS -->
+                        <section class="susalud-sec" id="susalud-proximos-sec" hidden>
+                            <h3 class="susalud-sec__title">Próximos</h3>
+                            <ul class="susalud-lista" id="susalud-proximos-lista"></ul>
+                        </section>
+
+                        <button type="button" class="btn-cta susalud-add-btn" id="susalud-add">+ Añadir</button>
+
+                        <!-- REALIZADOS (colapsable) -->
+                        <section class="susalud-sec susalud-realizados" id="susalud-realizados" hidden>
+                            <button type="button" class="susalud-realizados__toggle" id="susalud-realizados-toggle" aria-expanded="false">
+                                <span>Realizados <span class="susalud-realizados__count" id="susalud-realizados-count">0</span></span>
+                                <svg class="susalud-realizados__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            <ul class="susalud-lista susalud-realizados__lista" id="susalud-realizados-lista" hidden></ul>
+                        </section>
+                    </div>
+                </div>
             </section>
+
+            <!-- Hoja (bottom sheet) Nuevo evento / detalle de Su salud -->
+            <div class="susalud-sheet-scrim" id="susalud-sheet-scrim" hidden></div>
+            <div class="susalud-sheet" id="susalud-sheet" role="dialog" aria-modal="true" aria-labelledby="susalud-sheet-title" hidden>
+                <div class="susalud-sheet__grip"></div>
+                <div class="susalud-sheet__head">
+                    <h3 class="susalud-sheet__title" id="susalud-sheet-title">Nuevo evento</h3>
+                    <button type="button" class="susalud-sheet__x" id="susalud-sheet-x" aria-label="Cerrar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="susalud-sheet__body">
+                    <label class="susalud-field__label">Tipo</label>
+                    <div class="susalud-chips" id="susalud-sheet-tipos" role="radiogroup" aria-label="Tipo de evento"></div>
+
+                    <label class="susalud-field__label" for="susalud-sheet-titulo">Título</label>
+                    <input type="text" class="susalud-input" id="susalud-sheet-titulo" placeholder="Ej. Vacuna de la rabia" maxlength="80" autocomplete="off">
+
+                    <div class="susalud-field-row">
+                        <div class="susalud-field-col">
+                            <label class="susalud-field__label" for="susalud-sheet-fecha">Fecha</label>
+                            <input type="date" class="susalud-input" id="susalud-sheet-fecha">
+                        </div>
+                        <div class="susalud-field-col">
+                            <label class="susalud-field__label" for="susalud-sheet-hora">Hora</label>
+                            <input type="time" class="susalud-input" id="susalud-sheet-hora">
+                        </div>
+                    </div>
+
+                    <label class="susalud-field__label">Avisarme</label>
+                    <div class="susalud-chips" id="susalud-sheet-aviso" role="radiogroup" aria-label="Cuándo avisar"></div>
+
+                    <label class="susalud-field__label" for="susalud-sheet-notas">Notas <span class="susalud-field__opt">(opcional)</span></label>
+                    <textarea class="susalud-input susalud-textarea" id="susalud-sheet-notas" rows="2" maxlength="300" placeholder="Detalles que quieras recordar"></textarea>
+
+                    <div class="susalud-sheet__edit-actions" id="susalud-sheet-edit-actions" hidden>
+                        <button type="button" class="susalud-linkbtn" id="susalud-sheet-realizado">Marcar como realizado</button>
+                        <button type="button" class="susalud-linkbtn susalud-linkbtn--danger" id="susalud-sheet-borrar">Borrar</button>
+                    </div>
+                </div>
+                <div class="susalud-sheet__foot">
+                    <button type="button" class="btn-cta" id="susalud-sheet-guardar">Guardar</button>
+                </div>
+            </div>
 
             <section class="tab-panel" id="tab-mensajes" data-tab="mensajes" hidden>
                 <div class="mensajes-screen">
@@ -1231,6 +1329,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=136"></script>
+    <script type="module" src="./js/app.js?v=137"></script>
 </body>
 </html>
