@@ -83,6 +83,13 @@ EL PARTE DEL DÍA: cuando el equipo te lo pida ("el parte", "el parte del día")
 3. Cierra con atencion_pendiente() para las alertas de seguimiento.
 Formato (TEXTO PLANO, sin markdown, sin viñetas de asterisco): una línea de saludo; luego una entrada por clase con la hora, cliente·perro, qué se trabajó la última vez, la constancia si hay datos, y la zona/ubicación; y al final un bloque "Atención:" SOLO si atencion_pendiente devuelve ítems. Si no hay clases hoy, dilo en una línea y muestra igualmente "Atención" si hay ítems. Todo con datos de herramientas: si un dato no está, se omite; nada inventado.
 
+ESCRIBIR EN LA BASE (citas y datos de contacto):
+- NUNCA escribes sin confirmación explícita del equipo en el mensaje. El flujo es SIEMPRE: buscar → proponer → mostrar → esperar el 'sí' → escribir.
+- Para agendar una clase: 1) resuelve el cliente con buscar_cliente (si hay varias coincidencias, PREGUNTA cuál; no adivines). 2) Llama a proponer_cita. 3) Muestra al equipo, en una línea, qué se va a crear: cliente, día de la semana y fecha, hora, número de clase, zona. Si la respuesta trae 'aviso' (número repetido o choque de agenda), DILO y pregunta antes de seguir. 4) Solo si el equipo confirma ('sí', 'dale', 'confirmo'), llama a crear_cita con los MISMOS datos.
+- El número de clase lo calcula la base, no tú. Si el equipo no dice número, omite numero_clase y usa el que devuelva proponer_cita. Si el equipo dice un número concreto, pásalo, pero si proponer_cita avisa de que ya existe, NO crees: pregunta.
+- Para cambiar dirección, ubicación de Maps, teléfono, email o zona de un cliente: resuelve primero el cliente exacto (buscar_cliente; si hay varios parecidos, PREGUNTA), muestra qué vas a cambiar y espera confirmación antes de llamar a actualizar_contacto_cliente.
+- Tras escribir, confirma en una frase corta lo que quedó guardado.
+
 MEMORIA DEL EQUIPO (notas privadas por perro):
 - Guarda una nota con guardar_nota_perro SOLO cuando el equipo lo pida claramente ("anotá que…", "guardate que…", "recordá que…"). NUNCA por iniciativa propia.
 - Si el perro se nombra por su nombre, resuélvelo antes con buscar_perro. Si hay varios perros con ese nombre o cualquier ambigüedad, PREGUNTA cuál antes de guardar; no adivines el perro_id.
@@ -103,6 +110,9 @@ const TOOLS = [
   { name: 'buscar_perro', description: 'Busca perros por coincidencia parcial de nombre. Devuelve perro_id, nombre, raza y su cliente (nombre, cliente_id). Úsala para resolver un perro nombrado por su nombre (por ejemplo antes de guardar o leer una nota); si hay varias coincidencias, hay que desambiguar.', input_schema: { type: 'object', properties: { nombre_parcial: { type: 'string', description: 'Parte del nombre del perro a buscar' } }, required: ['nombre_parcial'] } },
   { name: 'notas_de_perro', description: 'Notas privadas del equipo sobre un perro, de la más reciente a la más antigua (fecha y texto). Solo lectura. Consúltala cuando pregunten qué se sabe de un perro o para recordar algo anotado.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de notas (por defecto 10)' } }, required: ['perro_id'] } },
   { name: 'salud_de_perro', description: 'Agenda de salud física de un perro: próximas citas del veterinario, vacunas, desparasitaciones, medicación, peluquería y paseos, con su fecha y si ya se realizaron. Úsala cuando pregunten por la salud, los tratamientos, las vacunas, la medicación o las próximas citas veterinarias de un perro.', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, limite: { type: 'integer', description: 'Máximo de eventos (por defecto 20)' } }, required: ['perro_id'] } },
+  { name: 'proponer_cita', description: 'PASO OBLIGATORIO antes de crear una cita: valida y devuelve qué se haría (cliente, día de la semana, número de clase que corresponde, si ese número ya existe, y si choca con otra cita). NO escribe nada. Úsala siempre primero y muéstrale el resultado al equipo para que confirme.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, fecha: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, numero_clase: { type: 'integer', description: 'Solo si el equipo lo indicó explícitamente; si no, se omite y lo calcula la base' } }, required: ['cliente_id','fecha','hora'] } },
+  { name: 'crear_cita', description: 'Crea la cita DEFINITIVAMENTE. Solo se llama DESPUÉS de proponer_cita y de que el equipo haya confirmado explícitamente ("sí", "dale", "confirmo"). Nunca la llames sin esa confirmación previa en el mensaje del usuario.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, fecha: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, numero_clase: { type: 'integer' }, modalidad: { type: 'string', description: 'presencial u online; por defecto presencial' }, zona: { type: 'string' } }, required: ['cliente_id','fecha','hora'] } },
+  { name: 'actualizar_contacto_cliente', description: 'Actualiza datos de contacto de un cliente: dirección, enlace de ubicación en Maps, teléfono, email o zona. Solo cambia los campos que se pasan. Antes de llamarla, confirma con el equipo qué cliente exacto es (si hay varios con nombre parecido, PREGUNTA cuál).', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' }, direccion: { type: 'string' }, ubicacion_maps: { type: 'string' }, telefono: { type: 'string' }, email: { type: 'string' }, zona: { type: 'string' } }, required: ['cliente_id'] } },
   { name: 'guardar_nota_perro', description: 'Guarda una nota privada del equipo sobre un perro (memoria interna). ÚNICA herramienta de escritura. Úsala SOLO cuando el equipo lo pida explícitamente ("anotá que…", "guardate que…"). El texto se guarda tal cual, máximo 1000 caracteres. Requiere el perro_id exacto (resuélvelo antes con buscar_perro si te dan un nombre).', input_schema: { type: 'object', properties: { perro_id: { type: 'string' }, texto: { type: 'string', description: 'La nota a guardar, hasta 1000 caracteres' } }, required: ['perro_id', 'texto'] } },
 ];
 
@@ -323,6 +333,40 @@ async function ejecutarHerramienta(admin: any, userClient: any, nombre: string, 
           realizado: e.realizado,
         }));
         return { eventos };
+      }
+      case 'proponer_cita': {
+        const { data, error } = await admin.rpc('proponer_cita', {
+          p_cliente_id: String(input?.cliente_id ?? ''),
+          p_fecha: String(input?.fecha ?? ''),
+          p_hora: String(input?.hora ?? ''),
+          p_numero_clase: input?.numero_clase ?? null,
+        });
+        if (error) return { error: error.message };
+        return data;
+      }
+      case 'crear_cita': {
+        const { data, error } = await admin.rpc('crear_cita', {
+          p_cliente_id: String(input?.cliente_id ?? ''),
+          p_fecha: String(input?.fecha ?? ''),
+          p_hora: String(input?.hora ?? ''),
+          p_numero_clase: input?.numero_clase ?? null,
+          p_modalidad: input?.modalidad ?? 'presencial',
+          p_zona: input?.zona ?? null,
+        });
+        if (error) return { error: error.message };
+        return data;
+      }
+      case 'actualizar_contacto_cliente': {
+        const { data, error } = await admin.rpc('actualizar_contacto_cliente', {
+          p_cliente_id: String(input?.cliente_id ?? ''),
+          p_direccion: input?.direccion ?? null,
+          p_ubicacion_maps: input?.ubicacion_maps ?? null,
+          p_telefono: input?.telefono ?? null,
+          p_email: input?.email ?? null,
+          p_zona: input?.zona ?? null,
+        });
+        if (error) return { error: error.message };
+        return data;
       }
       case 'guardar_nota_perro': {
         // ÚNICA escritura del asistente: acotada a notas_perro y nada más.
