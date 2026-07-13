@@ -305,51 +305,22 @@ function abrir() {
     </div>`;
   overlay.querySelectorAll('[data-close]').forEach((el) => el.addEventListener('click', cerrar));
   document.body.appendChild(overlay);
-  // Decidir el parte ANTES de pintar: si dispara, su respuesta hace de saludo
-  // y no mostramos el saludo estático encima (un solo "hola").
-  parteAutoActivo = debeDispararParte();
+  // Al abrir, Jaime saluda en LOCAL (sin llamar a la edge function). El parte
+  // del día ya NO se auto-dispara: se pide con el chip "Parte del día".
   renderChatView();
-  if (parteAutoActivo) dispararParteDelDia();
 }
 
-// Parte del día automático: SOLO en la pantalla index del admin, la primera vez
-// que se abre el chat en el día. Dispara internamente "Dame el parte del día"
-// (mensaje oculto: se pinta solo la respuesta de Jaime, como si te recibiera
-// hablando) y guarda la fecha para no repetir hasta mañana.
-const PARTE_FECHA_KEY = 'pdli_jaime_parte_fecha';
 // Marca de que Jaime ya se presentó en el panel (luego saluda breve, sin
 // volver a presentarse).
 const JAIME_ADMIN_PRESENTADO_KEY = 'pdli_jaime_admin_presentado';
 
-// Cuando el parte auto-dispara, el propio parte hace de saludo: no mostramos el
-// saludo estático encima (evita el doble "hola"). Se decide al abrir el chat.
-let parteAutoActivo = false;
 // Saludo calculado UNA sola vez por apertura, para que no cambie entre renders
 // (saludoInicial tiene efecto: marca "presentado" la primera vez).
 let saludoCache = '';
 
-function hoyLocalISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 function primerNombreAdmin() {
   const n = (ctx.adminNombre || '').trim();
   return n ? n.split(/\s+/)[0] : '';
-}
-
-// ¿Toca disparar el parte del día? (index, sin conversación en curso, 1ª del día)
-function debeDispararParte() {
-  if (ctx.pantalla !== 'index') return false;   // ni cliente.html ni perro.html
-  if (chatHist.length) return false;            // no interrumpir una conversación
-  let ultima = null;
-  try { ultima = localStorage.getItem(PARTE_FECHA_KEY); } catch (_e) { /* noop */ }
-  return ultima !== hoyLocalISO();
-}
-
-function dispararParteDelDia() {
-  try { localStorage.setItem(PARTE_FECHA_KEY, hoyLocalISO()); } catch (_e) { /* noop */ }
-  mandarMensaje('Dame el parte del día', true);
 }
 
 // ─────────────────────────── CHAT ───────────────────────────
@@ -402,9 +373,8 @@ function renderChatView() {
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   });
-  // Saludo calculado una vez por apertura. Si el parte auto-dispara, no hay
-  // saludo estático (el parte hace de saludo → un solo "hola").
-  saludoCache = parteAutoActivo ? '' : saludoInicial();
+  // Saludo local, calculado una vez por apertura (sin llamada a la API).
+  saludoCache = saludoInicial();
   renderChat();
   ta?.focus();
 }
