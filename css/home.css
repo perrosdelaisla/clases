@@ -704,7 +704,12 @@
 }
 .home .jaime-burbuja__cta[hidden]{ display:none; }
 .home .jaime-burbuja__cerrar{
-  position:absolute; top:7px; right:7px; width:24px; height:24px;
+  /* Área táctil de 44px (Apple HIG) SIN mover el glifo: antes la caja era de
+     24px anclada en 7px, o sea centrada a 19px de la esquina. Al crecer a 44px
+     el offset pasa a -3px para que el centro siga en esos mismos 19px. */
+  position:absolute; top:-3px; right:-3px;
+  min-width:44px; min-height:44px;
+  display:inline-flex; align-items:center; justify-content:center;
   border:0; background:transparent; cursor:pointer; color:var(--c-text-3);
   font-size:13px; line-height:1; border-radius:50%;
 }
@@ -739,7 +744,11 @@
 .home .jaime-chat__cara{ width:34px; height:34px; object-fit:contain; flex-shrink:0; }
 .home .jaime-chat__nombre{ flex:1; font-family:var(--display); font-size:18px; letter-spacing:1px; color:var(--c-text); }
 .home .jaime-chat__cerrar{
-  width:30px; height:30px; border:0; background:transparent; cursor:pointer;
+  /* Área táctil de 44px (Apple HIG). El .jaime-chat__head es flex con
+     align-items:center, así que absorbe la altura sin descuadrar nada. */
+  min-width:44px; min-height:44px; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:0; background:transparent; cursor:pointer;
   color:var(--c-text-3); font-size:14px; line-height:1; border-radius:50%;
 }
 .home .jaime-chat__cerrar:hover{ color:var(--c-text); }
@@ -781,7 +790,8 @@
 }
 .home .jaime-chat__input{
   flex:1; resize:none; max-height:96px; border:1px solid var(--c-hair-2); border-radius:12px;
-  padding:10px 12px; font-family:var(--body); font-size:14px; line-height:1.4;
+  /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+  padding:10px 12px; font-family:var(--body); font-size:1rem; line-height:1.4;
   background:var(--c-surface); color:var(--c-text);
 }
 .home .jaime-chat__input:focus{ outline:none; border-color:var(--c-oliva); }

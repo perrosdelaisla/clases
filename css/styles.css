@@ -1025,6 +1025,15 @@ body {
    con opacity:1 estable que no depende de que ninguna animación complete. */
 .tab-panel[hidden] { display: none; }
 
+/* Zona segura superior (notch / Dynamic Island). Con viewport-fit=cover el
+   contenido llega hasta el borde físico, así que los tabs arrancaban debajo de
+   la barra de estado (headers y el toggle Bienestar|Su salud quedaban pillados).
+   Excepción: Rutina, cuyo .cover es un hero que sangra bajo la barra de estado a
+   propósito y ya compensa el inset por dentro (.ctop) — si lo empujáramos aquí
+   lo compensaríamos dos veces. En Android env() resuelve a 0px: no cambia nada. */
+.tab-panel { padding-top: env(safe-area-inset-top, 0px); }
+#tab-rutina { padding-top: 0; }
+
 /* ===== Bottom navigation (ANCLA OSCURA) ===== */
 
 .bottom-nav {
@@ -2248,7 +2257,8 @@ body {
     width: 100%; background: var(--color-surface);
     border: 1px solid var(--color-border); border-radius: var(--radius-sm);
     padding: 0.7rem 0.8rem; color: var(--color-text);
-    font-family: var(--font-body); font-size: 0.95rem;
+    /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+    font-family: var(--font-body); font-size: 1rem;
 }
 .susalud-input:focus { outline: none; border-color: var(--pdli-oliva); }
 .susalud-textarea { resize: vertical; min-height: 52px; }
@@ -3045,7 +3055,8 @@ body {
     background: transparent;
     resize: none;
     font-family: var(--pdli-body, 'Inter', sans-serif);
-    font-size: 14px;
+    /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+    font-size: 1rem;
     line-height: 1.5;
     color: var(--pdli-tinta, var(--color-text));
     min-height: 24px;
@@ -3220,7 +3231,8 @@ body {
     background: transparent;
     resize: none;
     font-family: var(--pdli-body, 'Inter', sans-serif);
-    font-size: 14px;
+    /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+    font-size: 1rem;
     line-height: 1.5;
     color: var(--pdli-tinta, var(--color-text));
     min-height: 56px;
@@ -4338,6 +4350,11 @@ body {
     flex: 1;
     max-width: 12rem;
     padding: 0.5rem 1rem;
+    /* Objetivo táctil de 44px (Apple HIG). El glifo no cambia de tamaño. */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid rgba(245, 239, 224, 0.18);
     border-radius: 999px;
     background: transparent;
@@ -4605,7 +4622,8 @@ textarea.input-pdli {
     border: none;
     color: var(--color-text);
     font-family: var(--font-body);
-    font-size: 0.95rem;
+    /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+    font-size: 1rem;
     line-height: 1.3;
     padding: 0.35rem 0.25rem;
     min-width: 0;
@@ -4794,6 +4812,11 @@ html.pdli-tour-open body { overflow: hidden; }
     font-size: 0.9rem; font-weight: 600;
     border: 0; border-radius: 999px;
     padding: 8px 14px; cursor: pointer;
+    /* Objetivo táctil de 44px (Apple HIG): el padding daba ~35px de alto. */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--color-red); color: #fff;
     transition: background 0.15s ease, opacity 0.15s ease;
 }
@@ -4805,6 +4828,8 @@ html.pdli-tour-open body { overflow: hidden; }
     background: transparent;
     color: var(--color-text);
     border: 1px solid rgba(0,0,0,0.12);
+    /* El botón "←" es solo una flecha: sin esto se queda muy estrecho. */
+    min-width: 44px;
 }
 .pdli-tour__btn--ghost:hover, .pdli-tour__btn--ghost:focus-visible {
     background: rgba(0,0,0,0.05); color: var(--color-text);

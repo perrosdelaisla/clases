@@ -193,7 +193,8 @@
 #seguimiento-screen .new-form textarea{
   width:100%; border:1px solid var(--c-hair-2); outline:0; background:var(--c-bg);
   border-radius:10px; padding:11px 12px;
-  font-family:var(--body); font-size:13.5px; line-height:1.45; color:var(--c-text);
+  /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+  font-family:var(--body); font-size:1rem; line-height:1.45; color:var(--c-text);
 }
 #seguimiento-screen .new-form textarea{resize:none;min-height:54px;}
 #seguimiento-screen .new-form input:focus,
@@ -478,7 +479,8 @@
 }
 #seguimiento-screen .note-edit textarea{
   width:100%; border:0; outline:0; background:transparent; resize:none;
-  font-family:var(--body); font-size:13.5px; line-height:1.45; color:var(--c-text);
+  /* 1rem = 16px: por debajo, iOS Safari hace auto-zoom al enfocar. */
+  font-family:var(--body); font-size:1rem; line-height:1.45; color:var(--c-text);
   min-height:40px;
 }
 #seguimiento-screen .note-edit textarea::placeholder{color:var(--c-text-3);font-style:italic;}
