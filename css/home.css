@@ -843,6 +843,7 @@
   text-transform:uppercase;color:var(--c-text-2);
 }
 .home .rutina-volver:hover{color:var(--c-rojo);}
+.home .rutina-volver[hidden]{display:none;}
 
 /* — cabecera de club (chapa + identidad; la fila de controles vive en el hero
      colapsado, ver .cover.is-manada más abajo) — */
