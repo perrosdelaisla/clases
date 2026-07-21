@@ -1636,6 +1636,16 @@ async function cargarAvisoJaime() {
             ctaAccion = () => { showTab('salud'); cambiarSaludModo('susalud'); };
             break;
         }
+        case 'comunicado':
+            texto = data.texto || '';
+            if (data.cta_url) {
+                ctaLabel = data.cta_label || 'Ver más';
+                ctaAccion = () => window.open(data.cta_url, '_blank', 'noopener');
+            } else {
+                ctaLabel = '';
+                ctaAccion = null;
+            }
+            break;
         default:
             _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
