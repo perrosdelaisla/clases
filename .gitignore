@@ -17,3 +17,14 @@ node_modules/
 # Working files de auditoría (locales, no se commitean)
 INVENTARIO_UNIFICACION.md
 DEUDA_TECNICA.md
+
+# Scripts y temporales locales de Charly
+_HOY_*
+_*.bat
+test_*.txt
+
+# Carpeta de diseño local (no va al repo)
+_desing/
+
+# Temporales de Supabase CLI
+supabase/.temp/
