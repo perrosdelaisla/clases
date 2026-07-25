@@ -7921,6 +7921,7 @@ function renderSegLista() {
             ? escapeHTML(s.descripcion.trim())
             : `Desde ${segFechaCorta(s.creado_en)}`;
         return `
+            <div class="track-wrap">
             <button type="button" class="track-card" data-seg-action="open-track" data-id="${escapeHTML(s.id)}">
                 <div class="tc-top">
                     <div class="tc-id">
@@ -7942,7 +7943,11 @@ function renderSegLista() {
                         <span class="ct"><span class="sw" style="background:var(--sem-rojo)"></span>${c.r}</span>
                     </span>
                 </div>
-            </button>`;
+            </button>
+            <button type="button" class="track-del" data-seg-action="del-conducta" data-id="${escapeHTML(s.id)}" aria-label="Eliminar conducta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+            </div>`;
     }).join('');
     const vacio = segState.seguimientos.length
         ? ''
@@ -7953,6 +7958,41 @@ function renderSegLista() {
     cont.innerHTML = intro + cards + vacio + footer;
     if (segState.newFormOpen) document.getElementById('seg-new-nombre')?.focus();
 }
+// Abre la confirmación para eliminar una conducta de seguimiento.
+function segPedirEliminar(id) {
+    const s = segState.seguimientos.find((x) => x.id === id);
+    if (!s) return;
+    segState.delId = id;
+    const nombre = (s.nombre && s.nombre.trim()) || 'esta conducta';
+    const cuerpo = document.getElementById('modal-seg-del-cuerpo');
+    // textContent: el nombre es dato del usuario, evitamos inyección de HTML.
+    if (cuerpo) cuerpo.textContent = `Se eliminará «${nombre}» y todo su historial de seguimiento. Esta acción no se puede deshacer.`;
+    abrirModal('modal-seg-del');
+}
+
+// Confirma el borrado. El backend (RLS DELETE del cliente + FK ON DELETE
+// CASCADE sobre registros_conducta) se encarga del historial.
+async function segEliminarConducta() {
+    const id = segState.delId;
+    if (!id) return;
+    const btn = document.getElementById('modal-seg-del-confirmar');
+    if (btn) btn.disabled = true;
+    try {
+        const { error } = await supabase.from('seguimientos_conducta').delete().eq('id', id);
+        if (error) throw error;
+        segState.delId = null;
+        cerrarModal('modal-seg-del');
+        segMostrarVista('lista');       // por si veníamos del calendario
+        await cargarListaSeguimientos();  // repuebla la lista sin la conducta
+        segToast('Conducta eliminada');
+    } catch (err) {
+        console.error('[seguimiento] eliminar conducta', err);
+        segToast('No se ha podido eliminar');   // no cerramos: puede reintentar
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
 function segNewFormHTML() {
     return `
         <div class="new-form">
@@ -8256,6 +8296,32 @@ function segBack() {
 function bindSeguimiento() {
     document.getElementById('btn-seguimiento')?.addEventListener('click', abrirSeguimiento);
 
+    // Modal de confirmación para eliminar una conducta. Se inyecta aquí (que
+    // corre dentro de bindEventos, ANTES del cableado genérico de cierre por
+    // data-close de las .modal-pdli) para heredar ese cierre y reutilizar el
+    // mismo patrón visual que #modal-cancelar.
+    if (!document.getElementById('modal-seg-del')) {
+        const cont = document.getElementById('modal-cancelar')?.parentElement || document.body;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `
+            <div class="modal-pdli" id="modal-seg-del" hidden aria-hidden="true">
+                <div class="modal-pdli__overlay" data-close></div>
+                <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-seg-del-titulo">
+                    <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                    </button>
+                    <h2 id="modal-seg-del-titulo">¿Eliminar esta conducta?</h2>
+                    <p class="modal-pdli__lead" id="modal-seg-del-cuerpo"></p>
+                    <div class="modal-pdli__actions">
+                        <button type="button" class="btn btn-secondary" data-close>No, dejar</button>
+                        <button type="button" class="btn btn-primary btn-danger" id="modal-seg-del-confirmar">Sí, eliminar</button>
+                    </div>
+                </div>
+            </div>`;
+        cont.appendChild(wrap.firstElementChild);
+        document.getElementById('modal-seg-del-confirmar')?.addEventListener('click', segEliminarConducta);
+    }
+
     const overlay = document.getElementById('seguimiento-screen');
     if (!overlay || overlay.__segBound) return;
     overlay.__segBound = true;
@@ -8265,6 +8331,7 @@ function bindSeguimiento() {
         switch (t.dataset.segAction) {
             case 'back': segBack(); break;
             case 'open-track': abrirCalendario(t.dataset.id); break;
+            case 'del-conducta': segPedirEliminar(t.dataset.id); break;
             case 'new-open': segState.newFormOpen = true; renderSegLista(); break;
             case 'new-cancel': segState.newFormOpen = false; renderSegLista(); break;
             case 'new-save': segCrearConducta(); break;
