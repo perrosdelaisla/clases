@@ -338,6 +338,11 @@
                         <div class="canvas-wrap"><canvas id="chart-origen"></canvas></div>
                         <div class="stats-tabla-desglose" id="tabla-origen"></div>
                     </section>
+                    <section class="stats-card stats-doble">
+                        <h3>Guías (descargas y ventas)</h3>
+                        <div class="canvas-wrap"><canvas id="chart-guias"></canvas></div>
+                        <div class="stats-tabla-desglose" id="tabla-guias"></div>
+                    </section>
                     <section class="stats-card">
                         <h3>Estado de clientes</h3>
                         <div class="canvas-wrap"><canvas id="chart-clientes"></canvas></div>
@@ -848,7 +853,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=80"></script>
+    <script type="module" src="./admin.js?v=81"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {

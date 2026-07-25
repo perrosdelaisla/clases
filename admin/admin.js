@@ -9,7 +9,7 @@
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=14';
-import * as stats from './stats/api.js?v=4';
+import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
@@ -3055,6 +3055,7 @@ async function cargarTodoStats() {
         cargarDoughnut('tema',      () => stats.obtenerDistribucionTema(rango),      'chart-tema',      'tabla-tema'),
         cargarDoughnut('modalidad', () => stats.obtenerDistribucionModalidad(rango), 'chart-modalidad', 'tabla-modalidad'),
         cargarDoughnut('origen',    () => stats.obtenerDistribucionOrigen(rango),    'chart-origen',    'tabla-origen'),
+        cargarDoughnut('guias',     () => stats.obtenerDistribucionGuias(rango),     'chart-guias',     'tabla-guias'),
         cargarDoughnut('clientes',  () => stats.obtenerDistribucionClientes(),       'chart-clientes'),
         cargarBarrasCitasMes(),
         cargarLlamadasStats(rango),

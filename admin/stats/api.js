@@ -171,6 +171,29 @@ export async function obtenerDistribucionTema(rango) {
 }
 
 /**
+ * Doughnut — Guías descargadas/vendidas.
+ * Lee ventas_guias y agrupa dinámicamente por product_name (sin hardcodear
+ * nombres): cada fila es una descarga/venta. Orden por volumen desc.
+ */
+export async function obtenerDistribucionGuias(rango) {
+    let q = supabase.from('ventas_guias').select('product_name, created_at');
+    if (rango?.desde) q = q.gte('created_at', rango.desde);
+    if (rango?.hasta) q = q.lte('created_at', rango.hasta + 'T23:59:59');
+    const { data, error } = await q;
+    if (error) { console.error('guias stats', error); return []; }
+    const filas = data || [];
+    const mapa = new Map();
+    filas.forEach((r) => {
+        const nom = r.product_name || 'Sin nombre';
+        mapa.set(nom, (mapa.get(nom) || 0) + 1);
+    });
+    const buckets = [...mapa.entries()]
+        .map(([label, n]) => ({ label, n }))
+        .sort((a, b) => b.n - a.n);
+    return enriquecerBuckets(buckets, filas.length);
+}
+
+/**
  * Doughnut 2 — Modalidad.
  * Mapping fijo (admin viejo: renderizarDesgloseModalidad línea 827-845).
  * El bucket 'otro' agrupa: !modalidad OR 'derivar' OR 'desconocida'.
