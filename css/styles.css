@@ -5016,3 +5016,91 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
 }
 .btn-wa:hover { background: #1ebe5a; }
 .btn-wa__ic { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Modal "Guías" — lista de guías (Lemon Squeezy)
+   Reutiliza tokens de marca --pdli-*, --color-* y la .badge existente.
+   ═══════════════════════════════════════════════════════════════════ */
+.badge--off {
+    background: rgba(200, 16, 46, 0.12);
+    color: var(--pdli-rojo);
+    border: 1px solid rgba(200, 16, 46, 0.32);
+}
+
+.guias-seccion { margin-top: 18px; }
+.guias-seccion__titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    color: var(--color-text);
+    margin: 0 0 10px;
+}
+
+.guias-list { display: flex; flex-direction: column; gap: 10px; }
+
+.guia-item {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 14px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+.guia-item__nombre {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-text);
+}
+.guia-item__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.guia-item__precio { font-size: 13px; color: var(--color-muted); }
+.guia-item__precio del { opacity: 0.55; margin-right: 4px; }
+.guia-item__precio strong { color: var(--color-green); font-weight: 700; font-size: 15px; }
+
+.guia-item__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: var(--radius-sm);
+    background: var(--pdli-rojo);
+    color: var(--pdli-crema);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.guia-item__cta:hover { background: var(--color-red-dk); }
+.guia-item__cta:active { transform: scale(0.98); }
+.guia-item__cta--free {
+    background: transparent;
+    color: var(--color-green);
+    border: 1px solid var(--color-green);
+}
+.guia-item__cta--free:hover { background: rgba(107, 122, 58, 0.10); }
+
+.guias-aviso {
+    display: flex;
+    gap: 9px;
+    margin: 18px 0 2px;
+    padding: 12px 14px;
+    background: rgba(107, 122, 58, 0.10);
+    border: 1px solid rgba(107, 122, 58, 0.30);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+.guias-aviso strong { color: var(--color-green); font-weight: 700; }
