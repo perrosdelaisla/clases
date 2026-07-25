@@ -485,6 +485,10 @@ function bindEventos() {
     // Seguimiento de conductas (calendario-semáforo dentro del perfil).
     bindSeguimiento();
 
+    // Entrada "Guías" de la rutina clásica → abre el modal existente.
+    document.getElementById('btn-guias-clasica')?.addEventListener('click',
+        () => abrirModal('modal-guias'));
+
     // Modales: cierres genéricos por data-close
     document.querySelectorAll('.modal-pdli').forEach((modal) => {
         modal.addEventListener('click', (e) => {
@@ -3223,6 +3227,7 @@ async function renderRutinaPerroSeleccionado() {
     saldoBox.setAttribute('hidden', '');
     cardSalud?.setAttribute('hidden', '');
     document.getElementById('btn-seguimiento')?.setAttribute('hidden', '');
+    document.getElementById('btn-guias-clasica')?.setAttribute('hidden', '');
     // Bloque de productos recomendados: solo visible en la sub-pestaña Herramientas
     const cardProductosHerr = document.getElementById('card-productos-herramienta');
     if (cardProductosHerr) cardProductosHerr.hidden = (state.rutinaCategoriaActiva !== 'herramienta');
@@ -3254,6 +3259,11 @@ async function renderRutinaPerroSeleccionado() {
 
     // Entrada "Seguimiento de conductas"
     document.getElementById('btn-seguimiento')?.removeAttribute('hidden');
+
+    // Entrada "Guías": accesible para clientes activos y veteranos.
+    const est = state.cliente?.estado;
+    document.getElementById('btn-guias-clasica')?.toggleAttribute('hidden',
+        !(est === 'activo' || est === 'veterano'));
 
     // Foto
     if (perro.foto_url) {
