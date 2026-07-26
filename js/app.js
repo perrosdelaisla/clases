@@ -1345,6 +1345,22 @@ function anclarBurbujaAlFab() {
     const b = document.getElementById('jaime-burbuja');
     if (!fab || !b || b.hasAttribute('hidden')) return;
     const r = fab.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) {
+        // FAB sin layout (arranque): no calcular con ceros. Volver al anclaje
+        // CSS por defecto (abajo-derecha sobre el FAB), que siempre es válido,
+        // y reintentar una vez al frame siguiente por si el layout llega tarde.
+        b.style.left = ''; b.style.right = ''; b.style.top = ''; b.style.bottom = '';
+        b.classList.remove('jaime-burbuja--arriba');
+        if (!anclarBurbujaAlFab._reintento) {
+            anclarBurbujaAlFab._reintento = true;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                anclarBurbujaAlFab._reintento = false;
+                anclarBurbujaAlFab();
+            }));
+        }
+        return;
+    }
+    anclarBurbujaAlFab._reintento = false;
     const vw = window.innerWidth, vh = window.innerHeight;
     const bw = b.offsetWidth, bh = b.offsetHeight;
     const gap = 8;
@@ -1355,6 +1371,10 @@ function anclarBurbujaAlFab() {
         abajo = false;
         top = Math.max(r.top - bh - gap, 8);
     }
+    // Clamp del top a la safe-area superior: la burbuja (y su ✕) nunca deben
+    // quedar bajo el notch/barra de estado de iOS.
+    const saTop = jfabSafeAreas().top;
+    top = Math.max(top, saTop + 8);
     // Alineamos el borde derecho de la burbuja con el del FAB; clamp al viewport.
     let left = r.right - bw;
     left = Math.min(Math.max(left, 8), vw - bw - 8);
