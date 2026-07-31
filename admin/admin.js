@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=14';
+import * as agenda from './agenda/api.js?v=15';
 import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -1791,7 +1791,8 @@ function renderUnificado(items) {
         return;
     }
 
-    list.innerHTML = visibles.map((it) => {
+    // Render por item (idéntico para pasadas y próximas; no se toca la tarjeta).
+    const renderItem = (it) => {
         if (it.kind === 'llamada') return renderItemLlamada(it.llamada);
 
         // ── Cita: lógica calcada de renderCitas (no refactor) ──
@@ -1869,7 +1870,22 @@ function renderUnificado(items) {
                 <div class="cita-acciones">${botones.join('')}</div>
             </div>
         `;
-    }).join('');
+    };
+
+    // Las pasadas (fecha < hoy) van a una sección replegada al inicio, cerrada
+    // por defecto, para no ensuciar el día a día. Las tarjetas se pintan igual.
+    const pasadas  = visibles.filter((it) => esCitaPasada(it.fecha));
+    const proximas = visibles.filter((it) => !esCitaPasada(it.fecha));
+
+    let html = '';
+    if (pasadas.length) {
+        html += '<details class="citas-pasadas">'
+              + '<summary class="citas-pasadas__sum">Clases pasadas (últimos 14 días)</summary>'
+              + `<div class="citas-pasadas__body">${pasadas.map(renderItem).join('')}</div>`
+              + '</details>';
+    }
+    html += proximas.map(renderItem).join('');
+    list.innerHTML = html;
 }
 
 /**

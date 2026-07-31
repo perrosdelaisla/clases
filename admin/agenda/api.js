@@ -312,13 +312,17 @@ export async function eliminarBloqueo(id) {
  * Equivalencia hola/supabase.js: línea 179
  */
 export async function obtenerCitasAdminConReportado() {
-    const hoy = new Date().toISOString().split('T')[0];
+    // Incluir también los últimos 14 días: así las citas pasadas siguen en la
+    // lista y se puede abrir su modal "editar" para añadirles el resumen a
+    // posteriori (el modal de resumen no restringe fecha). toISOString solo se
+    // usa aquí como cota inferior amplia; un desfase de horas no afecta.
+    const desde = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // 1) Citas futuras con clientes y sus perros
+    // 1) Citas (últimos 14 días en adelante) con clientes y sus perros
     const { data: citas, error: errCitas } = await supabase
         .from('citas')
         .select('*, clientes(nombre, telefono, zona, perros(nombre, raza, edad_meses, problematica))')
-        .gte('fecha', hoy)
+        .gte('fecha', desde)
         .order('fecha', { ascending: true })
         .order('hora', { ascending: true });
     if (errCitas) throw errCitas;

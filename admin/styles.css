@@ -3375,6 +3375,24 @@ body {
     font-size: 1.05rem;
 }
 
+/* Agenda: sección replegada de clases pasadas (últimos 14 días) */
+.citas-pasadas { margin-bottom: 14px; }
+.citas-pasadas__sum {
+    cursor: pointer;
+    list-style: none;
+    padding: 9px 12px;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    user-select: none;
+}
+.citas-pasadas__sum::-webkit-details-marker { display: none; }
+.citas-pasadas__sum::before { content: '▸ '; }
+.citas-pasadas[open] .citas-pasadas__sum::before { content: '▾ '; }
+.citas-pasadas__body { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+
 /* Agenda de salud física (admin/perro, solo lectura) */
 .admin-salud-eventos { margin-top: 1.6rem; }
 .salud-ev-grupo { margin-bottom: 1.1rem; }
