@@ -41,6 +41,9 @@
   letter-spacing:0.2px;
   margin-top:4px;
   margin-bottom:2px;
+  /* Velo de contraste: sombra suave para que el slogan sea legible sobre
+     cualquier foto (donde el scrim del cover aporta poco a esta altura). */
+  text-shadow:0 1px 2px rgba(10, 9, 6, 0.55), 0 0 10px rgba(10, 9, 6, 0.45);
 }
 
 /* Complemento del protocolo */
