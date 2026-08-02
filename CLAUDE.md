@@ -10,7 +10,7 @@ Slogan oficial: **"Tu perro merece ser feliz hoy"** (no inventar variantes).
 
 - **Frontend**: Vanilla JS puro. Sin framework, sin build step, sin npm. Solo HTML estático + CSS + JS + Service Worker + `manifest.json`.
 - **Hosting**: GitHub Pages — repo `github.com/perrosdelaisla/clases`, Pages ya activado.
-- **Backend**: Supabase, proyecto `pdli-clases` en `https://bchlhvgddguhjtgfenmo.supabase.co`. La publishable key vive como placeholder en `js/supabase.js` y la rellena Charly manualmente.
+- **Backend**: Supabase, proyecto `pdli-clases` en `https://sydzfwwiruxqaxojymdz.supabase.co`. La publishable key vive como placeholder en `js/supabase.js` y la rellena Charly manualmente.
 - **Auth**: Supabase Auth, email + contraseña.
 - **Notificaciones**: ntfy.sh — pendiente, se integra más adelante.
 - **SDK Supabase**: importado desde CDN como ES module (`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm`).
@@ -18,8 +18,8 @@ Slogan oficial: **"Tu perro merece ser feliz hoy"** (no inventar variantes).
 ## Brand voice
 
 - **Tipografías**: Bebas Neue para titulares (siempre en mayúsculas), Inter para texto corrido.
-- **Colores**: fondo `#111`, rojo principal `#c0392b`, verde acento `#9cb64b`.
-- **Estilo visual**: dark mode minimalista, líneas finas, transiciones cuidadas.
+- **Colores**: rojo principal `#C8102E`, negro `#1A1A1A`, crema `#F5EFE0`, verde acento `#6B7A3A`.
+- **Estilo visual**: tema claro crema, minimalista, editorial, líneas finas, transiciones cuidadas.
 
 ## Reglas de lenguaje (estrictas)
 
