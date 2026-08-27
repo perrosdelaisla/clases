@@ -179,6 +179,13 @@ async function onSesionLista(session) {
     showScreen('loading');
 
     try {
+        // Token vencido al abrir la app tras horas: refrescamos ANTES de
+        // consultar, si no la primera query se va en 401 y caemos en error-vinculo.
+        const expEnSeg = (session?.expires_at || 0) - Math.floor(Date.now() / 1000);
+        if (expEnSeg < 60) {
+            const { data } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
+            if (data?.session) state.session = session = data.session;
+        }
         const usuarioCliente = await cargarUsuarioCliente(session.user.id);
         if (!usuarioCliente) {
             showScreen('error-vinculo');
@@ -1008,16 +1015,25 @@ async function quitarFamiliar(id, nombre) {
 // ===================== Datos =====================
 
 async function cargarUsuarioCliente(authUserId) {
-    const { data, error } = await supabase
-        .from('usuarios_cliente')
-        .select('*')
-        .eq('auth_user_id', authUserId)
-        .maybeSingle();
-    if (error) {
+    for (let intento = 0; intento < 2; intento++) {
+        const { data, error } = await supabase
+            .from('usuarios_cliente')
+            .select('*')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle();
+        if (!error) return data || null;
+        // 401 / JWT vencido en el primer intento: refrescamos y reintentamos.
+        const esAuth = error.code === 'PGRST301'
+            || error.status === 401
+            || /jwt|token|401/i.test(error.message || '');
+        if (esAuth && intento === 0) {
+            await supabase.auth.refreshSession().catch(() => {});
+            continue;
+        }
         console.error('[app] error cargando usuario_cliente:', error);
         throw error;
     }
-    return data || null;
+    return null;
 }
 
 async function cargarPerros() {
