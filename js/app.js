@@ -5,6 +5,7 @@
 //   loading → login → (login-sent) → app
 //   loading → app                                  (sesión activa)
 //   loading → error-vinculo                        (sin usuarios_cliente)
+//   loading → error-carga                          (fallo transitorio de red)
 //
 // Dentro de #screen-app hay 3 tabs:
 //   rutina (default) — perro + ejercicios asignados
@@ -39,6 +40,7 @@ const SCREENS = {
     login: document.getElementById('screen-login'),
     'login-sent': document.getElementById('screen-login-sent'),
     'error-vinculo': document.getElementById('screen-error-vinculo'),
+    'error-carga': document.getElementById('screen-error-carga'),
     welcome: document.getElementById('screen-welcome'),
     'ex-cliente': document.getElementById('screen-ex-cliente'),
     app: document.getElementById('screen-app'),
@@ -234,8 +236,11 @@ async function onSesionLista(session) {
         showScreen('app');
         showTab(state.currentTab);
     } catch (err) {
+        // Error transitorio (red, timeout, un 401 que no llego a recuperarse):
+        // NO es un problema de la cuenta, asi que no mandamos a error-vinculo.
+        // Esa pantalla queda SOLO para el caso real: sin fila en usuarios_cliente.
         console.error('[app] error cargando datos:', err);
-        showScreen('error-vinculo');
+        showScreen('error-carga');
     }
 }
 
@@ -337,6 +342,9 @@ function bindEventos() {
 
     const errorLogout = document.getElementById('error-logout');
     if (errorLogout) errorLogout.addEventListener('click', cerrarSesion);
+
+    const errorCargaReintentar = document.getElementById('error-carga-reintentar');
+    if (errorCargaReintentar) errorCargaReintentar.addEventListener('click', () => location.reload());
 
     // Welcome editorial (primer login)
     const welcomeBtn = document.getElementById('welcome-empezar');

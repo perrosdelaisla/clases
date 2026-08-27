@@ -136,6 +136,25 @@
         </main>
     </section>
 
+    <!-- ── ERROR DE CARGA transitorio (red, timeout): NO es un problema de la
+         cuenta, así que no asustamos con el error-vinculo. Solo reintentar. ── -->
+    <section class="screen" id="screen-error-carga" hidden>
+        <main class="centered centered--narrow">
+            <div class="brand brand--splash">
+                <div class="logo-circle">
+                    <img src="./img/logo.png" alt="" class="logo-circle__img">
+                </div>
+                <div class="brand__text">
+                    <span class="brand__name">PERROS DE LA ISLA</span>
+                    <span class="brand__tagline">Adiestramiento canino profesional</span>
+                </div>
+            </div>
+            <h2 class="title-display">Un momento…</h2>
+            <p class="lead">No hemos podido cargar tus datos. Suele ser cosa de la conexión: comprueba tu wifi o tus datos y vuelve a intentarlo.</p>
+            <button type="button" class="btn btn-primary" id="error-carga-reintentar">Reintentar</button>
+        </main>
+    </section>
+
     <!-- ── EX CLIENTE: portada mínima de bloqueo (sin app, sin datos) ── -->
     <section class="screen" id="screen-ex-cliente" hidden>
         <main class="centered centered--narrow ex-cli">
@@ -1410,6 +1429,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=146"></script>
+    <script type="module" src="./js/app.js?v=147"></script>
 </body>
 </html>
