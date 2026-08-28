@@ -1064,7 +1064,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado')
+        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
