@@ -118,6 +118,16 @@
                     </label>
                     <p class="admin-widget__hint">El cliente podrá elegir UNA clase más. Se limpia solo cuando esa clase pase a realizada.</p>
                 </div>
+
+                <div class="admin-widget admin-widget--grabacion">
+                    <label class="admin-widget__label">Permiso de grabación</label>
+                    <div class="admin-widget__row" style="align-items:center;gap:10px">
+                        <span id="cli-grab-chip" class="grab-chip" style="font-weight:600">—</span>
+                        <button type="button" class="btn-secondary" id="cli-grab-btn" hidden>Pedir permiso</button>
+                    </div>
+                    <p class="admin-widget__hint">El cliente verá en su app un permiso (vía Jaime) para grabar solo la voz del adiestrador y generar su resumen. Solo el titular puede aceptarlo.</p>
+                    <p class="admin-widget__hint" id="cli-grab-fecha" style="margin-top:4px" hidden></p>
+                </div>
             </section>
 
             <section class="detalle-seccion" aria-labelledby="perros-titulo">
@@ -188,6 +198,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./cliente.js?v=31"></script>
+    <script type="module" src="./cliente.js?v=32"></script>
 </body>
 </html>

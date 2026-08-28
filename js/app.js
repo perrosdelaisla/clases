@@ -482,6 +482,7 @@ function bindEventos() {
     bindNotasEjercicio();
     bindTareaLista();
     bindJaimeChat();
+    bindGrabacionCliente();
 
     // Back navigation Android — atrapar el botón atrás físico para cerrar
     // modales / volver a Rutina antes de salir. Idempotente.
@@ -1519,6 +1520,57 @@ function jfabReclamp() {
     anclarBurbujaAlFab();
 }
 
+// ─────────────── Permiso de grabación de la clase (RGPD) ───────────────
+// El admin (Charly) lo pide desde la ficha del cliente (grabacion_estado =
+// 'solicitado'). Jaime se lo muestra al TITULAR con un aviso cuyo CTA abre el
+// diálogo. El estado real lo fija el propio cliente vía RPC segura.
+function mostrarAvisoGrabacion() {
+    _jaimeAvisoActual = {
+        texto: 'Antes de tu próxima clase necesitamos tu permiso para grabar y prepararte el resumen. Solo se graba la voz del adiestrador.',
+        ctaLabel: 'Ver permiso',
+        ctaAccion: abrirModalGrabacion,
+    };
+    abrirBurbujaJaime();
+}
+
+function abrirModalGrabacion() {
+    const chk = document.getElementById('grab-check-input');
+    const btn = document.getElementById('grab-autorizar');
+    if (chk) chk.checked = false;
+    if (btn) btn.disabled = true;
+    abrirModal('modal-grabacion');
+}
+
+async function responderGrabacion(nuevo) {
+    const btnAut = document.getElementById('grab-autorizar');
+    const btnNo = document.getElementById('grab-nogracias');
+    if (btnAut) btnAut.disabled = true;
+    if (btnNo) btnNo.disabled = true;
+    try {
+        const { error } = await supabase.rpc('set_grabacion_consentimiento', { nuevo });
+        if (error) throw error;
+        if (state.cliente) state.cliente.grabacion_estado = nuevo;
+        cerrarModal('modal-grabacion');
+        cerrarBurbujaJaime();
+        _jaimeAvisoActual = null;
+        if (nuevo === 'concedido') segToast('¡Gracias! Ya podemos preparar tu resumen después de la clase.');
+    } catch (e) {
+        console.error('[grabacion] no se pudo guardar el permiso:', e);
+        segToast('No se pudo guardar. Inténtalo de nuevo.');
+        if (btnAut) btnAut.disabled = false;
+        if (btnNo) btnNo.disabled = false;
+    }
+}
+
+function bindGrabacionCliente() {
+    const chk = document.getElementById('grab-check-input');
+    const btnAut = document.getElementById('grab-autorizar');
+    const btnNo = document.getElementById('grab-nogracias');
+    if (chk && btnAut) chk.addEventListener('change', () => { btnAut.disabled = !chk.checked; });
+    if (btnAut) btnAut.addEventListener('click', () => responderGrabacion('concedido'));
+    if (btnNo) btnNo.addEventListener('click', () => responderGrabacion('rechazado'));
+}
+
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
     if (!fab) return;
@@ -1550,6 +1602,13 @@ async function cargarAvisoJaime() {
     }
     // Fuera de la bienvenida, el botón "Ver el tutorial" nunca se muestra.
     document.getElementById('jaime-burbuja__tutorial')?.setAttribute('hidden', '');
+
+    // Permiso de grabación pendiente (solo el titular decide): prioridad sobre
+    // el aviso normal. La X del diálogo pospone (vuelve a salir la próxima vez).
+    if (state.cliente?.grabacion_estado === 'solicitado' && esPrincipal()) {
+        mostrarAvisoGrabacion();
+        return;
+    }
 
     if (!perro) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 

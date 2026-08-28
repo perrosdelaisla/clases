@@ -36,6 +36,7 @@ async function bootstrap() {
     bindInvitarUI();
     bindWidgetPack();
     bindMapsUbicacion();
+    bindGrabacion();
     bindEstadoSelector();
     bindBackNavigation();
 
@@ -149,6 +150,9 @@ function renderCliente(c, tieneUsuario) {
     // Checkbox "habilitar próxima clase" — refleja clase_extra_habilitada
     const extraCheck = document.getElementById('cli-clase-extra');
     if (extraCheck) extraCheck.checked = !!c.clase_extra_habilitada;
+
+    // Widget permiso de grabación
+    renderGrabacion(c);
 
     // Ubicación (Google Maps): botones Abrir/Editar o Añadir según el valor.
     renderMapsUbicacion(c.ubicacion_maps);
@@ -724,6 +728,67 @@ function telefonoParaWhatsapp(raw) {
 // ===================== Toast =====================
 
 let toastTimer = null;
+// ===================== Widget permiso de grabación =====================
+// El admin pide/retira el permiso; el estado real lo fija el cliente desde su
+// app (RPC set_grabacion_consentimiento). Acá solo movemos a 'solicitado' /
+// 'no_solicitado' y mostramos en qué anda. Cambios logueados por trigger.
+const CFG_GRAB = {
+    no_solicitado: { chip: 'Sin pedir',              color: '#6b7280', btn: 'Pedir permiso',      destino: 'solicitado'    },
+    solicitado:    { chip: 'Solicitado \u2014 esperando', color: '#b45309', btn: 'Cancelar solicitud', destino: 'no_solicitado' },
+    concedido:     { chip: 'Concedido \u2713',        color: '#15803d', btn: 'Retirar permiso',    destino: 'no_solicitado' },
+    rechazado:     { chip: 'Rechazado',              color: '#b91c1c', btn: 'Volver a pedir',     destino: 'solicitado'    },
+};
+
+function renderGrabacion(c) {
+    const estado = c.grabacion_estado || 'no_solicitado';
+    const cfg = CFG_GRAB[estado] || CFG_GRAB.no_solicitado;
+    const chip = document.getElementById('cli-grab-chip');
+    const btn = document.getElementById('cli-grab-btn');
+    const fecha = document.getElementById('cli-grab-fecha');
+    if (chip) { chip.textContent = cfg.chip; chip.style.color = cfg.color; }
+    if (btn) { btn.textContent = cfg.btn; btn.dataset.destino = cfg.destino; btn.hidden = false; }
+    if (fecha) {
+        if (c.grabacion_actualizado_en && estado !== 'no_solicitado') {
+            fecha.textContent = 'Última actualización: ' + formatearClienteDesde(c.grabacion_actualizado_en);
+            fecha.hidden = false;
+        } else {
+            fecha.hidden = true;
+        }
+    }
+}
+
+function bindGrabacion() {
+    const btn = document.getElementById('cli-grab-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        if (!state.clienteId) return;
+        const destino = btn.dataset.destino || 'solicitado';
+        const prev = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+        try {
+            const ahora = new Date().toISOString();
+            const { error } = await supabase
+                .from('clientes')
+                .update({ grabacion_estado: destino, grabacion_actualizado_en: ahora })
+                .eq('id', state.clienteId);
+            if (error) throw error;
+            if (state.cliente) {
+                state.cliente.grabacion_estado = destino;
+                state.cliente.grabacion_actualizado_en = ahora;
+                renderGrabacion(state.cliente);
+            }
+            toast('Permiso actualizado');
+        } catch (err) {
+            console.error('[cliente] error permiso grabacion:', err);
+            btn.textContent = prev;
+            toast('No se pudo actualizar', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
 function toast(msg, kind = 'info') {
     const el = document.getElementById('toast');
     if (!el) return;

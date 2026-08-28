@@ -718,6 +718,24 @@
         </div>
     </div>
 
+    <!-- ── Modal permiso de grabación ── -->
+    <div class="modal-pdli" id="modal-grabacion" hidden aria-hidden="true">
+        <div class="modal-pdli__overlay" data-close></div>
+        <div class="modal-pdli__panel" role="dialog" aria-modal="true" aria-labelledby="modal-grabacion-titulo">
+            <button type="button" class="modal-pdli__close" data-close aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+            <h2 id="modal-grabacion-titulo">Permiso para grabar la clase</h2>
+            <p class="modal-pdli__lead">Para poder dejarte un resumen escrito de todo lo que trabajamos, tu adiestrador graba únicamente su propia voz durante la sesión. Usamos ese audio solo para preparar tu resumen y lo eliminamos en cuanto está listo. No grabamos tu voz ni la de ningún otro participante de la clase. Este permiso cubre todas las clases incluidas en tu pack, y puedes retirarlo cuando quieras.</p>
+            <label class="grab-check" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:8px 0 18px">
+                <input type="checkbox" id="grab-check-input" style="margin-top:3px;flex:none">
+                <span>He leído lo anterior y doy mi permiso para grabar la voz del adiestrador en las clases de mi pack.</span>
+            </label>
+            <button type="button" class="btn btn-primary" id="grab-autorizar" disabled>Autorizar</button>
+            <button type="button" id="grab-nogracias" style="display:block;margin:14px auto 0;background:none;border:none;color:#6b7280;text-decoration:underline;cursor:pointer;font:inherit">No, gracias</button>
+        </div>
+    </div>
+
     <!-- ── Modal "Guías" (placeholder Fase 1) ── -->
     <div class="modal-pdli" id="modal-guias" hidden aria-hidden="true">
         <div class="modal-pdli__overlay" data-close></div>
@@ -1429,6 +1447,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=147"></script>
+    <script type="module" src="./js/app.js?v=148"></script>
 </body>
 </html>
