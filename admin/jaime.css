@@ -19,7 +19,7 @@
 
 /* FAB (arrastrable: la posición se aplica por transform desde jaime.js) */
 .jm-fab{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:50;
-  width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;background:transparent;
+  width:76px;height:76px;border-radius:50%;border:none;cursor:pointer;background:transparent;
   display:flex;align-items:center;justify-content:center;touch-action:none;will-change:transform;
   box-shadow:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));
   transition:opacity .2s ease;animation:jmFabIn .3s ease both}
