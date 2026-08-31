@@ -328,9 +328,14 @@
                     </div>
 
                     <div class="rutina-modo-panel" id="progreso-vista" hidden>
-                        <div class="anillo-semana anillo-semana--grande" id="anillo-progreso" hidden aria-label="Cumplimiento de la semana">
-                            <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true"><circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/><circle class="anillo-semana__fill" id="anillo-progreso-fill" cx="50" cy="50" r="44" fill="none" stroke-width="8" stroke-dasharray="276.46" stroke-dashoffset="276.46" transform="rotate(-90 50 50)" stroke-linecap="round"/></svg>
-                            <div class="anillo-semana__center"><span class="anillo-semana__num" id="anillo-progreso-num">0</span><span class="anillo-semana__den" id="anillo-progreso-den">/0</span><span class="anillo-semana__label">cumplidos</span></div>
+                        <div class="isla-semana" id="isla-progreso" hidden aria-label="Progreso de la semana">
+                            <p class="isla-semana__titulo">LA SEMANA DE <span id="isla-progreso-perro"></span></p>
+                            <svg class="isla-semana__svg" id="isla-progreso-svg" viewBox="0 0 220 150" aria-hidden="true"></svg>
+                            <div class="isla-semana__pct"><span id="isla-progreso-pct">0</span><small>%</small></div>
+                            <div class="isla-semana__barra"><i id="isla-progreso-barra"></i></div>
+                            <div class="isla-semana__dias" id="isla-progreso-dias" aria-label="Días con entreno esta semana"></div>
+                            <p class="isla-semana__lema" id="isla-progreso-lema"></p>
+                            <p class="isla-semana__racha" id="isla-progreso-racha" hidden><b id="isla-progreso-racha-n"></b> cuidando la isla</p>
                         </div>
                         <div id="progreso-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
                         <div id="progreso-empty" class="placeholder" hidden><p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p></div>
@@ -1480,6 +1485,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=153"></script>
+    <script type="module" src="./js/app.js?v=154"></script>
 </body>
 </html>

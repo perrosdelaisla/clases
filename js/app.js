@@ -4187,8 +4187,8 @@ const _islaSpotsFrente = _islaSpots(22, 110, 102, 72, 14, 21);
 
 // Pinta la escena completa en el <svg id="isla-semana-svg">.
 // hechos = entrenos totales de la semana; objetivo = Σ mínimos; t = pct 0..1.
-function _islaPintarEscena(hechos, objetivo, t) {
-    const svg = document.getElementById('isla-semana-svg');
+function _islaPintarEscena(hechos, objetivo, t, svgId = 'isla-semana-svg') {
+    const svg = document.getElementById(svgId);
     if (!svg) return;
     const done = t >= 1;
     const extras = Math.max(hechos - objetivo, 0);
@@ -4283,36 +4283,34 @@ function _islaRacha(pctActual) {
     return racha;
 }
 
-function renderAnilloSemana() {
-    const box = document.getElementById('isla-semana');
+// Pinta la isla "La semana de X" en un contenedor. prefix = 'isla-semana'
+// (Rutina) o 'isla-progreso' (Mi progreso). Solo el de Rutina toca el estado
+// ambiental de fondo (_islaSemanaCompleta / aplicarAmbientalAnillo).
+function renderIsla(prefix = 'isla-semana') {
+    const esRutina = (prefix === 'isla-semana');
+    const box = document.getElementById(prefix);
     if (!box) return;
     const { objetivo, hechosTotal, pct } = calcularIslaSemana();
 
     if (objetivo === 0) {
         box.setAttribute('hidden', '');
-        _islaSemanaCompleta = false;
-        aplicarAmbientalAnillo();
+        if (esRutina) { _islaSemanaCompleta = false; aplicarAmbientalAnillo(); }
         return;
     }
     box.removeAttribute('hidden');
 
-    // Nombre del perro en el título.
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    setText('isla-semana-perro', perro?.nombre || 'tu perro');
+    setText(`${prefix}-perro`, perro?.nombre || 'tu perro');
 
-    // Escena completa "De seca a vergel": tierra/agua/nubes según el % y
-    // una pieza de vegetación por entreno (extras en dorado).
-    _islaPintarEscena(hechosTotal, objetivo, Math.min(pct, 1));
+    _islaPintarEscena(hechosTotal, objetivo, Math.min(pct, 1), `${prefix}-svg`);
 
-    // % + barra.
     const pctEntero = Math.min(100, Math.round(pct * 100));
-    setText('isla-semana-pct', String(pctEntero));
-    const barra = document.getElementById('isla-semana-barra');
+    setText(`${prefix}-pct`, String(pctEntero));
+    const barra = document.getElementById(`${prefix}-barra`);
     if (barra) barra.style.width = `${pctEntero}%`;
 
-    // Días lun..dom con huella.
     const marcados = _islaDiasConEntreno();
-    const diasEl = document.getElementById('isla-semana-dias');
+    const diasEl = document.getElementById(`${prefix}-dias`);
     if (diasEl) {
         const letras = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
         diasEl.innerHTML = letras.map((l, i) =>
@@ -4320,28 +4318,29 @@ function renderAnilloSemana() {
         ).join('');
     }
 
-    // Lema + sol.
     const completo = pct >= 1;
     const lema = completo
         ? `¡La isla de ${perro?.nombre || 'tu perro'} floreció esta semana!`
         : _ISLA_LEMAS[Math.min(Math.floor(pct * (_ISLA_LEMAS.length - 1) + (hechosTotal > 0 ? 1 : 0)), _ISLA_LEMAS.length - 1)];
-    setText('isla-semana-lema', hechosTotal === 0 ? _ISLA_LEMAS[0] : lema);
+    setText(`${prefix}-lema`, hechosTotal === 0 ? _ISLA_LEMAS[0] : lema);
 
-    // Racha de semanas.
     const racha = _islaRacha(pct);
-    const rachaEl = document.getElementById('isla-semana-racha');
+    const rachaEl = document.getElementById(`${prefix}-racha`);
     if (rachaEl) {
         if (racha >= 1) {
-            setText('isla-semana-racha-n', racha === 1 ? '1 semana' : `${racha} semanas`);
+            setText(`${prefix}-racha-n`, racha === 1 ? '1 semana' : `${racha} semanas`);
             rachaEl.removeAttribute('hidden');
         } else {
             rachaEl.setAttribute('hidden', '');
         }
     }
 
-    _islaSemanaCompleta = completo;
-    aplicarAmbientalAnillo();
+    if (esRutina) { _islaSemanaCompleta = completo; aplicarAmbientalAnillo(); }
 }
+
+// Compat: los call sites existentes siguen llamando renderAnilloSemana (Rutina)
+// y renderAnilloProgreso (Mi progreso). Ahora ambos pintan la isla.
+function renderAnilloSemana() { renderIsla('isla-semana'); }
 
 // ───────────────────────────────────────────────────────────
 // Vista "Mi progreso" — toggle Rutina/Progreso, anillo grande,
@@ -4460,29 +4459,10 @@ async function cargarVistaProgreso() {
     aplicarAmbientalAnillo();
 }
 
+// "Mi progreso" ahora muestra la MISMA isla que Rutina (antes: anillo viejo
+// "N/M cumplidos", que apenas se movía). Misma escena, contenedor propio.
 function renderAnilloProgreso() {
-    const anillo = document.getElementById('anillo-progreso');
-    const fill   = document.getElementById('anillo-progreso-fill');
-    const numEl  = document.getElementById('anillo-progreso-num');
-    const denEl  = document.getElementById('anillo-progreso-den');
-    if (!anillo || !fill || !numEl || !denEl) return;
-
-    const rows = [..._progresoCache.values()].filter((r) => r.min_semanal != null);
-    const total = rows.length;
-    if (total === 0) {
-        anillo.hidden = true;
-        anillo.classList.remove('anillo-semana--completo');
-        return;
-    }
-    const cumplidos = rows.filter((r) => (r.count_semana ?? 0) >= r.min_semanal).length;
-    const pct = cumplidos / total;
-
-    anillo.hidden = false;
-    numEl.textContent = String(cumplidos);
-    denEl.textContent = `/${total}`;
-    const PERIMETRO = 276.46;
-    fill.setAttribute('stroke-dashoffset', String(PERIMETRO * (1 - pct)));
-    anillo.classList.toggle('anillo-semana--completo', pct >= 1);
+    renderIsla('isla-progreso');
 }
 
 function renderListaProgreso() {
