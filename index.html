@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=35">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=23">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=24">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -283,9 +283,19 @@
                             <button type="button" class="rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
                         </div>
 
-                        <div class="anillo-semana" id="anillo-semana" hidden aria-label="Cumplimiento de la semana">
-                            <svg class="anillo-semana__svg" viewBox="0 0 100 100" aria-hidden="true"><circle class="anillo-semana__track" cx="50" cy="50" r="44" fill="none" stroke-width="8"/><circle class="anillo-semana__fill" cx="50" cy="50" r="44" fill="none" stroke-width="8" stroke-dasharray="276.46" stroke-dashoffset="276.46" transform="rotate(-90 50 50)" stroke-linecap="round"/></svg>
-                            <div class="anillo-semana__center"><span class="anillo-semana__num" id="anillo-semana-num">0</span><span class="anillo-semana__den" id="anillo-semana-den">/0</span><span class="anillo-semana__label">cumplidos</span></div>
+                        <div class="isla-semana" id="isla-semana" hidden aria-label="Progreso de la semana">
+                            <p class="isla-semana__titulo">LA SEMANA DE <span id="isla-semana-perro"></span></p>
+                            <svg class="isla-semana__svg" viewBox="0 0 200 132" aria-hidden="true">
+                                <ellipse cx="100" cy="112" rx="84" ry="17" class="isla-semana__mar"/>
+                                <path d="M30 106 Q45 80 78 84 Q92 62 116 70 Q142 56 158 82 Q176 92 170 106 Q140 122 100 120 Q58 122 30 106 Z" class="isla-semana__tierra"/>
+                                <g id="isla-semana-veg"></g>
+                                <g id="isla-semana-sol" opacity="0"><circle cx="170" cy="24" r="11" fill="#F2C84B"/><g stroke="#F2C84B" stroke-width="2.4" stroke-linecap="round"><line x1="170" y1="6" x2="170" y2="1"/><line x1="170" y1="42" x2="170" y2="47"/><line x1="152" y1="24" x2="147" y2="24"/><line x1="188" y1="24" x2="193" y2="24"/><line x1="157" y1="11" x2="154" y2="8"/><line x1="183" y1="37" x2="186" y2="40"/><line x1="183" y1="11" x2="186" y2="8"/><line x1="157" y1="37" x2="154" y2="40"/></g></g>
+                            </svg>
+                            <div class="isla-semana__pct"><span id="isla-semana-pct">0</span><small>%</small></div>
+                            <div class="isla-semana__barra"><i id="isla-semana-barra"></i></div>
+                            <div class="isla-semana__dias" id="isla-semana-dias" aria-label="Días con entreno esta semana"></div>
+                            <p class="isla-semana__lema" id="isla-semana-lema"></p>
+                            <p class="isla-semana__racha" id="isla-semana-racha" hidden><b id="isla-semana-racha-n"></b> cuidando la isla</p>
                         </div>
 
                         <div id="rutina-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
@@ -1470,6 +1480,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=150"></script>
+    <script type="module" src="./js/app.js?v=151"></script>
 </body>
 </html>

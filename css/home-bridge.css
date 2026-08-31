@@ -185,3 +185,57 @@
 /* Caritas de la hoja post-registro (pedido de Charly 31/08) */
 .rapido-sheet__caras .reporte-pill{ font-size:23px; line-height:1; padding:9px 0; }
 .rapido-sheet__caras .reporte-pill.is-active{ transform:scale(1.12); }
+
+/* ────────────────────────────────────────────────────────────
+   La semana florece (Fase 2 · registro lúdico) — reemplaza al
+   anillo "N/M cumplidos" en la vista Rutina. 31/08/2026.
+   ──────────────────────────────────────────────────────────── */
+.home .isla-semana{
+    background:var(--c-surface); border:1px solid var(--c-hair);
+    border-radius:16px; padding:14px 14px 12px; margin:4px 0 14px;
+    text-align:center;
+}
+.home .isla-semana[hidden]{ display:none; }
+.home .isla-semana__titulo{
+    font-family:var(--display, 'Bebas Neue'); font-size:15px; letter-spacing:1.5px;
+    color:var(--c-text-2); margin:0 0 2px;
+}
+.home .isla-semana__svg{ width:180px; height:119px; display:block; margin:0 auto; }
+.home .isla-semana__mar{ fill:rgba(107,122,58,.12); }
+.home .isla-semana__tierra{ fill:#8A7A55; }
+.home .isla-semana__veg g{ transition:opacity .4s ease; }
+.home .isla-semana__pct{
+    font-family:var(--display, 'Bebas Neue'); font-size:38px; line-height:1;
+    letter-spacing:1px; color:var(--c-text); margin-top:2px;
+}
+.home .isla-semana__pct small{ font-size:17px; color:var(--c-text-3); }
+.home .isla-semana__barra{
+    height:8px; border-radius:999px; background:rgba(138,134,126,.18);
+    overflow:hidden; margin:10px 8px 10px;
+}
+.home .isla-semana__barra i{
+    display:block; height:100%; width:0;
+    background:linear-gradient(90deg, var(--c-oliva, #6B7A3A), #9CB64B);
+    transition:width .5s ease; border-radius:999px;
+}
+.home .isla-semana__dias{ display:flex; justify-content:center; gap:8px; margin-bottom:8px; }
+.home .isla-semana__dia{
+    width:30px; height:30px; border-radius:50%;
+    border:1.5px solid var(--c-hair); display:grid; place-items:center;
+    font-size:12px; font-weight:600; color:var(--c-text-3);
+}
+.home .isla-semana__dia--f{
+    background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A);
+}
+.home .isla-semana__dia--f::before{
+    content:''; width:16px; height:16px; display:block;
+    background-color:#F5EFE0;
+    -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12.8c-2.6 0-5.4 2.3-5.4 4.8 0 1.5 1.1 2.5 2.6 2.5 1 0 1.9-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.6-1 2.6-2.5 0-2.5-2.8-4.8-5.4-4.8zM6.1 8.3c-1.1.3-1.7 1.7-1.4 3 .3 1.3 1.5 2.2 2.6 1.9 1.1-.3 1.7-1.7 1.4-3-.3-1.3-1.5-2.2-2.6-1.9zm11.8 0c-1.1-.3-2.3.6-2.6 1.9-.3 1.3.3 2.7 1.4 3 1.1.3 2.3-.6 2.6-1.9.3-1.3-.3-2.7-1.4-3zM9.7 4c-1.2.2-2 1.6-1.8 3 .2 1.4 1.4 2.4 2.6 2.2 1.2-.2 2-1.6 1.8-3-.2-1.4-1.4-2.4-2.6-2.2zm4.6 0c-1.2-.2-2.4.8-2.6 2.2-.2 1.4.6 2.8 1.8 3 1.2.2 2.4-.8 2.6-2.2.2-1.4-.6-2.8-1.8-3z'/></svg>") center/contain no-repeat;
+            mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12.8c-2.6 0-5.4 2.3-5.4 4.8 0 1.5 1.1 2.5 2.6 2.5 1 0 1.9-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.6-1 2.6-2.5 0-2.5-2.8-4.8-5.4-4.8zM6.1 8.3c-1.1.3-1.7 1.7-1.4 3 .3 1.3 1.5 2.2 2.6 1.9 1.1-.3 1.7-1.7 1.4-3-.3-1.3-1.5-2.2-2.6-1.9zm11.8 0c-1.1-.3-2.3.6-2.6 1.9-.3 1.3.3 2.7 1.4 3 1.1.3 2.3-.6 2.6-1.9.3-1.3-.3-2.7-1.4-3zM9.7 4c-1.2.2-2 1.6-1.8 3 .2 1.4 1.4 2.4 2.6 2.2 1.2-.2 2-1.6 1.8-3-.2-1.4-1.4-2.4-2.6-2.2zm4.6 0c-1.2-.2-2.4.8-2.6 2.2-.2 1.4.6 2.8 1.8 3 1.2.2 2.4-.8 2.6-2.2.2-1.4-.6-2.8-1.8-3z'/></svg>") center/contain no-repeat;
+}
+.home .isla-semana__lema{ font-size:12.5px; color:var(--c-text-2); margin:0 0 2px; }
+.home .isla-semana__racha{ font-size:12px; color:var(--c-text-3); margin:2px 0 0; }
+.home .isla-semana__racha b{
+    font-family:var(--display, 'Bebas Neue'); font-size:16px; letter-spacing:1px;
+    color:#E8B62D; font-weight:400;
+}

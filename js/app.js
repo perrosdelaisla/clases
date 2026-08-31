@@ -3426,6 +3426,27 @@ async function renderRutinaPerroSeleccionado() {
             console.error('[progreso] continuando sin chips:', e);
         }
 
+        // Registros de las últimas 8 semanas (para los días con huella y la
+        // racha de la isla). Aditivo: si falla, la isla se pinta sin días.
+        _islaRegs = [];
+        try {
+            const idsEj = filas
+                .filter((f) => (f.ejercicios?.categoria || 'ejercicio') === 'ejercicio')
+                .map((f) => f.id);
+            if (idsEj.length > 0) {
+                const desde = new Date(Date.now() - 8 * 7 * 86400000).toISOString();
+                const { data: regsIsla, error: errIsla } = await supabase
+                    .from('registros_ejercicio')
+                    .select('ejercicio_asignado_id, registrado_en')
+                    .in('ejercicio_asignado_id', idsEj)
+                    .gte('registrado_en', desde);
+                if (errIsla) throw errIsla;
+                _islaRegs = regsIsla || [];
+            }
+        } catch (e) {
+            console.error('[isla] no se pudieron cargar los días/racha:', e);
+        }
+
         // Días de uso de las tareas esta semana (registros_tarea). Aditivo: si
         // falla, las tareas igual se pintan con el control en 0.
         _diasTareaSemana = {};
@@ -3815,6 +3836,8 @@ async function registrarEntrenoRapido(btn) {
         const row = _progresoCache.get(asignadoId);
         const estadoDespues = evaluarProgresoEjercicio(row);
 
+        _islaRegs.push({ ejercicio_asignado_id: asignadoId,
+                         registrado_en: new Date().toISOString() });
         actualizarCardProgreso(asignadoId);
         renderAnilloSemana();
         if (estadoAntes.estado === 'debajo' && estadoDespues.estado === 'en_zona') {
@@ -3865,6 +3888,9 @@ async function deshacerEntrenoRapido(registroId, asignadoId) {
             .delete()
             .eq('id', registroId);
         if (error) throw error;
+        for (let i = _islaRegs.length - 1; i >= 0; i--) {
+            if (_islaRegs[i].ejercicio_asignado_id === asignadoId) { _islaRegs.splice(i, 1); break; }
+        }
         try { await cargarProgresoPerro(state.perroSeleccionadoId); } catch (e) { /* no bloquea */ }
         actualizarCardProgreso(asignadoId);
         renderAnilloSemana();
@@ -3954,35 +3980,170 @@ function bindRapidoSheet() {
     });
 }
 
-// Anillo de cumplimiento de la semana, calculado solo sobre ejercicios con
-// min_semanal definido (los que tienen target semanal "mínimo a cumplir").
-function renderAnilloSemana() {
-    const anillo = document.getElementById('anillo-semana');
-    if (!anillo) return;
-    const fill = anillo.querySelector('.anillo-semana__fill');
+// ───────────────────────────────────────────────────────────
+// "La semana florece" (Fase 2 · registro lúdico) — reemplaza al
+// anillo "N/M cumplidos". Mantiene el NOMBRE renderAnilloSemana
+// para no tocar ningún call site: mismo disparo, otra pintura.
+// Métrica granular: Σ min(count_semana, min_semanal) / Σ min_semanal
+// sobre los ejercicios con mínimo semanal → se mueve con CADA entreno.
+// La vegetación crece con el total de entrenos (los extras, en dorado).
+// ───────────────────────────────────────────────────────────
 
-    const rows = [..._progresoCache.values()].filter((r) => r.min_semanal != null);
-    const total = rows.length;
-    if (total === 0) {
-        anillo.setAttribute('hidden', '');
-        anillo.classList.remove('anillo-semana--completo');
+let _islaSemanaCompleta = false;
+let _islaRegs = [];   // registros_ejercicio (8 semanas) del perro seleccionado
+
+function calcularIslaSemana() {
+    const rows = [..._progresoCache.values()]
+        .filter((r) => r.min_semanal != null && r.min_semanal > 0);
+    const objetivo = rows.reduce((a, r) => a + r.min_semanal, 0);
+    const hechosTotal = rows.reduce((a, r) => a + Number(r.count_semana ?? 0), 0);
+    const hechosCap = rows.reduce(
+        (a, r) => a + Math.min(Number(r.count_semana ?? 0), r.min_semanal), 0);
+    return { objetivo, hechosTotal, hechosCap,
+             pct: objetivo > 0 ? (hechosCap / objetivo) : 0 };
+}
+
+// Posición determinista de cada planta (sin azar: el render es estable).
+const _ISLA_SPOTS = [
+    [62, 98], [92, 90], [120, 94], [142, 100], [76, 110], [108, 110],
+    [132, 112], [52, 106], [96, 102], [118, 82], [84, 82], [138, 88],
+    [70, 92], [104, 78], [126, 104], [60, 86], [148, 108], [90, 116],
+];
+
+function _islaPlantaSVG(i, dorada) {
+    const [x, y] = _ISLA_SPOTS[i % _ISLA_SPOTS.length];
+    const jx = ((i * 37) % 9) - 4;   // jitter determinista ±4px
+    const px = x + jx;
+    const rojo = dorada ? '#E8B62D' : '#C8102E';
+    const tipo = i % 3;
+    if (tipo === 0) {
+        return `<line x1="${px}" y1="${y}" x2="${px}" y2="${y - 13}" stroke="#6B7A3A" stroke-width="3" stroke-linecap="round"/><circle cx="${px}" cy="${y - 16}" r="5" fill="${rojo}"/>`;
+    }
+    if (tipo === 1) {
+        return `<line x1="${px}" y1="${y}" x2="${px}" y2="${y - 10}" stroke="#6B7A3A" stroke-width="3" stroke-linecap="round"/><circle cx="${px - 4}" cy="${y - 12}" r="4" fill="#9CB64B"/><circle cx="${px + 4}" cy="${y - 12}" r="4" fill="#9CB64B"/><circle cx="${px}" cy="${y - 17}" r="4" fill="${dorada ? '#E8B62D' : '#9CB64B'}"/>`;
+    }
+    return `<line x1="${px}" y1="${y}" x2="${px - 4}" y2="${y - 9}" stroke="#9CB64B" stroke-width="2.5" stroke-linecap="round"/><line x1="${px}" y1="${y}" x2="${px + 4}" y2="${y - 9}" stroke="#9CB64B" stroke-width="2.5" stroke-linecap="round"/><line x1="${px}" y1="${y}" x2="${px}" y2="${y - 12}" stroke="${dorada ? '#E8B62D' : '#9CB64B'}" stroke-width="2.5" stroke-linecap="round"/>`;
+}
+
+const _ISLA_LEMAS = [
+    'La isla espera el primer entreno de la semana',
+    'La isla empieza a brotar',
+    'Buen ritmo — ya se nota el verde',
+    'La vegetación avanza',
+    'Semana muy verde',
+    'A un paso de florecer entera',
+];
+
+// Días de la semana (lun..dom) con al menos un entreno, desde _islaRegs.
+function _islaDiasConEntreno() {
+    const lunes = new Date(inicioSemanaLocalIso()).getTime();
+    const marcados = new Set();
+    _islaRegs.forEach((r) => {
+        const t = new Date(r.registrado_en).getTime();
+        if (!Number.isFinite(t) || t < lunes) return;
+        const idx = Math.floor((t - lunes) / 86400000);
+        if (idx >= 0 && idx <= 6) marcados.add(idx);
+    });
+    return marcados;
+}
+
+// Racha: semanas de calendario consecutivas (mirando hacia atrás desde la
+// anterior) en que se cumplió el 100% del objetivo, con los mínimos actuales.
+// Aproximación honesta y 100% frontend; la semana en curso suma solo si ya
+// está al 100%.
+function _islaRacha(pctActual) {
+    const rows = [..._progresoCache.values()]
+        .filter((r) => r.min_semanal != null && r.min_semanal > 0);
+    const objetivo = rows.reduce((a, r) => a + r.min_semanal, 0);
+    if (objetivo === 0) return 0;
+    const minPorAsignado = new Map(rows.map((r) => [r.ejercicio_asignado_id, r.min_semanal]));
+    const lunes = new Date(inicioSemanaLocalIso()).getTime();
+    const SEMANA = 7 * 86400000;
+    // counts[w][asignado] con w=1..8 semanas hacia atrás
+    const counts = new Map();
+    _islaRegs.forEach((r) => {
+        const t = new Date(r.registrado_en).getTime();
+        if (!Number.isFinite(t) || t >= lunes) return;
+        const w = Math.floor((lunes - t - 1) / SEMANA) + 1;
+        if (w < 1 || w > 8) return;
+        if (!counts.has(w)) counts.set(w, new Map());
+        const m = counts.get(w);
+        m.set(r.ejercicio_asignado_id, (m.get(r.ejercicio_asignado_id) || 0) + 1);
+    });
+    let racha = 0;
+    for (let w = 1; w <= 8; w++) {
+        const m = counts.get(w) || new Map();
+        let cap = 0;
+        minPorAsignado.forEach((min, id) => { cap += Math.min(m.get(id) || 0, min); });
+        if (cap >= objetivo) racha += 1; else break;
+    }
+    if (pctActual >= 1) racha += 1;
+    return racha;
+}
+
+function renderAnilloSemana() {
+    const box = document.getElementById('isla-semana');
+    if (!box) return;
+    const { objetivo, hechosTotal, pct } = calcularIslaSemana();
+
+    if (objetivo === 0) {
+        box.setAttribute('hidden', '');
+        _islaSemanaCompleta = false;
         aplicarAmbientalAnillo();
         return;
     }
+    box.removeAttribute('hidden');
 
-    const cumplidos = rows.filter((r) => (r.count_semana ?? 0) >= r.min_semanal).length;
-    const pct = cumplidos / total;
+    // Nombre del perro en el título.
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    setText('isla-semana-perro', perro?.nombre || 'tu perro');
 
-    anillo.removeAttribute('hidden');
-    setText('anillo-semana-num', String(cumplidos));
-    setText('anillo-semana-den', `/${total}`);
+    // Vegetación: una planta por entreno (tope visual 18); extras en dorado.
+    const plantas = Math.min(hechosTotal, _ISLA_SPOTS.length);
+    const doradasDesde = Math.min(objetivo, _ISLA_SPOTS.length);
+    let veg = '';
+    for (let i = 0; i < plantas; i++) veg += `<g>${_islaPlantaSVG(i, i >= doradasDesde)}</g>`;
+    const vegEl = document.getElementById('isla-semana-veg');
+    if (vegEl) vegEl.innerHTML = veg;
 
-    const PERIMETRO = 276.46;
-    if (fill) {
-        fill.setAttribute('stroke-dashoffset', String(PERIMETRO * (1 - pct)));
-        fill.classList.toggle('anillo-semana__fill--completo', pct >= 1);
+    // % + barra.
+    const pctEntero = Math.min(100, Math.round(pct * 100));
+    setText('isla-semana-pct', String(pctEntero));
+    const barra = document.getElementById('isla-semana-barra');
+    if (barra) barra.style.width = `${pctEntero}%`;
+
+    // Días lun..dom con huella.
+    const marcados = _islaDiasConEntreno();
+    const diasEl = document.getElementById('isla-semana-dias');
+    if (diasEl) {
+        const letras = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+        diasEl.innerHTML = letras.map((l, i) =>
+            `<span class="isla-semana__dia${marcados.has(i) ? ' isla-semana__dia--f' : ''}">${marcados.has(i) ? '' : l}</span>`
+        ).join('');
     }
-    anillo.classList.toggle('anillo-semana--completo', pct >= 1);
+
+    // Lema + sol.
+    const completo = pct >= 1;
+    const lema = completo
+        ? `¡La isla de ${perro?.nombre || 'tu perro'} floreció esta semana!`
+        : _ISLA_LEMAS[Math.min(Math.floor(pct * (_ISLA_LEMAS.length - 1) + (hechosTotal > 0 ? 1 : 0)), _ISLA_LEMAS.length - 1)];
+    setText('isla-semana-lema', hechosTotal === 0 ? _ISLA_LEMAS[0] : lema);
+    const sol = document.getElementById('isla-semana-sol');
+    if (sol) sol.setAttribute('opacity', completo ? '1' : '0');
+
+    // Racha de semanas.
+    const racha = _islaRacha(pct);
+    const rachaEl = document.getElementById('isla-semana-racha');
+    if (rachaEl) {
+        if (racha >= 1) {
+            setText('isla-semana-racha-n', racha === 1 ? '1 semana' : `${racha} semanas`);
+            rachaEl.removeAttribute('hidden');
+        } else {
+            rachaEl.setAttribute('hidden', '');
+        }
+    }
+
+    _islaSemanaCompleta = completo;
     aplicarAmbientalAnillo();
 }
 
@@ -4230,11 +4391,11 @@ function renderProgresoItem(row) {
 // el anillo cerró al 100%. Es estado del logro de la semana — aplica en
 // ambas sub-vistas (Rutina / Mi progreso) para no parpadear al cambiar.
 function aplicarAmbientalAnillo() {
+    // Desde la Fase 2 el estado "semana cerrada" vive en la isla, no en el
+    // anillo (que ya no existe en la vista Rutina).
     const tab = document.getElementById('tab-rutina');
-    const anillo = document.getElementById('anillo-semana');
-    if (!tab || !anillo) return;
-    const cerrado = anillo.classList.contains('anillo-semana--completo');
-    tab.classList.toggle('ambiental-cerrado', cerrado);
+    if (!tab) return;
+    tab.classList.toggle('ambiental-cerrado', !!_islaSemanaCompleta);
 }
 
 // Mini-progreso dentro del modal de detalle del ejercicio.
