@@ -200,10 +200,7 @@
     font-family:var(--display, 'Bebas Neue'); font-size:15px; letter-spacing:1.5px;
     color:var(--c-text-2); margin:0 0 2px;
 }
-.home .isla-semana__svg{ width:180px; height:119px; display:block; margin:0 auto; }
-.home .isla-semana__mar{ fill:rgba(107,122,58,.12); }
-.home .isla-semana__tierra{ fill:#8A7A55; }
-.home .isla-semana__veg g{ transition:opacity .4s ease; }
+.home .isla-semana__svg{ width:200px; height:136px; display:block; margin:0 auto; }
 .home .isla-semana__pct{
     font-family:var(--display, 'Bebas Neue'); font-size:38px; line-height:1;
     letter-spacing:1px; color:var(--c-text); margin-top:2px;
