@@ -337,3 +337,27 @@
 .jaime-burbuja__speak{ position:absolute; top:9px; right:40px; }
 .jaime-burbuja__speak:not([hidden]) ~ .jaime-burbuja__texto{ margin-top:24px; }
 @media (prefers-reduced-motion: reduce){ .jaime-speak--playing{ animation:none; } }
+
+/* ════════════════════════════════════════════════════════════
+   Rediseño de la portada — jerarquía + sistema unificado. 31/08/2026
+   Solo reordena y unifica el envoltorio; no toca ninguna lógica.
+   ════════════════════════════════════════════════════════════ */
+/* Título de sección: barrita oliva + rótulo Bebas. Da un ritmo común. */
+.home .stitle{ display:flex; align-items:center; gap:9px; margin:22px 2px 12px; }
+.home .stitle__bar{ flex:none; width:4px; height:15px; border-radius:2px; background:var(--c-oliva); }
+.home .stitle h3{
+    margin:0; font-family:var(--display,'Bebas Neue'); font-size:16px; letter-spacing:1.3px;
+    color:var(--c-text-2); text-transform:uppercase;
+}
+/* "Más para ti": los accesos secundarios apilados con el mismo espaciado. */
+.home .mas-sec{ margin-top:4px; }
+.home .mas-card{ display:flex; flex-direction:column; gap:10px; }
+.home .mas-card > [hidden]{ display:none; }
+/* Que Seguimiento (.seg-entry) y Bienestar (.health) compartan exactamente
+   el mismo formato de fila-tarjeta, para que no se sientan piezas sueltas. */
+.home .mas-card .seg-entry,
+.home .mas-card .health{ width:100%; margin:0; }
+/* La filosofía, ahora al pie como cierre discreto. */
+.home .philo--foot{ margin-top:22px; }
+/* La isla ya vive arriba de las subpestañas: un respiro bajo ella. */
+.home #rutina-vista > .isla-semana{ margin:2px 0 14px; }

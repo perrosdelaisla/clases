@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=36">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=29">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=30">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -249,24 +249,6 @@
                 </div>
             </div>
 
-            <button type="button" class="seg-entry" id="btn-seguimiento" hidden>
-                <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>
-                <span class="htx">
-                    <span class="ht">Seguimiento de conductas</span>
-                    <span class="hs">Registra día a día cómo evoluciona cada conducta</span>
-                </span>
-                <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
-            </button>
-
-            <button type="button" class="seg-entry" id="btn-guias-clasica" hidden>
-                <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-                <span class="htx">
-                    <span class="ht">Guías para entender a tu perro</span>
-                    <span class="hs">Las gratuitas, y tu 50% de la Manada en el resto</span>
-                </span>
-                <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
-            </button>
-
             <div class="work">
                 <div class="work-head"><span class="ttl">Hoy</span><span class="day" id="work-day"></span></div>
                 <div class="work-body">
@@ -276,13 +258,7 @@
                     </div>
 
                     <div class="rutina-modo-panel" id="rutina-vista">
-                        <div class="subtabs rutina-subtabs" role="tablist" aria-label="Categoría de ejercicios">
-                            <button type="button" class="rutina-subtab is-active" data-cat="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
-                            <button type="button" class="rutina-subtab" data-cat="cambio_rutina" role="tab" aria-selected="false">Cambios de rutina</button>
-                            <button type="button" class="rutina-subtab" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
-                            <button type="button" class="rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
-                        </div>
-
+                        <!-- Rediseño portada: la isla sube a protagonista, antes de las subpestañas. 31/08/2026 -->
                         <div class="isla-semana" id="isla-semana" hidden aria-label="Progreso de la semana">
                             <p class="isla-semana__titulo">LA SEMANA DE <span id="isla-semana-perro"></span></p>
                             <svg class="isla-semana__svg" id="isla-semana-svg" viewBox="0 0 220 150" aria-hidden="true"></svg>
@@ -291,6 +267,13 @@
                             <div class="isla-semana__dias" id="isla-semana-dias" aria-label="Días con entreno esta semana"></div>
                             <p class="isla-semana__lema" id="isla-semana-lema"></p>
                             <p class="isla-semana__racha" id="isla-semana-racha" hidden><b id="isla-semana-racha-n"></b> cuidando la isla</p>
+                        </div>
+
+                        <div class="subtabs rutina-subtabs" role="tablist" aria-label="Categoría de ejercicios">
+                            <button type="button" class="rutina-subtab is-active" data-cat="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
+                            <button type="button" class="rutina-subtab" data-cat="cambio_rutina" role="tab" aria-selected="false">Cambios de rutina</button>
+                            <button type="button" class="rutina-subtab" data-cat="tarea" role="tab" aria-selected="false">Tareas</button>
+                            <button type="button" class="rutina-subtab" data-cat="herramienta" role="tab" aria-selected="false">Herramientas</button>
                         </div>
 
                         <div id="rutina-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
@@ -309,22 +292,6 @@
                             </a>
                         </div>
 
-                        <div id="card-salud" hidden>
-                            <button type="button" class="health" id="btn-iniciar-evaluacion">
-                                <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
-                                <span class="htx">
-                                    <span class="ht">Evalúa el bienestar y la felicidad de <span id="card-salud-perro">tu perro</span></span>
-                                    <span class="hs">5 min · nos ayuda a ajustar la rutina</span>
-                                </span>
-                                <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-                            </button>
-                        </div>
-
-                        <div class="philo">
-                            <div class="pk">Nuestro enfoque</div>
-                            <p class="pt">Educar a tu perro es un proceso, no un truco. Muchos problemas de conducta no se resuelven con recetas mágicas ni dependen de la habilidad de una sola persona: detrás suele haber una emoción mal gestionada, una comunicación que falla entre el perro y su tutor, o una rutina que necesita cambios. El cambio real llega con constancia en el día a día, no en una tarde.</p>
-                            <div class="sig">— El equipo de Perros de la Isla</div>
-                        </div>
                     </div>
 
                     <div class="rutina-modo-panel" id="progreso-vista" hidden>
@@ -347,6 +314,45 @@
                         </section>
                     </div>
                 </div>
+            </div>
+
+            <!-- ── Rediseño portada: accesos secundarios unificados ("Más para ti"). 31/08/2026 ── -->
+            <div class="mas-sec">
+                <div class="stitle"><span class="stitle__bar"></span><h3>Más para ti</h3></div>
+                <div class="mas-card">
+                    <button type="button" class="seg-entry" id="btn-seguimiento" hidden>
+                        <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>
+                        <span class="htx">
+                            <span class="ht">Seguimiento de conductas</span>
+                            <span class="hs">Registra día a día cómo evoluciona cada conducta</span>
+                        </span>
+                        <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+                    </button>
+                    <div id="card-salud" hidden>
+                        <button type="button" class="health" id="btn-iniciar-evaluacion">
+                            <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+                            <span class="htx">
+                                <span class="ht">Evalúa el bienestar y la felicidad de <span id="card-salud-perro">tu perro</span></span>
+                                <span class="hs">5 min · nos ayuda a ajustar la rutina</span>
+                            </span>
+                            <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                        </button>
+                    </div>
+                    <button type="button" class="seg-entry" id="btn-guias-clasica" hidden>
+                        <span class="hmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+                        <span class="htx">
+                            <span class="ht">Guías para entender a tu perro</span>
+                            <span class="hs">Las gratuitas, y tu 50% de la Manada en el resto</span>
+                        </span>
+                        <span class="harr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="philo philo--foot">
+                <div class="pk">Nuestro enfoque</div>
+                <p class="pt">Educar a tu perro es un proceso, no un truco. Muchos problemas de conducta no se resuelven con recetas mágicas ni dependen de la habilidad de una sola persona: detrás suele haber una emoción mal gestionada, una comunicación que falla entre el perro y su tutor, o una rutina que necesita cambios. El cambio real llega con constancia en el día a día, no en una tarde.</p>
+                <div class="sig">— El equipo de Perros de la Isla</div>
             </div>
             </div>
             </section>
