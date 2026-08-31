@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=36">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=30">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=31">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -295,14 +295,16 @@
                     </div>
 
                     <div class="rutina-modo-panel" id="progreso-vista" hidden>
-                        <div class="isla-semana" id="isla-progreso" hidden aria-label="Progreso de la semana">
-                            <p class="isla-semana__titulo">LA SEMANA DE <span id="isla-progreso-perro"></span></p>
+                        <!-- Isla GLOBAL: el recorrido completo del plan (no la semana). 01/09/2026 -->
+                        <div class="isla-semana isla-global" id="isla-progreso" hidden aria-label="Progreso del plan completo">
+                            <p class="isla-semana__titulo">EL CAMINO DE <span id="isla-progreso-perro"></span></p>
+                            <p class="isla-global__sub">Plan completo · lo marca el protocolo más largo</p>
                             <svg class="isla-semana__svg" id="isla-progreso-svg" viewBox="0 0 220 150" aria-hidden="true"></svg>
                             <div class="isla-semana__pct"><span id="isla-progreso-pct">0</span><small>%</small></div>
                             <div class="isla-semana__barra"><i id="isla-progreso-barra"></i></div>
-                            <div class="isla-semana__dias" id="isla-progreso-dias" aria-label="Días con entreno esta semana"></div>
+                            <p class="isla-global__hito" id="isla-progreso-hito"></p>
                             <p class="isla-semana__lema" id="isla-progreso-lema"></p>
-                            <p class="isla-semana__racha" id="isla-progreso-racha" hidden><b id="isla-progreso-racha-n"></b> cuidando la isla</p>
+                            <p class="isla-semana__racha" id="isla-progreso-racha" hidden><b id="isla-progreso-racha-n"></b> de constancia</p>
                         </div>
                         <div id="progreso-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
                         <div id="progreso-empty" class="placeholder" hidden><p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p></div>
@@ -1492,6 +1494,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=156"></script>
+    <script type="module" src="./js/app.js?v=157"></script>
 </body>
 </html>

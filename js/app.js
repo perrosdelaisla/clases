@@ -4564,10 +4564,73 @@ async function cargarVistaProgreso() {
     aplicarAmbientalAnillo();
 }
 
-// "Mi progreso" ahora muestra la MISMA isla que Rutina (antes: anillo viejo
-// "N/M cumplidos", que apenas se movía). Misma escena, contenedor propio.
+// ── Isla GLOBAL (Mi progreso): el recorrido COMPLETO del plan, no la semana.
+//    Pedido de Charly (01/09/2026). El "largo" lo fija el protocolo más largo
+//    (horizonte en semanas); la isla florece con el ESFUERZO ACUMULADO —todos
+//    los entrenos, capados por semana al mínimo— contra lo esperado para todo
+//    el plan. Si no entrena, no florece. La isla de la semana (Rutina) intacta.
+const _HORIZONTE_SEMANAS = { educacion_basica: 4, educacion_cachorro: 4 };
+const _HORIZONTE_DEFAULT = 12; // protocolos de conducta: ~12 semanas (hasta 14)
+function _horizontePlan(perro) {
+    const protos = [perro?.protocolo_principal, ...((perro?.protocolos_complementarios) || [])]
+        .filter(Boolean);
+    if (protos.length === 0) return _HORIZONTE_DEFAULT;
+    return Math.max(...protos.map((p) => _HORIZONTE_SEMANAS[p] ?? _HORIZONTE_DEFAULT));
+}
+function calcularIslaGlobal() {
+    const rows = [..._progresoCache.values()]
+        .filter((r) => r.min_semanal != null && r.min_semanal > 0);
+    const objetivoSemanal = rows.reduce((a, r) => a + r.min_semanal, 0);
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    const H = _horizontePlan(perro);
+    const objetivoGlobal = objetivoSemanal * H;
+    // Esfuerzo acumulado: por ejercicio, sumo min(count, mínimo) de cada semana
+    // del historial (capado para no premiar de más una semana puntual).
+    let hechosCap = 0, semanasElapsed = 0;
+    rows.forEach((r) => {
+        const hist = _historialCache.get(r.ejercicio_asignado_id) || [];
+        if (hist.length > semanasElapsed) semanasElapsed = hist.length;
+        hist.forEach((s) => { hechosCap += Math.min(Number(s.count || 0), r.min_semanal); });
+    });
+    const pct = objetivoGlobal > 0 ? Math.min(hechosCap / objetivoGlobal, 1) : 0;
+    return { objetivoGlobal, hechosCap, pct, H,
+             semanaActual: Math.max(1, Math.min(semanasElapsed, H)) };
+}
+function renderIslaGlobal() {
+    const prefix = 'isla-progreso';
+    const box = document.getElementById(prefix);
+    if (!box) return;
+    const g = calcularIslaGlobal();
+    if (g.objetivoGlobal === 0) { box.setAttribute('hidden', ''); return; }
+    box.removeAttribute('hidden');
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    setText(`${prefix}-perro`, perro?.nombre || 'tu perro');
+    _islaPintarEscena(g.hechosCap, g.objetivoGlobal, g.pct, `${prefix}-svg`);
+    const pctE = Math.min(100, Math.round(g.pct * 100));
+    setText(`${prefix}-pct`, String(pctE));
+    const barra = document.getElementById(`${prefix}-barra`);
+    if (barra) barra.style.width = `${pctE}%`;
+    setText(`${prefix}-hito`, `Semana ${g.semanaActual} de ~${g.H}`);
+    const completo = g.pct >= 1;
+    setText(`${prefix}-lema`, completo
+        ? `¡${perro?.nombre || 'Tu perro'} completó su camino!`
+        : (g.hechosCap === 0 ? _ISLA_LEMAS[0]
+           : _ISLA_LEMAS[Math.min(Math.floor(g.pct * (_ISLA_LEMAS.length - 1)) + 1, _ISLA_LEMAS.length - 1)]));
+    // Racha: mismas "semanas seguidas cuidando la isla" (constancia real).
+    const racha = _islaRacha(calcularIslaSemana().pct);
+    const rachaEl = document.getElementById(`${prefix}-racha`);
+    if (rachaEl) {
+        if (racha >= 1) {
+            setText(`${prefix}-racha-n`, racha === 1 ? '1 semana' : `${racha} semanas`);
+            rachaEl.removeAttribute('hidden');
+        } else {
+            rachaEl.setAttribute('hidden', '');
+        }
+    }
+}
+// "Mi progreso" muestra la isla GLOBAL (todo el plan), no la de la semana.
 function renderAnilloProgreso() {
-    renderIsla('isla-progreso');
+    renderIslaGlobal();
 }
 
 function renderListaProgreso() {
@@ -4760,17 +4823,43 @@ function renderMedallero(d) {
 
 // Fila de barritas: una por semana desde la asignación, color por estado
 // (mismo criterio que el chip). Scrolleable si son muchas semanas.
+// Línea de constancia (sparkline legible). Cada punto es una semana desde la
+// asignación; la altura es el cumplimiento (0–100% del objetivo semanal), el
+// color el estado (verde/rojo/azul), y una línea punteada marca el objetivo.
+// La semana en curso va resaltada. Rediseño pedido por Charly (01/09/2026).
 function renderHistorialSemanal(asignadoId) {
     const semanas = _historialCache.get(asignadoId);
     if (!semanas || semanas.length === 0) return '';
-    const barras = semanas.map((s) => {
-        const color = COLOR_CHIP_FRECUENCIA[s.estado] || 'sin';
-        const actual = s.actual ? ' progreso-semana--actual' : '';
-        const veces = s.count === 1 ? 'vez' : 'veces';
-        const titulo = `Semana ${s.idx + 1}: ${s.count} ${veces}${s.actual ? ' (en curso)' : ''}`;
-        return `<span class="progreso-semana progreso-semana--${color}${actual}" title="${escapeHTML(titulo)}"><span class="progreso-semana__fill" style="height:${s.pct}%"></span></span>`;
+    const vis = semanas.slice(-12); // últimas 12 semanas: tendencia legible
+    const W = 300, H = 54, metaY = 10, baseY = H - 16;
+    const n = vis.length;
+    const step = n > 1 ? W / (n - 1) : 0;
+    const pts = vis.map((s, i) => {
+        const x = n > 1 ? i * step : W / 2;
+        const y = baseY - (Math.min(Number(s.pct || 0), 100) / 100) * (baseY - metaY);
+        return { x, y, s };
+    });
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const area = `${d} L${W} ${baseY} L0 ${baseY} Z`;
+    const dots = pts.map((p) => {
+        const est = COLOR_CHIP_FRECUENCIA[p.s.estado] || 'sin';
+        const now = p.s.actual;
+        const veces = p.s.count === 1 ? 'vez' : 'veces';
+        const titulo = `Semana ${p.s.idx + 1}: ${p.s.count} ${veces}${now ? ' (en curso)' : ''}`;
+        const halo = now
+            ? `<circle class="pk-halo pk--${est}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" fill="none" stroke="currentColor"/>`
+            : '';
+        return `${halo}<circle class="pk-dot pk--${est}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${now ? 4.6 : 2.8}" fill="currentColor"><title>${escapeHTML(titulo)}</title></circle>`;
     }).join('');
-    return `<div class="progreso-historial" aria-label="Historial por semana">${barras}</div>`;
+    return `<div class="progreso-spark" aria-label="Constancia semana a semana">
+            <svg viewBox="0 0 ${W} ${H}" role="img">
+              <line class="progreso-spark__meta" x1="0" y1="${metaY}" x2="${W}" y2="${metaY}"/>
+              <path class="progreso-spark__area" d="${area}"/>
+              <path class="progreso-spark__line" d="${d}"/>
+              ${dots}
+            </svg>
+            <span class="progreso-spark__lbl">objetivo</span>
+        </div>`;
 }
 
 function renderProgresoItem(row) {

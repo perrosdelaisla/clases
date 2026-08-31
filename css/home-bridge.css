@@ -361,3 +361,32 @@
 .home .philo--foot{ margin-top:22px; }
 /* La isla ya vive arriba de las subpestañas: un respiro bajo ella. */
 .home #rutina-vista > .isla-semana{ margin:2px 0 14px; }
+
+/* ════════════════════════════════════════════════════════════
+   Mi progreso — isla GLOBAL + línea de constancia. 01/09/2026
+   ════════════════════════════════════════════════════════════ */
+/* Subtítulo e hito de la isla global (el recorrido completo del plan). */
+.home .isla-global__sub{
+    font-size:11px; font-weight:600; letter-spacing:.2px;
+    color:var(--c-oliva); margin:-1px 0 4px; text-align:center;
+}
+.home .isla-global__hito{
+    font-family:var(--body); font-size:11px; font-weight:700; letter-spacing:.4px;
+    text-transform:uppercase; color:var(--c-text-3); margin:6px 0 2px; text-align:center;
+}
+/* Línea de constancia (sparkline legible) — reemplaza las barritas por semana. */
+.home .progreso-spark{ position:relative; margin-top:11px; }
+.home .progreso-spark svg{ width:100%; height:auto; display:block; overflow:visible; }
+.home .progreso-spark__meta{ stroke:var(--c-hair-2, #8A867E); stroke-width:1; stroke-dasharray:3 3; opacity:.7; }
+.home .progreso-spark__area{ fill:var(--c-oliva-soft, rgba(107,122,58,.14)); }
+.home .progreso-spark__line{ fill:none; stroke:var(--c-oliva, #6B7A3A); stroke-width:2.4; stroke-linejoin:round; stroke-linecap:round; }
+.home .progreso-spark__lbl{
+    position:absolute; top:-3px; right:2px; font-size:8px; font-weight:700; letter-spacing:.5px;
+    text-transform:uppercase; color:var(--c-text-3); background:var(--c-surface); padding:0 3px;
+}
+/* Color de punto/halo por estado (fill/stroke = currentColor). */
+.home .progreso-spark .pk--verde{ color:var(--c-oliva, #6B7A3A); }
+.home .progreso-spark .pk--rojo{ color:var(--c-rojo, #C8102E); }
+.home .progreso-spark .pk--azul{ color:#3F6FD0; }
+.home .progreso-spark .pk--sin{ color:var(--c-hair-2, #8A867E); }
+.home .progreso-spark .pk-halo{ opacity:.45; stroke-width:1.6; }
