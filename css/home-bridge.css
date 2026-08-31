@@ -390,3 +390,67 @@
 .home .progreso-spark .pk--azul{ color:#3F6FD0; }
 .home .progreso-spark .pk--sin{ color:var(--c-hair-2, #8A867E); }
 .home .progreso-spark .pk-halo{ opacity:.45; stroke-width:1.6; }
+
+/* ════════════════════════════════════════════════════════════
+   Hero: legible sobre CUALQUIER foto + controles despejados.
+   Pedido de Charly (01/09/2026). Solo visual/estructura del hero.
+   ════════════════════════════════════════════════════════════ */
+/* 1) Velo (scrim) reforzado: nunca transparente en la mitad baja del texto. */
+.home .dBp .cover .scrim{
+    background:linear-gradient(180deg,
+        rgba(8,7,5,0.55) 0%,
+        rgba(8,7,5,0.18) 22%,
+        rgba(8,7,5,0.34) 48%,
+        rgba(8,7,5,0.72) 74%,
+        rgba(8,7,5,0.95) 100%);
+}
+/* 2) Refuerzo local detrás del bloque de nombre/saludo: salva las fotos claras. */
+.home .dBp .cover .cbot::before{
+    content:""; position:absolute; left:0; right:0; bottom:0; top:-26px;
+    background:linear-gradient(180deg, transparent 0%, rgba(8,7,5,.28) 42%, rgba(8,7,5,.60) 100%);
+    pointer-events:none; z-index:-1;
+}
+/* 3) Doble sombra de texto: contorno oscuro en cada letra (claro y oscuro). */
+.home .dBp .cover .cbot .hi,
+.home .dBp .cover .cbot .br{
+    text-shadow:0 1px 2px rgba(6,5,3,.9), 0 0 10px rgba(6,5,3,.55);
+    color:rgba(245,239,224,.96);
+}
+.home .dBp .cover .cbot .hi .edit{ color:rgba(245,239,224,.82); }
+.home .dBp .cover .cbot .slogan{
+    text-shadow:0 1px 2px rgba(6,5,3,.9), 0 0 10px rgba(6,5,3,.55);
+    color:rgba(245,239,224,.94);
+}
+.home .dBp .cover .cbot .nm{
+    text-shadow:0 2px 6px rgba(6,5,3,.75), 0 1px 2px rgba(6,5,3,.9);
+}
+
+/* 4) Menú del avatar: ítems con icono + etiqueta (tema/editar viven acá).
+   El cover recorta con overflow:hidden y cortaría el 4º ítem del menú; como la
+   foto ya queda contenida por su object-fit, dejamos que el cover desborde para
+   que el menú (dropdown) se vea completo. Cuando está cerrado no desborda nada. */
+.home .dBp .cover{ overflow:visible; }
+.home .dBp .cover .avatar-menu{ min-width:196px; padding:5px; }
+.home .dBp .cover .avatar-menu__item{
+    display:flex; align-items:center; gap:11px; width:100%; padding:9px 11px;
+}
+.home .dBp .cover .avatar-menu__item svg{ width:17px; height:17px; flex:0 0 auto; }
+/* El toggle de tema tiene dos íconos (luna/sol); el JS oculta el que no toca.
+   Blindamos el [hidden] por si alguna regla de svg intentara mostrarlo igual. */
+.home .dBp .cover .avatar-menu__item svg[hidden]{ display:none; }
+.home .dBp .cover .avatar-menu__item .avatar-menu__lbl{ flex:1; min-width:0; }
+/* El toggle de tema muestra luna U sol según el tema; ambos como icono del ítem. */
+.home .dBp .cover .avatar-menu__item#theme-toggle{ color:var(--c-text); }
+
+/* 4b) Logo de Perros de la Isla un poco más grande (pedido de Charly), con un
+   halo sutil para que se apoye sobre cualquier foto sin ensuciarse. */
+.home .dBp .cover .ctop .logo{
+    width:40px; height:40px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.28), 0 2px 6px rgba(0,0,0,.35);
+}
+
+/* 5) Selector de perros con FOTO (la inicial queda de fallback debajo). */
+.home .dBp .cover .dogsel .av{ position:relative; overflow:hidden; }
+.home .dBp .cover .dogsel .av__foto{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit;
+}

@@ -297,14 +297,8 @@ function initTemaHome() {
     let t = 'claro';
     try { t = localStorage.getItem(PDLI_THEME_KEY) || 'claro'; } catch (e) {}
     aplicarTemaHome(t);
-    const tg = document.getElementById('theme-toggle');
-    if (tg && !tg.dataset.bound) {
-        tg.dataset.bound = '1';
-        tg.addEventListener('click', () => {
-            const cur = document.getElementById('screen-app').getAttribute('data-theme');
-            aplicarTemaHome(cur === 'oscuro' ? 'claro' : 'oscuro');
-        });
-    }
+    // El toggle de tema ahora es un ítem del menú del avatar: su click lo maneja
+    // ejecutarItemAvatar('theme-toggle'). No lo enganchamos acá para no duplicar.
     const wd = document.getElementById('work-day');
     if (wd) {
         let s = new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -419,7 +413,8 @@ function bindEventos() {
     // barra, y vuelta a la Manada desde la rutina clásica del veterano.
     document.getElementById('hero-categoria-chip')?.addEventListener('click', abrirModalCategoria);
     document.getElementById('hero-badge-veterano')?.addEventListener('click', abrirModalCategoria);
-    document.getElementById('hero-editar-manada')?.addEventListener('click', abrirModalEditarMisDatos);
+    // #hero-editar-manada ahora es ítem del menú del avatar → lo maneja
+    // ejecutarItemAvatar('hero-editar-manada'). Sin binding directo (evita doble).
     document.getElementById('rutina-volver-manada')?.addEventListener('click', volverAManada);
 
     // Manada: un ÚNICO handler DELEGADO para tarjetas, chips de perro y sus
@@ -921,6 +916,14 @@ function cerrarMenuAvatar() {
 function ejecutarItemAvatar(id) {
     if (id === 'familia-btn') abrirModalFamilia();
     else if (id === 'logout-btn') cerrarSesion();
+    // Tema y "editar mis datos" ahora viven dentro del menú del avatar
+    // (hero despejado). Se manejan acá para no duplicar con bindings directos.
+    else if (id === 'theme-toggle') {
+        const cur = document.getElementById('screen-app')?.getAttribute('data-theme');
+        aplicarTemaHome(cur === 'oscuro' ? 'claro' : 'oscuro');
+        // No cerramos el menú: deja alternar y ver el cambio al toque.
+    }
+    else if (id === 'hero-editar-manada') { cerrarMenuAvatar(); abrirModalEditarMisDatos(); }
 }
 
 // ===================== Mi familia (cliente principal) =====================
@@ -3099,12 +3102,16 @@ function renderSelectorPerros() {
         const active = p.id === state.perroSeleccionadoId;
         const nombre = p.nombre || 'Perro';
         const ini = escapeHTML(nombre.trim().charAt(0).toUpperCase() || 'P');
+        // Foto del perro en el chip (si tiene). La inicial queda de fallback debajo.
+        const foto = p.foto_url
+            ? `<img class="av__foto" src="${escapeHTML(p.foto_url)}" alt="" aria-hidden="true">`
+            : '';
         return `
             <button type="button" class="av${active ? ' is-active' : ''}"
                     data-perro-id="${escapeHTML(p.id)}"
                     aria-pressed="${active ? 'true' : 'false'}"
                     aria-label="${escapeHTML(nombre)}" title="${escapeHTML(nombre)}">
-                <span class="ini" aria-hidden="true">${ini}</span>
+                <span class="ini" aria-hidden="true">${ini}</span>${foto}
             </button>
         `;
     }).join('');
