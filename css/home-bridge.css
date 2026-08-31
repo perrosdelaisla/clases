@@ -331,6 +331,9 @@
     position:absolute; right:-10px; bottom:-10px; width:28px; height:28px;
     border:2px solid var(--c-surface, #211E16);
 }
-/* En la burbuja de aviso: arriba a la derecha, junto al cerrar */
-.jaime-burbuja__speak{ position:absolute; top:8px; right:38px; }
+/* En la burbuja de aviso: el altavoz va en una franja superior, a la izquierda
+   del botón cerrar. Cuando está visible, el texto baja una fila para no quedar
+   tapado (si no hay voz disponible el botón queda hidden y no sobra hueco). */
+.jaime-burbuja__speak{ position:absolute; top:9px; right:40px; }
+.jaime-burbuja__speak:not([hidden]) ~ .jaime-burbuja__texto{ margin-top:24px; }
 @media (prefers-reduced-motion: reduce){ .jaime-speak--playing{ animation:none; } }
