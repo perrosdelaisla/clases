@@ -181,3 +181,7 @@
     width:100%; background:none; border:none; color:var(--c-text-3, #8A867E);
     font-size:13.5px; padding:12px 0 2px; cursor:pointer; min-height:44px; font-family:inherit;
 }
+
+/* Caritas de la hoja post-registro (pedido de Charly 31/08) */
+.rapido-sheet__caras .reporte-pill{ font-size:23px; line-height:1; padding:9px 0; }
+.rapido-sheet__caras .reporte-pill.is-active{ transform:scale(1.12); }
