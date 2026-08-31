@@ -161,7 +161,7 @@
 .home .rutina-dots{ display:flex; flex-wrap:wrap; gap:5px; margin-top:2px; }
 .home .rutina-dots__dot{ width:11px; height:11px; border-radius:50%; border:1.5px solid var(--c-hair-2, #8A867E); }
 .home .rutina-dots__dot--f{ background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A); }
-.home .rutina-dots__dot--extra{ background:var(--c-rojo, #C8102E); border-color:var(--c-rojo, #C8102E); }
+.home .rutina-dots__dot--extra{ background:#E8B62D; border-color:#E8B62D; }
 
 /* Acción dentro del toast (Deshacer) — #toast vive fuera de .home */
 .toast__accion{
