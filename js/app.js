@@ -1098,7 +1098,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -3504,7 +3504,19 @@ async function renderRutinaPerroSeleccionado() {
         } else {
             if (myToken !== _renderRutinaToken) return;
             loading.setAttribute('hidden', '');
-            lista.innerHTML = cadenasFiltradas.map(renderRutinaCard).join('');
+            // Agrupación por protocolo ("la llave"): solo en Ejercicios y solo
+            // si el adiestrador asignó algún grupo. Si no, lista plana (idéntica
+            // a como era antes — cero cambio visual).
+            const agrupado = (state.rutinaCategoriaActiva === 'ejercicio')
+                ? renderGruposEjercicios(cadenasFiltradas)
+                : null;
+            if (agrupado) {
+                lista.classList.add('rutina-lista--agrupada');
+                lista.innerHTML = agrupado;
+            } else {
+                lista.classList.remove('rutina-lista--agrupada');
+                lista.innerHTML = cadenasFiltradas.map((c) => renderRutinaCard(c)).join('');
+            }
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
         }
@@ -3532,10 +3544,79 @@ async function renderRutinaPerroSeleccionado() {
 // Sin historia: una tarjeta simple (igual que siempre).
 // Con historia: un carrusel horizontal con scroll-snap nativo, tarjetas en
 // orden [paso más viejo … paso más reciente, vigente].
-function renderRutinaCard(cadena) {
+// Colores de la llave por posición del grupo (principal siempre rojo; los
+// complementarios rotan; "sin grupo" gris). Con transparencia para la barra.
+const _GRUPO_COLORES = ['#C8102E', '#4E7A9E', '#6B7A3A', '#D97962', '#E8B62D', '#8E6BA8'];
+function _grupoColor(idx, esSinGrupo) {
+    if (esSinGrupo) return '#8A867E';
+    return _GRUPO_COLORES[idx % _GRUPO_COLORES.length];
+}
+
+// Agrupa las cadenas de ejercicios por grupo_protocolo del vigente y las pinta
+// con la llave. Orden de grupos: protocolo principal, complementarios (en su
+// orden), cualquier slug suelto, y "Sin grupo" al final. Devuelve null si NINGÚN
+// ejercicio tiene grupo (para que el caller haga la lista plana de siempre).
+function renderGruposEjercicios(cadenas) {
+    const conGrupo = cadenas.some((c) => c.vigente.grupo_protocolo);
+    if (!conGrupo) return null;
+
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    const orden = [];
+    if (perro?.protocolo_principal) orden.push(perro.protocolo_principal);
+    (perro?.protocolos_complementarios || []).forEach((s) => {
+        if (s && !orden.includes(s)) orden.push(s);
+    });
+    // Slugs presentes en los ejercicios pero no en la ficha del perro (defensivo).
+    cadenas.forEach((c) => {
+        const g = c.vigente.grupo_protocolo;
+        if (g && !orden.includes(g)) orden.push(g);
+    });
+
+    // Reparte cada cadena en su grupo (o en "sin grupo").
+    const buckets = new Map();
+    orden.forEach((s) => buckets.set(s, []));
+    const sinGrupo = [];
+    cadenas.forEach((c) => {
+        const g = c.vigente.grupo_protocolo;
+        if (g && buckets.has(g)) buckets.get(g).push(c);
+        else sinGrupo.push(c);
+    });
+
+    let html = '';
+    let idx = 0;
+    const pintarGrupo = (nombre, lista, color) => {
+        if (lista.length === 0) return '';
+        const cards = lista.map((c) => renderRutinaCard(c, 'article')).join('');
+        const nom = escapeHTML(nombre);
+        return `
+            <li class="rutina-grupo">
+                <div class="rutina-grupo__llave" style="--grupo-color:${color}">
+                    <span class="rutina-grupo__bar"></span>
+                    <span class="rutina-grupo__lbl">${nom}</span>
+                    <span class="rutina-grupo__bar"></span>
+                </div>
+                <div class="rutina-grupo__body">
+                    <div class="rutina-grupo__head">
+                        <span class="rutina-grupo__nom">${nom}</span>
+                        <span class="rutina-grupo__cuenta">${lista.length}</span>
+                    </div>
+                    ${cards}
+                </div>
+            </li>`;
+    };
+    orden.forEach((slug) => {
+        const nombre = PROTOCOLOS_LABEL[slug] || slug;
+        html += pintarGrupo(nombre, buckets.get(slug) || [], _grupoColor(idx, false));
+        if ((buckets.get(slug) || []).length > 0) idx += 1;
+    });
+    html += pintarGrupo('Otros ejercicios', sinGrupo, _grupoColor(0, true));
+    return html;
+}
+
+function renderRutinaCard(cadena, tag = 'li') {
     const { vigente, history } = cadena;
     if (!history || history.length === 0) {
-        return rutinaCardHTML(vigente, { tag: 'li', superado: false });
+        return rutinaCardHTML(vigente, { tag, superado: false });
     }
     // DOM: vigente PRIMERO, después la historia (de más reciente a más vieja).
     // El track usa flex-direction: row-reverse, así que el vigente queda
@@ -3547,11 +3628,11 @@ function renderRutinaCard(cadena) {
         .concat(history.map((row) => rutinaCardHTML(row, { tag: 'article', superado: true })))
         .join('');
     return `
-        <li class="rutina-renglon">
+        <${tag} class="rutina-renglon">
             <div class="rutina-track" style="flex-direction: row-reverse;">
                 ${tarjetas}
             </div>
-        </li>
+        </${tag}>
     `;
 }
 
@@ -4365,6 +4446,8 @@ async function cargarVistaProgreso() {
         renderAnilloProgreso();
         renderListaProgreso();
         loading.hidden = true;
+        // Medallero: hitos derivados de los datos. No bloquea la vista.
+        cargarMedallero();
     } catch (e) {
         console.error('[progreso]', e);
         if (!teniaCache) {
@@ -4436,6 +4519,158 @@ function renderListaProgreso() {
         el.scrollLeft = el.scrollWidth;
     });
     lista.hidden = false;
+}
+
+// ───────────────────────────────────────────────────────────
+// Medallero de la Manada (Fase 3 · registro lúdico). Todos los
+// hitos se DERIVAN de los datos que ya existen — sin tabla nueva,
+// sin estado que desincronizar. Umbrales de volumen calibrados con
+// datos reales (media 15 entrenos/perro, ~6/semana): 10/30/60/120.
+// ───────────────────────────────────────────────────────────
+
+// 'YYYY-MM-DD' del lunes de la semana de un timestamp (para agrupar semanas).
+function _lunesDe(ts) {
+    const d = new Date(ts);
+    const dia = d.getDay();
+    const offset = (dia === 0) ? 6 : (dia - 1);
+    const l = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset, 0, 0, 0, 0);
+    return formatearFechaLocal(l);
+}
+
+async function cargarMedallero() {
+    const perroId = state.perroSeleccionadoId;
+    const cont = document.getElementById('medallero');
+    if (!cont || !perroId) return;
+    try {
+        // Ejercicios del perro (todos, para historia): ids + progresión + herramienta.
+        const { data: asignados, error: eA } = await supabase
+            .from('ejercicios_asignados')
+            .select('id, progresa_de, estado_cliente, ejercicios (categoria)')
+            .eq('perro_id', perroId);
+        if (eA) throw eA;
+        const ids = (asignados || []).map((a) => a.id);
+        const herramientasTiene = (asignados || [])
+            .filter((a) => a.ejercicios?.categoria === 'herramienta' && a.estado_cliente === 'tiene').length;
+        const progresiones = (asignados || []).filter((a) => a.progresa_de).length;
+
+        let regs = [];
+        if (ids.length > 0) {
+            const { data, error } = await supabase
+                .from('registros_ejercicio')
+                .select('registrado_en, tranquilidad, nota, video_path, ejercicio_asignado_id')
+                .in('ejercicio_asignado_id', ids);
+            if (error) throw error;
+            regs = data || [];
+        }
+
+        const total = regs.length;
+        const conTranq = regs.filter((r) => r.tranquilidad != null).length;
+        const conNota = regs.filter((r) => (r.nota && r.nota.trim()) || r.video_path).length;
+
+        // Días distintos y máxima racha de días consecutivos.
+        const dias = [...new Set(regs.map((r) => formatearFechaLocal(new Date(r.registrado_en))))].sort();
+        let maxDias = 0, run = 0, prev = null;
+        dias.forEach((d) => {
+            if (prev) {
+                const dif = (new Date(d) - new Date(prev)) / 86400000;
+                run = (Math.round(dif) === 1) ? run + 1 : 1;
+            } else run = 1;
+            if (run > maxDias) maxDias = run;
+            prev = d;
+        });
+
+        // Semanas al 100%: por semana, Σ min(count_ej, min_semanal) ≥ Σ min_semanal.
+        // Objetivo tomado de los targets actuales (_progresoCache) — aproximación honesta.
+        const targets = new Map();
+        _progresoCache.forEach((r, id) => { if (r.min_semanal) targets.set(id, r.min_semanal); });
+        const objetivo = [...targets.values()].reduce((a, b) => a + b, 0);
+        let semanas100 = 0, maxSemanas100 = 0;
+        if (objetivo > 0) {
+            const porSemana = new Map();   // lunes → Map(asignadoId → count)
+            regs.forEach((r) => {
+                const w = _lunesDe(r.registrado_en);
+                if (!porSemana.has(w)) porSemana.set(w, new Map());
+                const m = porSemana.get(w);
+                m.set(r.ejercicio_asignado_id, (m.get(r.ejercicio_asignado_id) || 0) + 1);
+            });
+            const semanasOrden = [...porSemana.keys()].sort();
+            let runW = 0, prevW = null;
+            semanasOrden.forEach((w) => {
+                const m = porSemana.get(w);
+                let cap = 0;
+                targets.forEach((min, id) => { cap += Math.min(m.get(id) || 0, min); });
+                const completa = cap >= objetivo;
+                if (completa) {
+                    semanas100 += 1;
+                    if (prevW) {
+                        const difW = Math.round((new Date(w) - new Date(prevW)) / 604800000);
+                        runW = (difW === 1) ? runW + 1 : 1;
+                    } else runW = 1;
+                    if (runW > maxSemanas100) maxSemanas100 = runW;
+                    prevW = w;
+                } else { runW = 0; prevW = null; }
+            });
+        }
+
+        renderMedallero({ total, conTranq, conNota, herramientasTiene, progresiones,
+                          maxDias, diasDistintos: dias.length, semanas100, maxSemanas100 });
+    } catch (e) {
+        console.error('[medallero] error:', e);
+        cont.setAttribute('hidden', '');
+    }
+}
+
+const _MEDALLAS = [
+    { grupo: 'Primeros pasos', medallas: [
+        { ic: '🐾', nom: 'Primera huella',  hint: 'Registra tu primer entreno',        ok: (d) => d.total >= 1 },
+        { ic: '🧰', nom: 'Nueva herramienta', hint: 'Consigue tu primera herramienta',  ok: (d) => d.herramientasTiene >= 1 },
+        { ic: '🌱', nom: 'Primer avance',   hint: 'Un ejercicio pasa a su siguiente versión', ok: (d) => d.progresiones >= 1 },
+    ]},
+    { grupo: 'Constancia', medallas: [
+        { ic: '📅', nom: 'Tres días',       hint: '3 días seguidos entrenando',        ok: (d) => d.maxDias >= 3 },
+        { ic: '🔥', nom: 'Semana sin fallar', hint: '7 días seguidos entrenando',       ok: (d) => d.maxDias >= 7 },
+        { ic: '🗓️', nom: '20 días de isla', hint: '20 días distintos de trabajo',      ok: (d) => d.diasDistintos >= 20 },
+    ]},
+    { grupo: 'La isla florece', medallas: [
+        { ic: '🌺', nom: 'Isla florecida',  hint: 'Completa una semana entera',         ok: (d) => d.semanas100 >= 1 },
+        { ic: '🌳', nom: 'Mes constante',   hint: '4 semanas completas seguidas',       ok: (d) => d.maxSemanas100 >= 4 },
+    ]},
+    { grupo: 'Camino recorrido', medallas: [
+        { ic: '🥉', nom: 'Primera decena',  hint: '10 entrenos',                        ok: (d) => d.total >= 10 },
+        { ic: '🥈', nom: 'En marcha',       hint: '30 entrenos',                        ok: (d) => d.total >= 30 },
+        { ic: '🥇', nom: 'Medio camino',    hint: '60 entrenos',                        ok: (d) => d.total >= 60 },
+        { ic: '🏆', nom: 'Leyenda de la isla', hint: '120 entrenos', oro: true,         ok: (d) => d.total >= 120 },
+    ]},
+    { grupo: 'Observador de tu perro', medallas: [
+        { ic: '👀', nom: 'Observador',      hint: '10 entrenos con estado emocional',   ok: (d) => d.conTranq >= 10 },
+        { ic: '✍️', nom: 'Cronista',        hint: '5 entrenos con nota o vídeo',        ok: (d) => d.conNota >= 5 },
+    ]},
+];
+
+function renderMedallero(d) {
+    const cont = document.getElementById('medallero');
+    const grupos = document.getElementById('medallero-grupos');
+    if (!cont || !grupos) return;
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    setText('medallero-perro', (perro?.nombre || 'tu perro').toUpperCase());
+
+    grupos.innerHTML = _MEDALLAS.map((g) => {
+        const cards = g.medallas.map((m) => {
+            const ganada = !!m.ok(d);
+            return `
+                <div class="medalla${ganada ? ' medalla--won' : ''}${(ganada && m.oro) ? ' medalla--oro' : ''}">
+                    <div class="medalla__ico">${m.ic}</div>
+                    <div class="medalla__nom">${escapeHTML(m.nom)}</div>
+                    <div class="medalla__hint">${escapeHTML(m.hint)}</div>
+                </div>`;
+        }).join('');
+        return `
+            <div class="medallero-grupo">
+                <div class="medallero-grupo__nom">${escapeHTML(g.grupo)}</div>
+                <div class="medallero-grupo__grid">${cards}</div>
+            </div>`;
+    }).join('');
+    cont.removeAttribute('hidden');
 }
 
 // Fila de barritas: una por semana desde la asignación, color por estado

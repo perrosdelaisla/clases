@@ -36,6 +36,20 @@ const SUBTAB_LABELS = {
 };
 const DEFAULT_SUBTAB = 'ejercicio';
 
+// Etiquetas de protocolo (mismo mapeo que el cliente) para la agrupación
+// de ejercicios "la llave".
+const PROTOCOLOS_LABEL = {
+    educacion_basica:         'Educación básica',
+    educacion_cachorro:       'Educación del cachorro',
+    gestion_ansiedad:         'Gestión de ansiedad',
+    reactividad_impulsividad: 'Reactividad e impulsividad',
+    proteccion_recursos:      'Protección de recursos',
+    depresion:                'Depresión y estados depresivos',
+    celos:                    'Celos y competiciones afectivas',
+    conflictividad_peleas:    'Conflictividad y peleas entre perros que conviven',
+    miedos_fobias:            'Miedos y fobias',
+};
+
 const state = {
     perroId: null,
     perro: null,
@@ -429,7 +443,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, parametros, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria, campos)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, parametros, grupo_protocolo, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria, campos)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -483,6 +497,9 @@ async function renderEjerciciosActivos() {
     });
     listaEl.querySelectorAll('[data-mover]').forEach((btn) => {
         btn.addEventListener('click', () => moverRenglon(btn, btn.dataset.mover));
+    });
+    listaEl.querySelectorAll('[data-accion="grupo"]').forEach((btn) => {
+        btn.addEventListener('click', () => abrirSelectorGrupo(btn.dataset.asignadoId, btn.dataset.grupo || ''));
     });
     listaEl.querySelectorAll('[data-accion="frecuencia"]').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -596,6 +613,22 @@ function renderEjercicioActivoCard(row, history = []) {
             ${freqLabel}
         </button>`;
 
+    // Chip de grupo/protocolo (la "llave"): solo en ejercicios. Muestra el
+    // protocolo al que pertenece o "Sin grupo". Abre el selector. NO toca
+    // parametros ni frecuencia.
+    const grupoChip = (categoria === 'ejercicio') ? (() => {
+        const g = row.grupo_protocolo || '';
+        const label = g ? (PROTOCOLOS_LABEL[g] || g) : 'Sin grupo';
+        return `<button type="button"
+                    class="grupo-chip${g ? '' : ' grupo-chip--vacio'}"
+                    data-accion="grupo"
+                    data-asignado-id="${escapeHTML(row.id)}"
+                    data-grupo="${escapeHTML(g)}"
+                    aria-label="Asignar a un protocolo">
+                    🔑 ${escapeHTML(label)}
+                </button>`;
+    })() : '';
+
     const nNotas = _notasNoLeidasPorEjercicio.get(row.id) || 0;
     const notasChip = nNotas > 0
         ? `<button type="button"
@@ -696,6 +729,7 @@ function renderEjercicioActivoCard(row, history = []) {
                     <div class="ejercicio-activo-chips">
                         ${catChip}
                         ${freqChip}
+                        ${grupoChip}
                         ${notasChip}
                     </div>
                 </div>${toggle}
@@ -714,6 +748,73 @@ function renderEjercicioActivoCard(row, history = []) {
             </div>
         </li>
     `;
+}
+
+// ===================== Grupo / protocolo del ejercicio (la "llave") =====
+
+// Slugs de protocolo disponibles para este perro: principal + complementarios,
+// deduplicados y en orden. Salen de la ficha del perro (no se inventan).
+function _gruposDelPerro() {
+    const p = state.perro || {};
+    const out = [];
+    if (p.protocolo_principal) out.push(p.protocolo_principal);
+    (p.protocolos_complementarios || []).forEach((s) => {
+        if (s && !out.includes(s)) out.push(s);
+    });
+    return out;
+}
+
+function abrirSelectorGrupo(asignadoId, actual) {
+    const slugs = _gruposDelPerro();
+    let cont = document.getElementById('selector-grupo');
+    if (!cont) {
+        cont = document.createElement('div');
+        cont.id = 'selector-grupo';
+        cont.className = 'selector-grupo-bg';
+        document.body.appendChild(cont);
+        cont.addEventListener('click', (e) => {
+            if (e.target === cont) cont.classList.remove('open');
+        });
+    }
+    let opciones;
+    if (slugs.length === 0) {
+        opciones = `<p class="selector-grupo__aviso">Este perro todavía no tiene protocolos en su ficha. Definí el protocolo principal y los complementarios arriba, y después podrás agrupar los ejercicios.</p>`;
+    } else {
+        opciones = slugs.map((s) => {
+            const sel = (s === actual) ? ' selector-grupo__opt--sel' : '';
+            return `<button type="button" class="selector-grupo__opt${sel}" data-slug="${escapeHTML(s)}">${escapeHTML(PROTOCOLOS_LABEL[s] || s)}</button>`;
+        }).join('');
+        const selSin = (!actual) ? ' selector-grupo__opt--sel' : '';
+        opciones += `<button type="button" class="selector-grupo__opt selector-grupo__opt--sin${selSin}" data-slug="">Sin grupo</button>`;
+    }
+    cont.innerHTML = `
+        <div class="selector-grupo">
+            <h3 class="selector-grupo__titulo">Agrupar en un protocolo</h3>
+            <p class="selector-grupo__sub">El tutor verá los ejercicios ordenados bajo esta llave.</p>
+            ${opciones}
+            <button type="button" class="selector-grupo__cerrar" data-cerrar>Cerrar</button>
+        </div>`;
+    cont.querySelectorAll('.selector-grupo__opt').forEach((b) => {
+        b.addEventListener('click', () => guardarGrupo(asignadoId, b.dataset.slug || null));
+    });
+    cont.querySelector('[data-cerrar]')?.addEventListener('click', () => cont.classList.remove('open'));
+    requestAnimationFrame(() => cont.classList.add('open'));
+}
+
+async function guardarGrupo(asignadoId, slug) {
+    const cont = document.getElementById('selector-grupo');
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({ grupo_protocolo: slug, actualizado_en: new Date().toISOString() })
+            .eq('id', asignadoId);
+        if (error) throw error;
+        if (cont) cont.classList.remove('open');
+        await renderEjerciciosActivos();
+    } catch (e) {
+        console.error('[perro] error guardando grupo:', e);
+        alert('No se pudo guardar el grupo. Inténtalo de nuevo.');
+    }
 }
 
 function toggleHistoria(btn) {

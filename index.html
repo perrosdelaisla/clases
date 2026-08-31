@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=35">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=25">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=26">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -335,6 +335,11 @@
                         <div id="progreso-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
                         <div id="progreso-empty" class="placeholder" hidden><p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p></div>
                         <ul id="progreso-lista" class="progreso-lista" hidden></ul>
+
+                        <section class="medallero" id="medallero" hidden aria-label="Logros">
+                            <h3 class="medallero__titulo">LOGROS DE <span id="medallero-perro"></span></h3>
+                            <div id="medallero-grupos"></div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -1475,6 +1480,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=152"></script>
+    <script type="module" src="./js/app.js?v=153"></script>
 </body>
 </html>

@@ -236,3 +236,65 @@
     font-family:var(--display, 'Bebas Neue'); font-size:16px; letter-spacing:1px;
     color:#E8B62D; font-weight:400;
 }
+
+/* ────────────────────────────────────────────────────────────
+   Agrupación de ejercicios por protocolo ("la llave") · Fase grupos.
+   Solo aplica cuando la lista tiene .rutina-lista--agrupada. 31/08/2026.
+   ──────────────────────────────────────────────────────────── */
+.home .rutina-lista--agrupada{ list-style:none; padding:0; margin:0; display:block; }
+.home .rutina-grupo{ display:flex; gap:10px; margin-bottom:16px; list-style:none; }
+.home .rutina-grupo__llave{
+    flex:0 0 auto; width:30px; display:flex; flex-direction:column; align-items:center;
+}
+.home .rutina-grupo__bar{
+    width:4px; flex:1; border-radius:4px; margin:5px 0;
+    background:var(--grupo-color, #8A867E);
+}
+.home .rutina-grupo__lbl{
+    writing-mode:vertical-rl; transform:rotate(180deg);
+    font-family:var(--display, 'Bebas Neue'); letter-spacing:1.2px; font-size:12px;
+    color:var(--grupo-color, #8A867E); white-space:nowrap; padding:2px 0;
+    max-height:220px; overflow:hidden; text-overflow:ellipsis;
+}
+.home .rutina-grupo__body{ flex:1; min-width:0; }
+.home .rutina-grupo__head{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+.home .rutina-grupo__nom{
+    font-family:var(--display, 'Bebas Neue'); letter-spacing:.8px; font-size:16px; color:var(--c-text);
+}
+.home .rutina-grupo__cuenta{
+    font-size:11px; color:var(--c-text-3, #8A867E);
+    background:var(--c-surface-2, #2A2620); padding:2px 8px; border-radius:999px;
+}
+.home .rutina-grupo__body .rutina-card{ margin-bottom:9px; }
+
+/* ────────────────────────────────────────────────────────────
+   Medallero de la Manada (Fase 3 · registro lúdico). 31/08/2026.
+   ──────────────────────────────────────────────────────────── */
+.home .medallero{ margin-top:20px; }
+.home .medallero[hidden]{ display:none; }
+.home .medallero__titulo{
+    font-family:var(--display, 'Bebas Neue'); letter-spacing:1.5px; font-size:18px;
+    color:var(--c-text-2); margin:0 0 14px;
+}
+.home .medallero-grupo{ margin-bottom:18px; }
+.home .medallero-grupo__nom{
+    font-family:var(--display, 'Bebas Neue'); letter-spacing:1px; font-size:14px;
+    color:var(--c-text-3, #8A867E); margin-bottom:9px;
+}
+.home .medallero-grupo__grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:9px;
+}
+.home .medalla{
+    background:var(--c-surface); border:1px solid var(--c-hair); border-radius:13px;
+    padding:13px 11px; text-align:center; opacity:.4; transition:opacity .3s, transform .3s, border-color .3s;
+}
+.home .medalla--won{ opacity:1; }
+.home .medalla--oro.medalla--won{ border-color:#E8B62D; box-shadow:0 0 0 1px rgba(232,182,45,.35) inset; }
+.home .medalla__ico{ font-size:27px; line-height:1; }
+.home .medalla--won .medalla__ico{ filter:none; }
+.home .medalla:not(.medalla--won) .medalla__ico{ filter:grayscale(1); }
+.home .medalla__nom{
+    font-family:var(--display, 'Bebas Neue'); letter-spacing:.6px; font-size:14px;
+    color:var(--c-text); margin-top:6px;
+}
+.home .medalla__hint{ font-size:10.5px; color:var(--c-text-3, #8A867E); margin-top:2px; line-height:1.3; }
