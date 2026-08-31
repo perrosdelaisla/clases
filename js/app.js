@@ -1201,7 +1201,18 @@ function pintarBurbujaJaime() {
     const textoEl = document.getElementById('jaime-burbuja__texto');
     const ctaEl = document.getElementById('jaime-burbuja__cta');
     const a = _jaimeAvisoActual;
-    if (textoEl) textoEl.textContent = a ? a.texto : 'Por hoy no hay novedades. ¡Seguimos!';
+    const texto = a ? a.texto : 'Por hoy no hay novedades. ¡Seguimos!';
+    if (textoEl) textoEl.textContent = texto;
+    // Botón de escuchar la burbuja (si el navegador soporta TTS).
+    const speakEl = document.getElementById('jaime-burbuja__speak');
+    if (speakEl) {
+        if ('speechSynthesis' in window) {
+            speakEl.hidden = false;
+            speakEl.onclick = (e) => { e.stopPropagation(); hablarJaime(texto, speakEl); };
+        } else {
+            speakEl.hidden = true;
+        }
+    }
     if (ctaEl) {
         if (a && a.ctaLabel && a.ctaAccion) {
             ctaEl.textContent = a.ctaLabel;
@@ -1225,6 +1236,7 @@ function abrirBurbujaJaime() {
 }
 
 function cerrarBurbujaJaime() {
+    detenerJaimeVoz();
     document.getElementById('jaime-burbuja')?.setAttribute('hidden', '');
 }
 
@@ -2014,10 +2026,63 @@ async function cargarHistorialJaime() {
 }
 
 function cerrarChatJaime() {
+    detenerJaimeVoz();   // corta la voz si estaba leyendo
     // No borra el historial: al reabrir sigue la charla de la sesión.
     document.getElementById('jaime-chat')?.setAttribute('hidden', '');
     // Devolvemos el FAB (conserva su posición arrastrada, guardada en el transform).
     document.getElementById('jaime-fab')?.removeAttribute('hidden');
+}
+
+// ───────────────────────────────────────────────────────────
+// Jaime habla (TTS). Voz masculina en español elegida por dispositivo
+// (Jorge/Pablo/Raúl/Google…), tono joven. Reusa la Web Speech API,
+// igual que el tutorial. Si el navegador no soporta TTS, no pasa nada.
+// ───────────────────────────────────────────────────────────
+const _JAIME_VOZ_MASC = /jorge|pablo|raul|raúl|diego|carlos|juan|enrique|miguel|álvaro|alvaro|male|hombre|masculino/i;
+let _jaimeVoz = null;
+function _elegirVozJaime() {
+    if (!('speechSynthesis' in window)) return;
+    const es = speechSynthesis.getVoices().filter((v) => /^es/i.test(v.lang));
+    if (!es.length) return;
+    _jaimeVoz = es.find((v) => _JAIME_VOZ_MASC.test(v.name))
+             || es.find((v) => /es[-_]ES/i.test(v.lang))
+             || es[0];
+}
+if ('speechSynthesis' in window) {
+    _elegirVozJaime();
+    window.speechSynthesis.addEventListener('voiceschanged', _elegirVozJaime);
+}
+function hablarJaime(texto, btn) {
+    if (!('speechSynthesis' in window) || !texto) return;
+    try {
+        speechSynthesis.cancel();
+        document.querySelectorAll('.jaime-speak--playing').forEach((b) => b.classList.remove('jaime-speak--playing'));
+        const u = new SpeechSynthesisUtterance(texto);
+        u.lang = 'es-ES';
+        if (_jaimeVoz) u.voice = _jaimeVoz;
+        u.rate = 1; u.pitch = 1.45;   // "muy joven" (elegido por Charly)
+        if (btn) {
+            btn.classList.add('jaime-speak--playing');
+            const off = () => btn.classList.remove('jaime-speak--playing');
+            u.onend = off; u.onerror = off;
+        }
+        speechSynthesis.speak(u);
+    } catch (e) { console.error('[jaime-voz]', e); }
+}
+function detenerJaimeVoz() {
+    if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (_) {} }
+    document.querySelectorAll('.jaime-speak--playing').forEach((b) => b.classList.remove('jaime-speak--playing'));
+}
+const _JAIME_SPEAK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
+function botonSpeakJaime(texto) {
+    if (!('speechSynthesis' in window)) return null;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'jaime-speak';
+    b.setAttribute('aria-label', 'Escuchar a Jaime');
+    b.innerHTML = _JAIME_SPEAK_SVG;
+    b.addEventListener('click', (e) => { e.stopPropagation(); hablarJaime(texto, b); });
+    return b;
 }
 
 function pintarMsgJaime(role, texto) {
@@ -2036,6 +2101,11 @@ function pintarMsgJaime(role, texto) {
     const burb = document.createElement('div');
     burb.className = 'jaime-chat__burb';
     burb.textContent = texto;   // textContent: sin inyección de HTML
+    // Botón de escuchar en los mensajes de Jaime.
+    if (esJaime) {
+        const sp = botonSpeakJaime(texto);
+        if (sp) burb.appendChild(sp);
+    }
     fila.appendChild(burb);
     cont.appendChild(fila);
     cont.scrollTop = cont.scrollHeight;
@@ -2087,6 +2157,9 @@ async function enviarChatJaime() {
         if (data && data.ok && data.reply) {
             _jaimeChatHist.push({ role: 'assistant', content: data.reply });
             pintarMsgJaime('assistant', data.reply);
+            // Jaime lee su respuesta en voz alta (hay gesto previo del usuario,
+            // así que el autoplay está permitido). Si no soporta TTS, no hace nada.
+            hablarJaime(data.reply);
         } else {
             // Error de la función: mensaje neutro (NO se agrega al historial).
             pintarMsgJaime('assistant', JAIME_CHAT_ERROR);

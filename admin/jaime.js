@@ -379,16 +379,52 @@ function renderChatView() {
   ta?.focus();
 }
 
+// Jaime habla (TTS) — voz masculina en español, tono joven. Igual que en el
+// cliente. Si el navegador no soporta síntesis de voz, no se muestra el botón.
+const _JM_VOZ_MASC = /jorge|pablo|raul|raúl|diego|carlos|juan|enrique|miguel|álvaro|alvaro|male|hombre|masculino/i;
+let _jmVoz = null;
+function _elegirVozJm() {
+  if (!('speechSynthesis' in window)) return;
+  const es = speechSynthesis.getVoices().filter((v) => /^es/i.test(v.lang));
+  if (!es.length) return;
+  _jmVoz = es.find((v) => _JM_VOZ_MASC.test(v.name)) || es.find((v) => /es[-_]ES/i.test(v.lang)) || es[0];
+}
+if ('speechSynthesis' in window) { _elegirVozJm(); window.speechSynthesis.addEventListener('voiceschanged', _elegirVozJm); }
+function hablarJm(texto, btn) {
+  if (!('speechSynthesis' in window) || !texto) return;
+  try {
+    speechSynthesis.cancel();
+    document.querySelectorAll('.jm-speak--playing').forEach((b) => b.classList.remove('jm-speak--playing'));
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'es-ES'; if (_jmVoz) u.voice = _jmVoz; u.rate = 1; u.pitch = 1.45;
+    if (btn) { btn.classList.add('jm-speak--playing'); const off = () => btn.classList.remove('jm-speak--playing'); u.onend = off; u.onerror = off; }
+    speechSynthesis.speak(u);
+  } catch (e) { console.error('[jm-voz]', e); }
+}
+const _JM_SPEAK = ('speechSynthesis' in window)
+  ? '<button type="button" class="jm-speak" aria-label="Escuchar a Jaime"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button>'
+  : '';
+
 function renderChat() {
   const list = document.getElementById('jm-chat-list');
   if (!list) return;
-  let html = saludoCache
-    ? `<div class="jm-msg jaime"><div class="jm-bubble">${escapeHtml(saludoCache)}</div></div>`
-    : '';
+  const bubbleJaime = (txt) => `<div class="jm-msg jaime"><div class="jm-bubble">${escapeHtml(txt)}${_JM_SPEAK}</div></div>`;
+  let html = saludoCache ? bubbleJaime(saludoCache) : '';
   html += chatHist.filter((m) => !m.hidden).map((m) =>
-    `<div class="jm-msg ${m.role === 'user' ? 'user' : 'jaime'}"><div class="jm-bubble">${escapeHtml(m.content)}</div></div>`
+    m.role === 'user'
+      ? `<div class="jm-msg user"><div class="jm-bubble">${escapeHtml(m.content)}</div></div>`
+      : bubbleJaime(m.content)
   ).join('');
   list.innerHTML = html;
+  // Delegación: el altavoz lee el texto de su propia burbuja.
+  list.querySelectorAll('.jm-speak').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const bubble = b.closest('.jm-bubble');
+      const txt = bubble ? bubble.textContent.trim() : '';
+      hablarJm(txt, b);
+    });
+  });
   list.scrollTop = list.scrollHeight;
 }
 

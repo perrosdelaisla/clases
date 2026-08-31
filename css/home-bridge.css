@@ -314,3 +314,23 @@
 .home .rutina-fase__dots{ display:flex; gap:3px; }
 .home .rutina-fase__dot{ width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.3; }
 .home .rutina-fase__dot--on{ opacity:1; }
+
+/* ── Jaime habla (botón altavoz TTS). 31/08/2026 ── */
+.jaime-speak{
+    border:none; cursor:pointer; padding:0; display:inline-grid; place-items:center;
+    width:26px; height:26px; border-radius:50%; background:var(--c-oliva, #6B7A3A);
+    color:#F5EFE0; flex:none; transition:transform .12s;
+}
+.jaime-speak svg{ width:14px; height:14px; fill:currentColor; }
+.jaime-speak:active{ transform:scale(.9); }
+.jaime-speak--playing{ background:#E8B62D; animation:jaime-speak-pulse 1s infinite; }
+@keyframes jaime-speak-pulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+/* En el chat: el altavoz va dentro de la burbuja de Jaime, abajo a la derecha */
+.jaime-chat__fila--jaime .jaime-chat__burb{ position:relative; padding-bottom:16px; }
+.jaime-chat__fila--jaime .jaime-chat__burb .jaime-speak{
+    position:absolute; right:-10px; bottom:-10px; width:28px; height:28px;
+    border:2px solid var(--c-surface, #211E16);
+}
+/* En la burbuja de aviso: arriba a la derecha, junto al cerrar */
+.jaime-burbuja__speak{ position:absolute; top:8px; right:38px; }
+@media (prefers-reduced-motion: reduce){ .jaime-speak--playing{ animation:none; } }

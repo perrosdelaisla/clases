@@ -170,3 +170,15 @@
 .jm-mic.on{background:var(--jm-rojo);border-color:var(--jm-rojo);color:var(--jm-crema);animation:jmDot 1.1s ease-in-out infinite}
 .jm-nota-guardar{background:var(--jm-rojo);color:var(--jm-crema);border:none;cursor:pointer;padding:10px 22px;border-radius:9px;font-family:var(--font-display);font-size:17px;letter-spacing:1px;text-transform:uppercase}
 .jm-nota-guardar:disabled{opacity:.6}
+
+/* ── Jaime habla (botón altavoz) · admin. 31/08/2026 ── */
+.jm-bubble{ position:relative; }
+.jm-msg.jaime .jm-bubble{ padding-bottom:18px; }
+.jm-speak{
+    position:absolute; right:-8px; bottom:-8px; width:28px; height:28px;
+    border-radius:50%; border:2px solid var(--jm-bg, #15130D); cursor:pointer;
+    background:var(--jm-oliva, #6B7A3A); color:#F5EFE0; display:grid; place-items:center; padding:0;
+}
+.jm-speak svg{ width:14px; height:14px; fill:currentColor; }
+.jm-speak--playing{ background:#E8B62D; animation:jmSpeakPulse 1s infinite; }
+@keyframes jmSpeakPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
