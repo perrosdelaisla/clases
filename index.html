@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=36">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=32">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=33">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -305,16 +305,22 @@
                     </div>
 
                     <div class="rutina-modo-panel" id="progreso-vista" hidden>
-                        <!-- Isla GLOBAL: el recorrido completo del plan (no la semana). 01/09/2026 -->
-                        <div class="isla-semana isla-global" id="isla-progreso" hidden aria-label="Progreso del plan completo">
+                        <!-- El camino del PROTOCOLO: avance por CLASES + isla que florece por
+                             el entrenamiento. Dos ejes distintos. 01/09/2026 -->
+                        <div class="isla-semana isla-global" id="isla-progreso" hidden aria-label="El camino del protocolo">
                             <p class="isla-semana__titulo">EL CAMINO DE <span id="isla-progreso-perro"></span></p>
-                            <p class="isla-global__sub">Plan completo · lo marca el protocolo más largo</p>
+                            <p class="isla-global__sub">Avance del protocolo</p>
                             <svg class="isla-semana__svg" id="isla-progreso-svg" viewBox="0 0 220 150" aria-hidden="true"></svg>
-                            <div class="isla-semana__pct"><span id="isla-progreso-pct">0</span><small>%</small></div>
-                            <div class="isla-semana__barra"><i id="isla-progreso-barra"></i></div>
-                            <p class="isla-global__hito" id="isla-progreso-hito"></p>
-                            <p class="isla-semana__lema" id="isla-progreso-lema"></p>
-                            <p class="isla-semana__racha" id="isla-progreso-racha" hidden><b id="isla-progreso-racha-n"></b> de constancia</p>
+                            <p class="camino-isla-cap">🌱 La isla florece con el <b>entrenamiento</b></p>
+                            <div class="camino-clase">
+                                <div class="camino-clase__head">
+                                    <span class="camino-clase__big">CLASE <b id="isla-progreso-clase-x">0</b> DE <span id="isla-progreso-clase-n">0</span></span>
+                                    <span class="camino-clase__pct"><span id="isla-progreso-pct">0</span>% del plan</span>
+                                </div>
+                                <div class="camino-clase__dots" id="isla-progreso-dots" aria-hidden="true"></div>
+                                <p class="camino-clase__cap">📅 Avanza cuando <span id="isla-progreso-perro2">tu perro</span> hace una clase</p>
+                            </div>
+                            <p class="isla-semana__racha" id="isla-progreso-racha" hidden><b id="isla-progreso-racha-n"></b> de constancia entrenando</p>
                         </div>
                         <div id="progreso-loading" class="placeholder placeholder--soft"><p>Cargando…</p></div>
                         <div id="progreso-empty" class="placeholder" hidden><p>Todavía no hay ejercicios con objetivos definidos. Cuando tu adiestrador los configure, los verás acá.</p></div>
@@ -1502,8 +1508,8 @@
     <!-- Tutorial / tour de bienvenida. Cargamos los pasos antes del motor
          para que `window.PDLI_TUTORIAL_PASOS` exista cuando el motor se
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
-    <script src="./js/tutorial-pasos.js?v=4"></script>
-    <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=158"></script>
+    <script src="./js/tutorial-pasos.js?v=5"></script>
+    <script src="./js/tutorial.js?v=5"></script>
+    <script type="module" src="./js/app.js?v=159"></script>
 </body>
 </html>

@@ -924,6 +924,8 @@ function ejecutarItemAvatar(id) {
         // No cerramos el menú: deja alternar y ver el cambio al toque.
     }
     else if (id === 'hero-editar-manada') { cerrarMenuAvatar(); abrirModalEditarMisDatos(); }
+    // "Ver el tutorial" (lo monta tutorial.js dentro del menú): abre el tour.
+    else if (id === 'btn-tutorial') { cerrarMenuAvatar(); window.PdliTour?.abrir?.(0); }
 }
 
 // ===================== Mi familia (cliente principal) =====================
@@ -4571,59 +4573,79 @@ async function cargarVistaProgreso() {
     aplicarAmbientalAnillo();
 }
 
-// ── Isla GLOBAL (Mi progreso): el recorrido COMPLETO del plan, no la semana.
-//    Pedido de Charly (01/09/2026). El "largo" lo fija el protocolo más largo
-//    (horizonte en semanas); la isla florece con el ESFUERZO ACUMULADO —todos
-//    los entrenos, capados por semana al mínimo— contra lo esperado para todo
-//    el plan. Si no entrena, no florece. La isla de la semana (Rutina) intacta.
-const _HORIZONTE_SEMANAS = { educacion_basica: 4, educacion_cachorro: 4 };
-const _HORIZONTE_DEFAULT = 12; // protocolos de conducta: ~12 semanas (hasta 14)
-function _horizontePlan(perro) {
+// ── "El camino" (Mi progreso): el recorrido del PROTOCOLO. Pedido de Charly
+//    (01/09/2026). Dos ejes distintos, conectados:
+//      · AVANCE  = CLASES realizadas / N  → "Clase X de N" + puntitos. Avanza
+//        solo cuando se marca una clase como realizada (no con el calendario).
+//      · FLORACIÓN de la isla = ESFUERZO (constancia de entrenamiento). La isla
+//        florece con los entrenos, pase lo que pase con las clases.
+//    N (clases del protocolo más largo): educación 8 / conducta 12 por defecto,
+//    ampliable por caso desde el admin (perros.clases_meta).
+const _CLASES_PROTOCOLO = {
+    educacion_basica: 8, educacion_cachorro: 8,
+    gestion_ansiedad: 12, reactividad_impulsividad: 12, proteccion_recursos: 12,
+    depresion: 12, celos: 12, conflictividad_peleas: 12, miedos_fobias: 12,
+};
+const _CLASES_DEFAULT = 12;
+function metaClasesPerro(perro) {
+    // Override manual por caso (admin) tiene prioridad.
+    if (perro?.clases_meta != null && perro.clases_meta > 0) return perro.clases_meta;
     const protos = [perro?.protocolo_principal, ...((perro?.protocolos_complementarios) || [])]
         .filter(Boolean);
-    if (protos.length === 0) return _HORIZONTE_DEFAULT;
-    return Math.max(...protos.map((p) => _HORIZONTE_SEMANAS[p] ?? _HORIZONTE_DEFAULT));
+    if (protos.length === 0) return _CLASES_DEFAULT;
+    return Math.max(...protos.map((p) => _CLASES_PROTOCOLO[p] ?? _CLASES_DEFAULT));
 }
 function calcularIslaGlobal() {
+    // Esfuerzo (para la floración de la isla): constancia acumulada = de todo lo
+    // que debería haber entrenado hasta ahora, cuánto entrenó realmente.
     const rows = [..._progresoCache.values()]
         .filter((r) => r.min_semanal != null && r.min_semanal > 0);
     const objetivoSemanal = rows.reduce((a, r) => a + r.min_semanal, 0);
-    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    const H = _horizontePlan(perro);
-    const objetivoGlobal = objetivoSemanal * H;
-    // Esfuerzo acumulado: por ejercicio, sumo min(count, mínimo) de cada semana
-    // del historial (capado para no premiar de más una semana puntual).
     let hechosCap = 0, semanasElapsed = 0;
     rows.forEach((r) => {
         const hist = _historialCache.get(r.ejercicio_asignado_id) || [];
         if (hist.length > semanasElapsed) semanasElapsed = hist.length;
         hist.forEach((s) => { hechosCap += Math.min(Number(s.count || 0), r.min_semanal); });
     });
-    const pct = objetivoGlobal > 0 ? Math.min(hechosCap / objetivoGlobal, 1) : 0;
-    return { objetivoGlobal, hechosCap, pct, H,
-             semanaActual: Math.max(1, Math.min(semanasElapsed, H)) };
+    const objetivoEsfuerzo = objetivoSemanal * Math.max(semanasElapsed, 1);
+    const effortPct = objetivoEsfuerzo > 0 ? Math.min(hechosCap / objetivoEsfuerzo, 1) : 0;
+    // Avance del protocolo (para "Clase X de N"): clases marcadas como realizada.
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    const N = metaClasesPerro(perro);
+    const X = (state.citas || []).filter((c) => c.estado === 'realizada').length;
+    const Xc = Math.min(X, N);
+    const classPct = N > 0 ? Math.min(X / N, 1) : 0;
+    return { effortPct, X, Xc, N, classPct, hayEjercicios: objetivoSemanal > 0 };
 }
 function renderIslaGlobal() {
     const prefix = 'isla-progreso';
     const box = document.getElementById(prefix);
     if (!box) return;
     const g = calcularIslaGlobal();
-    if (g.objetivoGlobal === 0) { box.setAttribute('hidden', ''); return; }
+    // Se muestra si hay algo real que contar: ejercicios para la isla o clases.
+    if (!g.hayEjercicios && g.X === 0) { box.setAttribute('hidden', ''); return; }
     box.removeAttribute('hidden');
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    setText(`${prefix}-perro`, perro?.nombre || 'tu perro');
-    _islaPintarEscena(g.hechosCap, g.objetivoGlobal, g.pct, `${prefix}-svg`);
-    const pctE = Math.min(100, Math.round(g.pct * 100));
-    setText(`${prefix}-pct`, String(pctE));
-    const barra = document.getElementById(`${prefix}-barra`);
-    if (barra) barra.style.width = `${pctE}%`;
-    setText(`${prefix}-hito`, `Semana ${g.semanaActual} de ~${g.H}`);
-    const completo = g.pct >= 1;
-    setText(`${prefix}-lema`, completo
-        ? `¡${perro?.nombre || 'Tu perro'} completó su camino!`
-        : (g.hechosCap === 0 ? _ISLA_LEMAS[0]
-           : _ISLA_LEMAS[Math.min(Math.floor(g.pct * (_ISLA_LEMAS.length - 1)) + 1, _ISLA_LEMAS.length - 1)]));
-    // Racha: mismas "semanas seguidas cuidando la isla" (constancia real).
+    const nombre = perro?.nombre || 'tu perro';
+    setText(`${prefix}-perro`, nombre);
+    setText(`${prefix}-perro2`, nombre);
+    // La isla FLORECE con el esfuerzo (constancia). t = effortPct; sin extras.
+    _islaPintarEscena(0, 1, g.effortPct, `${prefix}-svg`);
+    // Avance por CLASES.
+    setText(`${prefix}-clase-x`, String(g.X));
+    setText(`${prefix}-clase-n`, String(g.N));
+    setText(`${prefix}-pct`, String(Math.round(g.classPct * 100)));
+    const dots = document.getElementById(`${prefix}-dots`);
+    if (dots) {
+        let h = '';
+        for (let i = 1; i <= g.N; i++) {
+            const done = i <= g.Xc;
+            const next = (i === g.Xc + 1);
+            h += `<span class="camino-dot${done ? ' camino-dot--done' : next ? ' camino-dot--next' : ''}">${done ? '✓' : i}</span>`;
+        }
+        dots.innerHTML = h;
+    }
+    // Racha de constancia (entreno), igual que la isla de la semana.
     const racha = _islaRacha(calcularIslaSemana().pct);
     const rachaEl = document.getElementById(`${prefix}-racha`);
     if (rachaEl) {

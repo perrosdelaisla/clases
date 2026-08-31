@@ -127,9 +127,9 @@ window.PDLI_TUTORIAL_PASOS = [
     {
         id: 'cierre',
         tab: 'rutina',
-        selector: '#btn-tutorial',
+        selector: '#avatar-btn',
         titulo: '¡Listo!',
-        texto: 'Si quieres volver a ver este recorrido, está siempre aquí arriba, en este botón con el signo de interrogación.',
+        texto: 'Si quieres volver a ver este recorrido, lo tienes en el menú de tu avatar (arriba a la derecha), en "Ver el tutorial".',
         posicion: 'auto',
     },
 ];

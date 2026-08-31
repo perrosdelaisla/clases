@@ -374,6 +374,33 @@
     font-family:var(--body); font-size:11px; font-weight:700; letter-spacing:.4px;
     text-transform:uppercase; color:var(--c-text-3); margin:6px 0 2px; text-align:center;
 }
+/* El camino: la isla florece por el ENTRENO; el avance va por CLASES. 01/09/2026 */
+.home .camino-isla-cap{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:11px; font-weight:600; color:var(--c-text-2); margin:8px 0 0; text-align:center;
+}
+.home .camino-isla-cap b{ color:var(--c-oliva); font-weight:700; }
+.home .camino-clase{
+    margin-top:13px; padding-top:13px; border-top:1px solid var(--c-hair);
+}
+.home .camino-clase__head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px;
+}
+.home .camino-clase__big{
+    font-family:var(--display, 'Bebas Neue'); font-size:23px; letter-spacing:.6px; color:var(--c-text); line-height:1;
+}
+.home .camino-clase__big b{ color:var(--c-oliva); }
+.home .camino-clase__pct{ font-size:11px; font-weight:700; color:var(--c-text-3); white-space:nowrap; }
+.home .camino-clase__dots{ display:flex; flex-wrap:wrap; gap:7px; }
+.home .camino-dot{
+    width:20px; height:20px; border-radius:50%; border:2px solid var(--c-hair-2);
+    display:grid; place-items:center; font-size:9px; font-weight:800; color:var(--c-text-3); flex:0 0 auto;
+}
+.home .camino-dot--done{ background:var(--c-oliva); border-color:var(--c-oliva); color:#F5EFE0; }
+.home .camino-dot--next{ border-color:var(--c-oliva); border-style:dashed; color:var(--c-oliva); }
+.home .camino-clase__cap{
+    font-size:11px; color:var(--c-text-3); margin:9px 0 0; display:flex; align-items:center; gap:6px;
+}
 /* Línea de constancia (sparkline legible) — reemplaza las barritas por semana. */
 .home .progreso-spark{ position:relative; margin-top:11px; }
 .home .progreso-spark svg{ width:100%; height:auto; display:block; overflow:visible; }

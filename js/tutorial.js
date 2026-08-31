@@ -204,28 +204,28 @@
 
     function montarBoton() {
         if (document.getElementById(BTN_ID)) return;
-        // Tras el rediseño del home, el header es .ctop > .ctop-right (con
-        // .cdogs y .cavatar). Montamos el botón "?" dentro de .ctop-right.
-        const menu = document.querySelector('.ctop-right');
+        // Hero despejado (01/09/2026): "Ver el tutorial" vive dentro del menú
+        // del avatar, como un ítem más con su iconito (gorrito). Su acción la
+        // centraliza ejecutarItemAvatar('btn-tutorial') en app.js (mismo patrón
+        // que "Cambiar tema" y "Editar mis datos"), por eso no lleva click propio.
+        const menu = document.getElementById('avatar-menu');
         if (!menu) return;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.id = BTN_ID;
-        btn.className = 'tutorial-btn';
-        btn.setAttribute('aria-label', 'Abrir tutorial de la app');
-        btn.title = 'Tutorial';
+        btn.className = 'avatar-menu__item';
+        btn.setAttribute('role', 'menuitem');
+        btn.setAttribute('aria-label', 'Ver el tutorial de la app');
         btn.innerHTML =
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-            '<circle cx="12" cy="12" r="9"/>' +
-            '<path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1.3 1-1.3 1.9V14"/>' +
-            '<circle cx="12" cy="17" r="0.6" fill="currentColor"/>' +
-            '</svg>';
-        btn.addEventListener('click', () => abrir(0));
-        // Lo insertamos ANTES del avatar (.cavatar) para que el avatar siga
-        // siendo el último elemento del header (foco visual derecho).
-        const avatar = menu.querySelector('.cavatar');
-        if (avatar) menu.insertBefore(btn, avatar);
-        else menu.appendChild(btn);
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M22 10 12 5 2 10l10 5 10-5z"/>' +
+            '<path d="M6 12v5c0 1.1 2.7 2.5 6 2.5s6-1.4 6-2.5v-5"/>' +
+            '<path d="M22 10v5"/>' +
+            '</svg><span class="avatar-menu__lbl">Ver el tutorial</span>';
+        // Justo debajo de "Cambiar tema".
+        const theme = menu.querySelector('#theme-toggle');
+        if (theme) theme.insertAdjacentElement('afterend', btn);
+        else menu.insertBefore(btn, menu.firstChild);
     }
 
     // ----- Posicionamiento del hueco y del tooltip -----

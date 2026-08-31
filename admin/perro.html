@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Perro — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=56">
+    <link rel="stylesheet" href="./styles.css?v=57">
     <link rel="stylesheet" href="./jaime.css?v=10">
 </head>
 <body>
@@ -108,6 +108,18 @@
                             <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="conflictividad_peleas"><span class="admin-toggle__label">Conflictividad y peleas entre perros que conviven</span></label>
                             <label class="admin-toggle protocolo-comp-item"><input type="checkbox" class="protocolo-comp" data-protocolo="miedos_fobias"><span class="admin-toggle__label">Miedos y fobias</span></label>
                         </div>
+                    </div>
+                    <div class="protocolo-bloque">
+                        <p class="protocolo-bloque__titulo">Camino del protocolo</p>
+                        <p class="protocolo-bloque__hint">Cuántas clases marcan el final del camino de este perro. Por defecto según el protocolo (educación 8 · conducta 12); amplíalo si el caso lo necesita.</p>
+                        <div class="meta-clases">
+                            <button type="button" class="meta-clases__btn" id="meta-menos" aria-label="Menos clases">−</button>
+                            <span class="meta-clases__val" id="meta-valor">—</span>
+                            <span class="meta-clases__unit">clases</span>
+                            <button type="button" class="meta-clases__btn" id="meta-mas" aria-label="Más clases">+</button>
+                            <button type="button" class="meta-clases__reset" id="meta-reset" hidden>↺ volver al default</button>
+                        </div>
+                        <p class="meta-clases__def" id="meta-def"></p>
                     </div>
                 </section>
                 <section class="tab-panel tab-panel--ejercicios" data-panel="ejercicios" role="tabpanel" hidden>
@@ -418,6 +430,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./perro.js?v=55"></script>
+    <script type="module" src="./perro.js?v=56"></script>
 </body>
 </html>

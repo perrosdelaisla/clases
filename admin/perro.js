@@ -282,6 +282,60 @@ function renderProtocoloUI() {
         const item = chk.closest('.protocolo-comp-item');
         if (item) item.classList.toggle('is-disabled', esPrincipal);
     });
+    renderMetaClasesUI();
+}
+
+// ── Meta de clases del camino (por caso). Default educación 8 / conducta 12;
+//    ampliable por perro (perros.clases_meta). 01/09/2026 · pedido de Charly.
+const _CLASES_PROTOCOLO_ADMIN = {
+    educacion_basica: 8, educacion_cachorro: 8,
+    gestion_ansiedad: 12, reactividad_impulsividad: 12, proteccion_recursos: 12,
+    depresion: 12, celos: 12, conflictividad_peleas: 12, miedos_fobias: 12,
+};
+const _CLASES_DEFAULT_ADMIN = 12;
+function metaClasesDefault(p) {
+    const protos = [p?.protocolo_principal, ...((p?.protocolos_complementarios) || [])].filter(Boolean);
+    if (protos.length === 0) return _CLASES_DEFAULT_ADMIN;
+    return Math.max(...protos.map((x) => _CLASES_PROTOCOLO_ADMIN[x] ?? _CLASES_DEFAULT_ADMIN));
+}
+function metaClasesActual(p) {
+    return (p?.clases_meta != null && p.clases_meta > 0) ? p.clases_meta : metaClasesDefault(p);
+}
+function renderMetaClasesUI() {
+    const p = state.perro || {};
+    const def = metaClasesDefault(p);
+    const override = (p.clases_meta != null && p.clases_meta > 0) ? p.clases_meta : null;
+    const valEl = document.getElementById('meta-valor');
+    if (valEl) valEl.textContent = String(override ?? def);
+    const defEl = document.getElementById('meta-def');
+    if (defEl) defEl.textContent = override != null
+        ? `Ampliado a mano · default de este protocolo: ${def} clases`
+        : `Default de este protocolo: ${def} clases`;
+    const reset = document.getElementById('meta-reset');
+    if (reset) reset.hidden = (override == null);
+}
+async function guardarMetaClases(nuevo) {
+    if (!state.perroId) return;
+    try {
+        const { error } = await supabase.from('perros')
+            .update({ clases_meta: nuevo }).eq('id', state.perroId);
+        if (error) throw error;
+        if (state.perro) state.perro.clases_meta = nuevo;
+        renderMetaClasesUI();
+        toast(nuevo == null ? 'Meta: volvió al default' : 'Meta de clases actualizada');
+    } catch (err) {
+        console.error('[perro] error guardando meta de clases:', err);
+        toast('No se pudo guardar', 'error');
+        renderMetaClasesUI();
+    }
+}
+function bindMetaClases() {
+    const menos = document.getElementById('meta-menos');
+    const mas = document.getElementById('meta-mas');
+    const reset = document.getElementById('meta-reset');
+    if (menos) menos.addEventListener('click', () => guardarMetaClases(Math.max(1, metaClasesActual(state.perro) - 1)));
+    if (mas) mas.addEventListener('click', () => guardarMetaClases(Math.min(40, metaClasesActual(state.perro) + 1)));
+    if (reset) reset.addEventListener('click', () => guardarMetaClases(null));
 }
 
 function bindProtocolo() {
@@ -290,6 +344,7 @@ function bindProtocolo() {
     document.querySelectorAll('.protocolo-comp').forEach((chk) => {
         chk.addEventListener('change', guardarProtocolo);
     });
+    bindMetaClases();
 }
 
 async function guardarProtocolo() {
