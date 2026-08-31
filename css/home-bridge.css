@@ -298,3 +298,19 @@
     color:var(--c-text); margin-top:6px;
 }
 .home .medalla__hint{ font-size:10.5px; color:var(--c-text-3, #8A867E); margin-top:2px; line-height:1.3; }
+
+/* ── Sello de fase en la llave (por grupo/protocolo). 31/08/2026 ── */
+.home .rutina-fase{
+    display:inline-flex; align-items:center; gap:7px; margin:0 0 10px;
+    padding:4px 11px 4px 9px; border-radius:999px; font-size:11.5px; font-weight:600;
+    color:var(--fase-color, #8A867E);
+    background:color-mix(in srgb, var(--fase-color, #8A867E) 15%, transparent);
+    border:1px solid color-mix(in srgb, var(--fase-color, #8A867E) 40%, transparent);
+}
+/* Fallback para navegadores sin color-mix: un fondo suave neutro. */
+@supports not (background: color-mix(in srgb, red 15%, transparent)){
+    .home .rutina-fase{ background:rgba(138,134,126,.14); border-color:rgba(138,134,126,.4); }
+}
+.home .rutina-fase__dots{ display:flex; gap:3px; }
+.home .rutina-fase__dot{ width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.3; }
+.home .rutina-fase__dot--on{ opacity:1; }

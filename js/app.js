@@ -3469,6 +3469,20 @@ async function renderRutinaPerroSeleccionado() {
             console.error('[tarea-dias] no se pudieron cargar:', e);
         }
 
+        // Fase de cada grupo/protocolo (la "llave"). Aditivo: si falla, las
+        // llaves se muestran sin el sello de fase.
+        _gruposFase = {};
+        try {
+            const { data: fases, error } = await supabase
+                .from('grupos_fase')
+                .select('grupo_protocolo, fase')
+                .eq('perro_id', perro.id);
+            if (error) throw error;
+            (fases || []).forEach((f) => { _gruposFase[f.grupo_protocolo] = f.fase; });
+        } catch (e) {
+            console.error('[fase] no se pudieron cargar las fases:', e);
+        }
+
         if (filas.length === 0) {
             // Si otra llamada ya tomó el control, dejamos que esa pinte.
             if (myToken !== _renderRutinaToken) return;
@@ -3544,6 +3558,22 @@ async function renderRutinaPerroSeleccionado() {
 // Sin historia: una tarjeta simple (igual que siempre).
 // Con historia: un carrusel horizontal con scroll-snap nativo, tarjetas en
 // orden [paso más viejo … paso más reciente, vigente].
+// Fase de cada grupo/protocolo (la "llave"): { slug → 'preparatoria'|... }.
+let _gruposFase = {};
+// Metadata de las 3 fases: puntitos llenos, color, etiqueta.
+const _FASES = {
+    preparatoria:        { dots: 1, color: '#C8102E', label: 'Fase preparatoria' },
+    abordaje:            { dots: 2, color: '#E8B62D', label: 'Fase de abordaje' },
+    final_mantenimiento: { dots: 3, color: '#6E9E45', label: 'Fase final y mantenimiento' },
+};
+function renderSelloFase(slug) {
+    const f = _FASES[_gruposFase[slug]];
+    if (!f) return '';
+    let dots = '';
+    for (let i = 0; i < 3; i++) dots += `<i class="rutina-fase__dot${i < f.dots ? ' rutina-fase__dot--on' : ''}"></i>`;
+    return `<span class="rutina-fase" style="--fase-color:${f.color}"><span class="rutina-fase__dots">${dots}</span>${escapeHTML(f.label)}</span>`;
+}
+
 // Colores de la llave por posición del grupo (principal siempre rojo; los
 // complementarios rotan; "sin grupo" gris). Con transparencia para la barra.
 const _GRUPO_COLORES = ['#C8102E', '#4E7A9E', '#6B7A3A', '#D97962', '#E8B62D', '#8E6BA8'];
@@ -3584,10 +3614,11 @@ function renderGruposEjercicios(cadenas) {
 
     let html = '';
     let idx = 0;
-    const pintarGrupo = (nombre, lista, color) => {
+    const pintarGrupo = (nombre, lista, color, slug) => {
         if (lista.length === 0) return '';
         const cards = lista.map((c) => renderRutinaCard(c, 'article')).join('');
         const nom = escapeHTML(nombre);
+        const sello = slug ? renderSelloFase(slug) : '';
         return `
             <li class="rutina-grupo">
                 <div class="rutina-grupo__llave" style="--grupo-color:${color}">
@@ -3600,16 +3631,17 @@ function renderGruposEjercicios(cadenas) {
                         <span class="rutina-grupo__nom">${nom}</span>
                         <span class="rutina-grupo__cuenta">${lista.length}</span>
                     </div>
+                    ${sello}
                     ${cards}
                 </div>
             </li>`;
     };
     orden.forEach((slug) => {
         const nombre = PROTOCOLOS_LABEL[slug] || slug;
-        html += pintarGrupo(nombre, buckets.get(slug) || [], _grupoColor(idx, false));
+        html += pintarGrupo(nombre, buckets.get(slug) || [], _grupoColor(idx, false), slug);
         if ((buckets.get(slug) || []).length > 0) idx += 1;
     });
-    html += pintarGrupo('Otros ejercicios', sinGrupo, _grupoColor(0, true));
+    html += pintarGrupo('Otros ejercicios', sinGrupo, _grupoColor(0, true), null);
     return html;
 }
 

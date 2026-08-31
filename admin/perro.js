@@ -50,6 +50,14 @@ const PROTOCOLOS_LABEL = {
     miedos_fobias:            'Miedos y fobias',
 };
 
+// Fases de un grupo/protocolo (la "llave"). Slug → etiqueta, puntitos, color.
+const FASES = {
+    preparatoria:        { label: 'Preparatoria', dots: 1, color: '#C8102E', desc: 'Sentando las bases, generando seguridad' },
+    abordaje:            { label: 'Abordaje', dots: 2, color: '#E8B62D', desc: 'El grueso del trabajo del protocolo' },
+    final_mantenimiento: { label: 'Final y mantenimiento', dots: 3, color: '#6E9E45', desc: 'Consolidando y sosteniendo lo logrado' },
+};
+let _gruposFaseAdmin = {};   // { slug → fase } del perro actual
+
 const state = {
     perroId: null,
     perro: null,
@@ -440,7 +448,7 @@ async function renderEjerciciosActivos() {
     // El botón "Reordenar" se vuelve a mostrar al final si corresponde.
     document.getElementById('abrir-reordenar')?.setAttribute('hidden', '');
 
-    const [{ data, error }] = await Promise.all([
+    const [{ data, error }, , fasesRes] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
             .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, parametros, grupo_protocolo, estado_cliente, estado_actualizado_en, ejercicios (id, codigo, nombre, categoria, campos)')
@@ -448,7 +456,10 @@ async function renderEjerciciosActivos() {
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
         cargarNotasNoLeidasPorEjercicio(),
+        supabase.from('grupos_fase').select('grupo_protocolo, fase').eq('perro_id', state.perroId),
     ]);
+    _gruposFaseAdmin = {};
+    (fasesRes?.data || []).forEach((f) => { _gruposFaseAdmin[f.grupo_protocolo] = f.fase; });
 
     // Si otra llamada ya tomó el control, dejamos que esa pinte.
     if (myToken !== _renderEjerciciosToken) return;
@@ -481,6 +492,10 @@ async function renderEjerciciosActivos() {
     listaEl.innerHTML = cadenas
         .map((c) => renderEjercicioActivoCard(c.vigente, c.history))
         .join('');
+
+    // Panel de fases: una fila por protocolo presente en los ejercicios, con su
+    // fase editable. Solo en la sub-pestaña Ejercicios.
+    renderPanelFases(cadenas);
 
     // Wire toggle inline de pausa (solo renglones simples) + acciones de progresión.
     listaEl.querySelectorAll('.toggle').forEach((btn) => {
@@ -799,6 +814,104 @@ function abrirSelectorGrupo(asignadoId, actual) {
     });
     cont.querySelector('[data-cerrar]')?.addEventListener('click', () => cont.classList.remove('open'));
     requestAnimationFrame(() => cont.classList.add('open'));
+}
+
+// Panel compacto de fases: una fila por protocolo presente en los ejercicios
+// del perro, con su fase actual (editable). Se inserta antes de la lista.
+function renderPanelFases(cadenas) {
+    const cont = document.getElementById('ejercicios-lista');
+    let panel = document.getElementById('fases-panel');
+    // Solo en Ejercicios; en otras sub-pestañas se oculta.
+    if (state.subtabActiva !== 'ejercicio') {
+        if (panel) panel.remove();
+        return;
+    }
+    // Slugs de protocolo presentes (en orden de aparición).
+    const slugs = [];
+    cadenas.forEach((c) => {
+        const g = c.vigente.grupo_protocolo;
+        if (g && !slugs.includes(g)) slugs.push(g);
+    });
+    if (slugs.length === 0) { if (panel) panel.remove(); return; }
+
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'fases-panel';
+        cont.parentNode.insertBefore(panel, cont);
+    }
+    panel.innerHTML = `
+        <div class="fases-panel__titulo">Fase de cada protocolo</div>
+        ${slugs.map((slug) => {
+            const fase = _gruposFaseAdmin[slug];
+            const f = FASES[fase];
+            let dots = '';
+            for (let i = 0; i < 3; i++) dots += `<i class="fase-dot${f && i < f.dots ? ' fase-dot--on' : ''}"></i>`;
+            const label = f ? f.label : 'Sin fase';
+            const color = f ? f.color : '#8A867E';
+            return `
+                <button type="button" class="fase-row" data-slug="${escapeHTML(slug)}" style="--fc:${color}">
+                    <span class="fase-row__proto">${escapeHTML(PROTOCOLOS_LABEL[slug] || slug)}</span>
+                    <span class="fase-row__fase"><span class="fase-dots">${dots}</span>${escapeHTML(label)} ▾</span>
+                </button>`;
+        }).join('')}`;
+    panel.querySelectorAll('.fase-row').forEach((b) => {
+        b.addEventListener('click', () => abrirSelectorFase(b.dataset.slug));
+    });
+}
+
+function abrirSelectorFase(slug) {
+    const actual = _gruposFaseAdmin[slug] || '';
+    let cont = document.getElementById('selector-fase');
+    if (!cont) {
+        cont = document.createElement('div');
+        cont.id = 'selector-fase';
+        cont.className = 'selector-grupo-bg';
+        document.body.appendChild(cont);
+        cont.addEventListener('click', (e) => { if (e.target === cont) cont.classList.remove('open'); });
+    }
+    const opciones = Object.entries(FASES).map(([sl, f]) => {
+        let dots = '';
+        for (let i = 0; i < 3; i++) dots += `<i class="fase-dot${i < f.dots ? ' fase-dot--on' : ''}"></i>`;
+        const sel = (sl === actual) ? ' selector-grupo__opt--sel' : '';
+        return `<button type="button" class="selector-grupo__opt fase-opt${sel}" data-fase="${sl}" style="--fc:${f.color}">
+                    <span class="fase-dots">${dots}</span>
+                    <span class="fase-opt__txt"><b>${escapeHTML(f.label)}</b><small>${escapeHTML(f.desc)}</small></span>
+                </button>`;
+    }).join('');
+    cont.innerHTML = `
+        <div class="selector-grupo">
+            <h3 class="selector-grupo__titulo">Fase de ${escapeHTML(PROTOCOLOS_LABEL[slug] || slug)}</h3>
+            <p class="selector-grupo__sub">En qué etapa está este protocolo.</p>
+            ${opciones}
+            ${actual ? '<button type="button" class="selector-grupo__opt selector-grupo__opt--sin" data-fase="">Quitar fase</button>' : ''}
+            <button type="button" class="selector-grupo__cerrar" data-cerrar>Cerrar</button>
+        </div>`;
+    cont.querySelectorAll('.selector-grupo__opt').forEach((b) => {
+        b.addEventListener('click', () => guardarFase(slug, b.dataset.fase || null));
+    });
+    cont.querySelector('[data-cerrar]')?.addEventListener('click', () => cont.classList.remove('open'));
+    requestAnimationFrame(() => cont.classList.add('open'));
+}
+
+async function guardarFase(slug, fase) {
+    const cont = document.getElementById('selector-fase');
+    try {
+        if (fase === null) {
+            const { error } = await supabase.from('grupos_fase')
+                .delete().eq('perro_id', state.perroId).eq('grupo_protocolo', slug);
+            if (error) throw error;
+        } else {
+            const { error } = await supabase.from('grupos_fase')
+                .upsert({ perro_id: state.perroId, grupo_protocolo: slug, fase, actualizado_en: new Date().toISOString() },
+                        { onConflict: 'perro_id,grupo_protocolo' });
+            if (error) throw error;
+        }
+        if (cont) cont.classList.remove('open');
+        await renderEjerciciosActivos();
+    } catch (e) {
+        console.error('[perro] error guardando fase:', e);
+        alert('No se pudo guardar la fase. Inténtalo de nuevo.');
+    }
 }
 
 async function guardarGrupo(asignadoId, slug) {
