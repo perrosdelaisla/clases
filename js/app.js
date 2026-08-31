@@ -480,6 +480,7 @@ function bindEventos() {
     // Mensajes y notas (Bloque A.2)
     bindComposerMensaje();
     bindNotasEjercicio();
+    bindRapidoSheet();
     bindTareaLista();
     bindJaimeChat();
     bindGrabacionCliente();
@@ -556,12 +557,17 @@ function bindEventos() {
             // Las pills de días de tarea son su propio control: no abren el detalle.
             const pill = e.target.closest('.tarea-dias__pill');
             if (pill) { onTareaDiaPill(pill); return; }
+            // La huella registra el entreno; no abre el detalle.
+            const huella = e.target.closest('.huella-btn');
+            if (huella) { registrarEntrenoRapido(huella); return; }
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
         rutinaLista.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             // El botón de la pill maneja su propia activación; no abrir el detalle.
             if (e.target.closest('.tarea-dias__pill')) return;
+            // Ídem la huella (su Enter ya dispara el click delegado).
+            if (e.target.closest('.huella-btn')) return;
             e.preventDefault();
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
@@ -3597,12 +3603,19 @@ function rutinaCardHTML(row, { tag, superado }) {
         : '';
     const claseSuperado = superado ? ' rutina-card--superado' : '';
     const esTarea = (categoria === 'tarea');
+    const esEjercicio = (categoria === 'ejercicio');
     // Chip de progreso y texto de objetivo: no aplican a tareas (semánticamente
     // las tareas-lista no tienen "frecuencia"). Tampoco en cards superadas.
-    const chip = (superado || esTarea) ? '' : renderChipProgreso(row.id);
+    // En ejercicios vigentes el chip se reemplaza por los puntos de la semana
+    // (registro rápido con la huella).
+    const chip = (superado || esTarea || esEjercicio) ? '' : renderChipProgreso(row.id);
     const objetivo = (superado || esTarea) ? '' : renderObjetivoBajoNombre(row.id);
     // Tareas: control "días que la usé esta semana" (0-7). No en cards superadas.
     const diasControl = (esTarea && !superado) ? renderTareaDiasControl(row.id) : '';
+    // Registro rápido (huella) + puntos de la semana: solo ejercicios vigentes.
+    const huella = (esEjercicio && !superado) ? huellaBtnHTML(row.id) : '';
+    const dots = (esEjercicio && !superado) ? renderDotsSemana(row.id) : '';
+    const chevron = huella ? '' : '<svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>';
     return `
         <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
@@ -3610,10 +3623,11 @@ function rutinaCardHTML(row, { tag, superado }) {
                     <h3 class="rutina-card__nombre">${nombre}</h3>
                     ${objetivo}
                 </div>
-                <svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                ${chevron}${huella}
             </div>
             ${desc}
             ${diasControl}
+            ${dots}
             ${chip}
         </${tag}>
     `;
@@ -3695,6 +3709,249 @@ function renderChipProgreso(asignadoId) {
     if (!ev.tieneTarget) return '';
     const color = COLOR_CHIP_FRECUENCIA[ev.estado] || 'verde';
     return `<span class="rutina-card__progreso rutina-card__progreso--${color}">${escapeHTML(ev.chipTexto)}</span>`;
+}
+
+// ───────────────────────────────────────────────────────────
+// Registro rápido con la huella (Fase 1 · registro lúdico)
+// Un toque en la huella = INSERT en registros_ejercicio con los
+// mismos campos que el modal cuando no se completa nada opcional.
+// El modal de detalle/reporte completo queda intacto.
+// ───────────────────────────────────────────────────────────
+
+const HUELLA_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12.8c-2.6 0-5.4 2.3-5.4 4.8 0 1.5 1.1 2.5 2.6 2.5 1 0 1.9-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.6-1 2.6-2.5 0-2.5-2.8-4.8-5.4-4.8zM6.1 8.3c-1.1.3-1.7 1.7-1.4 3 .3 1.3 1.5 2.2 2.6 1.9 1.1-.3 1.7-1.7 1.4-3-.3-1.3-1.5-2.2-2.6-1.9zm11.8 0c-1.1-.3-2.3.6-2.6 1.9-.3 1.3.3 2.7 1.4 3 1.1.3 2.3-.6 2.6-1.9.3-1.3-.3-2.7-1.4-3zM9.7 4c-1.2.2-2 1.6-1.8 3 .2 1.4 1.4 2.4 2.6 2.2 1.2-.2 2-1.6 1.8-3-.2-1.4-1.4-2.4-2.6-2.2zm4.6 0c-1.2-.2-2.4.8-2.6 2.2-.2 1.4.6 2.8 1.8 3 1.2.2 2.4-.8 2.6-2.2.2-1.4-.6-2.8-1.8-3z"/></svg>';
+
+function _ejercicioCumplido(row) {
+    return !!(row && row.min_semanal != null
+              && Number(row.count_semana ?? 0) >= row.min_semanal);
+}
+
+function huellaBtnHTML(asignadoId) {
+    const done = _ejercicioCumplido(_progresoCache.get(asignadoId));
+    return `<button type="button" class="huella-btn${done ? ' huella-btn--done' : ''}" data-asignado-id="${escapeHTML(asignadoId)}" aria-label="Registrar entreno">${HUELLA_SVG}</button>`;
+}
+
+// Puntos de la semana: uno por cada entreno del mínimo semanal; los que
+// superan el mínimo se pintan en rojo. Sustituye al chip en ejercicios.
+function renderDotsSemana(asignadoId) {
+    const row = _progresoCache.get(asignadoId);
+    if (!row || row.min_semanal == null || row.min_semanal <= 0) return '';
+    const min = Math.min(Number(row.min_semanal), 14);
+    const hechos = Number(row.count_semana ?? 0);
+    let dots = '';
+    for (let i = 0; i < min; i++) {
+        dots += `<span class="rutina-dots__dot${i < hechos ? ' rutina-dots__dot--f' : ''}"></span>`;
+    }
+    const extras = Math.min(Math.max(hechos - min, 0), 7);
+    for (let i = 0; i < extras; i++) dots += '<span class="rutina-dots__dot rutina-dots__dot--extra"></span>';
+    return `<div class="rutina-dots" aria-label="${hechos} de ${row.min_semanal} esta semana">${dots}</div>`;
+}
+
+// Refresca en su sitio los puntos y el estado de la huella de UNA card,
+// sin re-render de la lista (así la animación no se corta).
+function actualizarCardProgreso(asignadoId) {
+    const card = document.querySelector(
+        `.rutina-card[data-asignado-id="${CSS.escape(String(asignadoId))}"]`);
+    if (!card) return;
+    const dotsEl = card.querySelector('.rutina-dots');
+    const nuevo = renderDotsSemana(asignadoId);
+    if (dotsEl && nuevo) dotsEl.outerHTML = nuevo;
+    else if (!dotsEl && nuevo) card.insertAdjacentHTML('beforeend', nuevo);
+    const btn = card.querySelector('.huella-btn');
+    if (btn) btn.classList.toggle('huella-btn--done', _ejercicioCumplido(_progresoCache.get(asignadoId)));
+}
+
+// Huella estampada + mini-explosión de huellitas (se apaga con
+// prefers-reduced-motion).
+function animarHuella(btn) {
+    btn.classList.remove('huella-btn--pop');
+    void btn.offsetWidth;
+    btn.classList.add('huella-btn--pop');
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (let i = 0; i < 6; i++) {
+        const s = document.createElement('span');
+        s.className = 'huella-burst';
+        s.innerHTML = HUELLA_SVG;
+        const ang = Math.random() * 2 * Math.PI;
+        const dist = 40 + Math.random() * 28;
+        s.style.setProperty('--dx', `${Math.round(Math.cos(ang) * dist)}px`);
+        s.style.setProperty('--dy', `${Math.round(Math.sin(ang) * dist)}px`);
+        btn.appendChild(s);
+        setTimeout(() => s.remove(), 700);
+    }
+}
+
+const _huellaEnCurso = new Set();  // anti doble-toque por ejercicio
+let _rapidoRegistroId = null;      // último registro creado con la huella
+let _rapidoAsignadoId = null;
+let _rapidoTranquilidad = null;
+
+async function registrarEntrenoRapido(btn) {
+    const asignadoId = btn.dataset.asignadoId;
+    const perroId = state.perroSeleccionadoId;
+    if (!asignadoId || !perroId || _huellaEnCurso.has(asignadoId)) return;
+    _huellaEnCurso.add(asignadoId);
+    animarHuella(btn);
+    try {
+        const practica_id = await obtenerOCrearPracticaHoy(perroId);
+        const { data, error } = await supabase
+            .from('registros_ejercicio')
+            .insert({
+                practica_id,
+                ejercicio_asignado_id: asignadoId,
+                datos_registro: { v: 2 },
+                tranquilidad: null,
+                nota: null,
+            })
+            .select('id')
+            .single();
+        if (error) throw error;
+        _rapidoRegistroId = data.id;
+        _rapidoAsignadoId = asignadoId;
+
+        const estadoAntes = evaluarProgresoEjercicio(_progresoCache.get(asignadoId));
+        try { await cargarProgresoPerro(perroId); } catch (e) {
+            console.error('[huella] no se pudo refrescar progreso:', e);
+        }
+        const row = _progresoCache.get(asignadoId);
+        const estadoDespues = evaluarProgresoEjercicio(row);
+
+        actualizarCardProgreso(asignadoId);
+        renderAnilloSemana();
+        if (estadoAntes.estado === 'debajo' && estadoDespues.estado === 'en_zona') {
+            marcarPulsoLogro(asignadoId);
+        }
+
+        const c = row ? Number(row.count_semana ?? 0) : null;
+        const m = (row && row.min_semanal != null) ? row.min_semanal : null;
+        const detalle = (c != null && m != null) ? ` · ${c}/${m} esta semana` : '';
+        if (estadoDespues.superoTopeDiario) {
+            toast('Ya has superado el máximo diario de este ejercicio.', 'info', 5000);
+        } else {
+            toastDeshacer(`Entreno registrado${detalle}`, _rapidoRegistroId, asignadoId);
+        }
+        // Hoja opcional de estado emocional, cuando el toast ya se leyó.
+        const idSheet = _rapidoRegistroId;
+        setTimeout(() => { if (_rapidoRegistroId === idSheet) abrirRapidoSheet(); }, 900);
+    } catch (e) {
+        console.error('[huella] error registrando:', e);
+        toast('No hemos podido registrar el entreno. Inténtalo de nuevo.', 'error');
+    } finally {
+        _huellaEnCurso.delete(asignadoId);
+    }
+}
+
+// Toast con acción "Deshacer" (reutiliza #toast; la política RLS permite
+// borrar registros propios de menos de 10 minutos).
+function toastDeshacer(msg, registroId, asignadoId) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.classList.remove('toast--error');
+    el.classList.add('toast--info');
+    el.innerHTML = `${escapeHTML(msg)}<button type="button" class="toast__accion" id="toast-deshacer">Deshacer</button>`;
+    el.removeAttribute('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.setAttribute('hidden', ''); el.textContent = ''; }, 4200);
+    document.getElementById('toast-deshacer')?.addEventListener('click', () => {
+        deshacerEntrenoRapido(registroId, asignadoId);
+    }, { once: true });
+}
+
+async function deshacerEntrenoRapido(registroId, asignadoId) {
+    if (!registroId) return;
+    if (_rapidoRegistroId === registroId) { _rapidoRegistroId = null; cerrarRapidoSheet(); }
+    try {
+        const { error } = await supabase
+            .from('registros_ejercicio')
+            .delete()
+            .eq('id', registroId);
+        if (error) throw error;
+        try { await cargarProgresoPerro(state.perroSeleccionadoId); } catch (e) { /* no bloquea */ }
+        actualizarCardProgreso(asignadoId);
+        renderAnilloSemana();
+        toast('Entreno eliminado');
+    } catch (e) {
+        console.error('[huella] no se pudo deshacer:', e);
+        toast('No hemos podido deshacerlo. Escríbenos por Mensajes y lo quitamos.', 'error', 4000);
+    }
+}
+
+// Hoja opcional post-registro: solo el estado emocional (1-5). Guardar hace
+// UPDATE del registro recién creado; Omitir no escribe nada.
+function abrirRapidoSheet() {
+    const scrim = document.getElementById('rapido-sheet-scrim');
+    const sheet = document.getElementById('rapido-sheet');
+    if (!scrim || !sheet || !_rapidoRegistroId) return;
+    _rapidoTranquilidad = null;
+    sheet.querySelectorAll('.reporte-pill').forEach((p) => {
+        p.classList.remove('is-active');
+        p.setAttribute('aria-checked', 'false');
+    });
+    scrim.hidden = false;
+    sheet.hidden = false;
+    requestAnimationFrame(() => {
+        scrim.classList.add('is-open');
+        sheet.classList.add('is-open');
+    });
+}
+
+function cerrarRapidoSheet() {
+    const scrim = document.getElementById('rapido-sheet-scrim');
+    const sheet = document.getElementById('rapido-sheet');
+    if (!scrim || !sheet || sheet.hidden) return;
+    scrim.classList.remove('is-open');
+    sheet.classList.remove('is-open');
+    setTimeout(() => { scrim.hidden = true; sheet.hidden = true; }, 260);
+}
+
+async function rapidoSheetGuardar() {
+    const id = _rapidoRegistroId;
+    const asignadoId = _rapidoAsignadoId;
+    const trq = _rapidoTranquilidad;
+    _rapidoRegistroId = null;
+    cerrarRapidoSheet();
+    if (!id || trq == null) return;
+    try {
+        const { error } = await supabase
+            .from('registros_ejercicio')
+            .update({ tranquilidad: trq })
+            .eq('id', id);
+        if (error) throw error;
+        toast('Guardado');
+        // El aviso de tranquilidad baja, igual que en el modal completo.
+        if (trq <= 2) {
+            const nombrePerro = state.perros.find((p) => p.id === state.perroSeleccionadoId)?.nombre || 'tu perro';
+            const fila = (state.rutinaFilas || []).find((r) => r.id === asignadoId);
+            mostrarAvisoTranquilidadBaja(nombrePerro, fila?.ejercicios?.nombre || '');
+        }
+    } catch (e) {
+        console.error('[huella] no se pudo guardar el estado:', e);
+        toast('No hemos podido guardarlo. Puedes añadirlo desde la ficha del ejercicio.', 'error', 4000);
+    }
+}
+
+function bindRapidoSheet() {
+    const sheet = document.getElementById('rapido-sheet');
+    if (!sheet) return;
+    sheet.querySelectorAll('.reporte-pill').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const valor = Number(btn.dataset.valor);
+            _rapidoTranquilidad = (_rapidoTranquilidad === valor) ? null : valor;
+            sheet.querySelectorAll('.reporte-pill').forEach((p) => {
+                const activa = Number(p.dataset.valor) === _rapidoTranquilidad;
+                p.classList.toggle('is-active', activa);
+                p.setAttribute('aria-checked', activa ? 'true' : 'false');
+            });
+        });
+    });
+    document.getElementById('rapido-sheet-guardar')?.addEventListener('click', rapidoSheetGuardar);
+    document.getElementById('rapido-sheet-omitir')?.addEventListener('click', () => {
+        _rapidoRegistroId = null;
+        cerrarRapidoSheet();
+    });
+    document.getElementById('rapido-sheet-scrim')?.addEventListener('click', () => {
+        _rapidoRegistroId = null;
+        cerrarRapidoSheet();
+    });
 }
 
 // Anillo de cumplimiento de la semana, calculado solo sobre ejercicios con

@@ -125,3 +125,58 @@
 .home .rutina-card__progreso{ display:inline-block; margin-top:8px; font-family:var(--body); font-size:8.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; border-radius:999px; padding:3px 8px; border:1px solid var(--c-rojo); color:var(--c-rojo); }
 .home .rutina-card__progreso--verde{ border-color:var(--c-oliva); color:var(--c-oliva); }
 .home .rutina-card__progreso--rojo{ border-color:var(--c-rojo); color:var(--c-rojo); }
+
+/* ────────────────────────────────────────────────────────────
+   Registro rápido con la huella (Fase 1 · registro lúdico)
+   Botón de huella en la card, puntos de la semana, burst y
+   hoja opcional post-registro. 31/08/2026.
+   ──────────────────────────────────────────────────────────── */
+.home .rutina-card__head{ align-items:center; }
+.home .huella-btn{
+    flex:0 0 auto; width:52px; height:52px; border-radius:50%; border:none;
+    background:var(--c-rojo, #C8102E); color:#F5EFE0;
+    display:grid; place-items:center; cursor:pointer; position:relative;
+    box-shadow:0 4px 14px rgba(200,16,46,.32);
+    transition:transform .12s ease, background .25s ease, box-shadow .25s ease;
+}
+.home .huella-btn svg{ width:28px; height:28px; display:block; }
+.home .huella-btn:active{ transform:scale(.88); }
+.home .huella-btn--done{ background:var(--c-oliva, #6B7A3A); box-shadow:0 4px 14px rgba(107,122,58,.35); }
+@keyframes huella-stamp{ 0%{ transform:scale(.55); } 55%{ transform:scale(1.22); } 100%{ transform:scale(1); } }
+.home .huella-btn--pop svg{ animation:huella-stamp .45s ease; }
+.home .huella-burst{
+    position:absolute; left:50%; top:50%; width:15px; height:15px;
+    margin:-7px 0 0 -7px; color:#F5EFE0; pointer-events:none;
+    animation:huella-fly .65s ease forwards;
+}
+.home .huella-burst svg{ width:100%; height:100%; display:block; }
+@keyframes huella-fly{
+    0%{ opacity:1; transform:translate(0,0) scale(.6); }
+    100%{ opacity:0; transform:translate(var(--dx, 0px), var(--dy, -40px)) scale(1.35); }
+}
+@media (prefers-reduced-motion: reduce){
+    .home .huella-btn--pop svg, .home .huella-burst{ animation:none; }
+    .home .huella-burst{ display:none; }
+}
+.home .rutina-dots{ display:flex; flex-wrap:wrap; gap:5px; margin-top:2px; }
+.home .rutina-dots__dot{ width:11px; height:11px; border-radius:50%; border:1.5px solid var(--c-hair-2, #8A867E); }
+.home .rutina-dots__dot--f{ background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A); }
+.home .rutina-dots__dot--extra{ background:var(--c-rojo, #C8102E); border-color:var(--c-rojo, #C8102E); }
+
+/* Acción dentro del toast (Deshacer) — #toast vive fuera de .home */
+.toast__accion{
+    background:none; border:none; color:#E8B62D; font-weight:700;
+    font-size:13.5px; margin-left:10px; padding:6px 8px; cursor:pointer;
+    font-family:inherit;
+}
+
+/* Hoja post-registro (reutiliza la mecánica de .susalud-sheet) */
+.rapido-sheet__body{ padding:6px 18px calc(18px + env(safe-area-inset-bottom)); }
+.rapido-sheet__title{ font-family:var(--display, 'Bebas Neue'); font-size:21px; letter-spacing:1px; margin:2px 0 2px; }
+.rapido-sheet__sub{ font-size:12.5px; color:var(--c-text-3, #8A867E); margin:0 0 14px; }
+.rapido-sheet .reporte-pills-wrap{ margin-bottom:16px; }
+.rapido-sheet__guardar{ width:100%; }
+.rapido-sheet__omitir{
+    width:100%; background:none; border:none; color:var(--c-text-3, #8A867E);
+    font-size:13.5px; padding:12px 0 2px; cursor:pointer; min-height:44px; font-family:inherit;
+}

@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=35">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=19">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=20">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -543,6 +543,29 @@
                 </div>
                 <div class="susalud-sheet__foot">
                     <button type="button" class="btn-cta" id="susalud-sheet-guardar">Guardar</button>
+                </div>
+            </div>
+
+            <!-- Hoja opcional tras el registro rápido con la huella -->
+            <div class="susalud-sheet-scrim" id="rapido-sheet-scrim" hidden></div>
+            <div class="susalud-sheet rapido-sheet" id="rapido-sheet" role="dialog" aria-modal="true" aria-labelledby="rapido-sheet-title" hidden>
+                <div class="susalud-sheet__grip"></div>
+                <div class="rapido-sheet__body">
+                    <h3 class="rapido-sheet__title" id="rapido-sheet-title">¿Cómo ha estado tu perro?</h3>
+                    <p class="rapido-sheet__sub">Opcional — su estado emocional en este entreno.</p>
+                    <div class="reporte-pills-wrap">
+                        <span class="reporte-pills-label reporte-pills-label--min">Bajo</span>
+                        <div class="reporte-pills" role="radiogroup" aria-label="Estado emocional del 1 al 5">
+                            <button type="button" class="reporte-pill" data-valor="1" role="radio" aria-checked="false">1</button>
+                            <button type="button" class="reporte-pill" data-valor="2" role="radio" aria-checked="false">2</button>
+                            <button type="button" class="reporte-pill" data-valor="3" role="radio" aria-checked="false">3</button>
+                            <button type="button" class="reporte-pill" data-valor="4" role="radio" aria-checked="false">4</button>
+                            <button type="button" class="reporte-pill" data-valor="5" role="radio" aria-checked="false">5</button>
+                        </div>
+                        <span class="reporte-pills-label reporte-pills-label--max">Alto</span>
+                    </div>
+                    <button type="button" class="btn-cta rapido-sheet__guardar" id="rapido-sheet-guardar">Guardar</button>
+                    <button type="button" class="rapido-sheet__omitir" id="rapido-sheet-omitir">Omitir</button>
                 </div>
             </div>
 
@@ -1447,6 +1470,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=4"></script>
     <script src="./js/tutorial.js?v=4"></script>
-    <script type="module" src="./js/app.js?v=149"></script>
+    <script type="module" src="./js/app.js?v=150"></script>
 </body>
 </html>
