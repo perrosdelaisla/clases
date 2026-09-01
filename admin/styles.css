@@ -5547,3 +5547,29 @@ body {
     padding:14px 15px;
     margin:0 0 11px;
 }
+
+/* ── KIT · Tercera tanda (01/09/2026): agenda y títulos de página ── */
+
+/* El título de pantalla iba a 48px en el índice y a ~30px en cliente y perro.
+   Un solo tamaño para el mismo papel. */
+.admin-panel-title{
+    font-size: 1.9rem;
+    letter-spacing: .03em;
+    margin: 0 0 6px;
+    line-height: 1.1;
+}
+.admin-panel-subtitle{ font-size: .8rem; margin: 0 0 18px; }
+
+/* Las tarjetas de cita no llevaban borde y usaban otro radio: misma piel que
+   el resto de tarjetas del admin. */
+.cita-card{
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 14px 15px;
+}
+
+/* La descripción de cada sub-panel es una pista, no un párrafo: mismo tamaño
+   que las pistas del resto del kit. */
+.agenda-subpanel-desc{ font-size: .8rem; }
+.agenda-subpanel{ padding-top: 16px; }
+.agenda-subpanel-header{ margin-bottom: 16px; }
