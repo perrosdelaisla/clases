@@ -1182,6 +1182,32 @@ function jaimeBienvenidaVista() {
 function marcarBienvenidaJaimeVista() {
     try { localStorage.setItem(JAIME_BIENVENIDA_KEY, '1'); } catch (_e) {}
 }
+
+// Novedad puntual: al cambiar cómo se registra el entreno (cartel de
+// confirmación + pausa de la huella) queremos avisar UNA sola vez a los
+// tutores que YA venían usando la versión anterior. Los tutores nuevos no
+// la ven: al mostrarles la bienvenida marcamos la novedad como vista.
+const JAIME_NOVEDAD_KEY = 'pdli_novedad_registro_v1';
+function novedadRegistroVista() {
+    // Si localStorage falla, devolvemos true para no molestar con el aviso.
+    try { return localStorage.getItem(JAIME_NOVEDAD_KEY) === '1'; } catch (_e) { return true; }
+}
+function marcarNovedadRegistroVista() {
+    try { localStorage.setItem(JAIME_NOVEDAD_KEY, '1'); } catch (_e) {}
+}
+// Burbuja de novedad. Se marca como vista al mostrarla (igual que la
+// bienvenida) para que no vuelva a saltar en cada carga.
+function mostrarNovedadRegistro() {
+    const nom = primerNombreTutor();
+    const hola = nom ? `¡Hola, ${nom}!` : '¡Hola!';
+    _jaimeAvisoActual = {
+        texto: `${hola} He mejorado el registro de entrenos. Cada vez que toques la huella verás un cartel que te confirma que quedó guardado, y la huella se rellena durante unos segundos antes de poder tocarla otra vez, para que no se cuelen toques de más. Recuerda: un toque = una práctica de ese ejercicio.`,
+        ctaLabel: 'Ver cómo funciona',
+        ctaAccion: () => { cerrarBurbujaJaime(); window.PdliTour?.abrir?.(0); },
+    };
+    marcarNovedadRegistroVista();
+    abrirBurbujaJaime();
+}
 // Primer nombre del tutor (la primera palabra de usuarioCliente.nombre).
 function primerNombreTutor() {
     const n = state.usuarioCliente?.nombre;
@@ -1199,6 +1225,8 @@ function mostrarBienvenidaJaime(perro) {
     // En bienvenida no usamos el CTA normal; mostramos chat + "Ver el tutorial".
     _jaimeAvisoActual = { texto, ctaLabel: '', ctaAccion: null };
     document.getElementById('jaime-burbuja__tutorial')?.removeAttribute('hidden');
+    // Tutor nuevo: la novedad del registro no aplica (ya estrena la versión nueva).
+    marcarNovedadRegistroVista();
     abrirBurbujaJaime();
 }
 
@@ -1630,6 +1658,13 @@ async function cargarAvisoJaime() {
     // el aviso normal. La X del diálogo pospone (vuelve a salir la próxima vez).
     if (state.cliente?.grabacion_estado === 'solicitado' && esPrincipal()) {
         mostrarAvisoGrabacion();
+        return;
+    }
+
+    // Novedad del registro con la huella: una sola vez, solo a quien ya venía
+    // usando la app con la versión anterior.
+    if (state.usuarioCliente && !novedadRegistroVista()) {
+        mostrarNovedadRegistro();
         return;
     }
 
@@ -3978,6 +4013,40 @@ function actualizarCardProgreso(asignadoId) {
 
 // Huella estampada + mini-explosión de huellitas (se apaga con
 // prefers-reduced-motion).
+// ── Feedback visible del toque (pedido de Charly, 01/09/2026) ──
+//   · Cartel fijo "¡Entreno registrado!" en CADA toque, para que el cliente
+//     nunca quede pulsando sin saber si quedó.
+//   · Celebración solo en el hito real: cuando completa el objetivo semanal
+//     de ese ejercicio (pasa de "debajo" a "en zona").
+//   · Pausa con relleno: corta el toqueteo en ráfaga.
+//   El estallido de huellitas (animarHuella) se mantiene igual.
+const _HUELLA_PAUSA_MS = 4000;
+const _huellaPausa = new Set();
+
+function mostrarConfirmHuella(btn, texto, esLogro) {
+    if (!btn) return;
+    const el = document.createElement('span');
+    el.className = 'huella-confirm' + (esLogro ? ' huella-confirm--logro' : '');
+    el.textContent = texto;
+    btn.appendChild(el);
+    setTimeout(() => { el.remove(); }, 2100);
+}
+
+function pausarHuella(btn, asignadoId) {
+    _huellaPausa.add(asignadoId);
+    if (btn) {
+        btn.classList.add('huella-btn--pausa');
+        btn.disabled = true;
+    }
+    setTimeout(() => {
+        _huellaPausa.delete(asignadoId);
+        if (btn) {
+            btn.classList.remove('huella-btn--pausa');
+            btn.disabled = false;
+        }
+    }, _HUELLA_PAUSA_MS);
+}
+
 function animarHuella(btn) {
     btn.classList.remove('huella-btn--pop');
     void btn.offsetWidth;
@@ -4004,7 +4073,8 @@ let _rapidoTranquilidad = null;
 async function registrarEntrenoRapido(btn) {
     const asignadoId = btn.dataset.asignadoId;
     const perroId = state.perroSeleccionadoId;
-    if (!asignadoId || !perroId || _huellaEnCurso.has(asignadoId)) return;
+    if (!asignadoId || !perroId || _huellaEnCurso.has(asignadoId)
+        || _huellaPausa.has(asignadoId)) return;
     _huellaEnCurso.add(asignadoId);
     animarHuella(btn);
     try {
@@ -4035,9 +4105,17 @@ async function registrarEntrenoRapido(btn) {
                          registrado_en: new Date().toISOString() });
         actualizarCardProgreso(asignadoId);
         renderAnilloSemana();
-        if (estadoAntes.estado === 'debajo' && estadoDespues.estado === 'en_zona') {
+        const logroSemana = (estadoAntes.estado === 'debajo' && estadoDespues.estado === 'en_zona');
+        if (logroSemana) {
             marcarPulsoLogro(asignadoId);
         }
+        // Cartel siempre visible en el toque + celebración solo en el hito.
+        mostrarConfirmHuella(
+            btn,
+            logroSemana ? '\u{1F389} \u00a1Objetivo de la semana cumplido!'
+                        : '\u{1F43E} \u00a1Entreno registrado!',
+            logroSemana);
+        pausarHuella(btn, asignadoId);
 
         const c = row ? Number(row.count_semana ?? 0) : null;
         const m = (row && row.min_semanal != null) ? row.min_semanal : null;

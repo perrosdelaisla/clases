@@ -481,3 +481,61 @@
 .home .dBp .cover .dogsel .av__foto{
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit;
 }
+
+/* ────────────────────────────────────────────────────────────
+   Feedback de la huella (01/09/2026)
+   · Cartel "¡Entreno registrado!" en cada toque, para que el tutor
+     sepa siempre que quedó registrado.
+   · Cartel dorado especial al completar el objetivo semanal.
+   · Pausa de 4s con relleno de abajo hacia arriba: corta el
+     toqueteo compulsivo sin bloquear nada.
+   ──────────────────────────────────────────────────────────── */
+
+/* La huella y el estallido tienen que quedar POR ENCIMA del relleno. */
+.home .huella-btn svg{ position:relative; z-index:2; }
+.home .huella-burst{ z-index:3; }
+
+/* Relleno de la pausa. Usamos background-size (no height) para que el
+   recorte lo haga el border-radius del propio botón: así no hace falta
+   overflow:hidden, que mataría el estallido de huellitas. */
+.home .huella-btn--pausa{ cursor:default; }
+.home .huella-btn--pausa::after{
+    content:""; position:absolute; inset:0; border-radius:50%; z-index:1;
+    pointer-events:none;
+    background-image:linear-gradient(to top, rgba(245,239,224,.34), rgba(245,239,224,.34));
+    background-repeat:no-repeat; background-position:bottom;
+    background-size:100% 0%;
+    animation:huella-pausa 4s linear forwards;
+}
+@keyframes huella-pausa{
+    from{ background-size:100% 0%; }
+    to{ background-size:100% 100%; }
+}
+/* Mientras está en pausa el :active no debe "hundir" el botón. */
+.home .huella-btn--pausa:active{ transform:none; }
+
+/* Cartel de confirmación. Anclado al borde DERECHO del botón (que ya está
+   pegado al borde derecho de la card) para que crezca hacia adentro y no
+   se corte nunca contra el borde de la pantalla. */
+.home .huella-confirm{
+    position:absolute; right:0; bottom:calc(100% + 6px); z-index:9;
+    white-space:nowrap; pointer-events:none;
+    background:var(--c-oliva, #6B7A3A); color:#F5EFE0;
+    font-family:var(--body); font-weight:700; font-size:12.5px; letter-spacing:.1px;
+    padding:7px 13px; border-radius:999px;
+    box-shadow:0 6px 18px rgba(0,0,0,.22);
+    opacity:0; transform:translateY(6px) scale(.82);
+    animation:huella-confirm 2s ease forwards;
+}
+.home .huella-confirm--logro{ background:#E8B62D; color:#16140F; }
+@keyframes huella-confirm{
+    0%{ opacity:0; transform:translateY(6px) scale(.82); }
+    12%{ opacity:1; transform:translateY(-2px) scale(1.04); }
+    20%{ opacity:1; transform:translateY(0) scale(1); }
+    72%{ opacity:1; transform:translateY(0) scale(1); }
+    100%{ opacity:0; transform:translateY(-10px) scale(.96); }
+}
+@media (prefers-reduced-motion: reduce){
+    .home .huella-confirm{ animation:none; opacity:1; transform:none; }
+    .home .huella-btn--pausa::after{ animation:none; background-size:100% 100%; }
+}
