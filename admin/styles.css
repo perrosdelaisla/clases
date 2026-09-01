@@ -5666,3 +5666,8 @@ body {
     border-radius:9px;
     padding:10px 11px;
 }
+
+/* Plazo del pack en la ficha del cliente (01/09/2026). */
+.pack-plazo{ font-weight:600; }
+.pack-plazo--cerca{ color:var(--color-warning); }
+.pack-plazo--vencido{ color:var(--color-red); }

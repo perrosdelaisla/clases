@@ -1718,6 +1718,27 @@ async function cargarAvisoJaime() {
     let ctaAccion = null;
 
     switch (data.tipo) {
+        // Las clases del pack tienen plazo (01/09/2026). Jaime avisa antes de
+        // que venza, para que el tutor las use en vez de perderlas.
+        case 'pack_caduca': {
+            const n = Number(data.restantes) || 0;
+            const dias = Number(data.dias);
+            const clases = `${n} clase${n === 1 ? '' : 's'}`;
+            if (data.vencido) {
+                texto = `Te ${n === 1 ? 'quedaba' : 'quedaban'} ${clases} por usar y el plazo terminó. Escríbenos y lo vemos: casi siempre hay una solución.`;
+                ctaLabel = 'Escribir al adiestrador';
+                ctaAccion = () => showTab('mensajes');
+            } else {
+                const cuando = dias <= 0 ? 'hoy mismo'
+                    : dias === 1 ? 'mañana'
+                    : dias <= 14 ? `en ${dias} días`
+                    : `el ${formatearFechaLarga(data.caduca_en)}`;
+                texto = `Te ${n === 1 ? 'queda' : 'quedan'} ${clases} del pack y el plazo para usarlas termina ${cuando}. ¿Reservamos?`;
+                ctaLabel = 'Reservar clase';
+                ctaAccion = () => showTab('reservar');
+            }
+            break;
+        }
         case 'informe':
             texto = `Te hemos dejado el resumen de la semana de ${nombre}. ¡Échale un ojo!`;
             ctaLabel = 'Ver resumen';
@@ -5699,6 +5720,22 @@ async function renderTabReservar() {
             </div>`;
         return;
     }
+    // Pack caducado: las clases del pack tienen un plazo para usarse
+    // (acordado el 01/09/2026). No se corta en seco: se explica y se
+    // deriva al adiestrador, que decide caso por caso.
+    if (estado.razon === 'pack_caducado') {
+        const quedan = Number(estado.restantes || 0);
+        const fecha = estado.caduco_en ? formatearFechaLarga(estado.caduco_en) : null;
+        mensajeBox.innerHTML = `
+            <div class="reservar-msg">
+                <h3>El plazo de tus clases ha terminado</h3>
+                <p>${quedan > 0
+                    ? `Te ${quedan === 1 ? 'quedaba' : 'quedaban'} ${quedan} clase${quedan === 1 ? '' : 's'} del pack`
+                    : 'Tu pack'}${fecha ? `, y el plazo para usarlas terminó el ${escapeHTML(fecha)}` : ''}.</p>
+                <p>Escríbenos al ${TELEFONO_PUBLICO} y lo vemos: casi siempre hay una solución.</p>
+            </div>`;
+        return;
+    }
     if (estado.razon === 'limite_alcanzado') {
         const reservas = estado.reservas_actuales ?? '';
         mensajeBox.innerHTML = `
@@ -5916,9 +5953,12 @@ async function confirmarReserva() {
             // Cubre el caso raro de que el state cambie entre abrir el modal y
             // confirmar (ej: pasaron 5 min y se llegó al límite).
             const gate = await llamarPuedeReservar();
-            if (gate.razon === 'limite_alcanzado' || gate.razon === 'sin_primera_clase') {
+            if (gate.razon === 'limite_alcanzado' || gate.razon === 'sin_primera_clase'
+                || gate.razon === 'pack_caducado') {
                 const mensajeGate = gate.razon === 'limite_alcanzado'
                     ? `Ya tienes el máximo de reservas activas. Cuando se realice alguna, podrás reservar la siguiente.`
+                    : gate.razon === 'pack_caducado'
+                    ? `El plazo para usar las clases de tu pack ha terminado. Escríbenos y lo vemos.`
                     : `Tu primera clase la coordinamos directamente. Escríbenos por WhatsApp.`;
                 toast(mensajeGate, 'error');
                 cerrarModal('modal-reservar');

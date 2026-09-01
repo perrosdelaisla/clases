@@ -128,6 +128,7 @@ async function cargarYRender(clienteId) {
     const elRealizadas = document.getElementById('cliente-clases-realizadas');
     if (elRealizadas) elRealizadas.textContent = realizadasRes.error ? '—' : String(realizadasRes.count || 0);
     actualizarClasesRestantes();
+    cargarPlazoPack();
     renderPerros(perrosRes.data || []);
     showScreen('cliente');
 }
@@ -692,6 +693,10 @@ async function enviarInvitacion() {
     setText('cliente-email', email);
     // La invitación salió bien: el cliente ya tiene usuario vinculado.
     actualizarBotonInvitar(true);
+    // Invitar a la app = empieza a ser cliente de verdad (01/09/2026).
+    // Solo promociona desde 'consulta': no pisa un inactivo, un veterano
+    // ni un ex cliente, que son decisiones ya tomadas.
+    await activarClienteAlInvitar();
     mostrarSuccessInvitacion(email);
 
     btn.disabled = false;
@@ -1063,4 +1068,69 @@ function instalarNavegacionSinPila() {
 // Ir a una pantalla del admin sin dejar rastro en el historial.
 function irAdmin(url) {
     location.replace(url);
+}
+
+
+// ───────────────────────────────────────────────────────────
+// Plazo del pack (01/09/2026)
+// Las clases caducan a los N meses de la última realizada. La cuenta la
+// hace la base (estado_pack_cliente), que es la misma que bloquea la
+// reserva y la que usa Jaime: una sola definición para todos.
+// ───────────────────────────────────────────────────────────
+
+async function cargarPlazoPack() {
+    const el = document.getElementById('pack-plazo');
+    if (!el || !state.clienteId) return;
+    try {
+        const { data, error } = await supabase.rpc('estado_pack_cliente', { p_cliente_id: state.clienteId });
+        if (error) throw error;
+        pintarPlazoPack(data);
+    } catch (e) {
+        console.error('[pack] no se pudo leer el plazo:', e);
+        el.hidden = true;
+    }
+}
+
+function pintarPlazoPack(p) {
+    const el = document.getElementById('pack-plazo');
+    if (!el) return;
+    const quedan = Number(p?.restantes || 0);
+    const dias = (p?.dias_restantes == null) ? null : Number(p.dias_restantes);
+    // Sin clases pendientes no hay plazo que mostrar.
+    if (!p || quedan <= 0 || dias == null) { el.hidden = true; el.textContent = ''; return; }
+
+    const fecha = p.caduca_en
+        ? new Date(p.caduca_en).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '';
+    el.classList.remove('pack-plazo--vencido', 'pack-plazo--cerca');
+    if (p.caducado) {
+        el.classList.add('pack-plazo--vencido');
+        el.textContent = `Plazo vencido el ${fecha} · no puede reservar`;
+    } else if (dias <= 30) {
+        el.classList.add('pack-plazo--cerca');
+        el.textContent = `Caduca en ${dias} ${dias === 1 ? 'día' : 'días'} · ${fecha}`;
+    } else {
+        el.textContent = `Caduca el ${fecha}`;
+    }
+    el.hidden = false;
+}
+
+
+// Al invitar a la app, un 'consulta' pasa a 'activo'. El resto de estados
+// se respetan: reinvitar a un inactivo no lo reactiva solo.
+async function activarClienteAlInvitar() {
+    if (!state.clienteId) return;
+    if ((state.cliente?.estado || '').toLowerCase() !== 'consulta') return;
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update({ estado: 'activo', cliente_desde: state.cliente?.cliente_desde || new Date().toISOString() })
+            .eq('id', state.clienteId);
+        if (error) throw error;
+        state.cliente.estado = 'activo';
+        renderEstadoSelector('activo');
+        toast('Cliente activado', 'info', 2000);
+    } catch (e) {
+        console.error('[invitar] no se pudo activar el cliente:', e);
+    }
 }

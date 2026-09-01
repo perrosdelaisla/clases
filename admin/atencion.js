@@ -72,6 +72,10 @@ function contarNuevos(items) {
 // de las pastillas 0-7 que salieron de la app del cliente, así que era una
 // regla muerta. La sustituye 'solo_usa', que sale del registro nuevo.
 const GRUPOS = [
+    { motivo: 'pack_vencido', titulo: 'Plazo vencido', icono: '⌛',
+      pie: 'Les quedaban clases y se les pasó el plazo. No pueden reservar solos: la decisión de darles margen es tuya.' },
+    { motivo: 'pack_por_vencer', titulo: 'Se les acaba el plazo', icono: '⏳',
+      pie: 'Les quedan clases y menos de un mes para usarlas. Jaime ya se lo está avisando en su app.' },
     { motivo: 'nunca_empezo', titulo: 'Nunca empezaron', icono: '🚦',
       pie: 'Tienen rutina asignada y cero registros. Son los que más rinde llamar.' },
     { motivo: 'inactivo',     titulo: 'Se enfriaron',    icono: '❄️',
@@ -104,7 +108,7 @@ function abrirCliente(clienteId) {
 // ---- Render ----
 
 function textoItem(it) {
-    const perro = esc(it.perro || 'Perro');
+    const perro = esc(it.perro || 'Perro');   // en los avisos de pack no aplica
     const cliente = esc(it.cliente || 'Cliente');
     switch (it.motivo) {
         case 'nunca_empezo':
@@ -113,6 +117,16 @@ function textoItem(it) {
             return `${perro} · ${cliente} — ${esc(it.dias)} días sin entrenar.`;
         case 'solo_usa':
             return `${perro} · ${cliente} — usa '${esc(it.tarea)}' pero no lo entrena.`;
+        case 'pack_vencido': {
+            const n = Number(it.tarea) || 0;
+            const d = Math.abs(Number(it.dias) || 0);
+            return `${cliente} — ${n} clase${n === 1 ? '' : 's'} sin usar, el plazo venció hace ${d} ${d === 1 ? 'día' : 'días'}.`;
+        }
+        case 'pack_por_vencer': {
+            const n = Number(it.tarea) || 0;
+            const d = Number(it.dias) || 0;
+            return `${cliente} — ${n} clase${n === 1 ? '' : 's'} sin usar, el plazo termina en ${d} ${d === 1 ? 'día' : 'días'}.`;
+        }
         default:
             return `${perro} · ${cliente}`;
     }
@@ -169,6 +183,9 @@ function render(data) {
                     <div class="a-kpi__i a-kpi__i--ok"><b>${esc(r.al_dia)}</b><small>Al día</small></div>
                 </div>
                 <p class="a-hint">${esc(pie)}</p>
+                ${(Number(r.packs_vencidos || 0) + Number(r.packs_por_vencer || 0)) > 0
+                    ? `<p class="a-hint">Y en packs: <b>${esc(r.packs_vencidos)}</b> con el plazo vencido y <b>${esc(r.packs_por_vencer)}</b> a punto de vencer.</p>`
+                    : ''}
             </section>`);
     }
 
