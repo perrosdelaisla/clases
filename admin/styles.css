@@ -5489,3 +5489,61 @@ body {
 /* Los mensajes ya tienen su propio encabezado dentro del kit. */
 .a-card.admin-mensajes{ display:block; }
 .a-card .admin-mensajes__titulo{ font-size:1.05rem; }
+
+/* ════════════════════════════════════════════════════════════
+   KIT · Segunda tanda (01/09/2026): que las tres pantallas
+   usen las mismas piezas. Todo presentación, cero lógica.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── 1) Tiras de pestañas: una forma por nivel ──────────────
+   Nivel 1  · .admin-tab      → la barra de navegación con iconos (sin tocar)
+   Nivel 2  · .tab, .agenda-subtab, .seguimiento-subtab → subrayado
+   Nivel 3  · .subtab         → píldora (el único tercer nivel)
+
+   Las de agenda y seguimiento iban en Bebas mayúsculas con 1,5px de
+   espaciado y las del perro en Inter: mismo nivel, dos tipografías.
+   Ahora las tres se leen igual. */
+.agenda-subtab, .seguimiento-subtab{
+    font-family:var(--font-body);
+    font-size:0.95rem;
+    font-weight:500;
+    letter-spacing:normal;
+    text-transform:none;
+    padding:0.85rem 0.85rem;
+    margin:0 0.15rem;
+}
+.agenda-subtab.active, .seguimiento-subtab.active{ font-weight:700; }
+/* El subrayado del activo, idéntico en las tres. */
+.tab.is-active, .agenda-subtab.active, .seguimiento-subtab.active{
+    color:var(--color-text);
+    border-bottom-color:var(--color-red);
+}
+
+/* ── 2) Contenedores: todos con la misma piel que .a-card ── */
+.protocolo-bloque{
+    background:var(--color-surface);
+    border:1px solid var(--color-border);
+    border-radius:12px;
+    padding:14px 15px;
+    margin:0 0 11px;
+}
+.protocolo-bloque:last-child{ margin-bottom:0; }
+.protocolo-bloque__titulo{
+    font-family:var(--font-display);
+    font-size:1.05rem;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    font-weight:400;
+    margin:0 0 4px;
+}
+.protocolo-bloque__hint{ font-size:.72rem; margin:0 0 11px; }
+
+/* .stats-card tenía su propio fondo y borde en crema translúcido y 20px de
+   padding: mismo componente, otra piel. Se alinea con la tarjeta común. */
+.stats-card{
+    background:var(--color-surface);
+    border:1px solid var(--color-border);
+    border-radius:12px;
+    padding:14px 15px;
+    margin:0 0 11px;
+}
