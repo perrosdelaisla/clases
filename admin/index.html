@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=54">
+    <link rel="stylesheet" href="./styles.css?v=55">
     <link rel="stylesheet" href="./jaime.css?v=10">
 </head>
 <body>
@@ -108,13 +108,16 @@
                 <section class="agenda-subpanel" data-subpanel="citas">
                     <div class="agenda-subpanel-header">
                         <p class="agenda-subpanel-desc">
-                            Citas futuras agendadas. Confirma, cancela, marca como realizada o crea una cita manual.
+                            Citas futuras agendadas. Confirma, cancela o marca como realizada.
                         </p>
-                        <button id="btn-abrir-cita-manual" class="btn-primary" type="button">+ Cita manual</button>
                     </div>
                     <div id="citas-list" class="citas-list">
                         <p class="agenda-empty">Cargando citas…</p>
                     </div>
+                    <!-- El botón va al final de la lista (pedido de Charly, 01/09/2026):
+                         la lista se mira muchas más veces de las que se crea una cita
+                         a mano. El id no cambia, así que el binding del JS sigue igual. -->
+                    <button id="btn-abrir-cita-manual" class="btn-primary btn-primary--pie" type="button">+ Cita manual</button>
                 </section>
 
                 <section class="agenda-subpanel" data-subpanel="bloqueos" hidden>
