@@ -1643,6 +1643,78 @@ function bindGrabacionCliente() {
     if (btnNo) btnNo.addEventListener('click', () => responderGrabacion('rechazado'));
 }
 
+// ───────────────────────────────────────────────────────────
+// Aviso del plazo del pack (01/09/2026)
+//
+// Charly quiso que el cliente esté avisado TODO el tiempo, no solo cuando
+// está por vencer. Cuatro etapas:
+//
+//   inicio       · tras la primera clase: se le explica el plazo cuando aún
+//                  da igual, para que nadie se entere el día que lo pierde
+//   recordatorio · 2 meses sin reservar nada
+//   urgente      · quedan 10 días o menos
+//   vencido      · se pasó y le quedaban clases
+//
+// Las dos primeras se enseñan UNA vez (marca por dispositivo): son
+// informativas y taparían el resto de avisos de Jaime si salieran a diario.
+// Las dos últimas salen siempre, hasta que se resuelvan.
+// ───────────────────────────────────────────────────────────
+
+const _PACK_ETAPAS_UNA_VEZ = ['inicio', 'recordatorio'];
+
+function _packAvisoVisto(etapa, caducaEn) {
+    // La marca lleva la fecha de caducidad: un pack nuevo vuelve a avisar.
+    const k = `pdli_pack_aviso_${etapa}_${caducaEn || 'sf'}`;
+    try { return localStorage.getItem(k) === '1'; } catch (_e) { return true; }
+}
+function _marcarPackAvisoVisto(etapa, caducaEn) {
+    try { localStorage.setItem(`pdli_pack_aviso_${etapa}_${caducaEn || 'sf'}`, '1'); } catch (_e) {}
+}
+
+function construirAvisoPack(pack) {
+    if (!pack || !pack.etapa) return null;
+    const etapa = pack.etapa;
+    const n = Number(pack.restantes) || 0;
+    const dias = Number(pack.dias);
+    const meses = Number(pack.meses) || 4;
+    const clases = `${n} clase${n === 1 ? '' : 's'}`;
+    const fecha = formatearFechaLarga(pack.caduca_en);
+
+    if (_PACK_ETAPAS_UNA_VEZ.includes(etapa)) {
+        if (_packAvisoVisto(etapa, pack.caduca_en)) return null;
+        _marcarPackAvisoVisto(etapa, pack.caduca_en);
+    }
+
+    if (etapa === 'inicio') {
+        return {
+            texto: `Un apunte para que lo tengas en cuenta: las clases del pack se pueden usar hasta ${meses} meses después de la última que hagas. Mientras vengas cada tanto no tienes que preocuparte, el plazo se renueva con cada clase. Ahora mismo te ${n === 1 ? 'queda' : 'quedan'} ${clases}, hasta el ${fecha}.`,
+            ctaLabel: 'Reservar clase',
+            ctaAccion: () => showTab('reservar'),
+        };
+    }
+    if (etapa === 'recordatorio') {
+        return {
+            texto: `Hace un par de meses que no nos vemos. Te ${n === 1 ? 'queda' : 'quedan'} ${clases} del pack y el plazo termina el ${fecha}. ¿Buscamos hueco?`,
+            ctaLabel: 'Reservar clase',
+            ctaAccion: () => showTab('reservar'),
+        };
+    }
+    if (etapa === 'urgente') {
+        const cuando = dias <= 0 ? 'hoy mismo' : dias === 1 ? 'mañana' : `en ${dias} días`;
+        return {
+            texto: `Atención: te ${n === 1 ? 'queda' : 'quedan'} ${clases} del pack y el plazo termina ${cuando}, el ${fecha}. Después ya no podrás reservarlas.`,
+            ctaLabel: 'Reservar ahora',
+            ctaAccion: () => showTab('reservar'),
+        };
+    }
+    // vencido
+    return {
+        texto: `Te ${n === 1 ? 'quedaba' : 'quedaban'} ${clases} y el plazo terminó el ${fecha}, así que ya no puedes reservar desde la app. Escríbenos y lo vemos: casi siempre hay una solución.`,
+        ctaLabel: 'Escribir al adiestrador',
+        ctaAccion: () => showTab('mensajes'),
+    };
+}
+
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
     if (!fab) return;
@@ -1710,6 +1782,14 @@ async function cargarAvisoJaime() {
         console.error('[jaime] no se pudo cargar el aviso:', e);
         _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
     }
+    // El aviso del plazo del pack viaja aparte, en data.pack: puede haberlo
+    // aunque no haya aviso normal.
+    const avisoPack = construirAvisoPack(data && data.pack);
+    if (avisoPack) {
+        _jaimeAvisoActual = avisoPack;
+        abrirBurbujaJaime();
+        return;
+    }
     if (!data || !data.tipo) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
     const nombre = data.perro || perro.nombre || 'tu perro';
@@ -1718,27 +1798,6 @@ async function cargarAvisoJaime() {
     let ctaAccion = null;
 
     switch (data.tipo) {
-        // Las clases del pack tienen plazo (01/09/2026). Jaime avisa antes de
-        // que venza, para que el tutor las use en vez de perderlas.
-        case 'pack_caduca': {
-            const n = Number(data.restantes) || 0;
-            const dias = Number(data.dias);
-            const clases = `${n} clase${n === 1 ? '' : 's'}`;
-            if (data.vencido) {
-                texto = `Te ${n === 1 ? 'quedaba' : 'quedaban'} ${clases} por usar y el plazo terminó. Escríbenos y lo vemos: casi siempre hay una solución.`;
-                ctaLabel = 'Escribir al adiestrador';
-                ctaAccion = () => showTab('mensajes');
-            } else {
-                const cuando = dias <= 0 ? 'hoy mismo'
-                    : dias === 1 ? 'mañana'
-                    : dias <= 14 ? `en ${dias} días`
-                    : `el ${formatearFechaLarga(data.caduca_en)}`;
-                texto = `Te ${n === 1 ? 'queda' : 'quedan'} ${clases} del pack y el plazo para usarlas termina ${cuando}. ¿Reservamos?`;
-                ctaLabel = 'Reservar clase';
-                ctaAccion = () => showTab('reservar');
-            }
-            break;
-        }
         case 'informe':
             texto = `Te hemos dejado el resumen de la semana de ${nombre}. ¡Échale un ojo!`;
             ctaLabel = 'Ver resumen';
