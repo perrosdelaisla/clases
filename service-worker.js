@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v285';
+const CACHE_VERSION = 'v286';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -87,15 +87,26 @@ self.addEventListener('fetch', (event) => {
 
 async function networkFirstHTML(req) {
     try {
-        const fresh = await fetch(req);
-        // Refrescamos el cache de la home con la última versión válida.
+        // `cache: 'no-store'` es la clave: un fetch normal respeta el cache
+        // HTTP del navegador, y GitHub Pages sirve el HTML con 10 minutos de
+        // vida. Sin esto, tras un despliegue el móvil seguía recibiendo el
+        // HTML viejo durante 10 minutos — y con él, los `?v=` viejos de CSS y
+        // JS, así que "no se veía el cambio" aunque estuviera publicado.
+        // Solo afecta a navegaciones (HTML): los assets siguen con su
+        // cacheFirst de siempre, que ya se invalida con el `?v=`.
+        const fresh = await fetch(req, { cache: 'no-store' });
+        // Guardamos CADA página en su propia clave, no todas bajo la home.
+        // Antes se cacheaba siempre como '/clases/index.html', así que sin red
+        // una página del admin devolvía la app del cliente.
         if (fresh && fresh.ok) {
             const cache = await caches.open(CACHE_NAME);
-            cache.put('/clases/index.html', fresh.clone()).catch(() => {});
+            cache.put(req, fresh.clone()).catch(() => {});
         }
         return fresh;
     } catch (_err) {
-        const cached = await caches.match('/clases/index.html');
+        // Sin red: primero la propia página; si nunca se visitó, la home.
+        const cached = (await caches.match(req))
+                    || (await caches.match('/clases/index.html'));
         return cached || Response.error();
     }
 }
