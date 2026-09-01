@@ -13,8 +13,8 @@ import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
-import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=3';
+import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=5';
+import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=4';
 import { initJaime, jaimeEscuchando } from './jaime.js?v=18';
 const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
@@ -171,6 +171,7 @@ async function afterLogin(session) {
     showScreen('app');
     bindTabs();
     bindBackNavigation();
+    instalarNavegacionSinPila();
 
     // Asistente Jaime (chat global): FAB en toda la pantalla del admin, sin
     // contexto de cliente/perro (los resuelve por nombre con sus herramientas).
@@ -3873,4 +3874,40 @@ async function guardarComentarioActividad() {
         actividadState.comentarRegistroId = null;
         closeModal('modal-comentar-actividad');
     }
+}
+
+// ───────────────────────────────────────────────────────────
+// Navegación del admin: las pantallas se REEMPLAZAN, no se apilan.
+// (Pedido de Charly, 01/09/2026)
+//
+// Antes cada salto sumaba una entrada al historial, así que salir desde
+// lo hondo obligaba a desandar el camino pantalla por pantalla. Ahora
+// index ⇄ cliente ⇄ perro comparten UNA sola entrada: el botón atrás
+// del móvil vuelve siempre a Agenda, y desde Agenda dos toques cierran
+// la app de verdad.
+//
+// Para volver al cliente desde un perro está el "← Volver" de la
+// pantalla, que sigue funcionando igual.
+//
+// Solo se interceptan clics normales sobre enlaces internos del admin:
+// abrir en pestaña nueva (Ctrl/Cmd/rueda), target="_blank" y los enlaces
+// externos (WhatsApp, Maps) se dejan en paz.
+function instalarNavegacionSinPila() {
+    if (window.__pdliNavReplace) return;
+    window.__pdliNavReplace = true;
+    document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const a = e.target.closest('a[href]');
+        if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+        const href = a.getAttribute('href') || '';
+        if (!/^\.?\/?(index|cliente|perro)\.html(\?|#|$)/.test(href)) return;
+        e.preventDefault();
+        location.replace(a.href);
+    });
+}
+
+// Ir a una pantalla del admin sin dejar rastro en el historial.
+function irAdmin(url) {
+    location.replace(url);
 }

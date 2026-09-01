@@ -39,6 +39,7 @@ async function bootstrap() {
     bindGrabacion();
     bindEstadoSelector();
     bindBackNavigation();
+    instalarNavegacionSinPila();
 
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) {
@@ -622,8 +623,8 @@ function bindBackNavigation() {
             return;
         }
 
-        // Sin modal: dejar pasar el back natural → vuelve a admin/index.html.
-        history.back();
+        // Sin modal: a Agenda, siempre (no se desanda el camino).
+        irAdmin('./index.html');
     });
 }
 
@@ -1026,4 +1027,40 @@ function bindAdminResponder(clienteId) {
             renderAdminMensajes(clienteId);
         }
     };
+}
+
+// ───────────────────────────────────────────────────────────
+// Navegación del admin: las pantallas se REEMPLAZAN, no se apilan.
+// (Pedido de Charly, 01/09/2026)
+//
+// Antes cada salto sumaba una entrada al historial, así que salir desde
+// lo hondo obligaba a desandar el camino pantalla por pantalla. Ahora
+// index ⇄ cliente ⇄ perro comparten UNA sola entrada: el botón atrás
+// del móvil vuelve siempre a Agenda, y desde Agenda dos toques cierran
+// la app de verdad.
+//
+// Para volver al cliente desde un perro está el "← Volver" de la
+// pantalla, que sigue funcionando igual.
+//
+// Solo se interceptan clics normales sobre enlaces internos del admin:
+// abrir en pestaña nueva (Ctrl/Cmd/rueda), target="_blank" y los enlaces
+// externos (WhatsApp, Maps) se dejan en paz.
+function instalarNavegacionSinPila() {
+    if (window.__pdliNavReplace) return;
+    window.__pdliNavReplace = true;
+    document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const a = e.target.closest('a[href]');
+        if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+        const href = a.getAttribute('href') || '';
+        if (!/^\.?\/?(index|cliente|perro)\.html(\?|#|$)/.test(href)) return;
+        e.preventDefault();
+        location.replace(a.href);
+    });
+}
+
+// Ir a una pantalla del admin sin dejar rastro en el historial.
+function irAdmin(url) {
+    location.replace(url);
 }

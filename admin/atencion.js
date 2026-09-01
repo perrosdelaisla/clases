@@ -97,7 +97,8 @@ function normalizarTelefonoWa(tel) {
 // Misma navegación que usa avisos.js para abrir un cliente.
 function abrirCliente(clienteId) {
     if (!clienteId) return;
-    location.href = `cliente.html?id=${encodeURIComponent(clienteId)}`;
+    // replace, no href: el admin no apila pantallas (01/09/2026).
+    location.replace(`cliente.html?id=${encodeURIComponent(clienteId)}`);
 }
 
 // ---- Render ----

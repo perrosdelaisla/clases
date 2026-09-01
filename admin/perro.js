@@ -124,6 +124,7 @@ async function bootstrap() {
         await cargarYRenderPerro(id);
         activarTab(params.get('tab'), { updateUrl: false });
         bindBackNavigation();
+        instalarNavegacionSinPila();
 
         // La carga de la lista de ejercicios activos no bloquea la UI:
         // el panel ya está visible con su loading propio.
@@ -1300,7 +1301,7 @@ function bindBackNavigation() {
             return;
         }
 
-        // Prioridad 2: nada abierto → back natural al cliente.
+        // Prioridad 2: nada abierto → a Agenda, siempre.
         //
         // Las pestañas y sub-pestañas NO consumen el botón atrás (01/09/2026).
         // Antes lo hacían y salir desde "Ejercicios > Tareas" costaba tres
@@ -1308,7 +1309,7 @@ function bindBackNavigation() {
         // atrás siempre significa lo mismo — cerrar lo que esté abierto, o
         // volver una pantalla — y para cambiar de pestaña están las pestañas.
         saliendoDePerro = true;
-        history.back();
+        irAdmin('./index.html');
     });
 }
 
@@ -3264,4 +3265,40 @@ async function pintarFotosClienteAdmin(scope) {
             console.error('[fotos-cli] no se pudo firmar la URL:', e);
         }
     }
+}
+
+// ───────────────────────────────────────────────────────────
+// Navegación del admin: las pantallas se REEMPLAZAN, no se apilan.
+// (Pedido de Charly, 01/09/2026)
+//
+// Antes cada salto sumaba una entrada al historial, así que salir desde
+// lo hondo obligaba a desandar el camino pantalla por pantalla. Ahora
+// index ⇄ cliente ⇄ perro comparten UNA sola entrada: el botón atrás
+// del móvil vuelve siempre a Agenda, y desde Agenda dos toques cierran
+// la app de verdad.
+//
+// Para volver al cliente desde un perro está el "← Volver" de la
+// pantalla, que sigue funcionando igual.
+//
+// Solo se interceptan clics normales sobre enlaces internos del admin:
+// abrir en pestaña nueva (Ctrl/Cmd/rueda), target="_blank" y los enlaces
+// externos (WhatsApp, Maps) se dejan en paz.
+function instalarNavegacionSinPila() {
+    if (window.__pdliNavReplace) return;
+    window.__pdliNavReplace = true;
+    document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const a = e.target.closest('a[href]');
+        if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+        const href = a.getAttribute('href') || '';
+        if (!/^\.?\/?(index|cliente|perro)\.html(\?|#|$)/.test(href)) return;
+        e.preventDefault();
+        location.replace(a.href);
+    });
+}
+
+// Ir a una pantalla del admin sin dejar rastro en el historial.
+function irAdmin(url) {
+    location.replace(url);
 }

@@ -253,7 +253,8 @@ function filtrarItems() {
 function abrirCliente(clienteId) {
     if (!clienteId) return;
     // El admin usa cliente.html?id=...
-    location.href = `cliente.html?id=${encodeURIComponent(clienteId)}`;
+    // replace, no href: el admin no apila pantallas (01/09/2026).
+    location.replace(`cliente.html?id=${encodeURIComponent(clienteId)}`);
 }
 
 function renderItem(a) {
