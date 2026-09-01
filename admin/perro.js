@@ -420,12 +420,9 @@ function activarTab(tabRaw, { updateUrl } = {}) {
         window.history.replaceState({}, '', url);
     }
 
-    // Si salimos de la pestaña Ejercicios con una subtab no-default activa,
-    // la devolvemos a su default para consumir su entrada de historial (si no,
-    // queda una entrada colgada que descuadra el back desde otras pestañas).
-    if (tab !== DEFAULT_TAB && state.subtabActiva !== DEFAULT_SUBTAB) {
-        activarSubtab(DEFAULT_SUBTAB);
-    }
+    // (Antes se reseteaba la sub-pestaña al salir de Ejercicios, solo para
+    // cuadrar el historial. Ya no hace falta, y así la encuentras donde la
+    // dejaste al volver.)
 
     if (tab === 'salud') { renderSaludPerro(); cargarSaludPerro(state.perroId); }
     if (tab === 'herramientas') renderHerramientas();
@@ -458,16 +455,9 @@ function activarSubtab(subtab) {
     // Mientras se reordena, las sub-pestañas quedan bloqueadas (también las
     // que dispararía el swipe horizontal).
     if (state.modoReordenar) return;
-    // Back navigation: mientras estás en una subtab ≠ default hay UNA entrada
-    // extra en el historial, igual que con los modales. Cruzar hacia afuera de
-    // la default la suma; volver a la default la consume. pushHistoriaUI /
-    // consumirHistoriaUI ya respetan navegandoPorPopstate (no pushean cuando
-    // el cambio viene de un popstate).
-    const eraDefault = (state.subtabActiva === DEFAULT_SUBTAB);
-    const esDefault = (subtab === DEFAULT_SUBTAB);
+    // Las sub-pestañas ya no tocan el historial: el botón atrás del móvil
+    // solo cierra lo que esté abierto o vuelve una pantalla.
     state.subtabActiva = subtab;
-    if (eraDefault && !esDefault) pushHistoriaUI();
-    else if (!eraDefault && esDefault) consumirHistoriaUI();
     document.querySelectorAll('.subtab').forEach((b) => {
         const active = b.dataset.subtab === subtab;
         b.classList.toggle('is-active', active);
@@ -1310,26 +1300,13 @@ function bindBackNavigation() {
             return;
         }
 
-        // Prioridad 2: en la pestaña Ejercicios con subtab ≠ default → volver a
-        // la subtab default. En otras pestañas la subtab no influye en el back.
-        const tabActivaAhora = document.querySelector('.tab.is-active')?.dataset.tab;
-        if (tabActivaAhora === DEFAULT_TAB && state.subtabActiva !== DEFAULT_SUBTAB) {
-            history.pushState({ pdli: 'anchor' }, '');
-            navegandoPorPopstate = true;
-            try { activarSubtab(DEFAULT_SUBTAB); } finally { navegandoPorPopstate = false; }
-            return;
-        }
-
-        // Prioridad 3: pestaña principal ≠ default → volver a la default.
-        const tabActual = document.querySelector('.tab.is-active')?.dataset.tab;
-        if (tabActual && tabActual !== DEFAULT_TAB) {
-            history.pushState({ pdli: 'anchor' }, '');
-            navegandoPorPopstate = true;
-            try { activarTab(DEFAULT_TAB); } finally { navegandoPorPopstate = false; }
-            return;
-        }
-
-        // Prioridad 4: nada abierto, pestaña default → back natural al cliente.
+        // Prioridad 2: nada abierto → back natural al cliente.
+        //
+        // Las pestañas y sub-pestañas NO consumen el botón atrás (01/09/2026).
+        // Antes lo hacían y salir desde "Ejercicios > Tareas" costaba tres
+        // toques que no movían de pantalla: se sentía como un paseo. Ahora
+        // atrás siempre significa lo mismo — cerrar lo que esté abierto, o
+        // volver una pantalla — y para cambiar de pestaña están las pestañas.
         saliendoDePerro = true;
         history.back();
     });
@@ -1341,10 +1318,14 @@ function hayUiAbierta() {
     const pau = document.getElementById('modal-pausados');
     const fre = document.getElementById('modal-frecuencia');
     const not = document.getElementById('modal-notas-ejercicio');
+    const reg = document.getElementById('selector-registro');
+    const gru = document.getElementById('selector-grupo');
     return (cat && !cat.hasAttribute('hidden'))
         || (pau && !pau.hasAttribute('hidden'))
         || (fre && !fre.hasAttribute('hidden'))
         || (not && !not.hasAttribute('hidden'))
+        || (reg && !reg.hidden)
+        || (gru && !gru.hidden)
         || state.modoReordenar === true;
 }
 
@@ -1358,6 +1339,10 @@ function cerrarUiAbierta() {
     if (pau && !pau.hasAttribute('hidden')) { cerrarSheetPausados(); return; }
     if (fre && !fre.hasAttribute('hidden')) { cerrarModalFrecuencia(); return; }
     if (not && !not.hasAttribute('hidden')) { cerrarNotasEjercicio(); return; }
+    const reg = document.getElementById('selector-registro');
+    if (reg && !reg.hidden) { reg.hidden = true; reg.innerHTML = ''; return; }
+    const gru = document.getElementById('selector-grupo');
+    if (gru && !gru.hidden) { gru.hidden = true; gru.innerHTML = ''; return; }
     if (state.modoReordenar) { salirModoReordenar(); return; }
 }
 

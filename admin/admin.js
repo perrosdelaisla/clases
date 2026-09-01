@@ -781,25 +781,11 @@ function bindBackNavigation() {
             return;
         }
 
-        // Prioridad 2: subtab Agenda ≠ citas
-        const tabActual = document.querySelector('.admin-tab.active')?.dataset.tab;
-        const subActual = document.querySelector('.agenda-subtab.active')?.dataset.subtab;
-        if (tabActual === 'agenda' && subActual && subActual !== 'citas') {
-            history.pushState({ pdli: 'anchor' }, '');
-            navegandoPorPopstate = true;
-            try { activarAgendaSubtab('citas'); } finally { navegandoPorPopstate = false; }
-            return;
-        }
+        // Las pestañas y sub-pestañas NO consumen el botón atrás (01/09/2026):
+        // antes había que atravesarlas todas para salir y se sentía como un
+        // paseo. Atrás significa siempre lo mismo: cerrar lo abierto, o salir.
 
-        // Prioridad 3: tab ≠ agenda → volver a agenda (siempre arranca en citas)
-        if (tabActual && tabActual !== 'agenda') {
-            history.pushState({ pdli: 'anchor' }, '');
-            navegandoPorPopstate = true;
-            try { activarTab('agenda'); } finally { navegandoPorPopstate = false; }
-            return;
-        }
-
-        // Prioridad 4: Agenda > Citas sin nada → doble-tap para salir
+        // Prioridad 2: nada abierto → doble-tap para salir de la app.
         if (readyToExit) {
             // Segundo back dentro de los 2s: dejar salir. No re-pushear.
             clearTimeout(exitTimer);
