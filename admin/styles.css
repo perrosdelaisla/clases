@@ -5314,3 +5314,38 @@ body {
     font-size: 0.75rem; color: var(--color-muted);
     margin: 0.7rem 0 0;
 }
+
+/* ── Ejercicios agrupados por protocolo (como el cliente). 01/09/2026 ── */
+.ejer-grupo { list-style: none; margin: 0 0 1.4rem; }
+.ejer-grupo__head {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    padding: 0 0.15rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 0.8rem;
+}
+.ejer-grupo__nom {
+    font-family: var(--font-display, 'Bebas Neue', sans-serif);
+    font-size: 1.2rem; letter-spacing: 0.5px; color: var(--color-text);
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    text-transform: uppercase;
+}
+.ejer-grupo__cuenta {
+    font-family: var(--font-body); font-size: 0.68rem; font-weight: 700;
+    color: var(--color-muted); background: var(--color-surface-2);
+    border-radius: 999px; padding: 0.12rem 0.5rem; letter-spacing: 0;
+}
+.ejer-grupo__fase {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    color: var(--fc, #8A867E);
+    background: color-mix(in srgb, var(--fc, #8A867E) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--fc, #8A867E) 42%, transparent);
+    border-radius: 999px; padding: 0.32rem 0.7rem;
+    font-size: 0.76rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+@supports not (background: color-mix(in srgb, red 16%, transparent)) {
+    .ejer-grupo__fase { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.18); }
+}
+.ejer-grupo__body {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.7rem;
+}

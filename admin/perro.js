@@ -544,13 +544,25 @@ async function renderEjerciciosActivos() {
     }
 
     listaEl.removeAttribute('hidden');
-    listaEl.innerHTML = cadenas
-        .map((c) => renderEjercicioActivoCard(c.vigente, c.history))
-        .join('');
-
-    // Panel de fases: una fila por protocolo presente en los ejercicios, con su
-    // fase editable. Solo en la sub-pestaña Ejercicios.
-    renderPanelFases(cadenas);
+    // En Ejercicios, si hay ejercicios con grupo, los agrupamos bajo cada
+    // protocolo (con su fase en el encabezado), igual que lo ve el cliente —
+    // así no genera confusión (pedido de Charly, 01/09/2026). En el resto de
+    // sub-pestañas, o si no hay grupos, va la lista plana + panel de fases.
+    const agrupar = (state.subtabActiva === 'ejercicio')
+        && cadenas.some((c) => c.vigente.grupo_protocolo);
+    if (agrupar) {
+        listaEl.innerHTML = renderEjerciciosAgrupados(cadenas);
+        document.getElementById('fases-panel')?.remove(); // la fase ya va en cada encabezado
+        listaEl.querySelectorAll('.ejer-grupo__fase').forEach((b) => {
+            b.addEventListener('click', () => abrirSelectorFase(b.dataset.slug));
+        });
+    } else {
+        listaEl.innerHTML = cadenas
+            .map((c) => renderEjercicioActivoCard(c.vigente, c.history))
+            .join('');
+        // Panel de fases: una fila por protocolo presente. Solo sub-pestaña Ejercicios.
+        renderPanelFases(cadenas);
+    }
 
     // Wire toggle inline de pausa (solo renglones simples) + acciones de progresión.
     listaEl.querySelectorAll('.toggle').forEach((btn) => {
@@ -646,6 +658,55 @@ function labelFrecuencia(minSem, maxDia) {
     if (minSem != null) partes.push(`mín ${minSem}/sem`);
     if (maxDia != null) partes.push(`máx ${maxDia}/día`);
     return partes.length === 0 ? '+ Frecuencia' : partes.join(' · ');
+}
+
+// Agrupa las cadenas por grupo_protocolo bajo un encabezado por protocolo
+// (nombre + fase editable), con las tarjetas debajo. Orden: principal,
+// complementarios (en su orden), slugs sueltos, y "Sin grupo" al final.
+// Espeja la vista del cliente. 01/09/2026.
+function renderEjerciciosAgrupados(cadenas) {
+    const p = state.perro || {};
+    const orden = [];
+    if (p.protocolo_principal) orden.push(p.protocolo_principal);
+    (p.protocolos_complementarios || []).forEach((s) => { if (s && !orden.includes(s)) orden.push(s); });
+    cadenas.forEach((c) => { const g = c.vigente.grupo_protocolo; if (g && !orden.includes(g)) orden.push(g); });
+
+    const buckets = new Map();
+    orden.forEach((s) => buckets.set(s, []));
+    const sinGrupo = [];
+    cadenas.forEach((c) => {
+        const g = c.vigente.grupo_protocolo;
+        if (g && buckets.has(g)) buckets.get(g).push(c);
+        else sinGrupo.push(c);
+    });
+
+    const bloque = (slug, lista) => {
+        if (!lista.length) return '';
+        const nombre = escapeHTML(slug ? (PROTOCOLOS_LABEL[slug] || slug) : 'Sin grupo');
+        const cards = lista.map((c) => renderEjercicioActivoCard(c.vigente, c.history)).join('');
+        let faseHtml = '';
+        if (slug) {
+            const f = FASES[_gruposFaseAdmin[slug]];
+            let dots = '';
+            for (let i = 0; i < 3; i++) dots += `<i class="fase-dot${f && i < f.dots ? ' fase-dot--on' : ''}"></i>`;
+            const label = f ? f.label : 'Sin fase';
+            const color = f ? f.color : '#8A867E';
+            faseHtml = `<button type="button" class="ejer-grupo__fase" data-slug="${escapeHTML(slug)}" style="--fc:${color}"><span class="fase-dots">${dots}</span>${escapeHTML(label)} ▾</button>`;
+        }
+        return `
+            <li class="ejer-grupo">
+                <div class="ejer-grupo__head">
+                    <span class="ejer-grupo__nom">${nombre}<span class="ejer-grupo__cuenta">${lista.length}</span></span>
+                    ${faseHtml}
+                </div>
+                <ul class="ejer-grupo__body">${cards}</ul>
+            </li>`;
+    };
+
+    let html = '';
+    orden.forEach((slug) => { html += bloque(slug, buckets.get(slug) || []); });
+    html += bloque('', sinGrupo);
+    return html;
 }
 
 function renderEjercicioActivoCard(row, history = []) {
@@ -1095,12 +1156,20 @@ function salirModoReordenar() {
 
 // Deshabilita ▲ en la primera tarjeta y ▼ en la última.
 function actualizarFlechasReordenar() {
-    const cards = [...document.querySelectorAll('#ejercicios-lista .ejercicio-activo-card')];
-    cards.forEach((card, i) => {
-        const subir = card.querySelector('[data-mover="subir"]');
-        const bajar = card.querySelector('[data-mover="bajar"]');
-        if (subir) subir.disabled = i === 0;
-        if (bajar) bajar.disabled = i === cards.length - 1;
+    // Por cada contenedor de tarjetas (lista plana, o el cuerpo de cada grupo),
+    // deshabilita ▲ en la primera y ▼ en la última. Así, agrupado, se reordena
+    // dentro de cada protocolo.
+    const contenedores = new Set();
+    document.querySelectorAll('#ejercicios-lista .ejercicio-activo-card')
+        .forEach((c) => { if (c.parentNode) contenedores.add(c.parentNode); });
+    contenedores.forEach((cont) => {
+        const cards = [...cont.children].filter((c) => c.classList.contains('ejercicio-activo-card'));
+        cards.forEach((card, i) => {
+            const subir = card.querySelector('[data-mover="subir"]');
+            const bajar = card.querySelector('[data-mover="bajar"]');
+            if (subir) subir.disabled = i === 0;
+            if (bajar) bajar.disabled = i === cards.length - 1;
+        });
     });
 }
 
@@ -1108,12 +1177,14 @@ function actualizarFlechasReordenar() {
 function moverRenglon(btn, dir) {
     const card = btn.closest('.ejercicio-activo-card');
     if (!card) return;
+    // Solo movemos entre tarjetas hermanas (dentro del mismo grupo/cuerpo);
+    // nunca cruzamos un encabezado de grupo.
     if (dir === 'subir') {
         const prev = card.previousElementSibling;
-        if (prev) card.parentNode.insertBefore(card, prev);
+        if (prev && prev.classList.contains('ejercicio-activo-card')) card.parentNode.insertBefore(card, prev);
     } else {
         const next = card.nextElementSibling;
-        if (next) card.parentNode.insertBefore(next, card);
+        if (next && next.classList.contains('ejercicio-activo-card')) card.parentNode.insertBefore(next, card);
     }
     actualizarFlechasReordenar();
 }
