@@ -5379,3 +5379,113 @@ body {
 /* "La tiene, pero no mandó foto": ámbar, para poder pedírsela en clase. */
 .herramienta-estado--sin-foto .herramienta-estado__dot{ background:#E8B62D; }
 .herramienta-estado--sin-foto .herramienta-estado__txt{ color:#8A6A12; }
+
+/* ════════════════════════════════════════════════════════════
+   KIT COMPARTIDO DEL ADMIN (01/09/2026)
+   Antes había tres formas de contenedor (.stats-card era una
+   tarjeta, .detalle-seccion no era nada, .protocolo-bloque una
+   tercera cosa) y dos escalas de título. Esto unifica las piezas
+   para que las tres pantallas se sientan la misma app.
+   Solo presentación: no cambia el comportamiento de nada.
+   ════════════════════════════════════════════════════════════ */
+
+.a-card{
+    background:var(--color-surface);
+    border:1px solid var(--color-border);
+    border-radius:12px;
+    padding:14px 15px;
+    margin:0 0 11px;
+}
+.a-card:last-child{ margin-bottom:0; }
+
+/* Encabezado de tarjeta: título a la izquierda, dato pequeño a la derecha. */
+.a-sec{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 0 11px; }
+.a-sec__t{
+    font-family:var(--font-display); font-size:1.05rem; letter-spacing:.09em;
+    font-weight:400; margin:0; color:var(--color-text); text-transform:uppercase;
+}
+.a-sec__meta{ font-style:normal; font-size:.72rem; color:var(--color-muted); font-weight:600; white-space:nowrap; }
+
+/* Fila etiqueta / valor. */
+.a-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:9px 0; font-size:.86rem; border-top:1px solid rgba(255,255,255,.05);
+}
+.a-row:first-of-type{ border-top:none; }
+.a-row > span:first-child{ color:var(--color-muted); flex:0 0 auto; }
+.a-row__v{ display:flex; align-items:center; gap:9px; }
+
+.a-hint{ font-size:.72rem; color:var(--color-muted); line-height:1.45; margin:7px 0 0; }
+
+/* Acciones al pie de una tarjeta. */
+.a-acc{ display:flex; gap:8px; margin-top:11px; flex-wrap:wrap; }
+.a-acc:empty{ display:none; }
+.a-acc .btn-secondary, .a-acc .btn-invitar{ flex:1; min-width:120px; text-align:center; }
+.btn-secondary--mini{ flex:0 0 auto !important; min-width:0 !important; padding:5px 11px; font-size:.78rem; }
+
+/* Cifras grandes. El primer recuadro lleva un input dentro: se edita
+   directamente sobre el número, sin abrir nada. */
+.a-kpi{ display:flex; gap:8px; }
+.a-kpi__i{ flex:1; background:var(--color-surface-2); border-radius:9px; padding:9px 10px; text-align:center; }
+.a-kpi__i b{ display:block; font-family:var(--font-display); font-size:1.55rem; line-height:1; font-weight:400; }
+.a-kpi__i small{ display:block; font-size:.62rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:.06em; margin-top:5px; }
+.a-kpi__i--ok b{ color:#9CB64B; }
+.a-kpi__i input[type="number"]{
+    display:block; width:100%; background:transparent; border:none; padding:0;
+    font-family:var(--font-display); font-size:1.55rem; line-height:1; font-weight:400;
+    color:var(--color-text); text-align:center; -moz-appearance:textfield;
+}
+.a-kpi__i input[type="number"]:focus{ outline:none; color:#fff; }
+.a-kpi__i input[type="number"]::-webkit-outer-spin-button,
+.a-kpi__i input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+
+/* Interruptor: la casilla real queda oculta pero sigue siendo la que
+   manda (el JS lee su .checked, no toca esto). */
+.a-tog{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0 0; cursor:pointer; }
+.a-tog__l{ font-size:.86rem; line-height:1.35; }
+.a-tog__l i{ font-style:normal; color:var(--color-muted); font-size:.72rem; display:block; }
+.a-tog__fb{ font-size:.72rem; color:var(--color-muted); display:block; }
+.a-tog input[type="checkbox"]{ position:absolute; opacity:0; width:0; height:0; }
+.a-sw{
+    width:42px; height:24px; border-radius:999px; background:#3a3a3a;
+    position:relative; flex:0 0 auto; transition:background .18s ease;
+}
+.a-sw::after{
+    content:""; position:absolute; top:3px; left:3px; width:18px; height:18px;
+    border-radius:50%; background:#fff; transition:left .18s ease;
+}
+.a-tog input[type="checkbox"]:checked ~ .a-sw{ background:var(--color-green); }
+.a-tog input[type="checkbox"]:checked ~ .a-sw::after{ left:21px; }
+.a-tog input[type="checkbox"]:focus-visible ~ .a-sw{ box-shadow:0 0 0 3px rgba(107,122,58,.4); }
+
+.a-maps-edit input[type="text"]{ width:100%; box-sizing:border-box; }
+
+/* ── Ajustes de la pantalla de cliente al entrar en el kit ── */
+.detalle-main > .detalle-nombre{
+    font-family:var(--font-display); font-size:1.9rem; letter-spacing:.03em;
+    font-weight:400; margin:0 0 12px; line-height:1.1;
+}
+/* Dentro de una tarjeta los campos ya no necesitan su propio marco. */
+.a-card .detalle-campos{ margin:0; }
+.a-card .detalle-campos .campo{
+    /* La regla base los apila en columna; dentro de la tarjeta van en fila,
+       etiqueta a la izquierda y valor a la derecha. */
+    display:flex; flex-direction:row; justify-content:space-between;
+    align-items:baseline; gap:12px;
+    padding:9px 0; border-top:1px solid rgba(255,255,255,.05); margin:0;
+}
+.a-card .detalle-campos .campo:first-child{ border-top:none; }
+.a-card .detalle-campos dt{
+    color:var(--color-muted); font-size:.86rem; flex:0 0 auto;
+    text-transform:none; letter-spacing:0; font-weight:400;
+}
+.a-card .detalle-campos dd{
+    margin:0; font-size:.86rem; text-align:right; min-width:0;
+    overflow-wrap:anywhere;
+}
+.a-card .estado-selector{ margin:0 0 11px; }
+.a-card .perros-lista, .a-card .miembros-lista{ margin:0; }
+.a-card .empty-state{ margin:6px 0 0; }
+/* Los mensajes ya tienen su propio encabezado dentro del kit. */
+.a-card.admin-mensajes{ display:block; }
+.a-card .admin-mensajes__titulo{ font-size:1.05rem; }

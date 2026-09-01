@@ -126,6 +126,7 @@ async function cargarYRender(clienteId) {
     renderCliente(clienteRes.data, tieneUsuario);
     const elRealizadas = document.getElementById('cliente-clases-realizadas');
     if (elRealizadas) elRealizadas.textContent = realizadasRes.error ? '—' : String(realizadasRes.count || 0);
+    actualizarClasesRestantes();
     renderPerros(perrosRes.data || []);
     showScreen('cliente');
 }
@@ -150,6 +151,7 @@ function renderCliente(c, tieneUsuario) {
     // Checkbox "habilitar próxima clase" — refleja clase_extra_habilitada
     const extraCheck = document.getElementById('cli-clase-extra');
     if (extraCheck) extraCheck.checked = !!c.clase_extra_habilitada;
+    actualizarClasesRestantes();
 
     // Widget permiso de grabación
     renderGrabacion(c);
@@ -394,6 +396,18 @@ async function guardarClaseExtra(ev) {
     }
 }
 
+// Restantes = pagadas − realizadas. Es una resta simple sobre lo que ya
+// está en pantalla, no una consulta nueva: si falta alguno de los dos, se
+// muestra un guion en vez de inventar un número.
+function actualizarClasesRestantes() {
+    const el = document.getElementById('cliente-clases-restantes');
+    if (!el) return;
+    const pagadas = parseInt((document.getElementById('cliente-pack-actual')?.value || '').trim(), 10);
+    const realizadas = parseInt(document.getElementById('cliente-clases-realizadas')?.textContent || '', 10);
+    if (!Number.isFinite(pagadas) || !Number.isFinite(realizadas)) { el.textContent = '—'; return; }
+    el.textContent = String(Math.max(pagadas - realizadas, 0));
+}
+
 async function guardarPackActual() {
     if (!state.clienteId) return;
     const input = document.getElementById('cliente-pack-actual');
@@ -418,6 +432,7 @@ async function guardarPackActual() {
             .eq('id', state.clienteId);
         if (error) throw error;
         if (state.cliente) state.cliente.pack_actual = valor;
+        actualizarClasesRestantes();
         toast('Pack actualizado');
     } catch (err) {
         console.error('[cliente] error guardando pack_actual:', err);

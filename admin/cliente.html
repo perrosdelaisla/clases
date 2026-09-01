@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Cliente — Admin Perros de la Isla</title>
-    <link rel="stylesheet" href="./styles.css?v=39">
+    <link rel="stylesheet" href="./styles.css?v=40">
     <link rel="stylesheet" href="./jaime.css?v=10">
 </head>
 <body>
@@ -35,12 +35,19 @@
     <section class="screen" id="screen-cliente" hidden>
         <header class="header header--with-back">
             <a class="btn-back" href="./index.html" aria-label="Volver a la lista">← Volver</a>
-            <h2 class="header-title">Detalle del cliente</h2>
+            <h2 class="header-title">Cliente</h2>
             <span class="header-spacer"></span>
         </header>
         <main class="detalle-main">
-            <section class="detalle-cabecera">
-                <h1 class="detalle-nombre" id="cliente-nombre">…</h1>
+            <h1 class="detalle-nombre" id="cliente-nombre">…</h1>
+
+            <!-- ── 1) EL CLIENTE: quién es ───────────────────────────── -->
+            <section class="a-card" aria-labelledby="tit-cliente">
+                <div class="a-sec">
+                    <h2 class="a-sec__t" id="tit-cliente">El cliente</h2>
+                    <em class="a-sec__meta">desde <span id="cliente-desde">—</span></em>
+                </div>
+
                 <div class="estado-selector" id="estado-selector" role="radiogroup" aria-label="Estado del cliente">
                     <button type="button" class="estado-pill" data-estado="consulta" role="radio" aria-checked="false">
                         <span class="estado-pill__dot"></span>
@@ -63,91 +70,102 @@
                         <span class="estado-pill__label">Ex cliente</span>
                     </button>
                 </div>
-                <button type="button" class="btn-invitar" id="btn-invitar">Invitar a la app</button>
+
                 <dl class="detalle-campos">
-                    <div class="campo">
-                        <dt>Teléfono</dt>
-                        <dd id="cliente-telefono">—</dd>
-                    </div>
-                    <div class="campo">
-                        <dt>Email</dt>
-                        <dd id="cliente-email">—</dd>
-                    </div>
-                    <div class="campo">
-                        <dt>Zona</dt>
-                        <dd id="cliente-zona">—</dd>
-                    </div>
-                    <div class="campo">
-                        <dt>Dirección</dt>
-                        <dd id="cliente-direccion">—</dd>
-                    </div>
-                    <div class="campo">
-                        <dt>Ubicación (Google Maps)</dt>
-                        <dd>
-                            <div id="cli-maps-view" style="display:flex;gap:8px;flex-wrap:wrap">
-                                <button type="button" class="btn-secondary" id="cli-maps-abrir" hidden>📍 Abrir en Maps</button>
-                                <button type="button" class="btn-secondary" id="cli-maps-editar" hidden>Editar</button>
-                                <button type="button" class="btn-secondary" id="cli-maps-anadir" hidden>Añadir enlace</button>
-                            </div>
-                            <div id="cli-maps-edit" hidden>
-                                <input type="text" id="cli-maps-input" maxlength="500" placeholder="Pega aquí el enlace de Compartir de Google Maps" style="width:100%;box-sizing:border-box">
-                                <div style="margin-top:8px;display:flex;gap:8px">
-                                    <button type="button" class="btn-secondary" id="cli-maps-guardar">Guardar</button>
-                                    <button type="button" class="btn-secondary" id="cli-maps-cancelar">Cancelar</button>
-                                </div>
-                            </div>
-                        </dd>
-                    </div>
-                    <div class="campo">
-                        <dt>Cliente desde</dt>
-                        <dd id="cliente-desde">—</dd>
-                    </div>
+                    <div class="campo"><dt>Teléfono</dt><dd id="cliente-telefono">—</dd></div>
+                    <div class="campo"><dt>Email</dt><dd id="cliente-email">—</dd></div>
+                    <div class="campo"><dt>Zona</dt><dd id="cliente-zona">—</dd></div>
+                    <div class="campo"><dt>Dirección</dt><dd id="cliente-direccion">—</dd></div>
                 </dl>
 
-                <div class="admin-widget admin-widget--pack">
-                    <label class="admin-widget__label" for="cliente-pack-actual">Pack actual</label>
-                    <div class="admin-widget__row">
-                        <input type="number" id="cliente-pack-actual" min="0" step="1" placeholder="—">
-                        <button type="button" class="btn-secondary" id="cliente-pack-guardar">Guardar</button>
-                    </div>
-                    <p class="admin-widget__hint">Número de clases que pagó este cliente en su pack actual. Vacío = sin pack registrado.</p>
-                    <p class="admin-widget__hint" style="margin-top:8px">Clases realizadas: <strong id="cliente-clases-realizadas">—</strong></p>
-                    <label class="admin-widget__check" style="margin-top:12px;display:flex;gap:8px;align-items:center;cursor:pointer">
-                        <input type="checkbox" id="cli-clase-extra"> Habilitar próxima clase (seña recibida)
-                        <span id="cli-clase-extra-feedback" class="admin-widget__hint" style="margin:0"></span>
-                    </label>
-                    <p class="admin-widget__hint">El cliente podrá elegir UNA clase más. Se limpia solo cuando esa clase pase a realizada.</p>
+                <div id="cli-maps-view" class="a-acc">
+                    <button type="button" class="btn-secondary" id="cli-maps-abrir" hidden>📍 Abrir en Maps</button>
+                    <button type="button" class="btn-secondary" id="cli-maps-editar" hidden>Editar ubicación</button>
+                    <button type="button" class="btn-secondary" id="cli-maps-anadir" hidden>Añadir ubicación</button>
                 </div>
-
-                <div class="admin-widget admin-widget--grabacion">
-                    <label class="admin-widget__label">Permiso de grabación</label>
-                    <div class="admin-widget__row" style="align-items:center;gap:10px">
-                        <span id="cli-grab-chip" class="grab-chip" style="font-weight:600">—</span>
-                        <button type="button" class="btn-secondary" id="cli-grab-btn" hidden>Pedir permiso</button>
+                <div id="cli-maps-edit" class="a-maps-edit" hidden>
+                    <input type="text" id="cli-maps-input" maxlength="500" placeholder="Pega aquí el enlace de Compartir de Google Maps">
+                    <div class="a-acc">
+                        <button type="button" class="btn-secondary" id="cli-maps-guardar">Guardar</button>
+                        <button type="button" class="btn-secondary" id="cli-maps-cancelar">Cancelar</button>
                     </div>
-                    <p class="admin-widget__hint">El cliente verá en su app un permiso (vía Jaime) para grabar solo la voz del adiestrador y generar su resumen. Solo el titular puede aceptarlo.</p>
-                    <p class="admin-widget__hint" id="cli-grab-fecha" style="margin-top:4px" hidden></p>
                 </div>
             </section>
 
-            <section class="detalle-seccion" aria-labelledby="perros-titulo">
-                <h2 id="perros-titulo" class="seccion-titulo">Perros</h2>
+            <!-- ── 2) SU PACK: las cifras y la seña ──────────────────── -->
+            <section class="a-card" aria-labelledby="tit-pack">
+                <div class="a-sec">
+                    <h2 class="a-sec__t" id="tit-pack">Su pack</h2>
+                    <em class="a-sec__meta"><span id="cliente-clases-restantes">—</span> restantes</em>
+                </div>
+
+                <div class="a-kpi">
+                    <div class="a-kpi__i">
+                        <input type="number" id="cliente-pack-actual" min="0" step="1" placeholder="—"
+                               aria-label="Clases pagadas en el pack actual">
+                        <small>Pagadas</small>
+                    </div>
+                    <div class="a-kpi__i a-kpi__i--ok">
+                        <b id="cliente-clases-realizadas">—</b>
+                        <small>Realizadas</small>
+                    </div>
+                </div>
+                <div class="a-acc">
+                    <button type="button" class="btn-secondary" id="cliente-pack-guardar">Guardar el pack</button>
+                </div>
+                <p class="a-hint">Clases que pagó en su pack actual. Vacío = sin pack registrado.</p>
+
+                <label class="a-tog" for="cli-clase-extra">
+                    <span class="a-tog__l">Habilitar próxima clase
+                        <i>seña recibida</i>
+                        <span id="cli-clase-extra-feedback" class="a-tog__fb"></span>
+                    </span>
+                    <input type="checkbox" id="cli-clase-extra">
+                    <span class="a-sw" aria-hidden="true"></span>
+                </label>
+                <p class="a-hint">Le deja elegir UNA clase más. Se limpia solo cuando esa clase pase a realizada.</p>
+            </section>
+
+            <!-- ── 3) SUS PERROS ─────────────────────────────────────── -->
+            <section class="a-card" aria-labelledby="tit-perros">
+                <div class="a-sec">
+                    <h2 class="a-sec__t" id="tit-perros">Sus perros</h2>
+                </div>
                 <ul id="perros-lista" class="perros-lista"></ul>
                 <p class="empty-state" id="perros-empty" hidden>Aún no hay perros registrados.</p>
             </section>
 
-            <section class="detalle-seccion" aria-labelledby="miembros-titulo">
-                <h2 id="miembros-titulo" class="seccion-titulo">Quién puede entrar a la app</h2>
+            <!-- ── 4) CONTACTO Y ACCESO ──────────────────────────────── -->
+            <section class="a-card" aria-labelledby="tit-acceso">
+                <div class="a-sec">
+                    <h2 class="a-sec__t" id="tit-acceso">Contacto y acceso</h2>
+                </div>
+
                 <ul id="miembros-lista" class="miembros-lista"></ul>
                 <p class="empty-state" id="miembros-empty" hidden>Esta cuenta aún no tiene a nadie con acceso a la app.</p>
+
+                <div class="a-row a-row--grab">
+                    <span>Permiso de grabación</span>
+                    <span class="a-row__v">
+                        <span id="cli-grab-chip" class="grab-chip">—</span>
+                        <button type="button" class="btn-secondary btn-secondary--mini" id="cli-grab-btn" hidden>Pedir</button>
+                    </span>
+                </div>
+                <p class="a-hint" id="cli-grab-fecha" hidden></p>
+                <p class="a-hint">Graba solo tu voz, vía Jaime, para generar el resumen de la clase. Solo lo acepta el titular.</p>
+
+                <div class="a-acc">
+                    <button type="button" class="btn-invitar" id="btn-invitar">Invitar a la app</button>
+                </div>
             </section>
 
-            <section class="admin-mensajes" id="admin-mensajes" hidden>
-                <div class="admin-mensajes__head">
-                    <h2 class="admin-mensajes__titulo">Mensajes del cliente</h2>
-                    <span class="admin-mensajes__count" id="admin-mensajes-count">
+            <!-- ── 5) MENSAJES ───────────────────────────────────────── -->
+            <section class="a-card admin-mensajes" id="admin-mensajes" hidden>
+                <div class="a-sec">
+                    <h2 class="a-sec__t admin-mensajes__titulo">Mensajes</h2>
+                    <em class="a-sec__meta admin-mensajes__count" id="admin-mensajes-count">
                         <span class="num is-cero">0</span> nuevos
-                    </span>
+                    </em>
                 </div>
                 <div id="admin-mensajes-feed">
                     <!-- Renderiza JS -->
@@ -198,6 +216,6 @@
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
 
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./cliente.js?v=33"></script>
+    <script type="module" src="./cliente.js?v=34"></script>
 </body>
 </html>
