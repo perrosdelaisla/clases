@@ -311,6 +311,12 @@ function render() {
     const empty = document.getElementById('avisos-empty');
     if (!lista) return;
     const items = filtrarItems();
+    // Contador en la cabecera de la tarjeta (01/09/2026).
+    const meta = document.getElementById('avisos-meta');
+    if (meta) {
+        const noLeidos = state.items.filter((a) => !a.leido).length;
+        meta.textContent = noLeidos > 0 ? `${noLeidos} sin leer` : 'todo leído';
+    }
     if (items.length === 0) {
         lista.innerHTML = '';
         if (empty) {

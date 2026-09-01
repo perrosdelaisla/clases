@@ -13,7 +13,7 @@ import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=5';
+import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=6';
 import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=4';
 import { initJaime, jaimeEscuchando } from './jaime.js?v=18';
 const supabase = getSupabase('admin');
@@ -3642,6 +3642,14 @@ function renderRegistrosActividad() {
     const items = actividadState.filtro === 'pendientes'
         ? todos.filter((r) => !r.visto_por_admin)
         : todos;
+    // Contador en la cabecera de la tarjeta (01/09/2026).
+    const meta = document.getElementById('actividad-meta');
+    if (meta) {
+        const pend = todos.filter((r) => !r.visto_por_admin).length;
+        meta.textContent = pend > 0
+            ? `${pend} sin revisar`
+            : (todos.length ? 'todo revisado' : '');
+    }
     if (!items.length) {
         lista.innerHTML = '';
         if (empty) {

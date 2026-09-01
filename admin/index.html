@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=55">
+    <link rel="stylesheet" href="./styles.css?v=56">
     <link rel="stylesheet" href="./jaime.css?v=10">
 </head>
 <body>
@@ -190,18 +190,26 @@
                 </header>
 
                 <section class="seguimiento-subpanel" data-seg-subpanel="avisos">
-                    <div class="avisos-toolbar">
-                        <nav class="avisos-filtros" aria-label="Filtros de avisos">
-                            <button type="button" class="avisos-filtro active" data-filtro="todos">Todos</button>
-                            <button type="button" class="avisos-filtro" data-filtro="no_leidos">No leídos</button>
-                            <button type="button" class="avisos-filtro" data-filtro="cita">Citas</button>
-                            <button type="button" class="avisos-filtro" data-filtro="mensaje">Mensajes</button>
-                            <button type="button" class="avisos-filtro" data-filtro="ejercicio">Entrenos</button>
-                        </nav>
-                        <button type="button" id="btn-avisos-marcar-todos" class="btn-secondary" hidden>Marcar todos leídos</button>
+                    <div class="a-card a-card--filtros">
+                        <div class="avisos-toolbar">
+                            <nav class="avisos-filtros" aria-label="Filtros de avisos">
+                                <button type="button" class="avisos-filtro active" data-filtro="todos">Todos</button>
+                                <button type="button" class="avisos-filtro" data-filtro="no_leidos">No leídos</button>
+                                <button type="button" class="avisos-filtro" data-filtro="cita">Citas</button>
+                                <button type="button" class="avisos-filtro" data-filtro="mensaje">Mensajes</button>
+                                <button type="button" class="avisos-filtro" data-filtro="ejercicio">Entrenos</button>
+                            </nav>
+                            <button type="button" id="btn-avisos-marcar-todos" class="btn-secondary" hidden>Marcar todos leídos</button>
+                        </div>
                     </div>
-                    <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
-                    <ul id="avisos-list" class="avisos-list" role="list"></ul>
+                    <section class="a-card">
+                        <div class="a-sec">
+                            <h2 class="a-sec__t">Lo que ha pasado</h2>
+                            <em class="a-sec__meta" id="avisos-meta"></em>
+                        </div>
+                        <p id="avisos-empty" class="avisos-empty" hidden>Cargando avisos…</p>
+                        <ul id="avisos-list" class="avisos-list" role="list"></ul>
+                    </section>
                 </section>
 
                 <section class="seguimiento-subpanel" data-seg-subpanel="atencion" hidden>
@@ -209,12 +217,20 @@
                 </section>
 
                 <section class="seguimiento-subpanel" data-seg-subpanel="registros" hidden>
-                    <nav class="actividad-filtros" aria-label="Filtro de registros">
-                        <button type="button" class="actividad-filtro active" data-filtro="pendientes">Pendientes</button>
-                        <button type="button" class="actividad-filtro" data-filtro="todos">Todos</button>
-                    </nav>
-                    <p id="actividad-registros-empty" class="actividad-empty" hidden>Cargando registros…</p>
-                    <ul id="actividad-registros-lista" class="actividad-lista" role="list"></ul>
+                    <div class="a-card a-card--filtros">
+                        <nav class="actividad-filtros" aria-label="Filtro de registros">
+                            <button type="button" class="actividad-filtro active" data-filtro="pendientes">Pendientes</button>
+                            <button type="button" class="actividad-filtro" data-filtro="todos">Todos</button>
+                        </nav>
+                    </div>
+                    <section class="a-card">
+                        <div class="a-sec">
+                            <h2 class="a-sec__t">Entrenos registrados</h2>
+                            <em class="a-sec__meta" id="actividad-meta"></em>
+                        </div>
+                        <p id="actividad-registros-empty" class="actividad-empty" hidden>Cargando registros…</p>
+                        <ul id="actividad-registros-lista" class="actividad-lista" role="list"></ul>
+                    </section>
                 </section>
             </section>
 
@@ -856,7 +872,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=87"></script>
+    <script type="module" src="./admin.js?v=88"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
       function toast(msg) {

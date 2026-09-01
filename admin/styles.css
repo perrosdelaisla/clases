@@ -5620,3 +5620,49 @@ body {
 /* El botón de cita manual, ahora al pie de la lista: ancho completo y con
    aire por arriba para que no se pegue a la última cita. */
 .btn-primary--pie{ display:block; width:100%; margin-top:14px; }
+
+/* ════════════════════════════════════════════════════════════
+   KIT · Quinta tanda (01/09/2026) — se cierra la cohesión.
+   Los últimos contenedores que seguían con piel propia pasan a
+   la de la tarjeta común. Solo presentación.
+   ════════════════════════════════════════════════════════════ */
+
+/* Seguimiento: la barra de filtros vive en su propia tarjeta, más baja. */
+.a-card--filtros{ padding:10px 12px; }
+.a-card--filtros .avisos-toolbar,
+.a-card--filtros .actividad-filtros{ margin:0; }
+
+/* Las listas de avisos y registros, dentro de su tarjeta, sin marco propio. */
+.a-card .avisos-list > li,
+.a-card .actividad-lista > li{
+    border:none; border-radius:0; background:transparent;
+    padding:10px 0; border-top:1px solid rgba(255,255,255,.05);
+}
+.a-card .avisos-list > li:first-child,
+.a-card .actividad-lista > li:first-child{ border-top:none; }
+.a-card .avisos-empty,
+.a-card .actividad-empty{ margin:4px 0 0; }
+
+/* Ficha del perro: mismos radios, bordes y padding que el resto. */
+.prog-admin-resumen,
+.hist-dia,
+.ejercicio-activo-card,
+.nota-feed__item{
+    background:var(--color-surface);
+    border:1px solid var(--color-border);
+    border-radius:12px;
+    padding:14px 15px;
+}
+.prog-admin-resumen{ margin-bottom:11px; }
+.prog-admin-resumen__label{
+    font-family:var(--font-display); font-size:1.05rem; letter-spacing:.09em;
+    text-transform:uppercase; font-weight:400; margin:0 0 6px; color:var(--color-text);
+}
+/* Los items de dentro son un segundo nivel: fondo tenue, sin competir. */
+.prog-admin-item,
+.hist-registro{
+    background:var(--color-surface-2);
+    border:1px solid transparent;
+    border-radius:9px;
+    padding:10px 11px;
+}
