@@ -539,3 +539,124 @@
     .home .huella-confirm{ animation:none; opacity:1; transform:none; }
     .home .huella-btn--pausa::after{ animation:none; background-size:100% 100%; }
 }
+
+/* ────────────────────────────────────────────────────────────
+   Registro por tipo (01/09/2026)
+   · ✓ hecho (listas y montajes)
+   · ¿Ya la tienes? (herramientas, en la tarjeta)
+   · Fotos del cliente (máx 2, opcionales, bucket privado)
+   · Anotar uso: línea discreta y tarjeta de solo uso
+   · Tira de acceso rápido
+   ──────────────────────────────────────────────────────────── */
+
+/* ── ✓ hecho: mismo tamaño que la huella, pero en negativo ── */
+.home .hecho-btn{
+    flex:0 0 auto; width:52px; height:52px; border-radius:50%;
+    border:2px dashed var(--c-hair-2, #8A867E); background:transparent;
+    color:var(--c-text-3, #8A867E); display:grid; place-items:center;
+    cursor:pointer; position:relative;
+    transition:transform .12s ease, background .25s ease, border-color .25s ease, color .25s ease;
+}
+.home .hecho-btn svg{ width:24px; height:24px; display:block; }
+.home .hecho-btn:active{ transform:scale(.9); }
+.home .hecho-btn--on{
+    border:2px solid var(--c-oliva, #6B7A3A); background:var(--c-oliva, #6B7A3A);
+    color:#F5EFE0; box-shadow:0 4px 14px rgba(107,122,58,.32);
+}
+
+/* ── ¿Ya la tienes? ── */
+.home .tengo{ margin-top:11px; padding-top:11px; border-top:1px dashed var(--c-hair); }
+.home .tengo__q{ margin:0 0 8px; font-size:11px; font-weight:800; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--c-text-3, #8A867E); }
+.home .tengo__row{ display:flex; gap:8px; }
+.home .tengo__btn{
+    flex:1; border:1px solid var(--c-hair-2, #8A867E); background:transparent;
+    color:var(--c-text-2, #4A4A48); border-radius:10px; padding:10px 6px;
+    font-family:var(--body); font-size:12.6px; font-weight:700; cursor:pointer;
+    transition:transform .1s ease, background .2s ease, border-color .2s ease, color .2s ease;
+}
+.home .tengo__btn:active{ transform:scale(.96); }
+.home .tengo__btn--si.is-on{ background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A); color:#F5EFE0; }
+.home .tengo__btn--no.is-on{ background:var(--c-text-3, #8A867E); border-color:var(--c-text-3, #8A867E); color:#F5EFE0; }
+
+/* ── Fotos del cliente ── */
+.home .fotoscli{ margin-top:11px; padding-top:11px; border-top:1px dashed var(--c-hair); }
+.home .fotoscli--subiendo{ opacity:.55; pointer-events:none; }
+.home .fotoscli__t{ margin:0 0 8px; font-size:11px; font-weight:800; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--c-text-3, #8A867E); }
+.home .fotoscli__row{ display:flex; gap:8px; }
+.home .foto-slot{
+    width:62px; height:62px; border-radius:10px; position:relative; overflow:hidden;
+    border:1.5px dashed var(--c-hair-2, #8A867E); background:rgba(128,128,128,.06);
+    display:grid; place-items:center; cursor:pointer;
+    color:var(--c-text-3, #8A867E); font-size:20px; font-family:var(--body); padding:0;
+}
+.home .foto-slot--full{ border-style:solid; border-color:var(--c-oliva, #6B7A3A); background:none; }
+.home .foto-slot--full img{ width:100%; height:100%; object-fit:cover; display:block; }
+.home .foto-slot__x{
+    position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%;
+    border:none; background:rgba(8,7,5,.66); color:#F5EFE0; font-size:11px; line-height:1;
+    cursor:pointer; display:grid; place-items:center; padding:0;
+}
+.home .fotoscli__hint{ margin:7px 0 0; font-size:11.2px; line-height:1.45; color:var(--c-text-3, #8A867E); }
+
+/* ── Anotar uso: azul, para que NO se confunda con el entreno ──
+   El uso no cuenta para el objetivo semanal ni para la isla, así que
+   tampoco usa el rojo/oliva del entreno. */
+.home .uso-linea{
+    margin-top:10px; padding-top:10px; border-top:1px dashed var(--c-hair);
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+}
+.home .uso-linea__lbl{ flex:1; min-width:130px; font-size:11.6px; line-height:1.35; color:var(--c-text-3, #8A867E); }
+.home .uso-linea__n{ font-size:11.4px; font-weight:700; color:#5B8FA8; white-space:nowrap; }
+.home .uso-btn{
+    border:1px solid var(--c-hair-2, #8A867E); background:var(--c-surface, #FFF);
+    color:var(--c-text-2, #4A4A48); border-radius:999px; padding:7px 12px;
+    font-family:var(--body); font-size:11.8px; font-weight:700; cursor:pointer;
+    white-space:nowrap; transition:transform .1s ease, background .2s ease, color .2s ease;
+}
+.home .uso-btn:active{ transform:scale(.94); }
+.home .uso-btn.uso--ok, .home .uso-grande.uso--ok{
+    background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A); color:#F5EFE0;
+}
+.home .uso-grande{
+    width:100%; margin-top:11px; border:none; border-radius:11px;
+    background:#5B8FA8; color:#fff; padding:13px 10px;
+    font-family:var(--body); font-size:13.6px; font-weight:800; cursor:pointer;
+    transition:transform .1s ease, background .2s ease;
+}
+.home .uso-grande:active{ transform:scale(.97); }
+.home .uso-solo__meta{
+    display:flex; justify-content:space-between; gap:8px; margin-top:9px;
+    font-size:11.4px; color:var(--c-text-3, #8A867E);
+}
+/* ── Tira de acceso rápido ── */
+.home .tira-uso{
+    background:rgba(91,143,168,.10); border:1px solid rgba(91,143,168,.34);
+    border-radius:12px; padding:9px 11px; margin:0 0 12px;
+}
+.home .tira-uso[hidden]{ display:none; }
+.home .tira-uso__t{ margin:0 0 7px; font-size:11px; font-weight:800; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--c-text-3, #8A867E); }
+.home .tira-uso__row{ display:flex; gap:7px; flex-wrap:wrap; }
+.home .tira-uso__b{
+    border:1px solid #5B8FA8; background:var(--c-surface, #FFF); color:#3E6B80;
+    border-radius:999px; padding:8px 13px; font-family:var(--body);
+    font-size:12.2px; font-weight:700; cursor:pointer; display:inline-flex;
+    align-items:center; gap:7px; transition:transform .1s ease, background .2s ease, color .2s ease;
+}
+.home .tira-uso__b:active{ transform:scale(.95); }
+.home .tira-uso__b i{
+    font-style:normal; font-size:10.5px; font-weight:800; min-width:17px; height:17px;
+    border-radius:999px; background:rgba(91,143,168,.2); color:#3E6B80;
+    display:inline-grid; place-items:center; padding:0 4px;
+}
+.home .tira-uso__b.uso--ok{ background:#5B8FA8; border-color:#5B8FA8; color:#fff; }
+.home .tira-uso__b.uso--ok i{ background:rgba(255,255,255,.26); color:#fff; }
+
+/* Tema oscuro: el azul del uso necesita subir para leerse sobre #211E16. */
+.home[data-theme="oscuro"] .uso-linea__n,
+.home[data-theme="oscuro"] .tira-uso__b{ color:#8FBBD1; }
+.home[data-theme="oscuro"] .tira-uso__b{ border-color:#5B8FA8; }
+.home[data-theme="oscuro"] .tira-uso__b i{ background:rgba(143,187,209,.2); color:#8FBBD1; }
+.home[data-theme="oscuro"] .uso-grande{ background:#4E7E96; }

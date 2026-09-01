@@ -93,6 +93,22 @@ window.PDLI_TUTORIAL_PASOS = [
         posicion: 'auto',
     },
     {
+        id: 'usar-recurso',
+        tab: 'rutina',
+        selector: '#tira-uso',
+        titulo: 'Cuando pasa algo',
+        texto: 'Algunas cosas no se entrenan: se usan en el momento, cuando tu perro lo necesita. Las tienes aquí arriba, a un toque, para que no tengas que buscarlas. Anotarlas nos dice mucho: si recurres mucho a un recurso pero se entrena poco, hay algo que ajustar.',
+        posicion: 'auto',
+    },
+    {
+        id: 'tipos-tarea',
+        tab: 'rutina',
+        selector: '[data-cat="tarea"]',
+        titulo: 'Tareas y herramientas',
+        texto: 'En Tareas hay de tres clases: listas que escribes tú, cosas que preparas en casa y se marcan con un ✓, y prácticas que se registran con la huella. En Herramientas solo tienes que decirnos si ya la tienes, y puedes mandarnos una foto para confirmar que es la correcta.',
+        posicion: 'auto',
+    },
+    {
         id: 'mi-progreso',
         tab: 'rutina',
         selector: '.rutina-modo',

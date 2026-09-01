@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=36">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=34">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=35">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -278,6 +278,11 @@
                             <p class="isla-semana__lema" id="isla-semana-lema"></p>
                             <p class="isla-semana__racha" id="isla-semana-racha" hidden><b id="isla-semana-racha-n"></b> cuidando la isla</p>
                         </div>
+
+                        <!-- Acceso rápido a los recursos que se usan en el momento
+                             (No en 3 pasos, espacio de calma...). Se pinta solo si
+                             el perro tiene alguno; si no, queda oculto. -->
+                        <div class="tira-uso" id="tira-uso" hidden aria-label="Recursos para usar ahora"></div>
 
                         <div class="subtabs rutina-subtabs" role="tablist" aria-label="Categoría de ejercicios">
                             <button type="button" class="rutina-subtab is-active" data-cat="ejercicio" role="tab" aria-selected="true">Ejercicios</button>
@@ -1508,8 +1513,8 @@
     <!-- Tutorial / tour de bienvenida. Cargamos los pasos antes del motor
          para que `window.PDLI_TUTORIAL_PASOS` exista cuando el motor se
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
-    <script src="./js/tutorial-pasos.js?v=6"></script>
+    <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=160"></script>
+    <script type="module" src="./js/app.js?v=161"></script>
 </body>
 </html>

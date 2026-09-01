@@ -548,23 +548,44 @@ function bindEventos() {
                 .find((r) => r.ejercicios && r.ejercicios.id === card.dataset.ejercicioId);
             if (fila) abrirModalEjercicio(fila.ejercicios, fila.id);
         };
+        // Todos los controles que viven DENTRO de la tarjeta se manejan aquí y
+        // NO abren el detalle. El resto de la tarjeta sí lo abre.
         rutinaLista.addEventListener('click', (e) => {
-            // Las pills de días de tarea son su propio control: no abren el detalle.
-            const pill = e.target.closest('.tarea-dias__pill');
-            if (pill) { onTareaDiaPill(pill); return; }
-            // La huella registra el entreno; no abre el detalle.
             const huella = e.target.closest('.huella-btn');
             if (huella) { registrarEntrenoRapido(huella); return; }
+            const hecho = e.target.closest('.hecho-btn');
+            if (hecho) { onCheckHecho(hecho); return; }
+            const tengo = e.target.closest('.tengo__btn');
+            if (tengo) { onTengoBtn(tengo); return; }
+            const usoBtn = e.target.closest('.uso-btn, .uso-grande');
+            if (usoBtn) { registrarUso(usoBtn.dataset.asignadoId, usoBtn); return; }
+            const quitarFoto = e.target.closest('.foto-slot__x');
+            if (quitarFoto) {
+                e.stopPropagation();
+                quitarFotoCliente(quitarFoto.dataset.asignadoId, Number(quitarFoto.dataset.idx));
+                return;
+            }
+            const slot = e.target.closest('button.foto-slot');
+            if (slot) { pedirFotoCliente(slot.dataset.asignadoId); return; }
+            // Una foto ya subida no abre el detalle (evita saltos al mirarla).
+            if (e.target.closest('.foto-slot--full')) return;
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
         rutinaLista.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
-            // El botón de la pill maneja su propia activación; no abrir el detalle.
-            if (e.target.closest('.tarea-dias__pill')) return;
-            // Ídem la huella (su Enter ya dispara el click delegado).
-            if (e.target.closest('.huella-btn')) return;
+            // Cada botón de dentro maneja su propia activación.
+            if (e.target.closest('.huella-btn, .hecho-btn, .tengo__btn, .uso-btn, .uso-grande, .foto-slot, .foto-slot__x')) return;
             e.preventDefault();
             abrirDesdeCard(e.target.closest('.rutina-card'));
+        });
+    }
+
+    // Tira de acceso rápido de los recursos que se usan en el momento.
+    const tiraUso = document.getElementById('tira-uso');
+    if (tiraUso) {
+        tiraUso.addEventListener('click', (e) => {
+            const b = e.target.closest('.tira-uso__b');
+            if (b) registrarUso(b.dataset.asignadoId, b);
         });
     }
 
@@ -1187,7 +1208,7 @@ function marcarBienvenidaJaimeVista() {
 // confirmación + pausa de la huella) queremos avisar UNA sola vez a los
 // tutores que YA venían usando la versión anterior. Los tutores nuevos no
 // la ven: al mostrarles la bienvenida marcamos la novedad como vista.
-const JAIME_NOVEDAD_KEY = 'pdli_novedad_registro_v1';
+const JAIME_NOVEDAD_KEY = 'pdli_novedad_registro_v2';
 function novedadRegistroVista() {
     // Si localStorage falla, devolvemos true para no molestar con el aviso.
     try { return localStorage.getItem(JAIME_NOVEDAD_KEY) === '1'; } catch (_e) { return true; }
@@ -1201,7 +1222,7 @@ function mostrarNovedadRegistro() {
     const nom = primerNombreTutor();
     const hola = nom ? `¡Hola, ${nom}!` : '¡Hola!';
     _jaimeAvisoActual = {
-        texto: `${hola} He mejorado el registro de entrenos. Cada vez que toques la huella verás un cartel que te confirma que quedó guardado, y la huella se rellena durante unos segundos antes de poder tocarla otra vez, para que no se cuelen toques de más. Recuerda: un toque = una práctica de ese ejercicio.`,
+        texto: `${hola} Hemos cambiado cómo se registra la rutina. Los cambios de rutina ya se marcan con la huella, igual que los ejercicios. Las herramientas se contestan desde la propia tarjeta y puedes mandarnos una foto. Y lo que no se entrena sino que se usa cuando tu perro lo necesita, lo tienes arriba del todo para anotarlo de un toque.`,
         ctaLabel: 'Ver cómo funciona',
         ctaAccion: () => { cerrarBurbujaJaime(); window.PdliTour?.abrir?.(0); },
     };
@@ -3420,7 +3441,6 @@ function renderCategoriaAcceso() {
 
 // Días de uso de cada tarea en la semana actual: { ejercicio_asignado_id -> dias }.
 // Se recarga al pintar la rutina del perro (registros_tarea de esta semana).
-let _diasTareaSemana = {};
 
 async function renderRutinaPerroSeleccionado() {
     const myToken = ++_renderRutinaToken;
@@ -3564,27 +3584,8 @@ async function renderRutinaPerroSeleccionado() {
             console.error('[isla] no se pudieron cargar los días/racha:', e);
         }
 
-        // Días de uso de las tareas esta semana (registros_tarea). Aditivo: si
-        // falla, las tareas igual se pintan con el control en 0.
-        _diasTareaSemana = {};
-        try {
-            const idsTareas = filas
-                .filter((f) => (f.ejercicios?.categoria) === 'tarea')
-                .map((f) => f.id);
-            if (idsTareas.length > 0) {
-                const { data: regs, error } = await supabase
-                    .from('registros_tarea')
-                    .select('ejercicio_asignado_id, dias')
-                    .in('ejercicio_asignado_id', idsTareas)
-                    .eq('semana_inicio', inicioSemanaLocalFecha());
-                if (error) throw error;
-                (regs || []).forEach((r) => {
-                    _diasTareaSemana[r.ejercicio_asignado_id] = Number(r.dias) || 0;
-                });
-            }
-        } catch (e) {
-            console.error('[tarea-dias] no se pudieron cargar:', e);
-        }
+        // (Se retiró la lectura de registros_tarea: las pastillas "0-7 días"
+        // ya no se muestran. Las filas existentes siguen en la base.)
 
         // Fase de cada grupo/protocolo (la "llave"). Aditivo: si falla, las
         // llaves se muestran sin el sello de fase.
@@ -3632,6 +3633,7 @@ async function renderRutinaPerroSeleccionado() {
             loading.setAttribute('hidden', '');
             lista.setAttribute('hidden', '');
             empty.removeAttribute('hidden');
+            renderTiraUso();
         } else {
             if (myToken !== _renderRutinaToken) return;
             loading.setAttribute('hidden', '');
@@ -3650,8 +3652,11 @@ async function renderRutinaPerroSeleccionado() {
             }
             lista.removeAttribute('hidden');
             empty.setAttribute('hidden', '');
+            // Las fotos del bucket privado necesitan enlace firmado.
+            pintarFotosCliente(lista);
         }
 
+        renderTiraUso();
         renderAnilloSemana();
         // Si el usuario está mirando "Mi progreso", refrescar también su vista.
         if (state.rutinaModo === 'progreso') {
@@ -3853,20 +3858,41 @@ function rutinaCardHTML(row, { tag, superado }) {
         ? `<p class="rutina-card__desc">${escapeHTML(ej.descripcion)}</p>`
         : '';
     const claseSuperado = superado ? ' rutina-card--superado' : '';
+
+    // ── Modelo de registro (01/09/2026) ────────────────────────────────
+    // Dos interruptores independientes por asignación, no categorías:
+    //   se_entrena → huella + objetivo semanal + puntitos (cuenta para la isla)
+    //   se_usa     → "Anotar uso" con contador aparte (NO cuenta para la isla)
+    // Y para las tareas, un tipo: lista | montaje | practica.
+    const prog = _progresoCache.get(row.id);
     const esTarea = (categoria === 'tarea');
-    const esEjercicio = (categoria === 'ejercicio');
-    // Chip de progreso y texto de objetivo: no aplican a tareas (semánticamente
-    // las tareas-lista no tienen "frecuencia"). Tampoco en cards superadas.
-    // En ejercicios vigentes el chip se reemplaza por los puntos de la semana
-    // (registro rápido con la huella).
-    const chip = (superado || esTarea || esEjercicio) ? '' : renderChipProgreso(row.id);
-    const objetivo = (superado || esTarea) ? '' : renderObjetivoBajoNombre(row.id);
-    // Tareas: control "días que la usé esta semana" (0-7). No en cards superadas.
-    const diasControl = (esTarea && !superado) ? renderTareaDiasControl(row.id) : '';
-    // Registro rápido (huella) + puntos de la semana: solo ejercicios vigentes.
-    const huella = (esEjercicio && !superado) ? huellaBtnHTML(row.id) : '';
-    const dots = (esEjercicio && !superado) ? renderDotsSemana(row.id) : '';
-    const chevron = huella ? '' : '<svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>';
+    const esHerramienta = (categoria === 'herramienta');
+    const tipoTarea = prog?.tipo_tarea || (esTarea ? 'practica' : null);
+    const esLista = esTarea && tipoTarea === 'lista';
+    const esMontaje = esTarea && tipoTarea === 'montaje';
+    const seEntrena = (prog?.se_entrena !== false);
+    const seUsa = !!prog?.se_usa;
+    const hecho = (prog?.estado_cliente === 'hecho');
+    const tieneHerr = (prog?.estado_cliente === 'tiene');
+
+    // La huella (práctica planificada) va en ejercicios, cambios de rutina y
+    // tareas de tipo "práctica", siempre que la asignación se entrene.
+    const conHuella = !superado && !esHerramienta && !esLista && !esMontaje && seEntrena;
+    const conUso = !superado && !esHerramienta && seUsa;
+
+    // Ni el chip de frecuencia ni el texto de objetivo tienen sentido en algo
+    // que no se entrena (herramientas, listas, montajes y recursos de solo uso).
+    const sinObjetivo = (superado || esHerramienta || esLista || esMontaje || !seEntrena);
+    const chip = (sinObjetivo || esTarea || conHuella) ? '' : renderChipProgreso(row.id);
+    const objetivo = sinObjetivo ? '' : renderObjetivoBajoNombre(row.id);
+    const huella = conHuella ? huellaBtnHTML(row.id, categoria) : '';
+    const dots = conHuella ? renderDotsSemana(row.id) : '';
+    const check = (!superado && (esLista || esMontaje)) ? checkHechoHTML(row.id, hecho, esLista) : '';
+    const tengo = (!superado && esHerramienta) ? tengoBotonesHTML(row.id, prog?.estado_cliente) : '';
+    const fotos = (!superado && (esMontaje || (esHerramienta && tieneHerr)))
+        ? fotosClienteHTML(row.id, esMontaje) : '';
+    const uso = conUso ? (seEntrena ? usoLineaHTML(row.id) : usoSoloHTML(row.id)) : '';
+    const chevron = (huella || check) ? '' : '<svg class="rutina-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>';
     return `
         <${tag} class="rutina-card${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
             <div class="rutina-card__head">
@@ -3874,75 +3900,22 @@ function rutinaCardHTML(row, { tag, superado }) {
                     <h3 class="rutina-card__nombre">${nombre}</h3>
                     ${objetivo}
                 </div>
-                ${chevron}${huella}
+                ${chevron}${huella}${check}
             </div>
             ${desc}
-            ${diasControl}
             ${dots}
+            ${tengo}
+            ${fotos}
+            ${uso}
             ${chip}
         </${tag}>
     `;
 }
 
-// Control de "días que la usaste esta semana" (0-7) para una tarea. El valor
-// actual (del mapa _diasTareaSemana) queda resaltado. Una pulsación lo fija.
-function renderTareaDiasControl(asignadoId) {
-    const sel = Number(_diasTareaSemana[asignadoId] || 0);
-    let pills = '';
-    for (let n = 0; n <= 7; n++) {
-        const on = (n === sel);
-        pills += `<button type="button" class="tarea-dias__pill${on ? ' tarea-dias__pill--sel' : ''}" data-asignado-id="${escapeHTML(asignadoId)}" data-dias="${n}" aria-pressed="${on ? 'true' : 'false'}">${n}</button>`;
-    }
-    return `
-        <div class="tarea-dias" data-asignado-id="${escapeHTML(asignadoId)}">
-            <span class="tarea-dias__label">Días que la usaste esta semana</span>
-            <div class="tarea-dias__pills">${pills}</div>
-        </div>`;
-}
-
-// Guarda el nº de días elegido (upsert por semana). Optimista: resalta al
-// instante y revierte si la query falla.
-async function onTareaDiaPill(pill) {
-    const asignadoId = pill.dataset.asignadoId;
-    const n = Number(pill.dataset.dias);
-    if (!asignadoId || !Number.isInteger(n)) return;
-    const prev = Number(_diasTareaSemana[asignadoId] || 0);
-    if (n === prev) return;
-
-    const grupo = pill.closest('.tarea-dias');
-    const setSel = (valor) => {
-        grupo?.querySelectorAll('.tarea-dias__pill').forEach((b) => {
-            const on = Number(b.dataset.dias) === valor;
-            b.classList.toggle('tarea-dias__pill--sel', on);
-            b.setAttribute('aria-pressed', on ? 'true' : 'false');
-        });
-    };
-
-    // Optimista.
-    _diasTareaSemana[asignadoId] = n;
-    setSel(n);
-    grupo?.classList.add('tarea-dias--saving');
-
-    try {
-        const { error } = await supabase
-            .from('registros_tarea')
-            .upsert({
-                ejercicio_asignado_id: asignadoId,
-                semana_inicio: inicioSemanaLocalFecha(),
-                dias: n,
-                actualizado_en: new Date().toISOString(),
-            }, { onConflict: 'ejercicio_asignado_id,semana_inicio' });
-        if (error) throw error;
-        grupo?.classList.remove('tarea-dias--saving');
-        if (typeof toast === 'function') toast('Guardado', 'info', 1200);
-    } catch (e) {
-        console.error('[tarea-dias] no se pudo guardar:', e);
-        _diasTareaSemana[asignadoId] = prev;
-        setSel(prev);
-        grupo?.classList.remove('tarea-dias--saving');
-        if (typeof toast === 'function') toast('No se pudo guardar, prueba de nuevo', 'error');
-    }
-}
+// Las pastillas "0-7 días que la usaste esta semana" se retiraron el
+// 01/09/2026: chocaban con el nuevo registro por tipo de tarea (lista /
+// montaje / práctica) y apenas se usaban (4 registros en total). Las filas
+// de registros_tarea se conservan en la base, solo dejan de mostrarse.
 
 // Texto del objetivo bajo el nombre del ejercicio.
 function renderObjetivoBajoNombre(asignadoId) {
@@ -3962,6 +3935,363 @@ function renderChipProgreso(asignadoId) {
     return `<span class="rutina-card__progreso rutina-card__progreso--${color}">${escapeHTML(ev.chipTexto)}</span>`;
 }
 
+
+// ───────────────────────────────────────────────────────────
+// Registro por tipo (01/09/2026)
+//   · ✓ hecho        → tareas de tipo lista y montaje
+//   · Ya la tengo    → herramientas, en la propia tarjeta
+//   · Fotos          → herramientas "que tiene" y montajes (máx 2, opcionales)
+//   · Anotar uso     → recursos que se usan en el momento
+// ───────────────────────────────────────────────────────────
+
+const MAX_FOTOS_CLIENTE = 2;
+
+const _SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function checkHechoHTML(asignadoId, hecho, esLista) {
+    const etiqueta = esLista ? 'Marcar la lista como enviada' : 'Marcar como hecho';
+    return `<button type="button" class="hecho-btn${hecho ? ' hecho-btn--on' : ''}" data-asignado-id="${escapeHTML(asignadoId)}" aria-pressed="${hecho ? 'true' : 'false'}" aria-label="${etiqueta}">${_SVG_CHECK}</button>`;
+}
+
+function tengoBotonesHTML(asignadoId, estado) {
+    const tiene = (estado === 'tiene');
+    // "Aún no" es el estado por defecto solo cuando ya contestó que no la tiene;
+    // si nunca contestó, ninguno queda marcado y la pregunta se ve pendiente.
+    const contestoNo = (estado === null || estado === undefined) ? false : !tiene;
+    return `
+        <div class="tengo" data-asignado-id="${escapeHTML(asignadoId)}">
+            <p class="tengo__q">¿Ya la tienes?</p>
+            <div class="tengo__row">
+                <button type="button" class="tengo__btn tengo__btn--si${tiene ? ' is-on' : ''}" data-valor="tiene" aria-pressed="${tiene ? 'true' : 'false'}">✓ Ya la tengo</button>
+                <button type="button" class="tengo__btn tengo__btn--no${contestoNo ? ' is-on' : ''}" data-valor="no" aria-pressed="${contestoNo ? 'true' : 'false'}">Aún no</button>
+            </div>
+        </div>`;
+}
+
+function fotosClienteHTML(asignadoId, esMontaje) {
+    const prog = _progresoCache.get(asignadoId);
+    const fotos = Array.isArray(prog?.fotos_cliente) ? prog.fotos_cliente : [];
+    let slots = '';
+    for (let i = 0; i < MAX_FOTOS_CLIENTE; i++) {
+        const path = fotos[i];
+        slots += path
+            ? `<div class="foto-slot foto-slot--full" data-path="${escapeHTML(path)}"><img alt="" aria-hidden="true" data-foto-path="${escapeHTML(path)}"><button type="button" class="foto-slot__x" data-asignado-id="${escapeHTML(asignadoId)}" data-idx="${i}" aria-label="Quitar esta foto">✕</button></div>`
+            : `<button type="button" class="foto-slot" data-asignado-id="${escapeHTML(asignadoId)}" aria-label="Añadir una foto">+</button>`;
+    }
+    const titulo = esMontaje ? 'Enséñanos cómo quedó' : 'Enséñanos cuál conseguiste';
+    const pista = esMontaje
+        ? 'Hasta 2 fotos, opcionales. Las ve solo tu adiestrador.'
+        : 'Hasta 2 fotos, opcionales. Las ve solo tu adiestrador, para confirmarte que es la correcta.';
+    return `
+        <div class="fotoscli" data-asignado-id="${escapeHTML(asignadoId)}">
+            <p class="fotoscli__t">${titulo}</p>
+            <div class="fotoscli__row">${slots}</div>
+            <p class="fotoscli__hint">${pista}</p>
+        </div>`;
+}
+
+function _textoUsos(n) {
+    const k = Number(n || 0);
+    if (k === 0) return 'Sin usos esta semana';
+    return k === 1 ? '1 uso esta semana' : `${k} usos esta semana`;
+}
+
+// Línea discreta bajo un ejercicio que además se usa en el momento.
+function usoLineaHTML(asignadoId) {
+    const prog = _progresoCache.get(asignadoId);
+    const n = Number(prog?.count_usos_semana ?? 0);
+    return `
+        <div class="uso-linea" data-asignado-id="${escapeHTML(asignadoId)}">
+            <span class="uso-linea__lbl">¿Recurriste a ello porque lo necesitaba?</span>
+            <span class="uso-linea__n"${n > 0 ? '' : ' hidden'}>${escapeHTML(_textoUsos(n))}</span>
+            <button type="button" class="uso-btn" data-asignado-id="${escapeHTML(asignadoId)}">+ Anotar uso</button>
+        </div>`;
+}
+
+// Tarjeta de algo que SOLO se usa: sin huella, sin objetivo, sin puntitos.
+function usoSoloHTML(asignadoId) {
+    const prog = _progresoCache.get(asignadoId);
+    const n = Number(prog?.count_usos_semana ?? 0);
+    const ult = prog?.ultimo_uso ? textoUltimoUso(prog.ultimo_uso) : '';
+    return `
+        <div class="uso-solo" data-asignado-id="${escapeHTML(asignadoId)}">
+            <button type="button" class="uso-grande" data-asignado-id="${escapeHTML(asignadoId)}">🤚 Lo acabo de usar</button>
+            <div class="uso-solo__meta">
+                <span class="uso-linea__n">${escapeHTML(_textoUsos(n))}</span>
+                ${ult ? `<span>${escapeHTML(ult)}</span>` : ''}
+            </div>
+        </div>`;
+}
+
+function textoUltimoUso(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const dia = new Date(d); dia.setHours(0, 0, 0, 0);
+    const dif = Math.round((hoy - dia) / 86400000);
+    if (dif <= 0) return 'Última vez: hoy';
+    if (dif === 1) return 'Última vez: ayer';
+    if (dif < 7) return `Última vez: hace ${dif} días`;
+    return `Última vez: ${d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`;
+}
+
+// Tira de acceso rápido: los recursos de uso del perro, a un toque, arriba
+// de la lista. Si el perro no tiene ninguno, no se pinta nada.
+function renderTiraUso() {
+    const cont = document.getElementById('tira-uso');
+    if (!cont) return;
+    const items = [...(_progresoCache.values() || [])]
+        .filter((r) => r.se_usa && r.categoria !== 'herramienta');
+    if (items.length === 0) { cont.hidden = true; cont.innerHTML = ''; return; }
+    const btns = items.map((r) => {
+        const n = Number(r.count_usos_semana ?? 0);
+        return `<button type="button" class="tira-uso__b" data-asignado-id="${escapeHTML(r.ejercicio_asignado_id)}">${escapeHTML(r.nombre || 'Recurso')}${n > 0 ? `<i>${n}</i>` : ''}</button>`;
+    }).join('');
+    cont.innerHTML = `<p class="tira-uso__t">¿Pasó algo ahora mismo?</p><div class="tira-uso__row">${btns}</div>`;
+    cont.hidden = false;
+}
+
+// ── Acciones ───────────────────────────────────────────────
+
+const _hechoEnCurso = new Set();
+
+async function onCheckHecho(btn) {
+    const asignadoId = btn.dataset.asignadoId;
+    if (!asignadoId || _hechoEnCurso.has(asignadoId)) return;
+    const prog = _progresoCache.get(asignadoId);
+    const eraHecho = (prog?.estado_cliente === 'hecho');
+    const nuevo = eraHecho ? null : 'hecho';
+    _hechoEnCurso.add(asignadoId);
+    // Optimista.
+    btn.classList.toggle('hecho-btn--on', !eraHecho);
+    btn.setAttribute('aria-pressed', !eraHecho ? 'true' : 'false');
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({ estado_cliente: nuevo,
+                      estado_actualizado_en: nuevo ? new Date().toISOString() : null })
+            .eq('id', asignadoId);
+        if (error) throw error;
+        if (prog) prog.estado_cliente = nuevo;
+        const esLista = (prog?.tipo_tarea === 'lista');
+        if (nuevo) {
+            animarHuella(btn);
+            mostrarConfirmHuella(btn, esLista ? '📋 ¡Lista enviada!' : '✅ ¡Hecho!', true);
+        } else {
+            toast('Lo hemos desmarcado.', 'info', 2000);
+        }
+    } catch (e) {
+        console.error('[hecho] no se pudo guardar:', e);
+        btn.classList.toggle('hecho-btn--on', eraHecho);
+        btn.setAttribute('aria-pressed', eraHecho ? 'true' : 'false');
+        toast('No hemos podido guardarlo. Inténtalo de nuevo.', 'error');
+    } finally {
+        _hechoEnCurso.delete(asignadoId);
+    }
+}
+
+async function onTengoBtn(btn) {
+    const caja = btn.closest('.tengo');
+    const asignadoId = caja?.dataset.asignadoId;
+    if (!asignadoId) return;
+    const quiere = (btn.dataset.valor === 'tiene') ? 'tiene' : 'no';
+    const prog = _progresoCache.get(asignadoId);
+    const actual = prog?.estado_cliente ?? null;
+    const nuevo = (quiere === 'tiene') ? 'tiene' : null;
+    // Si ya estaba en ese estado y fue contestado, no reescribimos.
+    if (nuevo === actual && !(quiere === 'no' && actual === null && !caja.dataset.contestado)) {
+        // "Aún no" cuando nunca contestó sí debe marcarse visualmente.
+        if (!(quiere === 'no' && actual === null)) return;
+    }
+    caja.querySelectorAll('.tengo__btn').forEach((b) => {
+        const on = (b === btn);
+        b.classList.toggle('is-on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    caja.dataset.contestado = '1';
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({ estado_cliente: nuevo,
+                      estado_actualizado_en: nuevo ? new Date().toISOString() : null })
+            .eq('id', asignadoId);
+        if (error) throw error;
+        if (prog) prog.estado_cliente = nuevo;
+        // Al decir que sí, aparecen los recuadros de foto (opcionales).
+        const card = caja.closest('.rutina-card');
+        const yaHayFotos = card?.querySelector('.fotoscli');
+        if (nuevo === 'tiene' && !yaHayFotos) {
+            caja.insertAdjacentHTML('afterend', fotosClienteHTML(asignadoId, false));
+            pintarFotosCliente(card);
+        } else if (nuevo !== 'tiene' && yaHayFotos) {
+            yaHayFotos.remove();
+        }
+        toast(nuevo === 'tiene' ? '¡Genial! Queda anotado.' : 'Anotado, te la recordaremos.', 'info', 2200);
+    } catch (e) {
+        console.error('[herramienta] no se pudo guardar:', e);
+        toast('No hemos podido guardarlo. Inténtalo de nuevo.', 'error');
+    }
+}
+
+const _usoEnCurso = new Set();
+
+// Un uso es un registro normal marcado con datos_registro.tipo = 'uso'.
+// La RPC lo excluye del objetivo semanal y de la isla a propósito.
+async function registrarUso(asignadoId, btn) {
+    const perroId = state.perroSeleccionadoId;
+    if (!asignadoId || !perroId || _usoEnCurso.has(asignadoId)) return;
+    _usoEnCurso.add(asignadoId);
+    const textoOriginal = btn ? btn.textContent : '';
+    if (btn) { btn.classList.add('uso--ok'); btn.textContent = '✓ Uso anotado'; }
+    try {
+        const practica_id = await obtenerOCrearPracticaHoy(perroId);
+        const { error } = await supabase
+            .from('registros_ejercicio')
+            .insert({
+                practica_id,
+                ejercicio_asignado_id: asignadoId,
+                datos_registro: { v: 2, tipo: 'uso' },
+                tranquilidad: null,
+                nota: null,
+            });
+        if (error) throw error;
+        try { await cargarProgresoPerro(perroId); } catch (_e) {}
+        actualizarUsoEnCard(asignadoId);
+        renderTiraUso();
+    } catch (e) {
+        console.error('[uso] no se pudo registrar:', e);
+        toast('No hemos podido anotar el uso. Inténtalo de nuevo.', 'error');
+    } finally {
+        setTimeout(() => {
+            if (btn) { btn.classList.remove('uso--ok'); btn.textContent = textoOriginal; }
+            _usoEnCurso.delete(asignadoId);
+        }, 1800);
+    }
+}
+
+function actualizarUsoEnCard(asignadoId) {
+    const prog = _progresoCache.get(asignadoId);
+    if (!prog) return;
+    const sel = `[data-asignado-id="${CSS.escape(String(asignadoId))}"]`;
+    document.querySelectorAll(`.uso-linea${sel} .uso-linea__n, .uso-solo${sel} .uso-linea__n`)
+        .forEach((el) => {
+            el.textContent = _textoUsos(prog.count_usos_semana);
+            el.hidden = false;
+        });
+}
+
+// ── Fotos del cliente (bucket privado fotos-cliente) ───────
+
+const BUCKET_FOTOS = 'fotos-cliente';
+const _fotoUrlCache = new Map();
+
+async function urlFirmadaFoto(path) {
+    if (_fotoUrlCache.has(path)) return _fotoUrlCache.get(path);
+    const { data, error } = await supabase.storage.from(BUCKET_FOTOS).createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) return null;
+    _fotoUrlCache.set(path, data.signedUrl);
+    return data.signedUrl;
+}
+
+// Rellena los <img> de las fotos ya subidas con su enlace firmado.
+async function pintarFotosCliente(scope) {
+    const raiz = scope || document;
+    const imgs = raiz.querySelectorAll('img[data-foto-path]:not([src])');
+    for (const img of imgs) {
+        const url = await urlFirmadaFoto(img.dataset.fotoPath);
+        if (url) img.src = url;
+    }
+}
+
+let _fotoInput = null;
+let _fotoAsignadoId = null;
+
+function pedirFotoCliente(asignadoId) {
+    _fotoAsignadoId = asignadoId;
+    if (!_fotoInput) {
+        _fotoInput = document.createElement('input');
+        _fotoInput.type = 'file';
+        _fotoInput.accept = 'image/jpeg,image/png,image/webp';
+        _fotoInput.style.display = 'none';
+        document.body.appendChild(_fotoInput);
+        _fotoInput.addEventListener('change', () => {
+            const f = _fotoInput.files && _fotoInput.files[0];
+            _fotoInput.value = '';
+            if (f && _fotoAsignadoId) subirFotoCliente(_fotoAsignadoId, f);
+        });
+    }
+    _fotoInput.click();
+}
+
+async function subirFotoCliente(asignadoId, file) {
+    const extPorMime = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const ext = extPorMime[file.type];
+    if (!ext) { toast('Usa una foto JPG, PNG o WEBP.', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast('La foto es demasiado grande (máximo 5 MB).', 'error'); return; }
+    const cliente_id = state.usuarioCliente?.cliente_id;
+    if (!cliente_id) { toast('No hemos podido identificar tu cuenta. Recarga la app.', 'error'); return; }
+    const prog = _progresoCache.get(asignadoId);
+    const actuales = Array.isArray(prog?.fotos_cliente) ? prog.fotos_cliente.slice() : [];
+    if (actuales.length >= MAX_FOTOS_CLIENTE) { toast('Ya has subido las dos fotos.', 'info'); return; }
+
+    const card = document.querySelector(`.rutina-card[data-asignado-id="${CSS.escape(String(asignadoId))}"]`);
+    card?.querySelector('.fotoscli')?.classList.add('fotoscli--subiendo');
+    const path = `${cliente_id}/${crypto.randomUUID()}.${ext}`;
+    try {
+        const { error: upErr } = await supabase.storage
+            .from(BUCKET_FOTOS)
+            .upload(path, file, { contentType: file.type, upsert: false });
+        if (upErr) throw upErr;
+        const nuevas = actuales.concat([path]);
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({ fotos_cliente: nuevas })
+            .eq('id', asignadoId);
+        if (error) throw error;
+        if (prog) prog.fotos_cliente = nuevas;
+        repintarFotosDeCard(asignadoId);
+        toast('Foto subida. ¡Gracias!', 'info', 2200);
+    } catch (e) {
+        console.error('[foto] no se pudo subir:', e);
+        toast('No hemos podido subir la foto. Inténtalo de nuevo.', 'error');
+    } finally {
+        card?.querySelector('.fotoscli')?.classList.remove('fotoscli--subiendo');
+    }
+}
+
+async function quitarFotoCliente(asignadoId, idx) {
+    const prog = _progresoCache.get(asignadoId);
+    const actuales = Array.isArray(prog?.fotos_cliente) ? prog.fotos_cliente.slice() : [];
+    const path = actuales[idx];
+    if (!path) return;
+    actuales.splice(idx, 1);
+    try {
+        const { error } = await supabase
+            .from('ejercicios_asignados')
+            .update({ fotos_cliente: actuales })
+            .eq('id', asignadoId);
+        if (error) throw error;
+        if (prog) prog.fotos_cliente = actuales;
+        // El objeto del bucket se borra en segundo plano; si falla no bloquea.
+        supabase.storage.from(BUCKET_FOTOS).remove([path]).catch(() => {});
+        _fotoUrlCache.delete(path);
+        repintarFotosDeCard(asignadoId);
+    } catch (e) {
+        console.error('[foto] no se pudo quitar:', e);
+        toast('No hemos podido quitar la foto.', 'error');
+    }
+}
+
+function repintarFotosDeCard(asignadoId) {
+    const card = document.querySelector(`.rutina-card[data-asignado-id="${CSS.escape(String(asignadoId))}"]`);
+    const caja = card?.querySelector('.fotoscli');
+    if (!caja) return;
+    const prog = _progresoCache.get(asignadoId);
+    const esMontaje = (prog?.tipo_tarea === 'montaje');
+    caja.outerHTML = fotosClienteHTML(asignadoId, esMontaje);
+    pintarFotosCliente(card);
+}
+
 // ───────────────────────────────────────────────────────────
 // Registro rápido con la huella (Fase 1 · registro lúdico)
 // Un toque en la huella = INSERT en registros_ejercicio con los
@@ -3976,9 +4306,11 @@ function _ejercicioCumplido(row) {
               && Number(row.count_semana ?? 0) >= row.min_semanal);
 }
 
-function huellaBtnHTML(asignadoId) {
+function huellaBtnHTML(asignadoId, categoria) {
     const done = _ejercicioCumplido(_progresoCache.get(asignadoId));
-    return `<button type="button" class="huella-btn${done ? ' huella-btn--done' : ''}" data-asignado-id="${escapeHTML(asignadoId)}" aria-label="Registrar entreno">${HUELLA_SVG}</button>`;
+    const cat = categoria || 'ejercicio';
+    const etiqueta = (cat === 'cambio_rutina') ? 'Marcar como hecho' : 'Registrar entreno';
+    return `<button type="button" class="huella-btn${done ? ' huella-btn--done' : ''}" data-asignado-id="${escapeHTML(asignadoId)}" data-cat="${escapeHTML(cat)}" aria-label="${etiqueta}">${HUELLA_SVG}</button>`;
 }
 
 // Puntos de la semana: uno por cada entreno del mínimo semanal; los que
@@ -4110,10 +4442,14 @@ async function registrarEntrenoRapido(btn) {
             marcarPulsoLogro(asignadoId);
         }
         // Cartel siempre visible en el toque + celebración solo en el hito.
+        // Un cambio de rutina no se "entrena" (rellenar un kong, esparcir la
+        // comida): para esos el cartel dice "¡Hecho!".
+        const esCambio = (btn.dataset.cat === 'cambio_rutina');
         mostrarConfirmHuella(
             btn,
             logroSemana ? '\u{1F389} \u00a1Objetivo de la semana cumplido!'
-                        : '\u{1F43E} \u00a1Entreno registrado!',
+                        : (esCambio ? '\u{1F43E} \u00a1Hecho!'
+                                    : '\u{1F43E} \u00a1Entreno registrado!'),
             logroSemana);
         pausarHuella(btn, asignadoId);
 
@@ -4123,7 +4459,8 @@ async function registrarEntrenoRapido(btn) {
         if (estadoDespues.superoTopeDiario) {
             toast('Ya has superado el máximo diario de este ejercicio.', 'info', 5000);
         } else {
-            toastDeshacer(`Entreno registrado${detalle}`, _rapidoRegistroId, asignadoId);
+            toastDeshacer(`${esCambio ? 'Hecho' : 'Entreno registrado'}${detalle}`,
+                          _rapidoRegistroId, asignadoId);
         }
         // Hoja opcional de estado emocional, cuando el toast ya se leyó.
         const idSheet = _rapidoRegistroId;
@@ -6128,7 +6465,14 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
         inst.classList.add('modal-ejercicio__instrucciones--vacio');
     }
 
-    const esTarea = (ej.categoria === 'tarea');
+    // El tipo manda: solo las tareas de tipo "lista" abren la lista de ítems.
+    // Las de tipo "montaje" se resuelven enteras en la tarjeta (✓ y fotos), y
+    // las de tipo "práctica" usan el flujo normal de reportar entreno.
+    const _progModal = _progresoCache.get(ejercicioAsignadoId);
+    const _tipoTarea = _progModal?.tipo_tarea
+        || ((ej.categoria === 'tarea') ? 'practica' : null);
+    const esTarea = (ej.categoria === 'tarea') && (_tipoTarea === 'lista');
+    const esMontajeModal = (ej.categoria === 'tarea') && (_tipoTarea === 'montaje');
     const seccionProgreso = document.getElementById('ejercicio-progreso');
     const seccionMisEntrenos = document.getElementById('mientreno');
     const btnReportar = document.getElementById('btn-reportar-entreno');
@@ -6137,13 +6481,13 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
     const esHerramienta = (ej.categoria === 'herramienta');
 
     if (seccionHerramienta) seccionHerramienta.hidden = true;
-    if (esHerramienta) {
+    if (esHerramienta || esMontajeModal) {
+        // La pregunta "¿ya la tienes?", el ✓ y las fotos viven ahora en la
+        // propia tarjeta: aquí solo queda la explicación del ejercicio.
         if (seccionProgreso) seccionProgreso.hidden = true;
         if (seccionMisEntrenos) seccionMisEntrenos.hidden = true;
         if (btnReportar) btnReportar.hidden = true;
         if (seccionTarea) seccionTarea.hidden = true;
-        if (seccionHerramienta) seccionHerramienta.hidden = false;
-        renderHerramientaEstado(ejercicioAsignadoId);
     } else if (esTarea) {
         // Ocultamos progreso / mis entrenos / reportar. Mostramos tarea-lista.
         if (seccionProgreso) seccionProgreso.hidden = true;
