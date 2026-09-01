@@ -68,10 +68,16 @@ function contarNuevos(items) {
 }
 
 // Orden y etiqueta de cada motivo de atención.
+// 'tarea_abandonada' se retiró el 01/09/2026: leía registros_tarea, la tabla
+// de las pastillas 0-7 que salieron de la app del cliente, así que era una
+// regla muerta. La sustituye 'solo_usa', que sale del registro nuevo.
 const GRUPOS = [
-    { motivo: 'nunca_empezo',     titulo: 'Nunca empezó',     icono: '🚦' },
-    { motivo: 'inactivo',         titulo: 'Se enfrió',        icono: '❄️' },
-    { motivo: 'tarea_abandonada', titulo: 'Tarea abandonada', icono: '📋' },
+    { motivo: 'nunca_empezo', titulo: 'Nunca empezaron', icono: '🚦',
+      pie: 'Tienen rutina asignada y cero registros. Son los que más rinde llamar.' },
+    { motivo: 'inactivo',     titulo: 'Se enfriaron',    icono: '❄️',
+      pie: 'Entrenaron alguna vez y llevan más de una semana parados.' },
+    { motivo: 'solo_usa',     titulo: 'Usan sin entrenar', icono: '🤚',
+      pie: 'Recurren al recurso cuando el perro lo necesita, pero no lo entrenan en frío. Así no acaba de funcionar.' },
 ];
 
 // ---- Helpers ----
@@ -104,8 +110,8 @@ function textoItem(it) {
             return `${perro} · ${cliente} — tiene rutina pero aún no registró ningún entreno.`;
         case 'inactivo':
             return `${perro} · ${cliente} — ${esc(it.dias)} días sin entrenar.`;
-        case 'tarea_abandonada':
-            return `${perro} · ${cliente} — dejó de registrar '${esc(it.tarea)}' esta semana.`;
+        case 'solo_usa':
+            return `${perro} · ${cliente} — usa '${esc(it.tarea)}' pero no lo entrena.`;
         default:
             return `${perro} · ${cliente}`;
     }
@@ -131,37 +137,39 @@ function renderItem(it, icono) {
     return partes.join('');
 }
 
-function renderUsoTareas(rows) {
-    const partes = [];
-    partes.push(`<h2 class="atencion-grupo-titulo">📊 Uso de tareas</h2>`);
-    if (!rows || rows.length === 0) {
-        partes.push(`<p class="avisos-empty">Aún no hay registros de tareas.</p>`);
-        return partes.join('');
-    }
-    partes.push(`<div class="atencion-tabla-wrap"><table class="atencion-tabla">`);
-    partes.push(`<thead><tr><th>Cliente</th><th>Perro</th><th>Tarea</th><th>Esta semana</th><th>Semana pasada</th></tr></thead>`);
-    partes.push(`<tbody>`);
-    rows.forEach((r) => {
-        partes.push(
-            `<tr>` +
-            `<td>${esc(r.cliente)}</td>` +
-            `<td>${esc(r.perro)}</td>` +
-            `<td>${esc(r.tarea)}</td>` +
-            `<td>${esc(r.dias_esta_semana)}</td>` +
-            `<td>${esc(r.dias_semana_pasada)}</td>` +
-            `</tr>`
-        );
-    });
-    partes.push(`</tbody></table></div>`);
-    return partes.join('');
-}
+// (renderUsoTareas se eliminó el 01/09/2026: pintaba la tabla de "uso de
+// tareas" a partir de registros_tarea, que ya no se alimenta desde el cliente.
+// El RPC devuelve uso_tareas vacío por compatibilidad.)
 
 function render(data) {
     const cont = document.getElementById('atencion-contenido');
     if (!cont) return;
 
     const items = Array.isArray(data.atencion) ? data.atencion : [];
+    const r = data.resumen || null;
     const partes = [];
+
+    // Cabecera con las tres cifras. Es el dato más importante del admin y
+    // hasta ahora había que deducirlo contando la lista a ojo. (01/09/2026)
+    if (r && Number(r.con_rutina) > 0) {
+        const pendientes = Number(r.nunca_empezo || 0) + Number(r.inactivos || 0);
+        const pie = pendientes > 0
+            ? `${pendientes} de ${r.con_rutina} perros con rutina activa necesitan que hagas algo.`
+            : `Los ${r.con_rutina} perros con rutina activa están al día.`;
+        partes.push(`
+            <section class="a-card">
+                <div class="a-sec">
+                    <h3 class="a-sec__t">Cómo va la cosa</h3>
+                    <em class="a-sec__meta">${esc(r.con_rutina)} perros con rutina</em>
+                </div>
+                <div class="a-kpi">
+                    <div class="a-kpi__i a-kpi__i--rojo"><b>${esc(r.nunca_empezo)}</b><small>Sin empezar</small></div>
+                    <div class="a-kpi__i a-kpi__i--ambar"><b>${esc(r.inactivos)}</b><small>Enfriados</small></div>
+                    <div class="a-kpi__i a-kpi__i--ok"><b>${esc(r.al_dia)}</b><small>Al día</small></div>
+                </div>
+                <p class="a-hint">${esc(pie)}</p>
+            </section>`);
+    }
 
     if (items.length === 0) {
         partes.push(`<p class="avisos-empty">Todo en orden, no hay perros que necesiten atención ahora mismo. 🎉</p>`);
@@ -169,15 +177,15 @@ function render(data) {
         GRUPOS.forEach((g) => {
             const delGrupo = items.filter((it) => it.motivo === g.motivo);
             if (delGrupo.length === 0) return;
-            partes.push(`<h2 class="atencion-grupo-titulo">${g.icono} ${esc(g.titulo)} <span class="atencion-grupo-count">${delGrupo.length}</span></h2>`);
+            partes.push(`<section class="a-card">`);
+            partes.push(`<div class="a-sec"><h3 class="a-sec__t">${g.icono} ${esc(g.titulo)}</h3><em class="a-sec__meta">${delGrupo.length}</em></div>`);
             partes.push(`<ul class="avisos-list" role="list">`);
             delGrupo.forEach((it) => partes.push(renderItem(it, g.icono)));
             partes.push(`</ul>`);
+            if (g.pie) partes.push(`<p class="a-hint">${esc(g.pie)}</p>`);
+            partes.push(`</section>`);
         });
     }
-
-    // Uso de tareas, debajo de la atención.
-    partes.push(renderUsoTareas(Array.isArray(data.uso_tareas) ? data.uso_tareas : []));
 
     cont.innerHTML = partes.join('');
 }

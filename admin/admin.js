@@ -14,7 +14,7 @@ import * as catalogo from './catalogo/api.js?v=4';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=4';
-import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=2';
+import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=3';
 import { initJaime, jaimeEscuchando } from './jaime.js?v=18';
 const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
@@ -1642,19 +1642,30 @@ function bindBloqueosActions() {
 function renderBloqueos(bloqueos) {
     const list = document.getElementById('bloqueos-list');
     if (!list) return;
-    if (!bloqueos || bloqueos.length === 0) {
-        list.innerHTML = '<p class="agenda-empty">No hay bloqueos futuros configurados.</p>';
+    // Cada cita reservada crea su propio bloqueo "Auto: cita <uuid>", y los días
+    // que se llenan generan "Auto: día completo". No son decisiones del
+    // adiestrador: son contabilidad interna y llenaban la lista de ruido.
+    // Se ocultan, pero se cuentan para poder decirlo. (01/09/2026)
+    const todos = bloqueos || [];
+    const esAuto = (b) => String(b.motivo || '').startsWith('Auto:');
+    const propios = todos.filter((b) => !esAuto(b));
+    const nAuto = todos.length - propios.length;
+    const notaAuto = nAuto > 0
+        ? `<p class="agenda-nota">Se ocultan ${nAuto} ${nAuto === 1 ? 'bloqueo automático' : 'bloqueos automáticos'} que crean las citas al reservarse.</p>`
+        : '';
+    if (propios.length === 0) {
+        list.innerHTML = '<p class="agenda-empty">No has bloqueado ningún día.</p>' + notaAuto;
         return;
     }
-    list.innerHTML = bloqueos.map((b) => `
+    list.innerHTML = propios.map((b) => `
         <div class="bloqueo-card" data-bloqueo-id="${escapeHTML(b.id)}">
             <div class="bloqueo-info">
                 <span class="bloqueo-fecha">${formatearFechaCorta(b.fecha)}${b.hora ? ' · ' + formatearHora(b.hora) : ' · día completo'}</span>
-                <span class="bloqueo-motivo">${escapeHTML(b.motivo || '(sin motivo)')}</span>
+                <span class="bloqueo-motivo">${escapeHTML(b.motivo || 'Día cerrado')}</span>
             </div>
             <button class="bloqueo-eliminar" data-action="eliminar-bloqueo" type="button">Eliminar</button>
         </div>
-    `).join('');
+    `).join('') + notaAuto;
 }
 
 function formatearFechaCorta(fechaISO) {
@@ -1885,8 +1896,64 @@ function renderUnificado(items) {
               + `<div class="citas-pasadas__body">${pasadas.map(renderItem).join('')}</div>`
               + '</details>';
     }
-    html += proximas.map(renderItem).join('');
+    // Agrupación (01/09/2026): "Hoy" en su propia tarjeta y el resto por día.
+    // Las tarjetas de cita/llamada se pintan con renderItem SIN tocar, así que
+    // los data-action y sus handlers delegados siguen funcionando igual.
+    const deHoy   = proximas.filter((it) => esCitaHoy(it.fecha));
+    const futuras = proximas.filter((it) => !esCitaHoy(it.fecha));
+
+    if (deHoy.length) {
+        html += `<section class="a-card agenda-grupo">
+            <div class="a-sec">
+                <h3 class="a-sec__t">Hoy</h3>
+                <em class="a-sec__meta">${escapeHTML(etiquetaDiaAgenda(hoyStr(), false))} · ${deHoy.length} ${deHoy.length === 1 ? 'cita' : 'citas'}</em>
+            </div>
+            ${deHoy.map(renderItem).join('')}
+        </section>`;
+    }
+
+    if (futuras.length) {
+        // Map conserva el orden de inserción, y `futuras` ya viene ordenada.
+        const porDia = new Map();
+        futuras.forEach((it) => {
+            if (!porDia.has(it.fecha)) porDia.set(it.fecha, []);
+            porDia.get(it.fecha).push(it);
+        });
+        let cuerpo = '';
+        porDia.forEach((its, fecha) => {
+            cuerpo += `<p class="agenda-dia">${escapeHTML(etiquetaDiaAgenda(fecha, true))}</p>`
+                    + its.map(renderItem).join('');
+        });
+        html += `<section class="a-card agenda-grupo">
+            <div class="a-sec">
+                <h3 class="a-sec__t">Lo que viene</h3>
+                <em class="a-sec__meta">${futuras.length} ${futuras.length === 1 ? 'cita' : 'citas'}</em>
+            </div>
+            ${cuerpo}
+        </section>`;
+    }
+
+    if (!deHoy.length && !futuras.length && !pasadas.length) {
+        html = '<p class="agenda-empty">No hay citas ni llamadas futuras.</p>';
+    }
     list.innerHTML = html;
+}
+
+// Etiqueta de día para los separadores de la agenda.
+//   hoy → "martes 1"   ·   mañana → "Mañana · miércoles 2"   ·   resto → "sábado 5"
+// `conPrefijo` añade el "Mañana ·" cuando corresponde.
+const _DIAS_SEM = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function etiquetaDiaAgenda(fechaISO, conPrefijo) {
+    if (!fechaISO) return '';
+    const [y, m, d] = fechaISO.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const base = `${_DIAS_SEM[dt.getDay()]} ${d}`;
+    if (!conPrefijo) return base;
+    // ¿Es mañana? Comparamos contra hoyStr() + 1 día, en fecha local.
+    const hoy = hoyStr().split('-').map(Number);
+    const manana = new Date(hoy[0], hoy[1] - 1, hoy[2] + 1);
+    const mIso = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+    return (fechaISO === mIso) ? `Mañana · ${base}` : base;
 }
 
 /**

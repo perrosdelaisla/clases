@@ -5573,3 +5573,46 @@ body {
 .agenda-subpanel-desc{ font-size: .8rem; }
 .agenda-subpanel{ padding-top: 16px; }
 .agenda-subpanel-header{ margin-bottom: 16px; }
+
+/* ── KIT · Cuarta tanda: agenda agrupada y seguimiento con cifras ── */
+
+/* Las tarjetas de cita ya traen su propio marco: dentro de un grupo se quedan
+   planas, para no ver un borde dentro de otro. */
+.agenda-grupo .cita-card{
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 11px 0;
+    border-top: 1px solid rgba(255,255,255,.05);
+}
+.agenda-grupo .cita-card:first-of-type{ border-top: none; }
+/* La franja azul de las llamadas se conserva, movida al filo izquierdo. */
+.agenda-grupo .cita-card--llamada{ padding-left: 11px; border-left: 3px solid #4E7E96; }
+
+/* Separador de día dentro de "Lo que viene". */
+.agenda-dia{
+    font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--color-muted); margin: 14px 0 0; padding-top: 11px;
+    border-top: 1px dashed rgba(255,255,255,.09);
+}
+.agenda-dia:first-child{ border-top: none; padding-top: 0; margin-top: 0; }
+.agenda-dia + .cita-card{ border-top: none; }
+
+/* Nota al pie de los bloqueos (los automáticos que se ocultan). */
+.agenda-nota{
+    font-size: .72rem; color: var(--color-muted); line-height: 1.45;
+    margin: 11px 0 0; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,.09);
+}
+
+/* Variantes de color de las cifras. El semáforo de siempre: rojo lo que no
+   arrancó, ámbar lo que se enfrió, oliva lo que va bien. */
+.a-kpi__i--rojo  b{ color: var(--color-red); }
+.a-kpi__i--ambar b{ color: var(--color-warning); }
+
+/* Los items de atención, dentro de su tarjeta, sin marco propio. */
+.a-card .avisos-list{ margin: 0; padding: 0; list-style: none; }
+.a-card .avisos-list .aviso-item{
+    border: none; border-radius: 0; background: transparent;
+    padding: 10px 0; border-top: 1px solid rgba(255,255,255,.05);
+}
+.a-card .avisos-list .aviso-item:first-child{ border-top: none; }
