@@ -781,11 +781,26 @@ function bindBackNavigation() {
             return;
         }
 
-        // Las pestañas y sub-pestañas NO consumen el botón atrás (01/09/2026):
-        // antes había que atravesarlas todas para salir y se sentía como un
-        // paseo. Atrás significa siempre lo mismo: cerrar lo abierto, o salir.
+        // Prioridad 2: no estás en la pantalla de arranque (Agenda > Citas)
+        // → volver a ella DE UN SOLO SALTO. Antes esto eran dos pasos
+        // encadenados (sub-pestaña primero, pestaña después) y desde
+        // "Seguimiento > Registros" hacían falta tres toques para llegar a
+        // poder salir: eso era el paseo. Ahora es uno.
+        const tabActual = document.querySelector('.admin-tab.active')?.dataset.tab;
+        const subAgenda = document.querySelector('.agenda-subtab.active')?.dataset.subtab;
+        const fueraDeCasa = (tabActual && tabActual !== 'agenda')
+                         || (subAgenda && subAgenda !== 'citas');
+        if (fueraDeCasa) {
+            history.pushState({ pdli: 'anchor' }, '');
+            navegandoPorPopstate = true;
+            try {
+                if (tabActual !== 'agenda') activarTab('agenda');
+                if (subAgenda && subAgenda !== 'citas') activarAgendaSubtab('citas');
+            } finally { navegandoPorPopstate = false; }
+            return;
+        }
 
-        // Prioridad 2: nada abierto → doble-tap para salir de la app.
+        // Prioridad 3: ya en Agenda > Citas → doble-tap para salir de la app.
         if (readyToExit) {
             // Segundo back dentro de los 2s: dejar salir. No re-pushear.
             clearTimeout(exitTimer);
