@@ -671,23 +671,33 @@
    contraste suficiente con el texto crema. */
 .camino{
   position:sticky; top:0; z-index:40;
-  display:flex; align-items:center; gap:12px;
-  padding:11px 16px;
+  display:block;
+  padding:11px 16px 12px;
   background:#5C6A32; color:#F5EFE0;
   box-shadow:0 2px 10px rgba(0,0,0,.18);
   animation:caminoIn .35s cubic-bezier(.22,1,.36,1) both;
 }
-/* display:flex de arriba pisa el [hidden] del navegador: sin esta regla la
-   franja se ve SIEMPRE, con su texto de plantilla. Le pasó a una clienta a las
-   22:01 con un "va camino a tu casa" que no era verdad. */
+/* display de arriba pisa el [hidden] del navegador: sin esta regla la franja
+   se ve SIEMPRE, con su texto de plantilla. Le pasó a una clienta el 02/09. */
 .camino[hidden]{ display:none; }
 @keyframes caminoIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 @media (prefers-reduced-motion: reduce){ .camino{animation:none} }
-.camino__ic{flex:0 0 auto;width:26px;height:26px;display:block;opacity:.95}
-.camino__ic svg{width:100%;height:100%;display:block}
-.camino__txt{min-width:0;flex:1}
 .camino__t{margin:0;font-family:var(--display,inherit);font-size:17px;letter-spacing:.6px;line-height:1.15}
 .camino__s{margin:2px 0 0;font-family:var(--body,inherit);font-size:13px;line-height:1.35;opacity:.92}
+
+/* La carretera. La moto avanza según el tiempo transcurrido, no con una
+   animación fija: la posición la escribe renderEnCamino(). La casa vive fuera
+   de la vía, así que la moto nunca se le encima. */
+.camino__ruta{display:flex;align-items:flex-end;gap:9px;margin-top:7px}
+.camino__via{position:relative;flex:1;height:26px}
+.camino__linea{position:absolute;left:0;right:0;bottom:4px;height:2px;
+  background:repeating-linear-gradient(90deg,rgba(245,239,224,.55) 0 7px,transparent 7px 13px)}
+.camino__moto{position:absolute;bottom:2px;left:0;width:32px;color:#F5EFE0;
+  transition:left 1.2s linear, transform 1.2s linear}
+.camino__moto svg{width:100%;display:block}
+.camino__casa{flex:0 0 19px;width:19px;margin-bottom:1px;opacity:.85;color:#F5EFE0}
+.camino__casa svg{width:100%;display:block}
+@media (prefers-reduced-motion: reduce){ .camino__moto{transition:none} }
 
 /* Invitación a los avisos: mismo lenguaje que el aviso de Su salud, pero
    colocada donde se ve — debajo del hero de la pestaña Rutina. */

@@ -3252,6 +3252,15 @@ function citaEnCamino() {
     }) || null;
 }
 
+// Cuánto del trayecto lleva hecho, de 0 a 1. Es lo que mueve la moto.
+function progresoCamino(cita) {
+    const desde = new Date(cita.en_camino_desde).getTime();
+    const total = (Number(cita.en_camino_eta_min) || 0) * 60000;
+    if (!Number.isFinite(desde) || total <= 0) return 1;
+    const pct = (Date.now() - desde) / total;
+    return Math.max(0, Math.min(1, pct));
+}
+
 function textoCamino(cita) {
     const desde = new Date(cita.en_camino_desde).getTime();
     const eta = Number(cita.en_camino_eta_min) || 0;
@@ -3272,9 +3281,21 @@ function renderEnCamino() {
     }
     const sub = document.getElementById('camino-sub');
     if (sub) sub.textContent = textoCamino(cita);
+
+    // La moto avanza por la carretera. left + translateX del mismo porcentaje
+    // la mantiene siempre dentro: a 0% pegada al margen, a 100% pegada al final
+    // sin salirse ni taparse con la casa.
+    const moto = document.getElementById('camino-moto');
+    if (moto) {
+        const pct = progresoCamino(cita) * 100;
+        moto.style.left = pct + '%';
+        moto.style.transform = 'translateX(-' + pct + '%)';
+    }
+
     barra.hidden = false;
-    // Un solo temporizador vivo, que se refresca cada minuto.
-    if (!_caminoTimer) _caminoTimer = setInterval(renderEnCamino, 60000);
+    // Cada 20 s: el texto solo cambia al cambiar el minuto, pero así la moto
+    // avanza a pasos cortos y el trayecto se ve fluido.
+    if (!_caminoTimer) _caminoTimer = setInterval(renderEnCamino, 20000);
 }
 
 // Al volver a la app (push tocado, pestaña recuperada) recargamos las citas:

@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=73">
     <link rel="stylesheet" href="./css/home.css?v=36">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=37">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=38">
     <link rel="stylesheet" href="./css/seguimiento.css?v=4">
 </head>
 <body class="app-cliente">
@@ -176,19 +176,40 @@
     </section>
 
     <section class="screen home" id="screen-app" data-theme="claro" hidden>
-        <main class="app-main">
-
-            <!-- Franja "voy en camino". La pinta renderEnCamino() desde la cita
+        <!-- Franja "voy en camino". La pinta renderEnCamino() desde la cita
                  de hoy; se apaga sola cuando la clase se marca o pasa el tiempo. -->
             <div class="camino" id="camino-barra" hidden role="status" aria-live="polite">
-                <span class="camino__ic" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                </span>
-                <div class="camino__txt">
-                    <p class="camino__t" id="camino-titulo">Va camino a tu casa</p>
-                    <p class="camino__s" id="camino-sub">Llega en unos minutos</p>
+                <p class="camino__t">Va camino a tu casa</p>
+                <p class="camino__s" id="camino-sub">Llega en unos minutos</p>
+            <!-- La moto avanza según el tiempo que puso Charly: la posición
+                     la calcula renderEnCamino(), no una animación fija. -->
+                <div class="camino__ruta" aria-hidden="true">
+                    <span class="camino__via">
+                        <span class="camino__linea"></span>
+                        <span class="camino__moto" id="camino-moto">
+                            <svg viewBox="0 0 118 62">
+                                <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="25" cy="45" r="13" stroke-width="5"/><circle cx="99" cy="45" r="13" stroke-width="3.6"/>
+                                    <path d="M99 45 L79 17" stroke-width="3.4"/><path d="M95 48 L75 20" stroke-width="2.8"/>
+                                    <path d="M79 16 L76 7" stroke-width="3.4"/><path d="M77 6 L64 4" stroke-width="3.4"/>
+                                    <path d="M25 45 L40 31" stroke-width="3"/><path d="M70 28 L60 41" stroke-width="3"/>
+                                    <path d="M56 43 L38 45" stroke-width="3.4"/>
+                                </g>
+                                <g fill="currentColor">
+                                    <path d="M34 27 q9 -3 16 -2 q9 -6 20 -2 q4 2 3 6 q-9 3 -16 5 q-9 3 -16 1 q-5 -2 -7 -4 z"/>
+                                    <rect x="52" y="33" width="16" height="10" rx="3.5"/>
+                                    <circle cx="85" cy="20" r="4.2"/>
+                                </g>
+                            </svg>
+                        </span>
+                    </span>
+                    <span class="camino__casa">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 L12 3 L21 11"/><path d="M5 10v10h14V10"/></svg>
+                    </span>
                 </div>
             </div>
+        <main class="app-main">
+
 
             <!-- ── TAB RUTINA ── -->
 <section class="tab-panel is-active dBp" id="tab-rutina" data-tab="rutina">
@@ -1541,6 +1562,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=164"></script>
+    <script type="module" src="./js/app.js?v=165"></script>
 </body>
 </html>
