@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=15';
 import * as stats from './stats/api.js?v=5';
-import * as catalogo from './catalogo/api.js?v=4';
+import * as catalogo from './catalogo/api.js?v=5';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=6';
@@ -66,6 +66,8 @@ async function bootstrap() {
 // ---------- Eventos UI ----------
 
 function bindEvents() {
+    bindTipoTareaCatalogo();
+
     document.getElementById('login-form')
         .addEventListener('submit', handleLoginSubmit);
 
@@ -1749,6 +1751,20 @@ function bindCitasActions() {
                 } else if (action === 'editar') {
                     await abrirModalEditarCita(citaId);
                     return; // no refrescar — el modal se ocupa al guardar/eliminar
+                } else if (action === 'camino-abrir') {
+                    cardCita.querySelector('.camino-opts')?.removeAttribute('hidden');
+                    return;
+                } else if (action === 'camino-cerrar') {
+                    cardCita.querySelector('.camino-opts')?.setAttribute('hidden', '');
+                    return;
+                } else if (action === 'camino-set') {
+                    const min = Number(btn.dataset.min);
+                    if (!min) return;
+                    btn.disabled = true;
+                    await marcarEnCamino(citaId, min);
+                } else if (action === 'camino-cancelar') {
+                    const { error } = await supabase.rpc('cancelar_en_camino', { p_cita_id: citaId });
+                    if (error) throw error;
                 } else {
                     return;
                 }
@@ -1865,6 +1881,8 @@ function renderUnificado(items) {
             ? `<span class="cita-numero">Clase ${escapeHTML(String(c.numero_clase))}</span>`
             : '';
 
+        const bloqueCamino = bloqueCaminoHTML(c, estado);
+
         return `
             <div class="cita-card" data-cita-id="${escapeHTML(c.id)}">
                 <div class="cita-header">
@@ -1880,6 +1898,7 @@ function renderUnificado(items) {
                 <div class="cita-perro">${escapeHTML(perrosTexto)}</div>
                 ${bloqueProtocolo}
                 ${bloqueReportado}
+                ${bloqueCamino}
                 <div class="cita-acciones">${botones.join('')}</div>
             </div>
         `;
@@ -1938,6 +1957,85 @@ function renderUnificado(items) {
         html = '<p class="agenda-empty">No hay citas ni llamadas futuras.</p>';
     }
     list.innerHTML = html;
+}
+
+
+/* ── "Voy en camino" (02/09/2026) ─────────────────────────────────────
+   Charly avisa desde la cita de hoy y elige el tiempo a ojo. Se guarda en
+   citas.en_camino_desde/_eta_min y se manda un push SOLO a ese cliente.
+   El tiempo lo pone él, no Google: funciona sin cobertura y sin depender de
+   que la dirección esté bien cargada. */
+
+const CAMINO_OPCIONES = [10, 20, 30, 45];
+
+function caminoMinutosRestantes(c) {
+    const desde = new Date(c.en_camino_desde).getTime();
+    if (!Number.isFinite(desde)) return null;
+    return Math.round((desde + (Number(c.en_camino_eta_min) || 0) * 60000 - Date.now()) / 60000);
+}
+
+function bloqueCaminoHTML(c, estado) {
+    // Solo tiene sentido en una clase de hoy, presencial y con cliente.
+    const abierta = (estado === 'pendiente' || estado === 'confirmada');
+    if (!abierta || !c.cliente_id || !esCitaHoy(c.fecha)) return '';
+    if (c.modalidad === 'online') return '';
+
+    const opciones = CAMINO_OPCIONES
+        .map((m) => `<button type="button" data-action="camino-set" data-min="${m}">${m} min</button>`)
+        .join('');
+    const chooser = `<div class="camino-opts" hidden>
+            <span class="camino-opts__lbl">¿En cuánto llegas?</span>
+            ${opciones}
+            <button type="button" class="camino-opts__x" data-action="camino-cerrar" aria-label="Cerrar">&times;</button>
+        </div>`;
+
+    if (c.en_camino_desde) {
+        const faltan = caminoMinutosRestantes(c);
+        const txt = (faltan == null) ? 'Avisado'
+            : (faltan > 1 ? `Avisado · llega en ~${faltan} min`
+            : (faltan >= -5 ? 'Avisado · estás llegando' : 'Avisado · ya deberías estar ahí'));
+        return `<div class="cita-camino is-on">
+            <span class="cita-camino__txt">🚐 ${escapeHTML(txt)}</span>
+            <button type="button" data-action="camino-abrir">Voy con retraso</button>
+            <button type="button" class="btn-eliminar" data-action="camino-cancelar">Quitar aviso</button>
+            ${chooser}
+        </div>`;
+    }
+
+    return `<div class="cita-camino">
+        <button type="button" class="btn-camino" data-action="camino-abrir">🚐 Voy en camino</button>
+        ${chooser}
+    </div>`;
+}
+
+// Marca la salida y avisa al cliente. El push va segmentado: enviar-push exige
+// destinatario desde el 02/09, así que aquí mandamos cliente_id.
+async function marcarEnCamino(citaId, minutos) {
+    const { data, error } = await supabase.rpc('marcar_en_camino', {
+        p_cita_id: citaId,
+        p_eta_min: minutos,
+    });
+    if (error) throw error;
+    const fila = Array.isArray(data) ? data[0] : data;
+    if (!fila) throw new Error('la cita no devolvió cliente');
+
+    try {
+        const { error: pushErr } = await supabase.functions.invoke('enviar-push', {
+            body: {
+                cliente_id: fila.cliente_id,
+                title: 'Perros de la Isla',
+                body: `Vamos camino a tu casa. Llegamos en unos ${minutos} min.`,
+                url: '/clases/',
+                tag: 'pdli-en-camino',
+            },
+        });
+        if (pushErr) throw pushErr;
+    } catch (e) {
+        // La salida YA quedó marcada: la franja de su app se pintará igual en
+        // cuanto abra. Solo falló el aviso, y eso hay que decirlo.
+        console.error('[camino] push:', e);
+        alert('Marqué la salida, pero no pude mandar la notificación. Si tiene la app abierta lo verá igual.');
+    }
 }
 
 // Etiqueta de día para los separadores de la agenda.
@@ -3388,6 +3486,22 @@ function slugCodigoDesdeNombre(nombre) {
         .slice(0, 32);
 }
 
+
+// El campo "cómo se registra por defecto" solo aplica a las tareas: se muestra
+// y se oculta siguiendo al select de categoría, en los dos modales.
+function sincronizarTipoTareaCatalogo(prefijo) {
+    const cat = document.getElementById(`${prefijo}-categoria`)?.value;
+    const wrap = document.getElementById(`${prefijo}-tipotarea-wrap`);
+    if (wrap) wrap.hidden = (cat !== 'tarea');
+}
+
+function bindTipoTareaCatalogo() {
+    ['ee', 'nc'].forEach((pre) => {
+        document.getElementById(`${pre}-categoria`)
+            ?.addEventListener('change', () => sincronizarTipoTareaCatalogo(pre));
+    });
+}
+
 function abrirModalEditarEjercicio(ej) {
     document.getElementById('ee-nombre').value = ej.nombre || '';
     document.getElementById('ee-categoria').value = ej.categoria || 'ejercicio';
@@ -3395,6 +3509,8 @@ function abrirModalEditarEjercicio(ej) {
     document.getElementById('ee-como-se-hace').value = ej.como_se_hace || '';
     document.getElementById('ee-instrucciones').value = ej.instrucciones || '';
     document.getElementById('ee-video').value = ej.video_url || '';
+    document.getElementById('ee-tipo-tarea').value = ej.tipo_tarea_defecto || 'practica';
+    sincronizarTipoTareaCatalogo('ee');
     const err = document.getElementById('ee-error');
     if (err) err.hidden = true;
     document.getElementById('modal-editar-ejercicio').dataset.ejercicioId = ej.id;
@@ -3421,6 +3537,7 @@ async function guardarEdicionEjercicio() {
         await catalogo.actualizarEjercicio(id, {
             nombre,
             categoria,
+            tipo_tarea_defecto: document.getElementById('ee-tipo-tarea').value,
             descripcion: descripcion || null,
             como_se_hace: comoSeHace || null,
             instrucciones: instrucciones || null,
@@ -3446,6 +3563,8 @@ function abrirModalCrearEjercicio(categoria) {
     document.getElementById('nc-video').value = '';
     const sel = document.getElementById('nc-categoria');
     if (sel) sel.value = categoria || 'ejercicio';
+    document.getElementById('nc-tipo-tarea').value = 'practica';
+    sincronizarTipoTareaCatalogo('nc');
     const err = document.getElementById('nc-error');
     if (err) { err.textContent = ''; err.hidden = true; }
     openModal('modal-crear-ejercicio');
@@ -3481,6 +3600,7 @@ async function guardarNuevoEjercicio() {
             nombre,
             plantilla: parseInt(plantillaRaw, 10),
             categoria,
+            tipo_tarea_defecto: document.getElementById('nc-tipo-tarea').value,
             descripcion: descripcion || null,
             como_se_hace: comoSeHace || null,
             instrucciones: instrucciones || null,

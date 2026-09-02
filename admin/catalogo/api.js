@@ -32,7 +32,7 @@ const supabase = getSupabase('admin');
 export async function obtenerCatalogo() {
     const { data, error } = await supabase
         .from('ejercicios')
-        .select('id, codigo, nombre, descripcion, como_se_hace, instrucciones, video_url, plantilla, categoria, orden_catalogo')
+        .select('id, codigo, nombre, descripcion, como_se_hace, instrucciones, video_url, plantilla, categoria, tipo_tarea_defecto, orden_catalogo')
         .eq('activo', true)
         .order('orden_catalogo', { ascending: true });
     if (error) throw error;
@@ -49,6 +49,8 @@ export async function actualizarEjercicio(id, campos) {
         .update({
             nombre: campos.nombre,
             categoria: campos.categoria,
+            // Solo las tareas llevan tipo por defecto; el resto lo deja en null.
+            tipo_tarea_defecto: campos.categoria === 'tarea' ? (campos.tipo_tarea_defecto || 'practica') : null,
             descripcion: campos.descripcion,
             como_se_hace: campos.como_se_hace,
             instrucciones: campos.instrucciones,
@@ -98,6 +100,7 @@ export async function crearEjercicio(campos) {
             nombre: campos.nombre,
             plantilla: campos.plantilla,
             categoria: campos.categoria,
+            tipo_tarea_defecto: campos.categoria === 'tarea' ? (campos.tipo_tarea_defecto || 'practica') : null,
             descripcion: campos.descripcion,
             como_se_hace: campos.como_se_hace,
             instrucciones: campos.instrucciones,

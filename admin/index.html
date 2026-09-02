@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=57">
+    <link rel="stylesheet" href="./styles.css?v=58">
     <link rel="preload" as="image" href="../img/jaime.png" fetchpriority="high">
     <link rel="stylesheet" href="./jaime.css?v=10">
 </head>
@@ -762,6 +762,16 @@
                         <option value="herramienta">Herramienta</option>
                     </select>
                 </label>
+                <!-- Solo para categoria=tarea: cómo se registra por defecto.
+                     El trigger de la base lo copia a cada asignación nueva. -->
+                <label class="form-field" id="ee-tipotarea-wrap" hidden>
+                    <span>Cómo se registra (por defecto)</span>
+                    <select id="ee-tipo-tarea">
+                        <option value="practica">Práctica — se entrena, con huella</option>
+                        <option value="lista">Lista — se hace una vez y se marca</option>
+                        <option value="montaje">Montaje — se monta una vez, admite foto</option>
+                    </select>
+                </label>
                 <label class="form-field">
                     <span>Descripción corta</span>
                     <input type="text" id="ee-descripcion" maxlength="200" placeholder="Línea breve que ve el cliente en la tarjeta">
@@ -806,6 +816,16 @@
                         <option value="cambio_rutina">Cambio de rutina</option>
                         <option value="tarea">Tarea</option>
                         <option value="herramienta">Herramienta</option>
+                    </select>
+                </label>
+                <!-- Solo para categoria=tarea: cómo se registra por defecto.
+                     El trigger de la base lo copia a cada asignación nueva. -->
+                <label class="form-field" id="nc-tipotarea-wrap" hidden>
+                    <span>Cómo se registra (por defecto)</span>
+                    <select id="nc-tipo-tarea">
+                        <option value="practica">Práctica — se entrena, con huella</option>
+                        <option value="lista">Lista — se hace una vez y se marca</option>
+                        <option value="montaje">Montaje — se monta una vez, admite foto</option>
                     </select>
                 </label>
                 <label class="form-field">
@@ -873,9 +893,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=89"></script>
+    <script type="module" src="./admin.js?v=90"></script>
     <script type="module">
-      import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=2';
+      import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=3';
       function toast(msg) {
         const t = document.createElement('div');
         t.textContent = msg;

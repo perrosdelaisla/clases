@@ -5671,3 +5671,46 @@ body {
 .pack-plazo{ font-weight:600; }
 .pack-plazo--cerca{ color:var(--color-warning); }
 .pack-plazo--vencido{ color:var(--color-red); }
+
+/* =====================================================================
+   "Voy en camino" en la tarjeta de cita (02/09/2026)
+   ===================================================================== */
+.cita-camino{
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+  margin-top:10px; padding-top:10px;
+  border-top:1px solid var(--color-border);
+  position:relative;
+}
+.cita-camino__txt{
+  font-family:var(--font-body); font-size:13px; font-weight:600;
+  color:var(--color-green); margin-right:auto;
+}
+.cita-camino button{
+  border:1px solid var(--color-border); background:var(--color-surface-2);
+  color:var(--color-text); cursor:pointer;
+  padding:7px 12px; border-radius:8px;
+  font-family:var(--font-body); font-size:13px; font-weight:600;
+}
+.cita-camino .btn-camino{
+  background:var(--color-green); border-color:var(--color-green); color:#F5EFE0;
+}
+.cita-camino button[disabled]{opacity:.55;cursor:default}
+
+.camino-opts{
+  flex-basis:100%;
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+  margin-top:8px; padding:10px 12px;
+  border:1px solid var(--color-border); border-radius:10px;
+  background:var(--color-surface-2);
+}
+.camino-opts__lbl{
+  font-family:var(--font-body); font-size:12.5px; font-weight:600;
+  color:var(--color-muted); margin-right:2px;
+}
+.camino-opts button[data-action="camino-set"]{
+  background:transparent; border:1px solid var(--color-green); color:var(--color-green);
+}
+.camino-opts .camino-opts__x{
+  margin-left:auto; border:none; background:none; color:var(--color-muted);
+  font-size:18px; line-height:1; padding:2px 6px;
+}

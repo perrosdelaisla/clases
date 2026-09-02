@@ -660,3 +660,56 @@
 .home[data-theme="oscuro"] .tira-uso__b{ border-color:#5B8FA8; }
 .home[data-theme="oscuro"] .tira-uso__b i{ background:rgba(143,187,209,.2); color:#8FBBD1; }
 .home[data-theme="oscuro"] .uso-grande{ background:#4E7E96; }
+
+/* =====================================================================
+   Franja "voy en camino" + invitación a activar los avisos (02/09/2026)
+   ===================================================================== */
+
+/* La franja de camino va arriba del todo y pegada: es un aviso vivo, no
+   contenido de la pestaña, así que sobrevive al scroll. Color fijo en los dos
+   temas: es una franja de marca, y el oliva claro del tema oscuro no daría
+   contraste suficiente con el texto crema. */
+.camino{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:12px;
+  padding:11px 16px;
+  background:#5C6A32; color:#F5EFE0;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
+  animation:caminoIn .35s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes caminoIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@media (prefers-reduced-motion: reduce){ .camino{animation:none} }
+.camino__ic{flex:0 0 auto;width:26px;height:26px;display:block;opacity:.95}
+.camino__ic svg{width:100%;height:100%;display:block}
+.camino__txt{min-width:0;flex:1}
+.camino__t{margin:0;font-family:var(--display,inherit);font-size:17px;letter-spacing:.6px;line-height:1.15}
+.camino__s{margin:2px 0 0;font-family:var(--body,inherit);font-size:13px;line-height:1.35;opacity:.92}
+
+/* Invitación a los avisos: mismo lenguaje que el aviso de Su salud, pero
+   colocada donde se ve — debajo del hero de la pestaña Rutina. */
+.avisopush{
+  position:relative;
+  display:flex; align-items:center; gap:12px;
+  margin:14px 16px 0; padding:13px 14px;
+  border:1px solid var(--c-hair); border-radius:14px;
+  background:var(--c-surface);
+}
+.avisopush__ic{flex:0 0 auto;width:24px;height:24px;color:var(--c-oliva)}
+.avisopush__ic svg{width:100%;height:100%;display:block}
+.avisopush__txt{min-width:0;flex:1}
+.avisopush__t{margin:0;font-family:var(--body,inherit);font-size:14.5px;font-weight:700;color:var(--c-text)}
+.avisopush__s{margin:3px 24px 0 0;font-family:var(--body,inherit);font-size:13px;line-height:1.4;color:var(--c-text-2)}
+.avisopush__btn{
+  flex:0 0 auto; border:none; cursor:pointer;
+  background:var(--c-oliva); color:#F5EFE0;
+  padding:9px 16px; border-radius:9px;
+  font-family:var(--display,inherit); font-size:15px; letter-spacing:.8px; text-transform:uppercase;
+}
+.home[data-theme="oscuro"] .avisopush__btn{color:#15130D}
+.avisopush__btn[disabled]{opacity:.6;cursor:default}
+.avisopush__x{
+  position:absolute; top:5px; right:7px;
+  width:28px; height:28px; line-height:1; padding:0;
+  border:none; background:none; cursor:pointer;
+  font-size:21px; color:var(--c-text-3);
+}

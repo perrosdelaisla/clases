@@ -45,12 +45,18 @@ export async function activarNotificaciones() {
     });
   }
 
+  // auth_user_id: sin esto la suscripcion queda huerfana y no hay forma de
+  // mandarle un push SOLO a Charly. Antes faltaba, y por eso enviar-push tenia
+  // que mandar a todo el mundo.
+  const { data: { user } } = await supabase.auth.getUser();
+
   const json = sub.toJSON();
   const { error } = await supabase.from('push_subscriptions').insert({
     endpoint: sub.endpoint,
     p256dh: json.keys.p256dh,
     auth: json.keys.auth,
-    user_agent: navigator.userAgent
+    user_agent: navigator.userAgent,
+    auth_user_id: user ? user.id : null
   });
   // Si ya estaba registrada (endpoint único), no es error real.
   if (error && !/duplicate|unique|already exists/i.test(error.message || '')) throw error;
@@ -72,7 +78,9 @@ export async function desactivarNotificaciones() {
 
 export async function probarPush() {
   const { data, error } = await supabase.functions.invoke('enviar-push', {
-    body: { title: 'Perros de la Isla', body: '🔔 Notificación de prueba — ¡funciona!', url: '/clases/admin/' }
+    // solo_admin: la prueba se la manda Charly a si mismo. Antes iba a TODAS
+    // las suscripciones, clientes incluidos.
+    body: { solo_admin: true, title: 'Perros de la Isla', body: '🔔 Notificación de prueba — ¡funciona!', url: '/clases/admin/' }
   });
   if (error) throw error;
   return data;

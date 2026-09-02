@@ -225,6 +225,8 @@ async function onSesionLista(session) {
         renderHeader();
         renderSelectorPerros();
         renderCategoriaAcceso();
+        renderEnCamino();
+        actualizarAvisoPushInicio();
         await renderRutinaPerroSeleccionado();
         aplicarModoManada();
         actualizarBadgeMensajes();
@@ -307,6 +309,16 @@ function initTemaHome() {
 }
 
 function bindEventos() {
+    bindAvisoPushInicio();
+
+    // Al volver a la app (tocaron el push, o vuelve de segundo plano) puede
+    // haber un "voy en camino" nuevo que llegó con la app cerrada.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && state.usuarioCliente?.cliente_id) {
+            refrescarEnCamino();
+        }
+    });
+
     // Login
     const form = document.getElementById('login-form');
     if (form) form.addEventListener('submit', enviarCodigo);
@@ -3127,6 +3139,151 @@ function mostrarToastSusalud(msg) {
     el.classList.add('is-open');
     clearTimeout(_susaludToastTimer);
     _susaludToastTimer = setTimeout(() => el.classList.remove('is-open'), 2200);
+}
+
+
+/* =====================================================================
+   Avisos: invitación a activar el push (inicio) + franja "voy en camino"
+   Añadido 02/09/2026.
+   ===================================================================== */
+
+// La invitación vivía SOLO en Salud > Su salud, dos niveles adentro: 4 de 22
+// clientes tenían las notificaciones puestas. Ahora se pide en el inicio, y si
+// dicen "ahora no" se calla una semana en vez de desaparecer para siempre.
+const PUSH_SNOOZE_KEY = 'pdli_push_ahora_no_hasta';
+const PUSH_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function pushSnoozeActivo() {
+    try {
+        const hasta = Number(localStorage.getItem(PUSH_SNOOZE_KEY) || 0);
+        return Number.isFinite(hasta) && Date.now() < hasta;
+    } catch (_e) { return false; }
+}
+function pushSnoozeAplazar() {
+    try { localStorage.setItem(PUSH_SNOOZE_KEY, String(Date.now() + PUSH_SNOOZE_MS)); } catch (_e) {}
+}
+
+async function actualizarAvisoPushInicio() {
+    const aviso = document.getElementById('aviso-push-inicio');
+    if (!aviso) return;
+    if (pushSnoozeActivo()) { aviso.hidden = true; return; }
+    let estado;
+    try { estado = await estadoNotificaciones(); } catch (_e) { aviso.hidden = true; return; }
+    // 'no-soportado' incluye iOS sin la app instalada: no tiene sentido pedirlo.
+    if (estado === 'activo' || estado === 'no-soportado') { aviso.hidden = true; return; }
+    if (estado === 'bloqueado') {
+        pintarAvisoPushInicio(
+            'Los avisos están bloqueados',
+            'Actívalos para este sitio en los ajustes de tu navegador y vuelve a entrar.',
+            null
+        );
+    }
+    aviso.hidden = false;
+}
+
+function pintarAvisoPushInicio(titulo, sub, btnLabel) {
+    const t = document.getElementById('aviso-push-titulo');
+    const p = document.getElementById('aviso-push-sub');
+    const b = document.getElementById('aviso-push-activar');
+    if (t) t.textContent = titulo;
+    if (p) p.textContent = sub;
+    if (b) {
+        if (btnLabel === null) b.hidden = true;
+        else { b.hidden = false; b.textContent = btnLabel; }
+    }
+}
+
+function bindAvisoPushInicio() {
+    document.getElementById('aviso-push-activar')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try {
+            await activarNotificaciones();
+            const aviso = document.getElementById('aviso-push-inicio');
+            if (aviso) aviso.hidden = true;
+            toast('Avisos activados', 'ok');
+            // El aviso gemelo de Su salud tiene que enterarse.
+            actualizarAvisoPush();
+        } catch (err) {
+            console.error('[push-cliente] activar desde inicio:', err);
+            const kind = clasificarErrorPush(err);
+            if (kind === 'denied') {
+                pintarAvisoPushInicio(
+                    'Los avisos están bloqueados',
+                    'Actívalos para este sitio en los ajustes de tu navegador y vuelve a entrar.',
+                    null
+                );
+            } else {
+                pintarAvisoPushInicio(
+                    'No se pudieron activar',
+                    'Inténtalo otra vez en un momento.',
+                    'Reintentar'
+                );
+            }
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('aviso-push-cerrar')?.addEventListener('click', () => {
+        pushSnoozeAplazar();
+        const aviso = document.getElementById('aviso-push-inicio');
+        if (aviso) aviso.hidden = true;
+    });
+}
+
+// ── Franja "voy en camino" ────────────────────────────────────────────
+// Charly marca la salida desde la agenda y elige el tiempo. Aquí solo
+// pintamos la cuenta atrás desde en_camino_desde + en_camino_eta_min.
+// Se apaga sola: a los 90 min de la hora estimada de llegada, o en cuanto la
+// cita deja de estar pendiente (el trigger de la base también limpia los campos).
+const CAMINO_MARGEN_MS = 90 * 60 * 1000;
+let _caminoTimer = null;
+
+function citaEnCamino() {
+    const citas = state.citas || [];
+    return citas.find((c) => {
+        if (!c.en_camino_desde) return false;
+        if (c.estado !== 'pendiente' && c.estado !== 'confirmada') return false;
+        const desde = new Date(c.en_camino_desde).getTime();
+        if (!Number.isFinite(desde)) return false;
+        const eta = Number(c.en_camino_eta_min) || 0;
+        return Date.now() < desde + eta * 60000 + CAMINO_MARGEN_MS;
+    }) || null;
+}
+
+function textoCamino(cita) {
+    const desde = new Date(cita.en_camino_desde).getTime();
+    const eta = Number(cita.en_camino_eta_min) || 0;
+    const faltanMin = Math.round((desde + eta * 60000 - Date.now()) / 60000);
+    if (faltanMin > 1) return `Llega en unos ${faltanMin} min`;
+    if (faltanMin >= -5) return 'Está llegando';
+    return 'Ya debería estar ahí';
+}
+
+function renderEnCamino() {
+    const barra = document.getElementById('camino-barra');
+    if (!barra) return;
+    const cita = citaEnCamino();
+    if (!cita) {
+        barra.hidden = true;
+        if (_caminoTimer) { clearInterval(_caminoTimer); _caminoTimer = null; }
+        return;
+    }
+    const sub = document.getElementById('camino-sub');
+    if (sub) sub.textContent = textoCamino(cita);
+    barra.hidden = false;
+    // Un solo temporizador vivo, que se refresca cada minuto.
+    if (!_caminoTimer) _caminoTimer = setInterval(renderEnCamino, 60000);
+}
+
+// Al volver a la app (push tocado, pestaña recuperada) recargamos las citas:
+// el aviso pudo llegar con la app cerrada.
+async function refrescarEnCamino() {
+    try {
+        state.citas = await cargarCitasCliente();
+    } catch (_e) { /* sin red: seguimos con lo que hubiera */ }
+    renderEnCamino();
 }
 
 function bindSuSalud() {
