@@ -28,7 +28,12 @@ export function initJaime(context) {
   fabEl = document.createElement('button');
   fabEl.className = 'jm-fab';
   fabEl.setAttribute('aria-label', 'Abrir asistente');
-  fabEl.innerHTML = '<img class="jm-img" src="img/jaime.png" alt="Jaime"><span class="jm-zzz" aria-hidden="true"><span>z</span><span>z</span><span>z</span></span>';
+  // La imagen se sirve desde /clases/img/ (no desde admin/img/): esa copia SÍ
+  // está en el precache del service worker, así que tras un despliegue Jaime
+  // aparece al instante en vez de esperar una descarga de 70 KB.
+  // width/height + alt vacío: el hueco ya está reservado y no se ve el texto
+  // "Jaime" desbordado mientras carga (el botón ya tiene su aria-label).
+  fabEl.innerHTML = '<img class="jm-img" src="../img/jaime.png" alt="" width="76" height="76" fetchpriority="high" decoding="async"><span class="jm-zzz" aria-hidden="true"><span>z</span><span>z</span><span>z</span></span>';
   document.body.appendChild(fabEl);
   setupFabArrastrable();
   bindInactividad();
@@ -39,9 +44,9 @@ export function initJaime(context) {
 // panel está abierto, del avatar de la cabecera. Nunca toca left/top/transform
 // del FAB arrastrable (fix 1344f4f): solo reescribe el src y togglea is-durmiendo.
 const JM_CARAS = {
-  normal: 'img/jaime.png',
-  durmiendo: 'img/jaime-durmiendo.png',
-  pensando: 'img/jaime-pensando.png',
+  normal: '../img/jaime.png',
+  durmiendo: '../img/jaime-durmiendo.png',
+  pensando: '../img/jaime-pensando.png',
 };
 let jmEstado = 'normal';
 let jmInactivTimer = null;
@@ -294,7 +299,7 @@ function abrir() {
     <div class="jm-sheet" role="dialog" aria-modal="true">
       <div class="jm-grabber"></div>
       <div class="jm-head">
-        <div class="jm-avatar"><img class="jm-img" src="img/jaime.png" alt="Jaime"></div>
+        <div class="jm-avatar"><img class="jm-img" src="../img/jaime.png" alt="" width="44" height="44"></div>
         <div style="flex:1">
           <div class="jm-name">Jaime</div>
           <div class="jm-sub">${sub}</div>

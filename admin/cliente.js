@@ -10,7 +10,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import { initJaime } from './jaime.js?v=18';
+import { initJaime } from './jaime.js?v=19';
 const supabase = getSupabase('admin');
 
 const SCREENS = {
@@ -40,6 +40,12 @@ async function bootstrap() {
     bindEstadoSelector();
     bindBackNavigation();
     instalarNavegacionSinPila();
+
+    // Jaime se monta YA, sin esperar a que llegue el cliente de Supabase.
+    // Antes se creaba al final de pintarCliente(), así que tardaba lo que
+    // tardara la consulta. El contexto (clienteId, nombre) lo rellena la
+    // segunda llamada de pintarCliente: initJaime fusiona ctx y no duplica FAB.
+    initJaime({ pantalla: 'cliente' });
 
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) {
@@ -277,8 +283,11 @@ function formatearClienteDesde(valor) {
     if (!valor) return '—';
     const d = new Date(valor);
     if (isNaN(d.getTime())) return String(valor);
+    // Devuelve solo "agosto de 2026". El "desde" / "Última actualización:"
+    // lo pone quien llama; si se devolviera aquí salía duplicado
+    // ("desde Cliente desde agosto de 2026").
     const formatter = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' });
-    return `Cliente desde ${formatter.format(d)}`;
+    return formatter.format(d);
 }
 
 // ===================== Selector de estado =====================

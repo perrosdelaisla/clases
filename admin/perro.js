@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import { CATEGORIA_LABEL } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initJaime } from './jaime.js?v=18';
+import { initJaime } from './jaime.js?v=19';
 const supabase = getSupabase('admin');
 import {
     estadoChipFrecuencia,
@@ -93,6 +93,9 @@ async function bootstrap() {
     bindHerramientas();
     bindCasoComplejo();
     bindProtocolo();
+
+    // Jaime se monta YA, sin esperar los datos del perro (ver cliente.js).
+    initJaime({ pantalla: 'perro' });
 
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
