@@ -3261,13 +3261,22 @@ function progresoCamino(cita) {
     return Math.max(0, Math.min(1, pct));
 }
 
+// Primera persona del plural, como el resto de la voz de la marca ("salimos
+// hacia tu casa"). Si vamos tarde lo decimos: es peor callarlo.
 function textoCamino(cita) {
     const desde = new Date(cita.en_camino_desde).getTime();
     const eta = Number(cita.en_camino_eta_min) || 0;
     const faltanMin = Math.round((desde + eta * 60000 - Date.now()) / 60000);
-    if (faltanMin > 1) return `Llega en unos ${faltanMin} min`;
-    if (faltanMin >= -5) return 'Está llegando';
-    return 'Ya debería estar ahí';
+    if (faltanMin > 1) return `Llegamos en unos ${faltanMin} min`;
+    if (faltanMin >= -5) return 'Estamos llegando';
+    return 'Vamos con algo de retraso';
+}
+
+// "Estamos en camino, Katerina". El nombre lo pone la app; si no lo tiene,
+// la frase funciona igual sin él.
+function tituloCamino() {
+    const nom = primerNombreTutor();
+    return nom ? `Estamos en camino, ${nom}` : 'Estamos en camino';
 }
 
 function renderEnCamino() {
@@ -3279,6 +3288,8 @@ function renderEnCamino() {
         if (_caminoTimer) { clearInterval(_caminoTimer); _caminoTimer = null; }
         return;
     }
+    const tit = document.getElementById('camino-titulo');
+    if (tit) tit.textContent = tituloCamino();
     const sub = document.getElementById('camino-sub');
     if (sub) sub.textContent = textoCamino(cita);
 

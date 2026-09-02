@@ -2024,7 +2024,7 @@ async function marcarEnCamino(citaId, minutos) {
             body: {
                 cliente_id: fila.cliente_id,
                 title: 'Perros de la Isla',
-                body: `Vamos camino a tu casa. Llegamos en unos ${minutos} min.`,
+                body: `Estamos en camino. Llegamos en unos ${minutos} min.`,
                 url: '/clases/',
                 tag: 'pdli-en-camino',
             },
