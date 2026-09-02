@@ -677,6 +677,10 @@
   box-shadow:0 2px 10px rgba(0,0,0,.18);
   animation:caminoIn .35s cubic-bezier(.22,1,.36,1) both;
 }
+/* display:flex de arriba pisa el [hidden] del navegador: sin esta regla la
+   franja se ve SIEMPRE, con su texto de plantilla. Le pasó a una clienta a las
+   22:01 con un "va camino a tu casa" que no era verdad. */
+.camino[hidden]{ display:none; }
 @keyframes caminoIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 @media (prefers-reduced-motion: reduce){ .camino{animation:none} }
 .camino__ic{flex:0 0 auto;width:26px;height:26px;display:block;opacity:.95}
@@ -694,6 +698,7 @@
   border:1px solid var(--c-hair); border-radius:14px;
   background:var(--c-surface);
 }
+.avisopush[hidden]{ display:none; }
 .avisopush__ic{flex:0 0 auto;width:24px;height:24px;color:var(--c-oliva)}
 .avisopush__ic svg{width:100%;height:100%;display:block}
 .avisopush__txt{min-width:0;flex:1}

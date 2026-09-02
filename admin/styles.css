@@ -5703,6 +5703,8 @@ body {
   border:1px solid var(--color-border); border-radius:10px;
   background:var(--color-surface-2);
 }
+/* Mismo motivo que en la app del cliente: display:flex pisa el [hidden]. */
+.camino-opts[hidden]{ display:none; }
 .camino-opts__lbl{
   font-family:var(--font-body); font-size:12.5px; font-weight:600;
   color:var(--color-muted); margin-right:2px;
