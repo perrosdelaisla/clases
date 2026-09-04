@@ -1275,8 +1275,10 @@ function mostrarBienvenidaJaime(perro) {
     // En bienvenida no usamos el CTA normal; mostramos chat + "Ver el tutorial".
     _jaimeAvisoActual = { texto, ctaLabel: '', ctaAccion: null };
     document.getElementById('jaime-burbuja__tutorial')?.removeAttribute('hidden');
-    // Tutor nuevo: la novedad del registro no aplica (ya estrena la versión nueva).
+    // Tutor nuevo: la novedad del registro no aplica (ya estrena la versión
+    // nueva), y las escaleras que tenga se las explica Charly en la clase.
     marcarNovedadRegistroVista();
+    _escaleraCache.forEach((esc, id) => marcarEscaleraPresentada(id));
     abrirBurbujaJaime();
 }
 
@@ -1744,6 +1746,57 @@ function construirAvisoPack(pack) {
     };
 }
 
+
+// Presentación de una escalera nueva. Una sola vez por escalera, y solo a
+// quien ya venía usando la app: al tutor nuevo se la explica Charly en clase.
+// Charly la asigna y quiere que Jaime la cuente él mismo (03/09/2026).
+const JAIME_ESCALERA_KEY = 'pdli_escalera_presentada_';
+function escaleraPresentada(id) {
+    try { return localStorage.getItem(JAIME_ESCALERA_KEY + id) === '1'; } catch (_e) { return true; }
+}
+function marcarEscaleraPresentada(id) {
+    try { localStorage.setItem(JAIME_ESCALERA_KEY + id, '1'); } catch (_e) {}
+}
+// La primera escalera del perro que aún no se haya contado.
+function escaleraSinPresentar() {
+    for (const esc of _escaleraCache.values()) {
+        if (esc && esc.asignado_id && !esc.completa && !escaleraPresentada(esc.asignado_id)) return esc;
+    }
+    return null;
+}
+// cargarAvisoJaime() corre ANTES de que las escaleras estén cargadas, así que
+// la presentación se dispara aquí, cuando ya sabemos que existen. Respeta las
+// mismas prioridades: bienvenida, permiso de grabación y novedad del registro
+// van primero.
+function presentarEscaleraSiToca(perro) {
+    if (!perro || !state.usuarioCliente) return;
+    if (!jaimeBienvenidaVista()) return;
+    if (state.cliente?.grabacion_estado === 'solicitado' && esPrincipal()) return;
+    if (!novedadRegistroVista()) return;
+    const esc = escaleraSinPresentar();
+    if (esc) mostrarNovedadEscalera(esc, perro);
+}
+
+function mostrarNovedadEscalera(esc, perro) {
+    const nom = primerNombreTutor();
+    const hola = nom ? `¡Hola, ${nom}!` : '¡Hola!';
+    const nombrePerro = perro?.nombre || 'tu perro';
+    const conducta = esc.nombre ? `«${esc.nombre}»` : 'una conducta que le cuesta';
+    const min = esc.reps_min, max = esc.reps_max;
+    const cuantas = (min != null && max != null) ? `de ${min} a ${max} veces al día`
+                  : (min != null ? `${min} o más veces al día` : 'unas cuantas veces al día');
+    _jaimeAvisoActual = {
+        texto: `${hola} Charly ha añadido algo nuevo a la rutina de ${nombrePerro}: una escalera para ${conducta}. `
+             + `La idea es partirlo en ${esc.total} pasos pequeños y subirlos de uno en uno. `
+             + `Verás solo el paso en el que estáis: lo practicáis ${cuantas} y, cuando ${nombrePerro} lo lleve tranquilo, tocáis «Paso superado». `
+             + `Si un día cuesta, se vuelve un paso y no pasa nada: retroceder es parte del método. Sin prisa, que lo importante es que cada paso quede bien asentado.`,
+        ctaLabel: '',
+        ctaAccion: null,
+    };
+    marcarEscaleraPresentada(esc.asignado_id);
+    abrirBurbujaJaime();
+}
+
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
     if (!fab) return;
@@ -1787,6 +1840,14 @@ async function cargarAvisoJaime() {
     // usando la app con la versión anterior.
     if (state.usuarioCliente && !novedadRegistroVista()) {
         mostrarNovedadRegistro();
+        return;
+    }
+
+    // Escalera nueva: Charly la monta en el admin y Jaime se la presenta al
+    // tutor la primera vez que abre la app.
+    const escNueva = escaleraSinPresentar();
+    if (escNueva && perro) {
+        mostrarNovedadEscalera(escNueva, perro);
         return;
     }
 
@@ -3851,7 +3912,10 @@ async function renderRutinaPerroSeleccionado() {
 
         // Escaleras del perro. Si falla, sus tarjetas se pintan como un
         // ejercicio normal en vez de romper la rutina entera.
-        if (filas.some(esEscalera)) await cargarEscalerasPerro(perro.id);
+        if (filas.some(esEscalera)) {
+            await cargarEscalerasPerro(perro.id);
+            presentarEscaleraSiToca(perro);
+        }
 
         // Registros de las últimas 8 semanas (para los días con huella y la
         // racha de la isla). Aditivo: si falla, la isla se pinta sin días.
