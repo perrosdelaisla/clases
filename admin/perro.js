@@ -3234,7 +3234,7 @@ async function abrirEditorEscalera(asignadoId) {
     const criterio = (esc && esc.criterio_dias) || 3;
 
     cont.innerHTML = `
-        <div class="modal__backdrop" data-cerrar="1"></div>
+        <div class="modal__overlay" data-cerrar="1"></div>
         <div class="modal__panel modal__panel--ancho">
             <h3 class="modal__titulo">La escalera</h3>
             <p class="modal__sub">Un peldaño a la vez. Se avanza cuando el perro está tranquilo.</p>
@@ -3284,8 +3284,13 @@ async function abrirEditorEscalera(asignadoId) {
             </div>
         </div>`;
     cont.hidden = false;
+    requestAnimationFrame(() => cont.classList.add('is-open'));
 
-    const cerrar = () => { cont.hidden = true; cont.innerHTML = ''; };
+    const cerrar = () => {
+        cont.classList.remove('is-open');
+        cont.hidden = true;
+        cont.innerHTML = '';
+    };
     cont.querySelectorAll('[data-cerrar]').forEach((el) => el.addEventListener('click', cerrar));
 
     const listaEl = cont.querySelector('#esc-lista');
@@ -3397,7 +3402,7 @@ function abrirSelectorRegistro({ asignadoId, nombre, categoria, seEntrena, seUsa
         </fieldset>`;
 
     cont.innerHTML = `
-        <div class="modal__backdrop" data-cerrar="1"></div>
+        <div class="modal__overlay" data-cerrar="1"></div>
         <div class="modal__panel">
             <h3 class="modal__titulo">Cómo se registra</h3>
             <p class="modal__sub">${escapeHTML(nombre)}</p>
@@ -3420,8 +3425,13 @@ function abrirSelectorRegistro({ asignadoId, nombre, categoria, seEntrena, seUsa
             </div>
         </div>`;
     cont.hidden = false;
+    requestAnimationFrame(() => cont.classList.add('is-open'));
 
-    const cerrar = () => { cont.hidden = true; cont.innerHTML = ''; };
+    const cerrar = () => {
+        cont.classList.remove('is-open');
+        cont.hidden = true;
+        cont.innerHTML = '';
+    };
     cont.querySelectorAll('[data-cerrar]').forEach((el) => el.addEventListener('click', cerrar));
 
     const chkE = cont.querySelector('#reg-entrena');

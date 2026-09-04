@@ -5722,7 +5722,17 @@ body {
    ===================================================================== */
 .registro-chip--esc{border-color:var(--color-green);color:var(--color-green)}
 
-.modal__panel--ancho{max-width:520px}
+.modal__panel--ancho{max-width:520px;max-height:calc(100dvh - 32px);overflow-y:auto;
+  -webkit-overflow-scrolling:touch}
+
+/* Los botones no se pueden quedar debajo del borde en un movil: van pegados
+   al fondo del panel, siempre a mano. */
+.modal__acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;
+  position:sticky;bottom:-24px;padding:12px 0 4px;background:var(--color-bg)}
+.modal__acciones .btn{flex:0 0 auto}
+.modal__sub{font-family:var(--font-body);font-size:13px;color:var(--color-muted);margin:4px 0 0}
+.modal__titulo{font-family:var(--font-display);font-size:24px;letter-spacing:.5px;
+  color:var(--color-text);margin:0}
 
 .esc-ed__lbl{display:block;font-family:var(--font-body);font-size:11px;font-weight:700;
   letter-spacing:1.2px;text-transform:uppercase;color:var(--color-muted);margin:16px 0 6px}
