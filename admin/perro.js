@@ -821,14 +821,13 @@ function renderEjercicioActivoCard(row, history = []) {
            </button>`
         : '';
 
-    // Pausar un renglón lo pausa ENTERO: la punta y los pasos anteriores de
-    // la progresión. Si se apagara solo la punta, el paso anterior quedaría
-    // activo y el renglón reaparecería en una versión vieja. Por eso antes no
-    // había interruptor en los renglones con progresión (04/09/2026).
-    const idsCadena = [row.id, ...history.map((h) => h.id)].filter(Boolean).join(',');
-    const ejsCadena = [ej.id, ...history.map((h) => h.ejercicios?.id)].filter(Boolean).join(',');
+    // El interruptor pausa SOLO el paso de arriba, por su fila, no por el
+    // ejercicio del catálogo. Si el renglón viene de una progresión, al
+    // pausarlo vuelve al paso anterior, que queda con su propio interruptor:
+    // así se baja de a un paso, sin borrar nada (04/09/2026, pedido de Charly).
+    const pasoPrevio = history[0]?.ejercicios?.nombre || '';
     const toggle = `
-                <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}" data-cadena-ids="${escapeHTML(idsCadena)}" data-cadena-ejs="${escapeHTML(ejsCadena)}" data-pasos="${history.length}">
+                <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" data-paso-previo="${escapeHTML(pasoPrevio)}">
                     <span class="toggle-thumb"></span>
                 </button>`;
 
@@ -1161,24 +1160,20 @@ async function onTogglePrincipal(btn) {
     const ejercicioId = btn.dataset.ejercicioId;
     if (!ejercicioId) return;
 
-    const idsCadena = (btn.dataset.cadenaIds || '').split(',').filter(Boolean);
-    const ejsCadena = (btn.dataset.cadenaEjs || '').split(',').filter(Boolean);
-    const pasos = Number(btn.dataset.pasos || 0);
+    const asignadoId = btn.dataset.asignadoId || '';
+    const pasoPrevio = btn.dataset.pasoPrevio || '';
 
     // Está activo → lo pausamos (off). Optimistic UI.
     btn.setAttribute('aria-checked', 'false');
     btn.disabled = true;
 
     try {
-        if (idsCadena.length) await pausarCadena(idsCadena);
+        if (asignadoId) await pausarAsignacion(asignadoId);
         else await toggleOff(state.perroId, ejercicioId);
-        // Todos los ejercicios del renglón quedan apagados en el catálogo.
-        (ejsCadena.length ? ejsCadena : [ejercicioId]).forEach((id) => {
-            const prev = state.asignados.get(id) || {};
-            state.asignados.set(id, { ...prev, activo: false });
-        });
-        toast(pasos > 0
-            ? `Ejercicio pausado (con ${pasos} ${pasos === 1 ? 'paso anterior' : 'pasos anteriores'})`
+        const prev = state.asignados.get(ejercicioId) || {};
+        state.asignados.set(ejercicioId, { ...prev, activo: false });
+        toast(pasoPrevio
+            ? `Paso pausado · vuelve a "${pasoPrevio}"`
             : 'Ejercicio pausado');
         // El ítem desaparece de la lista de activos: refrescamos.
         await renderEjerciciosActivos();
@@ -1748,12 +1743,14 @@ async function toggleOn(perroId, ejercicioId) {
     if (e3) throw e3;
 }
 
-// Pausa varias asignaciones de una (un renglón con toda su progresión).
-async function pausarCadena(ids) {
+// Pausa UNA asignación por su fila. Por fila y no por ejercicio: en una
+// progresión, el mismo ejercicio podría estar en más de un paso y hay que
+// apagar exactamente el que se tocó.
+async function pausarAsignacion(id) {
     const { error } = await supabase
         .from('ejercicios_asignados')
         .update({ activo: false, actualizado_en: new Date().toISOString() })
-        .in('id', ids);
+        .eq('id', id);
     if (error) throw error;
 }
 
