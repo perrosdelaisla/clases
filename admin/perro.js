@@ -821,10 +821,14 @@ function renderEjercicioActivoCard(row, history = []) {
            </button>`
         : '';
 
-    // El toggle de pausa solo va en renglones simples (sin historia). Los
-    // renglones con progresiones se retroceden con "Borrar último paso".
-    const toggle = tieneHistoria ? '' : `
-                <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}">
+    // Pausar un renglón lo pausa ENTERO: la punta y los pasos anteriores de
+    // la progresión. Si se apagara solo la punta, el paso anterior quedaría
+    // activo y el renglón reaparecería en una versión vieja. Por eso antes no
+    // había interruptor en los renglones con progresión (04/09/2026).
+    const idsCadena = [row.id, ...history.map((h) => h.id)].filter(Boolean).join(',');
+    const ejsCadena = [ej.id, ...history.map((h) => h.ejercicios?.id)].filter(Boolean).join(',');
+    const toggle = `
+                <button type="button" class="toggle toggle--small" role="switch" aria-checked="true" aria-label="Pausar ${nombre}" data-ejercicio-id="${escapeHTML(ej.id)}" data-cadena-ids="${escapeHTML(idsCadena)}" data-cadena-ejs="${escapeHTML(ejsCadena)}" data-pasos="${history.length}">
                     <span class="toggle-thumb"></span>
                 </button>`;
 
@@ -1157,14 +1161,25 @@ async function onTogglePrincipal(btn) {
     const ejercicioId = btn.dataset.ejercicioId;
     if (!ejercicioId) return;
 
+    const idsCadena = (btn.dataset.cadenaIds || '').split(',').filter(Boolean);
+    const ejsCadena = (btn.dataset.cadenaEjs || '').split(',').filter(Boolean);
+    const pasos = Number(btn.dataset.pasos || 0);
+
     // Está activo → lo pausamos (off). Optimistic UI.
     btn.setAttribute('aria-checked', 'false');
     btn.disabled = true;
 
     try {
-        await toggleOff(state.perroId, ejercicioId);
-        state.asignados.set(ejercicioId, { activo: false });
-        toast('Ejercicio pausado');
+        if (idsCadena.length) await pausarCadena(idsCadena);
+        else await toggleOff(state.perroId, ejercicioId);
+        // Todos los ejercicios del renglón quedan apagados en el catálogo.
+        (ejsCadena.length ? ejsCadena : [ejercicioId]).forEach((id) => {
+            const prev = state.asignados.get(id) || {};
+            state.asignados.set(id, { ...prev, activo: false });
+        });
+        toast(pasos > 0
+            ? `Ejercicio pausado (con ${pasos} ${pasos === 1 ? 'paso anterior' : 'pasos anteriores'})`
+            : 'Ejercicio pausado');
         // El ítem desaparece de la lista de activos: refrescamos.
         await renderEjerciciosActivos();
     } catch (err) {
@@ -1731,6 +1746,15 @@ async function toggleOn(perroId, ejercicioId) {
             actualizado_en: ahora,
         });
     if (e3) throw e3;
+}
+
+// Pausa varias asignaciones de una (un renglón con toda su progresión).
+async function pausarCadena(ids) {
+    const { error } = await supabase
+        .from('ejercicios_asignados')
+        .update({ activo: false, actualizado_en: new Date().toISOString() })
+        .in('id', ids);
+    if (error) throw error;
 }
 
 async function toggleOff(perroId, ejercicioId) {
