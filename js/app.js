@@ -565,6 +565,29 @@ function bindEventos() {
         rutinaLista.addEventListener('click', (e) => {
             const huella = e.target.closest('.huella-btn');
             if (huella) { registrarEntrenoRapido(huella); return; }
+            const escAv = e.target.closest('.esc-avanzar');
+            if (escAv) { e.stopPropagation(); escaleraAvanzar(escAv.dataset.asignadoId); return; }
+            const escAtras = e.target.closest('.esc-atras');
+            if (escAtras) { e.stopPropagation(); escaleraRetroceder(escAtras.dataset.asignadoId); return; }
+            const escLuego = e.target.closest('.esc-luego');
+            if (escLuego) {
+                e.stopPropagation();
+                escLuego.closest('.esc-sug')?.setAttribute('hidden', '');
+                return;
+            }
+            const escVer = e.target.closest('.esc-vermas');
+            if (escVer) {
+                e.stopPropagation();
+                const lista = escVer.nextElementSibling;
+                if (lista) {
+                    const oculta = lista.hasAttribute('hidden');
+                    lista.toggleAttribute('hidden', !oculta);
+                    const esc = _escaleraCache.get(escVer.dataset.asignadoId);
+                    escVer.textContent = oculta ? 'Ocultar los pasos' : `Ver los ${esc ? esc.total : ''} pasos`;
+                }
+                return;
+            }
+            if (e.target.closest('.esc-lista, .esc-paso')) { e.stopPropagation(); return; }
             const hecho = e.target.closest('.hecho-btn');
             if (hecho) { onCheckHecho(hecho); return; }
             const tengo = e.target.closest('.tengo__btn');
@@ -586,7 +609,7 @@ function bindEventos() {
         rutinaLista.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             // Cada botón de dentro maneja su propia activación.
-            if (e.target.closest('.huella-btn, .hecho-btn, .tengo__btn, .uso-btn, .uso-grande, .foto-slot, .foto-slot__x')) return;
+            if (e.target.closest('.huella-btn, .hecho-btn, .tengo__btn, .uso-btn, .uso-grande, .foto-slot, .foto-slot__x, .esc-avanzar, .esc-atras, .esc-luego, .esc-vermas')) return;
             e.preventDefault();
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
@@ -1136,7 +1159,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -3832,6 +3855,10 @@ async function renderRutinaPerroSeleccionado() {
             console.error('[progreso] continuando sin chips:', e);
         }
 
+        // Escaleras del perro. Si falla, sus tarjetas se pintan como un
+        // ejercicio normal en vez de romper la rutina entera.
+        if (filas.some(esEscalera)) await cargarEscalerasPerro(perro.id);
+
         // Registros de las últimas 8 semanas (para los días con huella y la
         // racha de la isla). Aditivo: si falla, la isla se pinta sin días.
         _islaRegs = [];
@@ -4118,6 +4145,138 @@ async function guardarEstadoHerramienta(asignadoId, valor) {
     } catch (e) { console.error('[herramienta] no se pudo guardar:', e); if (typeof toast === 'function') toast('No pudimos guardar. Intentalo de nuevo.', 'error'); }
 }
 
+
+/* =====================================================================
+   ESCALERA DE DESENSIBILIZACIÓN (03/09/2026)
+   Una conducta que le cuesta, partida en peldaños. El tutor ve SOLO el
+   peldaño en el que está; los de más adelante no se pueden tocar. Se avanza
+   cuando el perro está tranquilo, no cuando pasan los días.
+   El estado vive en la base (get_escalera): aquí solo se pinta.
+   ===================================================================== */
+
+// { asignado_id → objeto de get_escalera }
+const _escaleraCache = new Map();
+
+async function cargarEscalerasPerro(perroId) {
+    _escaleraCache.clear();
+    if (!perroId) return;
+    try {
+        const { data, error } = await supabase.rpc('get_escaleras_perro', { p_perro_id: perroId });
+        if (error) throw error;
+        (data || []).forEach((e) => { if (e && e.asignado_id) _escaleraCache.set(e.asignado_id, e); });
+    } catch (e) {
+        console.error('[escalera] no se pudieron cargar:', e);
+    }
+}
+
+function esEscalera(row) {
+    return !!(row?.ejercicios?.es_escalera);
+}
+
+function escaleraCuerpoHTML(asignadoId) {
+    const esc = _escaleraCache.get(asignadoId);
+    if (!esc) return '';
+    const pasos = esc.pasos || [];
+    const actual = esc.paso_actual;
+
+    // Barra de peldaños: superados en oliva, el actual en ámbar.
+    const barra = pasos.map((p) => {
+        const cls = p.superado ? ' is-ok' : (actual && p.orden === actual.orden ? ' is-now' : '');
+        return `<i class="esc-peld${cls}"></i>`;
+    }).join('');
+
+    if (esc.completa) {
+        return `<div class="esc" data-asignado-id="${escapeHTML(asignadoId)}">
+            <div class="esc-barra">${barra}</div>
+            <div class="esc-fin">🎉 Escalera completa. ${escapeHTML(esc.nombre || 'La conducta')} ya no es un problema.</div>
+            ${escaleraListaHTML(esc)}
+            <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Ha vuelto a costar — repasamos el último paso</button>
+        </div>`;
+    }
+
+    const reps = Number(esc.reps_hoy || 0);
+    const min = esc.reps_min, max = esc.reps_max;
+    const objetivo = (min != null && max != null) ? `de ${min} a ${max} al día`
+                   : (min != null ? `${min} o más al día` : 'sin número fijo');
+    const dias = Number(esc.dias_en_paso || 1);
+    const diasTxt = dias === 1 ? 'Primer día en este paso' : `Llevas ${dias} días en este paso`;
+
+    const sugerencia = esc.sugerir_avanzar ? `
+        <div class="esc-sug">
+            <p><strong>Lleváis ${esc.dias_tranquilos} días tranquilos en este paso.</strong> ¿Pasamos al siguiente? Si preferís asentarlo un poco más, no hay ninguna prisa.</p>
+            <div class="esc-sug__bts">
+                <button type="button" class="esc-avanzar" data-asignado-id="${escapeHTML(asignadoId)}">Sí, al paso ${actual.orden + 1}</button>
+                <button type="button" class="esc-luego" data-asignado-id="${escapeHTML(asignadoId)}">Todavía no</button>
+            </div>
+        </div>` : '';
+
+    return `<div class="esc" data-asignado-id="${escapeHTML(asignadoId)}">
+        <div class="esc-barra">${barra}</div>
+        <div class="esc-paso">
+            <div class="esc-paso__lbl">Paso ${actual.orden} de ${esc.total}</div>
+            <div class="esc-paso__txt">${escapeHTML(actual.texto)}</div>
+            <div class="esc-paso__obj">${escapeHTML(objetivo)} · ${escapeHTML(diasTxt.toLowerCase())}</div>
+        </div>
+        <div class="esc-hoy"><span class="esc-hoy__n">${reps}</span> hoy</div>
+        ${sugerencia}
+        ${escaleraListaHTML(esc)}
+        <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Hoy ha costado — volvemos un paso</button>
+    </div>`;
+}
+
+// La lista completa, plegada. Se puede mirar pero no tocar: los peldaños de
+// más adelante no son botones a propósito.
+function escaleraListaHTML(esc) {
+    const actual = esc.paso_actual;
+    const filas = (esc.pasos || []).map((p) => {
+        const cls = p.superado ? 'ok' : (actual && p.orden === actual.orden ? 'now' : 'pend');
+        const mk = p.superado ? '✓' : p.orden;
+        return `<div class="esc-lp esc-lp--${cls}"><span class="esc-lp__mk">${mk}</span><span>${escapeHTML(p.texto)}</span></div>`;
+    }).join('');
+    return `<button type="button" class="esc-vermas" data-asignado-id="${escapeHTML(esc.asignado_id)}">Ver los ${esc.total} pasos</button>
+            <div class="esc-lista" hidden>${filas}</div>`;
+}
+
+// Repinta solo la escalera de una tarjeta, sin recargar la rutina entera.
+async function refrescarEscalera(asignadoId) {
+    try {
+        const { data, error } = await supabase.rpc('get_escalera', { p_asignado_id: asignadoId });
+        if (error) throw error;
+        if (data) _escaleraCache.set(asignadoId, data);
+    } catch (e) {
+        console.error('[escalera] no se pudo refrescar:', e);
+        return;
+    }
+    const card = document.querySelector(`.rutina-card[data-asignado-id="${CSS.escape(asignadoId)}"]`);
+    const cont = card && card.querySelector('.esc');
+    if (cont) cont.outerHTML = escaleraCuerpoHTML(asignadoId);
+}
+
+async function escaleraAvanzar(asignadoId) {
+    try {
+        const { error } = await supabase.rpc('escalera_avanzar', { p_asignado_id: asignadoId });
+        if (error) throw error;
+        await refrescarEscalera(asignadoId);
+        const esc = _escaleraCache.get(asignadoId);
+        toast(esc && esc.completa ? '🎉 ¡Escalera completa!' : 'Peldaño superado. A por el siguiente.');
+    } catch (e) {
+        console.error('[escalera] avanzar:', e);
+        toast('No hemos podido avanzar. Inténtalo de nuevo.', 'error');
+    }
+}
+
+async function escaleraRetroceder(asignadoId) {
+    try {
+        const { error } = await supabase.rpc('escalera_retroceder', { p_asignado_id: asignadoId });
+        if (error) throw error;
+        await refrescarEscalera(asignadoId);
+        toast('Volvemos un paso. Retroceder es parte del método.');
+    } catch (e) {
+        console.error('[escalera] retroceder:', e);
+        toast('No hemos podido volver atrás.', 'error');
+    }
+}
+
 function rutinaCardHTML(row, { tag, superado }) {
     const ej = row.ejercicios;
     if (!ej) return '';
@@ -4134,6 +4293,26 @@ function rutinaCardHTML(row, { tag, superado }) {
     //   se_usa     → "Anotar uso" con contador aparte (NO cuenta para la isla)
     // Y para las tareas, un tipo: lista | montaje | practica.
     const prog = _progresoCache.get(row.id);
+
+    // Una escalera se pinta distinta: manda el peldaño, no el objetivo semanal.
+    // Conserva la huella (cuenta para la isla: es entrenamiento diario).
+    if (esEscalera(row) && _escaleraCache.has(row.id)) {
+        const esc = _escaleraCache.get(row.id);
+        const titulo = escapeHTML(esc.nombre || ej.nombre || 'Escalera');
+        const huellaEsc = (!superado && !esc.completa) ? huellaBtnHTML(row.id, categoria) : '';
+        return `
+        <${tag} class="rutina-card rutina-card--esc${claseSuperado}" data-categoria="${escapeHTML(categoria)}" data-ejercicio-id="${escapeHTML(ej.id)}" data-asignado-id="${escapeHTML(row.id)}" role="button" tabindex="0">
+            <div class="rutina-card__head">
+                <div class="rutina-card__nombre-wrap">
+                    <h3 class="rutina-card__nombre">${titulo}</h3>
+                    <p class="rutina-card__objetivo">Desensibilización paso a paso</p>
+                </div>
+                ${huellaEsc}
+            </div>
+            ${escaleraCuerpoHTML(row.id)}
+        </${tag}>`;
+    }
+
     const esTarea = (categoria === 'tarea');
     const esHerramienta = (categoria === 'herramienta');
     const tipoTarea = prog?.tipo_tarea || (esTarea ? 'practica' : null);
@@ -4680,12 +4859,20 @@ async function registrarEntrenoRapido(btn) {
     animarHuella(btn);
     try {
         const practica_id = await obtenerOCrearPracticaHoy(perroId);
+        // En una escalera dejamos anotado en qué peldaño se hizo: sin eso, el
+        // histórico no dice nada el día que se quiera revisar un paso concreto.
+        const esc = _escaleraCache.get(asignadoId);
+        const datos = { v: 2 };
+        if (esc && esc.paso_actual) {
+            datos.paso_id = esc.paso_actual.id;
+            datos.paso = esc.paso_actual.orden;
+        }
         const { data, error } = await supabase
             .from('registros_ejercicio')
             .insert({
                 practica_id,
                 ejercicio_asignado_id: asignadoId,
-                datos_registro: { v: 2 },
+                datos_registro: datos,
                 tranquilidad: null,
                 nota: null,
             })
@@ -4705,6 +4892,7 @@ async function registrarEntrenoRapido(btn) {
         _islaRegs.push({ ejercicio_asignado_id: asignadoId,
                          registrado_en: new Date().toISOString() });
         actualizarCardProgreso(asignadoId);
+        if (_escaleraCache.has(asignadoId)) { refrescarEscalera(asignadoId); }
         renderAnilloSemana();
         const logroSemana = (estadoAntes.estado === 'debajo' && estadoDespues.estado === 'en_zona');
         if (logroSemana) {
@@ -4786,6 +4974,20 @@ function abrirRapidoSheet() {
     const scrim = document.getElementById('rapido-sheet-scrim');
     const sheet = document.getElementById('rapido-sheet');
     if (!scrim || !sheet || !_rapidoRegistroId) return;
+
+    // En una escalera esta respuesta no es decorativa: es la que decide si el
+    // perro está listo para el peldaño siguiente. Por eso el texto lo dice.
+    const esc = _escaleraCache.get(_rapidoAsignadoId);
+    const tit = document.getElementById('rapido-sheet-title');
+    const sub = sheet.querySelector('.rapido-sheet__sub');
+    if (esc && esc.paso_actual) {
+        if (tit) tit.textContent = '¿Cómo lo ha llevado?';
+        if (sub) sub.textContent = 'Con este paso. De ahí sale cuándo pasar al siguiente.';
+    } else {
+        if (tit) tit.textContent = '¿Cómo ha estado tu perro?';
+        if (sub) sub.textContent = 'Opcional — su estado emocional en este entreno.';
+    }
+
     _rapidoTranquilidad = null;
     sheet.querySelectorAll('.reporte-pill').forEach((p) => {
         p.classList.remove('is-active');
@@ -4822,6 +5024,9 @@ async function rapidoSheetGuardar() {
             .eq('id', id);
         if (error) throw error;
         toast('Guardado');
+        // La valoración cambia la racha de días tranquilos: hay que repintar
+        // la escalera para que aparezca (o desaparezca) la sugerencia.
+        if (_escaleraCache.has(asignadoId)) refrescarEscalera(asignadoId);
         // El aviso de tranquilidad baja, igual que en el modal completo.
         if (trq <= 2) {
             const nombrePerro = state.perros.find((p) => p.id === state.perroSeleccionadoId)?.nombre || 'tu perro';

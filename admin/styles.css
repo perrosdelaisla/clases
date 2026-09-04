@@ -5716,3 +5716,62 @@ body {
   margin-left:auto; border:none; background:none; color:var(--color-muted);
   font-size:18px; line-height:1; padding:2px 6px;
 }
+
+/* =====================================================================
+   Editor de la escalera de desensibilización (03/09/2026)
+   ===================================================================== */
+.registro-chip--esc{border-color:var(--color-green);color:var(--color-green)}
+
+.modal__panel--ancho{max-width:520px}
+
+.esc-ed__lbl{display:block;font-family:var(--font-body);font-size:11px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;color:var(--color-muted);margin:16px 0 6px}
+.esc-ed__input{width:100%;background:var(--color-surface-2);border:1px solid var(--color-border);
+  border-radius:9px;padding:10px 11px;color:var(--color-text);font-family:var(--font-body);font-size:14px}
+
+.esc-ed__plt{display:flex;gap:7px;flex-wrap:wrap}
+.esc-ed__plt button{background:var(--color-surface-2);border:1px solid var(--color-border);
+  color:var(--color-text);border-radius:20px;padding:7px 13px;cursor:pointer;
+  font-family:var(--font-body);font-size:12.5px;font-weight:600}
+
+.esc-ed__lista{background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:11px;padding:6px;max-height:320px;overflow-y:auto}
+.esc-ed__paso{display:flex;align-items:center;gap:7px;padding:5px 6px}
+.esc-ed__num{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:var(--color-surface-2);
+  color:var(--color-muted);font-family:var(--font-body);font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+/* Un peldaño ya superado se marca: cambiarlo tiene consecuencias. */
+.esc-ed__paso.is-ok .esc-ed__num{background:var(--color-green);color:#F5EFE0}
+.esc-ed__paso input{flex:1;background:transparent;border:none;border-bottom:1px solid transparent;
+  color:var(--color-text);font-family:var(--font-body);font-size:13.5px;padding:5px 2px}
+.esc-ed__paso input:focus{outline:none;border-bottom-color:var(--color-green)}
+.esc-ed__sube,.esc-ed__x{background:none;border:none;color:var(--color-muted);cursor:pointer;
+  font-size:15px;padding:2px 5px;line-height:1}
+.esc-ed__x{font-size:18px}
+
+.esc-ed__add{width:100%;margin-top:7px;background:transparent;border:1px dashed var(--color-border);
+  border-radius:9px;padding:9px;color:var(--color-muted);cursor:pointer;
+  font-family:var(--font-body);font-size:12.5px;font-weight:600}
+
+.esc-ed__row{display:flex;gap:14px;flex-wrap:wrap}
+.esc-ed__row > div{flex:1;min-width:150px}
+.esc-ed__reps{display:flex;align-items:center;gap:8px}
+.esc-ed__reps input{width:70px}
+.esc-ed__reps span{color:var(--color-muted);font-family:var(--font-body);font-size:13px}
+
+/* Resumen de la escalera en la tarjeta del ejercicio */
+.esc-resumen{margin-top:10px;padding-top:10px;border-top:1px solid var(--color-border)}
+.esc-resumen__cab{margin:0 0 8px;font-family:var(--font-body);font-size:11.5px;font-weight:700;
+  letter-spacing:.6px;text-transform:uppercase;color:var(--color-green)}
+.esc-resumen__vacio{margin:0;font-family:var(--font-body);font-size:12.5px;color:var(--color-muted)}
+.esc-res__p{display:flex;gap:8px;align-items:flex-start;padding:4px 0;
+  font-family:var(--font-body);font-size:12.5px;line-height:1.35}
+.esc-res__p > span:first-child{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.esc-res__p em{display:block;font-style:normal;font-size:11px;color:var(--color-muted);margin-top:1px}
+.esc-res__p--ok > span:first-child{background:var(--color-green);color:#F5EFE0}
+.esc-res__p--ok{color:var(--color-muted)}
+.esc-res__p--now > span:first-child{background:var(--color-warning);color:#1A1A1A}
+.esc-res__p--now{font-weight:600}
+.esc-res__p--pend > span:first-child{background:var(--color-surface-2);color:var(--color-muted)}
+.esc-res__p--pend{color:var(--color-muted)}

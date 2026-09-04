@@ -500,7 +500,7 @@ async function renderEjerciciosActivos() {
     const [{ data, error }, , fasesRes] = await Promise.all([
         supabase
             .from('ejercicios_asignados')
-            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, parametros, grupo_protocolo, estado_cliente, estado_actualizado_en, se_entrena, se_usa, tipo_tarea, fotos_cliente, ejercicios (id, codigo, nombre, categoria, campos)')
+            .select('id, ejercicio_id, activo, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, parametros, grupo_protocolo, estado_cliente, estado_actualizado_en, se_entrena, se_usa, tipo_tarea, fotos_cliente, escalera_nombre, escalera_criterio_dias, escalera_reps_min, escalera_reps_max, ejercicios (id, codigo, nombre, categoria, campos, es_escalera, escalera_pasos_defecto)')
             .eq('perro_id', state.perroId)
             .eq('activo', true)
             .order('posicion_rutina', { ascending: true }),
@@ -528,6 +528,10 @@ async function renderEjerciciosActivos() {
     // se muestra es la punta de cada cadena (el "vigente"); las filas previas
     // son historia. El filtro por sub-pestaña se aplica sobre la categoría del
     // vigente, no sobre cada fila. El modal sigue ofreciendo todas.
+    // Guardamos las filas: el editor de la escalera necesita leer la plantilla
+    // de peldaños del catálogo.
+    state.filasActivas = data || [];
+
     const cadenas = construirCadenas(data || [])
         .filter((c) => c.vigente.ejercicios?.categoria === state.subtabActiva)
         .sort((a, b) => (a.vigente.posicion_rutina ?? 0) - (b.vigente.posicion_rutina ?? 0));
@@ -599,6 +603,9 @@ async function renderEjerciciosActivos() {
             });
         });
     });
+    listaEl.querySelectorAll('[data-accion="escalera"]').forEach((btn) => {
+        btn.addEventListener('click', () => abrirEditorEscalera(btn.dataset.asignadoId));
+    });
     listaEl.querySelectorAll('[data-accion="registro"]').forEach((btn) => {
         btn.addEventListener('click', () => {
             const card = btn.closest('.ejercicio-activo-card');
@@ -614,6 +621,7 @@ async function renderEjerciciosActivos() {
         });
     });
     pintarFotosClienteAdmin(listaEl);
+    pintarEscalerasAdmin(listaEl);
     listaEl.querySelectorAll('[data-accion="notas"]').forEach((btn) => {
         btn.addEventListener('click', () => {
             const card = btn.closest('.ejercicio-activo-card');
@@ -756,7 +764,17 @@ function renderEjercicioActivoCard(row, history = []) {
                 data-se-usa="${seUsa ? '1' : '0'}"
                 data-tipo-tarea="${escapeHTML(tipoTarea || '')}"
                 title="Cómo se registra">${escapeHTML(regTxt)}</button>`;
-    const freqChip = esTarea ? '' : `
+    // Una escalera se configura entera desde su propio editor: los chips de
+    // registro y frecuencia no le aplican.
+    const esEscaleraEj = !!ej.es_escalera;
+    const escChip = !esEscaleraEj ? '' : `
+        <button type="button"
+                class="registro-chip registro-chip--esc"
+                data-accion="escalera"
+                data-asignado-id="${escapeHTML(row.id)}"
+                title="Montar la escalera">🪜 ${escapeHTML(row.escalera_nombre || 'Sin montar')}</button>`;
+    const escEscaleraSustituye = esEscaleraEj;
+    const freqChip = (esTarea || esEscaleraEj) ? '' : `
         <button type="button"
                 class="frecuencia-chip${vacio ? ' frecuencia-chip--vacio' : ''}"
                 data-accion="frecuencia"
@@ -908,7 +926,7 @@ function renderEjercicioActivoCard(row, history = []) {
                     <span class="ejercicio-activo-nombre">${nombre}</span>
                     <div class="ejercicio-activo-chips">
                         ${catChip}
-                        ${regChip}
+                        ${escEscaleraSustituye ? escChip : regChip}
                         ${freqChip}
                         ${grupoChip}
                         ${notasChip}
@@ -3121,6 +3139,224 @@ function renderProgresoAdminItem(row, rachaMap) {
     `;
 }
 
+
+
+/* ===================== Escalera de desensibilización =====================
+   Una conducta que le cuesta, partida en peldaños. Los peldaños son POR PERRO
+   (no del catálogo): cada caso tiene los suyos. El catálogo solo aporta la
+   plantilla de arranque.
+   Del caso de Layla y el horno (clase del 29/08/2026).
+   ====================================================================== */
+
+const ESCALERA_PLANTILLAS = {
+    horno: ['Acercarse y tirar comida al suelo', 'Apoyar la mano en la perilla',
+            'Hacer el ruido de la perilla', 'Abrir un centímetro y cerrar',
+            'Abrir un cuarto', 'Abrir la mitad', 'Abrir del todo',
+            'Abrir y cerrar', 'Abrir, meter algo y cerrar'],
+    secador: ['Ver el secador apagado en el suelo', 'Cogerlo sin encenderlo',
+              'Encenderlo en otra habitación', 'Encenderlo en la misma habitación, lejos',
+              'Acercarlo encendido a un metro', 'Encenderlo cerca, sin apuntarle',
+              'Aire suave en el lomo un segundo'],
+    puerta: ['Acercarse a la puerta y tirar comida', 'Tocar la manija',
+             'Mover la manija sin abrir', 'Abrir un centímetro',
+             'Abrir la mitad', 'Abrir del todo', 'Abrir y cerrar'],
+};
+
+
+// Resumen de la escalera dentro de la tarjeta del ejercicio: en qué peldaño
+// va, cuánto lleva y cómo lo está llevando. Se rellena tras pintar la lista.
+async function pintarEscalerasAdmin(listaEl) {
+    const chips = listaEl.querySelectorAll('[data-accion="escalera"]');
+    for (const chip of chips) {
+        const asignadoId = chip.dataset.asignadoId;
+        let esc = null;
+        try {
+            const { data, error } = await supabase.rpc('get_escalera', { p_asignado_id: asignadoId });
+            if (error) throw error;
+            esc = data;
+        } catch (e) { continue; }
+
+        const card = chip.closest('.ejercicio-activo-card');
+        if (!card) continue;
+        card.querySelector('.esc-resumen')?.remove();
+
+        const cont = document.createElement('div');
+        cont.className = 'esc-resumen';
+        if (!esc) {
+            cont.innerHTML = '<p class="esc-resumen__vacio">Sin montar. Toca el chip para escribir los peldaños.</p>';
+            card.appendChild(cont);
+            continue;
+        }
+        const filas = (esc.pasos || []).map((pa) => {
+            const cls = pa.superado ? 'ok' : (esc.paso_actual && pa.orden === esc.paso_actual.orden ? 'now' : 'pend');
+            const mk = pa.superado ? '✓' : pa.orden;
+            const fecha = pa.superado_en
+                ? ` <em>superado el ${new Date(pa.superado_en).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</em>`
+                : (cls === 'now' ? ` <em>${esc.dias_en_paso} ${esc.dias_en_paso === 1 ? 'día' : 'días'} · ${esc.reps_hoy} hoy · ${esc.dias_tranquilos} tranquilos seguidos</em>` : '');
+            return `<div class="esc-res__p esc-res__p--${cls}"><span>${mk}</span><span>${escapeHTML(pa.texto)}${fecha}</span></div>`;
+        }).join('');
+        const cab = esc.completa
+            ? 'Completa'
+            : `Paso ${esc.paso_actual.orden} de ${esc.total}${esc.sugerir_avanzar ? ' · listo para avanzar' : ''}`;
+        cont.innerHTML = `<p class="esc-resumen__cab">${escapeHTML(cab)}</p>${filas}`;
+        card.appendChild(cont);
+    }
+}
+
+async function abrirEditorEscalera(asignadoId) {
+    let esc = null;
+    try {
+        const { data, error } = await supabase.rpc('get_escalera', { p_asignado_id: asignadoId });
+        if (error) throw error;
+        esc = data;
+    } catch (e) {
+        console.error('[escalera] no se pudo leer:', e);
+    }
+
+    const fila = (state.filasActivas || []).find((r) => r.id === asignadoId);
+    const plantillaCat = fila?.ejercicios?.escalera_pasos_defecto || [];
+    // Peldaños de partida: los que ya tiene, o la plantilla del catálogo.
+    let pasos = (esc && esc.pasos && esc.pasos.length)
+        ? esc.pasos.map((p) => ({ id: p.id, texto: p.texto, superado: p.superado }))
+        : plantillaCat.map((t) => ({ id: null, texto: t, superado: false }));
+
+    let cont = document.getElementById('editor-escalera');
+    if (!cont) {
+        cont = document.createElement('div');
+        cont.id = 'editor-escalera';
+        cont.className = 'modal';
+        document.body.appendChild(cont);
+    }
+
+    const nombre = (esc && esc.nombre) || '';
+    const repsMin = (esc && esc.reps_min) || 4;
+    const repsMax = (esc && esc.reps_max) || 8;
+    const criterio = (esc && esc.criterio_dias) || 3;
+
+    cont.innerHTML = `
+        <div class="modal__backdrop" data-cerrar="1"></div>
+        <div class="modal__panel modal__panel--ancho">
+            <h3 class="modal__titulo">La escalera</h3>
+            <p class="modal__sub">Un peldaño a la vez. Se avanza cuando el perro está tranquilo.</p>
+
+            <label class="esc-ed__lbl" for="esc-nombre">Conducta a desensibilizar</label>
+            <input class="esc-ed__input" id="esc-nombre" maxlength="60"
+                   value="${escapeHTML(nombre)}" placeholder="El horno, el secador, la persiana…">
+
+            <label class="esc-ed__lbl">Empezar desde</label>
+            <div class="esc-ed__plt">
+                <button type="button" data-plt="horno">Horno</button>
+                <button type="button" data-plt="secador">Secador</button>
+                <button type="button" data-plt="puerta">Puerta / ventana</button>
+                <button type="button" data-plt="cero">Desde cero</button>
+            </div>
+
+            <label class="esc-ed__lbl">Los peldaños</label>
+            <div class="esc-ed__lista" id="esc-lista"></div>
+            <button type="button" class="esc-ed__add" id="esc-add">+ Añadir peldaño</button>
+
+            <div class="esc-ed__row">
+                <div>
+                    <label class="esc-ed__lbl" for="esc-min">Repeticiones al día</label>
+                    <div class="esc-ed__reps">
+                        <input class="esc-ed__input" id="esc-min" type="number" min="1" max="50" value="${repsMin}">
+                        <span>a</span>
+                        <input class="esc-ed__input" id="esc-max" type="number" min="1" max="50" value="${repsMax}">
+                    </div>
+                </div>
+                <div>
+                    <label class="esc-ed__lbl" for="esc-crit">Sugerir avanzar tras</label>
+                    <select class="esc-ed__input" id="esc-crit">
+                        ${[2,3,4,5].map((d) => `<option value="${d}" ${d === criterio ? 'selected' : ''}>${d} días tranquilos</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+
+            <p class="reg-aviso" id="esc-aviso" hidden></p>
+            <div class="modal__acciones">
+                <button type="button" class="btn btn--ghost" data-cerrar="1">Cancelar</button>
+                <button type="button" class="btn" id="esc-guardar">Guardar</button>
+            </div>
+        </div>`;
+    cont.hidden = false;
+
+    const cerrar = () => { cont.hidden = true; cont.innerHTML = ''; };
+    cont.querySelectorAll('[data-cerrar]').forEach((el) => el.addEventListener('click', cerrar));
+
+    const listaEl = cont.querySelector('#esc-lista');
+    const pintar = () => {
+        listaEl.innerHTML = '';
+        pasos.forEach((paso, i) => {
+            const d = document.createElement('div');
+            d.className = 'esc-ed__paso' + (paso.superado ? ' is-ok' : '');
+            d.innerHTML = `
+                <span class="esc-ed__num">${paso.superado ? '✓' : (i + 1)}</span>
+                <input type="text" value="${escapeHTML(paso.texto || '')}" placeholder="Describe el peldaño…">
+                <button type="button" class="esc-ed__sube" title="Subir">↑</button>
+                <button type="button" class="esc-ed__x" title="Quitar">×</button>`;
+            d.querySelector('input').addEventListener('input', (e) => { pasos[i].texto = e.target.value; });
+            d.querySelector('.esc-ed__x').addEventListener('click', () => { pasos.splice(i, 1); pintar(); });
+            d.querySelector('.esc-ed__sube').addEventListener('click', () => {
+                if (i === 0) return;
+                [pasos[i - 1], pasos[i]] = [pasos[i], pasos[i - 1]];
+                pintar();
+            });
+            listaEl.appendChild(d);
+        });
+    };
+    pintar();
+
+    cont.querySelector('#esc-add').addEventListener('click', () => {
+        pasos.push({ id: null, texto: '', superado: false });
+        pintar();
+        const ins = listaEl.querySelectorAll('input');
+        ins[ins.length - 1]?.focus();
+    });
+
+    cont.querySelectorAll('[data-plt]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const yaSuperado = pasos.some((p) => p.superado);
+            if (yaSuperado && !confirm('Ya hay peldaños superados. Cambiar de plantilla los reemplaza y se pierde ese avance. ¿Seguimos?')) return;
+            const k = btn.dataset.plt;
+            pasos = (ESCALERA_PLANTILLAS[k] || ['', '', '']).map((t) => ({ id: null, texto: t, superado: false }));
+            const nom = { horno: 'El horno', secador: 'El secador', puerta: 'La puerta' }[k] || '';
+            if (nom) cont.querySelector('#esc-nombre').value = nom;
+            pintar();
+        });
+    });
+
+    cont.querySelector('#esc-guardar').addEventListener('click', async () => {
+        const aviso = cont.querySelector('#esc-aviso');
+        const limpios = pasos.filter((p) => (p.texto || '').trim() !== '');
+        const min = Number(cont.querySelector('#esc-min').value);
+        const max = Number(cont.querySelector('#esc-max').value);
+        const mostrar = (m) => { aviso.textContent = m; aviso.hidden = false; };
+        if (limpios.length === 0) return mostrar('Hace falta al menos un peldaño.');
+        if (!(min >= 1 && max >= min && max <= 50)) return mostrar('Las repeticiones no cuadran.');
+        aviso.hidden = true;
+
+        const btn = cont.querySelector('#esc-guardar');
+        btn.disabled = true;
+        try {
+            const { error } = await supabase.rpc('escalera_guardar', {
+                p_asignado_id: asignadoId,
+                p_nombre: cont.querySelector('#esc-nombre').value.trim(),
+                p_pasos: limpios.map((p) => ({ id: p.id, texto: p.texto.trim() })),
+                p_reps_min: min,
+                p_reps_max: max,
+                p_criterio_dias: Number(cont.querySelector('#esc-crit').value),
+            });
+            if (error) throw error;
+            cerrar();
+            await renderEjerciciosActivos();
+            if (typeof toast === 'function') toast('Escalera guardada', 'ok');
+        } catch (e) {
+            console.error('[escalera] guardar:', e);
+            mostrar('No se pudo guardar. Inténtalo de nuevo.');
+            btn.disabled = false;
+        }
+    });
+}
 
 // ===================== Cómo se registra =====================
 //
