@@ -3272,6 +3272,11 @@ async function abrirEditorEscalera(asignadoId) {
                 </div>
             </div>
 
+            <label class="esc-ed__check">
+                <input type="checkbox" id="esc-avisar" ${(esc && esc.avisar) ? 'checked' : ''}>
+                <span><b>Que Jaime se lo cuente al tutor</b><small>Solo si la asignas fuera de clase. Se lo dice una vez, la próxima vez que abra la app.</small></span>
+            </label>
+
             <p class="reg-aviso" id="esc-aviso" hidden></p>
             <div class="modal__acciones">
                 <button type="button" class="btn btn--ghost" data-cerrar="1">Cancelar</button>
@@ -3345,6 +3350,7 @@ async function abrirEditorEscalera(asignadoId) {
                 p_reps_min: min,
                 p_reps_max: max,
                 p_criterio_dias: Number(cont.querySelector('#esc-crit').value),
+                p_avisar: cont.querySelector('#esc-avisar').checked,
             });
             if (error) throw error;
             cerrar();

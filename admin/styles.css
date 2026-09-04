@@ -5775,3 +5775,11 @@ body {
 .esc-res__p--now{font-weight:600}
 .esc-res__p--pend > span:first-child{background:var(--color-surface-2);color:var(--color-muted)}
 .esc-res__p--pend{color:var(--color-muted)}
+
+/* Casilla "que Jaime se lo cuente": apagada por defecto, porque lo normal es
+   que la escalera se explique en clase. */
+.esc-ed__check{display:flex;gap:10px;align-items:flex-start;margin-top:18px;cursor:pointer}
+.esc-ed__check input{margin-top:3px;flex-shrink:0}
+.esc-ed__check b{display:block;font-family:var(--font-body);font-size:13.5px;color:var(--color-text)}
+.esc-ed__check small{display:block;font-family:var(--font-body);font-size:12px;line-height:1.4;
+  color:var(--color-muted);margin-top:2px}

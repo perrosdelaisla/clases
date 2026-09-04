@@ -1747,9 +1747,9 @@ function construirAvisoPack(pack) {
 }
 
 
-// Presentación de una escalera nueva. Una sola vez por escalera, y solo a
-// quien ya venía usando la app: al tutor nuevo se la explica Charly en clase.
-// Charly la asigna y quiere que Jaime la cuente él mismo (03/09/2026).
+// Presentación de una escalera nueva. NO es automática: solo cuando Charly
+// marca "que Jaime se lo cuente" al montarla, que es para cuando la asigna
+// fuera de clase. Lo normal es que la explique él en la sesión (03/09/2026).
 const JAIME_ESCALERA_KEY = 'pdli_escalera_presentada_';
 function escaleraPresentada(id) {
     try { return localStorage.getItem(JAIME_ESCALERA_KEY + id) === '1'; } catch (_e) { return true; }
@@ -1760,7 +1760,8 @@ function marcarEscaleraPresentada(id) {
 // La primera escalera del perro que aún no se haya contado.
 function escaleraSinPresentar() {
     for (const esc of _escaleraCache.values()) {
-        if (esc && esc.asignado_id && !esc.completa && !escaleraPresentada(esc.asignado_id)) return esc;
+        if (esc && esc.asignado_id && esc.avisar && !esc.completa
+            && !escaleraPresentada(esc.asignado_id)) return esc;
     }
     return null;
 }
@@ -3914,6 +3915,13 @@ async function renderRutinaPerroSeleccionado() {
         // ejercicio normal en vez de romper la rutina entera.
         if (filas.some(esEscalera)) {
             await cargarEscalerasPerro(perro.id);
+            // Una escalera sin peldaños todavía no es nada. Hasta que Charly la
+            // monte no se enseña: si no, al tutor le sale un ejercicio suelto
+            // llamado "Escalera de desensibilización" que no hace nada.
+            // (Mismo array que state.rutinaFilas: se recorta en sitio.)
+            for (let i = filas.length - 1; i >= 0; i--) {
+                if (esEscalera(filas[i]) && !_escaleraCache.has(filas[i].id)) filas.splice(i, 1);
+            }
             presentarEscaleraSiToca(perro);
         }
 
