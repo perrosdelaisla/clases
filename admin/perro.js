@@ -3236,8 +3236,8 @@ async function abrirEditorEscalera(asignadoId) {
     cont.innerHTML = `
         <div class="modal__overlay" data-cerrar="1"></div>
         <div class="modal__panel modal__panel--ancho">
-            <h3 class="modal__titulo">La escalera</h3>
-            <p class="modal__sub">Un peldaño a la vez. Se avanza cuando el perro está tranquilo.</p>
+            <h2>La escalera</h2>
+            <p class="modal__lead">Un peldaño a la vez. Se avanza cuando el perro está tranquilo.</p>
 
             <label class="esc-ed__lbl" for="esc-nombre">Conducta a desensibilizar</label>
             <input class="esc-ed__input" id="esc-nombre" maxlength="60"
@@ -3278,7 +3278,7 @@ async function abrirEditorEscalera(asignadoId) {
             </label>
 
             <p class="reg-aviso" id="esc-aviso" hidden></p>
-            <div class="modal__acciones">
+            <div class="modal__actions">
                 <button type="button" class="btn btn--ghost" data-cerrar="1">Cancelar</button>
                 <button type="button" class="btn" id="esc-guardar">Guardar</button>
             </div>
@@ -3404,8 +3404,8 @@ function abrirSelectorRegistro({ asignadoId, nombre, categoria, seEntrena, seUsa
     cont.innerHTML = `
         <div class="modal__overlay" data-cerrar="1"></div>
         <div class="modal__panel">
-            <h3 class="modal__titulo">Cómo se registra</h3>
-            <p class="modal__sub">${escapeHTML(nombre)}</p>
+            <h2>Cómo se registra</h2>
+            <p class="modal__lead">${escapeHTML(nombre)}</p>
             ${tipoHtml}
             <fieldset class="reg-fs">
                 <legend>Registro</legend>
@@ -3419,7 +3419,7 @@ function abrirSelectorRegistro({ asignadoId, nombre, categoria, seEntrena, seUsa
                 </label>
             </fieldset>
             <p class="reg-aviso" id="reg-aviso" hidden>Tiene que estar marcado al menos uno de los dos.</p>
-            <div class="modal__acciones">
+            <div class="modal__actions">
                 <button type="button" class="btn btn--ghost" data-cerrar="1">Cancelar</button>
                 <button type="button" class="btn" id="reg-guardar">Guardar</button>
             </div>
