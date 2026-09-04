@@ -569,12 +569,6 @@ function bindEventos() {
             if (escAv) { e.stopPropagation(); escaleraAvanzar(escAv.dataset.asignadoId); return; }
             const escAtras = e.target.closest('.esc-atras');
             if (escAtras) { e.stopPropagation(); escaleraRetroceder(escAtras.dataset.asignadoId); return; }
-            const escLuego = e.target.closest('.esc-luego');
-            if (escLuego) {
-                e.stopPropagation();
-                escLuego.closest('.esc-sug')?.setAttribute('hidden', '');
-                return;
-            }
             const escVer = e.target.closest('.esc-vermas');
             if (escVer) {
                 e.stopPropagation();
@@ -609,7 +603,7 @@ function bindEventos() {
         rutinaLista.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             // Cada botón de dentro maneja su propia activación.
-            if (e.target.closest('.huella-btn, .hecho-btn, .tengo__btn, .uso-btn, .uso-grande, .foto-slot, .foto-slot__x, .esc-avanzar, .esc-atras, .esc-luego, .esc-vermas')) return;
+            if (e.target.closest('.huella-btn, .hecho-btn, .tengo__btn, .uso-btn, .uso-grande, .foto-slot, .foto-slot__x, .esc-avanzar, .esc-atras, .esc-vermas')) return;
             e.preventDefault();
             abrirDesdeCard(e.target.closest('.rutina-card'));
         });
@@ -4190,7 +4184,9 @@ function escaleraCuerpoHTML(asignadoId) {
             <div class="esc-barra">${barra}</div>
             <div class="esc-fin">🎉 Escalera completa. ${escapeHTML(esc.nombre || 'La conducta')} ya no es un problema.</div>
             ${escaleraListaHTML(esc)}
-            <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Ha vuelto a costar — repasamos el último paso</button>
+            <div class="esc-acciones">
+                <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Repasamos el último paso</button>
+            </div>
         </div>`;
     }
 
@@ -4201,15 +4197,6 @@ function escaleraCuerpoHTML(asignadoId) {
     const dias = Number(esc.dias_en_paso || 1);
     const diasTxt = dias === 1 ? 'Primer día en este paso' : `Llevas ${dias} días en este paso`;
 
-    const sugerencia = esc.sugerir_avanzar ? `
-        <div class="esc-sug">
-            <p><strong>Lleváis ${esc.dias_tranquilos} días tranquilos en este paso.</strong> ¿Pasamos al siguiente? Si preferís asentarlo un poco más, no hay ninguna prisa.</p>
-            <div class="esc-sug__bts">
-                <button type="button" class="esc-avanzar" data-asignado-id="${escapeHTML(asignadoId)}">Sí, al paso ${actual.orden + 1}</button>
-                <button type="button" class="esc-luego" data-asignado-id="${escapeHTML(asignadoId)}">Todavía no</button>
-            </div>
-        </div>` : '';
-
     return `<div class="esc" data-asignado-id="${escapeHTML(asignadoId)}">
         <div class="esc-barra">${barra}</div>
         <div class="esc-paso">
@@ -4218,9 +4205,11 @@ function escaleraCuerpoHTML(asignadoId) {
             <div class="esc-paso__obj">${escapeHTML(objetivo)} · ${escapeHTML(diasTxt.toLowerCase())}</div>
         </div>
         <div class="esc-hoy"><span class="esc-hoy__n">${reps}</span> hoy</div>
-        ${sugerencia}
         ${escaleraListaHTML(esc)}
-        <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Hoy ha costado — volvemos un paso</button>
+        <div class="esc-acciones">
+            <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Volvemos un paso</button>
+            <button type="button" class="esc-avanzar" data-asignado-id="${escapeHTML(asignadoId)}">Paso superado</button>
+        </div>
     </div>`;
 }
 

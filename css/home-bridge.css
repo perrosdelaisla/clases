@@ -750,16 +750,6 @@
 .esc-hoy{margin-top:10px;font-family:var(--body,inherit);font-size:13px;color:var(--c-text-2)}
 .esc-hoy__n{font-family:var(--display,inherit);font-size:22px;line-height:1;color:var(--c-text);margin-right:3px}
 
-.esc-sug{margin-top:12px;padding:12px;border-radius:12px;
-  background:var(--c-oliva-soft);border:1px solid var(--c-oliva-line)}
-.esc-sug[hidden]{display:none}
-.esc-sug p{margin:0 0 10px;font-family:var(--body,inherit);font-size:13px;line-height:1.45;color:var(--c-text)}
-.esc-sug__bts{display:flex;gap:8px;flex-wrap:wrap}
-.esc-sug__bts button{border:none;border-radius:9px;padding:9px 15px;cursor:pointer;
-  font-family:var(--display,inherit);font-size:15px;letter-spacing:.8px}
-.esc-avanzar{background:var(--c-oliva);color:#F5EFE0}
-.esc-luego{background:transparent;border:1px solid var(--c-hair) !important;color:var(--c-text-2)}
-
 .esc-vermas{display:block;width:100%;margin-top:12px;padding:7px;background:none;border:none;
   cursor:pointer;font-family:var(--body,inherit);font-size:13px;font-weight:700;color:var(--c-oliva)}
 .esc-lista{margin-top:6px;padding-top:8px;border-top:1px solid var(--c-hair)}
@@ -776,9 +766,14 @@
 .esc-lp--pend span:last-child{color:var(--c-text-3)}
 
 /* Volver atrás se ofrece sin dramatismo: retroceder es parte del método. */
-.esc-atras{display:block;width:100%;margin-top:8px;padding:9px;border-radius:9px;cursor:pointer;
-  background:none;border:1px dashed var(--c-hair);
-  font-family:var(--body,inherit);font-size:12.5px;font-weight:600;color:var(--c-text-3)}
+/* Las dos acciones, del mismo tamaño: avanzar y retroceder pesan igual.
+   Cuándo hacerlo lo decide el tutor con lo que se habló en clase; la app no
+   opina (03/09/2026, a petición de Charly). */
+.esc-acciones{display:flex;gap:8px;margin-top:10px}
+.esc-acciones button{flex:1;padding:10px 8px;border-radius:9px;cursor:pointer;
+  font-family:var(--body,inherit);font-size:12.5px;font-weight:600}
+.esc-atras{background:none;border:1px dashed var(--c-hair);color:var(--c-text-3)}
+.esc-avanzar{background:none;border:1px solid var(--c-oliva-line);color:var(--c-oliva)}
 
 .esc-fin{padding:13px 14px;border-radius:12px;background:var(--c-oliva-soft);
   border:1px solid var(--c-oliva-line);font-family:var(--body,inherit);font-size:14px;line-height:1.45}
