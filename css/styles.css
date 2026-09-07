@@ -3873,6 +3873,40 @@ body {
     outline: none;
 }
 
+/* Video grande: aviso "Preparar video" y barra de progreso de la compresión. */
+.reporte-video__aviso {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.reporte-video__aviso[hidden] { display: none; }
+
+.reporte-video__aviso-texto {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+}
+
+.reporte-video__barra {
+    display: block;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+    overflow: hidden;
+}
+
+.reporte-video__barra-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--pdli-rojo);
+    transition: width 0.2s linear;
+}
+
 .reporte-video__error {
     margin-top: 0.4rem;
 }

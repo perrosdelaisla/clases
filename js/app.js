@@ -8571,9 +8571,17 @@ let _grabMimeType = null;      // mimeType elegido para esta grabación
 let _grabTimer = null;         // setInterval del countdown
 let _grabSegundosRest = 0;
 
-// Límites de video del entreno (Paso 1A): 25 MB y 65 s.
-const VIDEO_MAX_BYTES = 26214400;
+// Límites de video del entreno: 60 MB y 65 s. Si el clip pesa más, la app lo
+// comprime en el propio móvil antes de subirlo (los teléfonos graban en 4K y
+// medio minuto puede pesar 200 MB).
+const VIDEO_MAX_BYTES = 62914560;            // 60 MB — tope duro (el del bucket)
+const VIDEO_DIRECTO_MAX_BYTES = 26214400;    // 25 MB — por encima, mejor comprimir
 const VIDEO_MAX_SEG = 65;
+const VIDEO_COMPRIMIR_MAX_BYTES = 838860800; // 800 MB: por encima ni lo intentamos
+const VIDEO_COMPRIMIR_LADO = 1280;           // lado largo del video comprimido
+const VIDEO_COMPRIMIR_BPS = 2000000;         // ~2 Mbps → 60 s ≈ 15 MB
+const VIDEO_GRABAR_BPS = 2500000;            // tope al grabar en vivo
+let _videoGrandePendiente = null;            // File grande esperando a "Preparar video"
 
 // Helpers de fecha
 function formatearFechaRelativa(dateStr) {
@@ -8829,6 +8837,13 @@ function bindNotasEjercicio() {
         ?.addEventListener('click', quitarVideoSeleccionado);
     document.getElementById('reporte-video-input')
         ?.addEventListener('change', (e) => onVideoSeleccionado(e.target));
+    document.getElementById('reporte-video-preparar')
+        ?.addEventListener('click', prepararVideoGrande);
+    document.getElementById('reporte-video-otro')
+        ?.addEventListener('click', () => {
+            ocultarVideoGrande();
+            document.getElementById('reporte-video-input')?.click();
+        });
 
     // Video del entreno (opcional) — Grabar ahora (Parte 1B).
     document.getElementById('reporte-video-grabar')
@@ -9194,6 +9209,8 @@ function setVideoSeleccionado(file) {
 
 function quitarVideoSeleccionado() {
     limpiarVideoPreviewUrl();
+    ocultarVideoGrande();
+    ocultarProgresoVideo();
     _reporteVideoFile = null;
     const player = document.getElementById('reporte-video-player');
     const preview = document.getElementById('reporte-video-preview');
@@ -9214,7 +9231,7 @@ function quitarVideoSeleccionado() {
 // Valida un File de video (tipo blando, tamaño, duración) y, si pasa,
 // lo deja seleccionado con preview. Reusable: la usa tanto el flujo de
 // "Subir video" (onVideoSeleccionado) como "Grabar ahora" (Parte 1B).
-async function procesarVideoFile(file) {
+async function procesarVideoFile(file, yaComprimido = false) {
     const errEl = document.getElementById('reporte-video-error');
     const showVErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } };
     if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
@@ -9226,12 +9243,7 @@ async function procesarVideoFile(file) {
         showVErr('Ese archivo no parece un video. Usa MP4, MOV o WEBM.');
         return;
     }
-    // Tamaño.
-    if (file.size > VIDEO_MAX_BYTES) {
-        showVErr('El video supera los 25 MB. Graba o elige un clip más corto.');
-        return;
-    }
-    // Duración (blanda).
+    // Duración (blanda) — va primero: si el clip es largo, ese es el aviso útil.
     let dur = null;
     try {
         dur = await leerDuracionVideo(file);
@@ -9243,7 +9255,247 @@ async function procesarVideoFile(file) {
         return;
     }
 
+    // Tamaño. Hasta 25 MB sube tal cual; por encima le ofrecemos prepararlo
+    // (comprimir) en el propio móvil, que además sube mucho más rápido.
+    const limite = yaComprimido ? VIDEO_MAX_BYTES : VIDEO_DIRECTO_MAX_BYTES;
+    if (file.size > limite) {
+        const mb = Math.round(file.size / 1048576);
+        if (yaComprimido) {
+            showVErr('Incluso preparado, el video pesa ' + mb + ' MB. Prueba con un clip más corto.');
+            return;
+        }
+        if (!soportaCompresionVideo() || file.size > VIDEO_COMPRIMIR_MAX_BYTES) {
+            // No podemos comprimirlo aquí: si aun así cabe, que lo suba tal cual.
+            if (file.size <= VIDEO_MAX_BYTES) { setVideoSeleccionado(file); return; }
+            showVErr('Este video pesa ' + mb + ' MB y el máximo son 60 MB. Usa "Grabar ahora" o elige un clip más corto.');
+            return;
+        }
+        mostrarVideoGrande(file, mb, dur);
+        return;
+    }
+
     setVideoSeleccionado(file);
+}
+
+// ── Video demasiado grande: prepararlo (comprimir) en el propio móvil ──
+// Los teléfonos graban en 4K y medio minuto puede pesar 200 MB. En vez de
+// rebotar al tutor, le ofrecemos re-codificar el clip aquí mismo: se reproduce
+// en un <video> oculto, cada fotograma se pinta en un canvas de 720p y
+// MediaRecorder graba ese canvas. Tarda lo que dura el clip, así que se lo
+// avisamos y lo lanza él con un botón (iOS sólo deja reproducir tras un toque).
+
+function soportaCompresionVideo() {
+    try {
+        if (typeof MediaRecorder === 'undefined') return false;
+        const c = document.createElement('canvas');
+        return typeof c.captureStream === 'function';
+    } catch (_) {
+        return false;
+    }
+}
+
+function mostrarVideoGrande(file, mb, dur) {
+    _videoGrandePendiente = file;
+    const texto = document.getElementById('reporte-video-grande-texto');
+    if (texto) {
+        const seg = dur != null ? Math.max(1, Math.round(dur)) : null;
+        texto.textContent = 'Este video pesa ' + mb + ' MB. Puedo prepararlo aquí para que '
+            + 'ocupe mucho menos y suba rápido'
+            + (seg ? ' (tarda unos ' + seg + ' segundos, lo que dura el video).' : ' (tarda lo que dura el video).')
+            + ' No cierres la app mientras tanto.';
+    }
+    document.getElementById('reporte-video-grande')?.removeAttribute('hidden');
+    document.getElementById('reporte-video-btn')?.setAttribute('hidden', '');
+    document.getElementById('reporte-video-grabar')?.setAttribute('hidden', '');
+    document.getElementById('reporte-video-hint')?.setAttribute('hidden', '');
+}
+
+function ocultarVideoGrande() {
+    _videoGrandePendiente = null;
+    document.getElementById('reporte-video-grande')?.setAttribute('hidden', '');
+    if (!_reporteVideoFile) {
+        document.getElementById('reporte-video-btn')?.removeAttribute('hidden');
+        document.getElementById('reporte-video-grabar')?.removeAttribute('hidden');
+        document.getElementById('reporte-video-hint')?.removeAttribute('hidden');
+        aplicarSoporteGrabacion();
+    }
+}
+
+function mostrarProgresoVideo(p) {
+    const caja = document.getElementById('reporte-video-progreso');
+    const barra = document.getElementById('reporte-video-barra');
+    const texto = document.getElementById('reporte-video-progreso-texto');
+    if (caja) caja.hidden = false;
+    const pct = Math.max(0, Math.min(100, Math.round((p || 0) * 100)));
+    if (barra) barra.style.width = pct + '%';
+    if (texto) texto.textContent = 'Preparando el video… ' + pct + '%';
+}
+
+function ocultarProgresoVideo() {
+    const caja = document.getElementById('reporte-video-progreso');
+    const barra = document.getElementById('reporte-video-barra');
+    if (caja) caja.hidden = true;
+    if (barra) barra.style.width = '0%';
+}
+
+async function prepararVideoGrande() {
+    const file = _videoGrandePendiente;
+    if (!file) return;
+    const errEl = document.getElementById('reporte-video-error');
+    if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
+    document.getElementById('reporte-video-grande')?.setAttribute('hidden', '');
+    mostrarProgresoVideo(0);
+    let comprimido = null;
+    try {
+        comprimido = await comprimirVideo(file, mostrarProgresoVideo);
+    } catch (e) {
+        console.error('[video] no se pudo preparar el video:', e);
+    }
+    ocultarProgresoVideo();
+    _videoGrandePendiente = null;
+    if (!comprimido) {
+        if (errEl) {
+            errEl.textContent = 'No pude preparar el video en este teléfono. Usa "Grabar ahora" o elige un clip más corto.';
+            errEl.hidden = false;
+        }
+        document.getElementById('reporte-video-btn')?.removeAttribute('hidden');
+        document.getElementById('reporte-video-grabar')?.removeAttribute('hidden');
+        document.getElementById('reporte-video-hint')?.removeAttribute('hidden');
+        aplicarSoporteGrabacion();
+        return;
+    }
+    // Si al comprimir salió más pesado que el original (clip ya ligero), nos
+    // quedamos con el que menos pese.
+    await procesarVideoFile(comprimido.size < file.size ? comprimido : file, true);
+}
+
+async function comprimirVideo(file, onProgreso) {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.src = url;
+
+    // Desbloqueo de reproducción: esta llamada ocurre todavía dentro del toque
+    // del tutor (iOS no deja reproducir fuera de un gesto).
+    const desbloqueo = video.play().catch(() => {});
+
+    let audioCtx = null;
+    let stream = null;
+    let rec = null;
+    let rafId = null;
+    let guardia = null;
+
+    const limpiar = () => {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        if (guardia) { clearTimeout(guardia); guardia = null; }
+        try { video.pause(); } catch (_) {}
+        try { stream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+        try { audioCtx?.close(); } catch (_) {}
+        video.removeAttribute('src');
+        try { video.load(); } catch (_) {}
+        URL.revokeObjectURL(url);
+    };
+
+    try {
+        await new Promise((res, rej) => {
+            if (video.readyState >= 1) return res();
+            const t = setTimeout(() => rej(new Error('timeout-metadata')), 20000);
+            video.onloadedmetadata = () => { clearTimeout(t); res(); };
+            video.onerror = () => { clearTimeout(t); rej(new Error('metadata')); };
+        });
+
+        const anchoNat = video.videoWidth;
+        const altoNat = video.videoHeight;
+        if (!anchoNat || !altoNat) throw new Error('sin-dimensiones');
+
+        await desbloqueo;
+        try { video.pause(); } catch (_) {}
+        if (video.currentTime > 0.05) {
+            await new Promise((res) => {
+                const t = setTimeout(res, 3000);
+                video.onseeked = () => { clearTimeout(t); res(); };
+                video.currentTime = 0;
+            });
+        }
+
+        const escala = Math.min(1, VIDEO_COMPRIMIR_LADO / Math.max(anchoNat, altoNat));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(2, Math.round((anchoNat * escala) / 2) * 2);
+        canvas.height = Math.max(2, Math.round((altoNat * escala) / 2) * 2);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        stream = canvas.captureStream(30);
+
+        // Sonido: lo enrutamos por WebAudio, así queda grabado sin sonar por el
+        // altavoz. Si el navegador no lo permite, seguimos sin audio.
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) {
+                audioCtx = new AC();
+                if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch (_) {} }
+                const fuente = audioCtx.createMediaElementSource(video);
+                const destino = audioCtx.createMediaStreamDestination();
+                fuente.connect(destino);
+                const pista = destino.stream.getAudioTracks()[0];
+                if (pista) stream.addTrack(pista);
+            }
+        } catch (_) { /* sin sonido */ }
+
+        // Orden por compatibilidad al reproducir: H.264 en mp4 (lo que da
+        // Safari/iOS y abre cualquier cosa), luego webm. Evitamos el
+        // 'video/mp4' pelado de Chrome: mete VP9 en mp4 y Safari no lo abre.
+        const candidatos = [
+            'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+            'video/mp4;codecs=avc1',
+            'video/webm;codecs=vp8,opus',
+            'video/webm;codecs=vp9,opus',
+            'video/webm',
+        ];
+        const mime = candidatos.find((m) => { try { return MediaRecorder.isTypeSupported(m); } catch (_) { return false; } }) || '';
+        const opciones = { videoBitsPerSecond: VIDEO_COMPRIMIR_BPS, audioBitsPerSecond: 64000 };
+        if (mime) opciones.mimeType = mime;
+        rec = new MediaRecorder(stream, opciones);
+
+        const trozos = [];
+        rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) trozos.push(e.data); };
+        const fin = new Promise((res) => { rec.onstop = res; });
+        rec.start(1000);
+
+        const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        const pintar = () => {
+            rafId = null;
+            if (video.ended) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            if (dur && onProgreso) onProgreso(Math.min(0.99, video.currentTime / dur));
+            rafId = requestAnimationFrame(pintar);
+        };
+        video.onended = () => { try { rec.stop(); } catch (_) {} };
+
+        try {
+            await video.play();
+        } catch (_) {
+            video.muted = true;
+            await video.play();
+        }
+        pintar();
+
+        // Red de seguridad: si el video se atasca, cortamos igual.
+        guardia = setTimeout(() => { try { rec.stop(); } catch (_) {} }, (VIDEO_MAX_SEG + 15) * 1000);
+        await fin;
+        if (onProgreso) onProgreso(1);
+
+        const salida = String(rec.mimeType || mime || 'video/webm').toLowerCase();
+        const esMp4 = salida.startsWith('video/mp4');
+        const tipo = esMp4 ? 'video/mp4' : 'video/webm';
+        const blob = new Blob(trozos, { type: tipo });
+        if (!blob.size) throw new Error('salida-vacia');
+        return new File([blob], esMp4 ? 'entreno.mp4' : 'entreno.webm', { type: tipo });
+    } finally {
+        limpiar();
+    }
 }
 
 // Valida un archivo elegido por el cliente (tamaño, duración, tipo) y, si pasa,
@@ -9293,7 +9545,7 @@ async function iniciarGrabacion() {
     // Pedir cámara trasera + audio.
     try {
         _grabStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
             audio: true,
         });
     } catch (err) {
@@ -9317,14 +9569,22 @@ async function iniciarGrabacion() {
     if (errEl) { errEl.textContent = ''; errEl.hidden = true; }
     document.getElementById('reporte-video-rec')?.removeAttribute('hidden');
 
-    // Elegir mimeType (primero soportado).
-    const candidatos = ['video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
-    _grabMimeType = candidatos.find((m) => MediaRecorder.isTypeSupported(m)) || '';
+    // Elegir mimeType (primero soportado). Orden por compatibilidad al
+    // reproducir: H.264 en mp4 antes que webm; el 'video/mp4' pelado de Chrome
+    // mete VP9 dentro de un mp4 y Safari no lo abre.
+    const candidatos = [
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4;codecs=avc1',
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+    ];
+    _grabMimeType = candidatos.find((m) => { try { return MediaRecorder.isTypeSupported(m); } catch (_) { return false; } }) || '';
 
-    // Instanciar MediaRecorder.
-    _grabRecorder = _grabMimeType
-        ? new MediaRecorder(_grabStream, { mimeType: _grabMimeType })
-        : new MediaRecorder(_grabStream);
+    // Instanciar MediaRecorder (bitrate acotado: 60 s no llegan ni a 20 MB).
+    const opcionesGrab = { videoBitsPerSecond: VIDEO_GRABAR_BPS, audioBitsPerSecond: 64000 };
+    if (_grabMimeType) opcionesGrab.mimeType = _grabMimeType;
+    _grabRecorder = new MediaRecorder(_grabStream, opcionesGrab);
     _grabChunks = [];
     _grabRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) _grabChunks.push(e.data); };
     _grabRecorder.onstop = onGrabacionDetenida;
