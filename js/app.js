@@ -1310,6 +1310,21 @@ function pintarBurbujaJaime() {
     }
 }
 
+// Registra que este usuario ya vio un comunicado "una_vez". Nunca rompe la app:
+// si falla, el comunicado simplemente volverá a salir la próxima vez.
+async function marcarComunicadoVisto(comunicadoId) {
+    const uid = state.usuarioCliente?.id;
+    if (!comunicadoId || !uid) return;
+    try {
+        const { error } = await supabase
+            .from('comunicados_vistos')
+            .upsert({ comunicado_id: comunicadoId, usuario_cliente_id: uid }, { onConflict: 'comunicado_id,usuario_cliente_id', ignoreDuplicates: true });
+        if (error) throw error;
+    } catch (e) {
+        console.error('[jaime] no se pudo marcar el comunicado como visto:', e);
+    }
+}
+
 function abrirBurbujaJaime() {
     pintarBurbujaJaime();
     document.getElementById('jaime-burbuja')?.removeAttribute('hidden');
@@ -1995,7 +2010,11 @@ async function cargarAvisoJaime() {
         }
         case 'comunicado':
             texto = data.texto || '';
-            if (data.cta_url) {
+            if (data.cta_accion === 'chat') {
+                // Comunicado que invita a hablar con Jaime: el botón abre su chat.
+                ctaLabel = data.cta_label || 'Preguntarle a Jaime';
+                ctaAccion = () => { cerrarBurbujaJaime(); abrirChatJaime(); };
+            } else if (data.cta_url) {
                 ctaLabel = data.cta_label || 'Ver más';
                 ctaAccion = () => window.open(data.cta_url, '_blank', 'noopener');
             } else {
@@ -2052,6 +2071,11 @@ async function cargarAvisoJaime() {
         } else {
             cerrarBurbujaJaime();
         }
+    } else if (data.tipo === 'comunicado' && data.una_vez) {
+        // Comunicado de una sola vez: se abre y se registra como visto en la base
+        // (por usuario, no por móvil). La RPC ya no lo devuelve la próxima vez.
+        abrirBurbujaJaime();
+        marcarComunicadoVisto(data.id);
     } else {
         const descartadoHoy = (localStorage.getItem(JAIME_AVISO_OCULTO_KEY) === formatearFechaLocal(new Date()));
         if (data.tipo !== 'al_dia' && !descartadoHoy) {
