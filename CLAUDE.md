@@ -18,7 +18,7 @@ Slogan oficial: **"Tu perro merece ser feliz hoy"** (no inventar variantes).
 ## Brand voice
 
 - **Tipografías**: Bebas Neue para titulares (siempre en mayúsculas), Inter para texto corrido.
-- **Colores**: rojo principal `#C8102E`, negro `#1A1A1A`, crema `#F5EFE0`, verde acento `#6B7A3A`.
+- **Colores**: rojo principal `#D91B1D`, negro `#1A1A1A`, crema `#F5EFE0`, verde acento `#6B7A3A`.
 - **Estilo visual**: tema claro crema, minimalista, editorial, líneas finas, transiciones cuidadas.
 
 ## Reglas de lenguaje (estrictas)

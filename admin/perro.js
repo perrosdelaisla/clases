@@ -52,7 +52,7 @@ const PROTOCOLOS_LABEL = {
 
 // Fases de un grupo/protocolo (la "llave"). Slug → etiqueta, puntitos, color.
 const FASES = {
-    preparatoria:        { label: 'Preparatoria', dots: 1, color: '#C8102E', desc: 'Sentando las bases, generando seguridad' },
+    preparatoria:        { label: 'Preparatoria', dots: 1, color: '#D91B1D', desc: 'Sentando las bases, generando seguridad' },
     abordaje:            { label: 'Abordaje', dots: 2, color: '#E8B62D', desc: 'El grueso del trabajo del protocolo' },
     final_mantenimiento: { label: 'Final y mantenimiento', dots: 3, color: '#6E9E45', desc: 'Consolidando y sosteniendo lo logrado' },
 };

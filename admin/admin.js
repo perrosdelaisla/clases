@@ -3292,7 +3292,7 @@ async function cargarDerivacionesStats(rango) {
     } catch (err) { console.error('Derivaciones:', err); }
 }
 
-const DOUGHNUT_COLORS = ['#C8102E', '#6B7A3A', '#1A1A1A', '#F5EFE0', '#8B7355', '#A04040', '#4A5530', '#D4A05C'];
+const DOUGHNUT_COLORS = ['#D91B1D', '#6B7A3A', '#1A1A1A', '#F5EFE0', '#8B7355', '#A04040', '#4A5530', '#D4A05C'];
 
 async function cargarDoughnut(key, fetcher, canvasId, tablaId) {
     try {
@@ -3386,7 +3386,7 @@ async function cargarBarrasCitasMes() {
             type: 'bar',
             data: {
                 labels: data.map((d) => d.mes),
-                datasets: [{ data: data.map((d) => d.n), backgroundColor: '#C8102E', borderWidth: 0 }],
+                datasets: [{ data: data.map((d) => d.n), backgroundColor: '#D91B1D', borderWidth: 0 }],
             },
             options: {
                 responsive: true,

@@ -2,7 +2,7 @@
 
 :root {
     /* Paleta núcleo PDLI */
-    --pdli-rojo:        #C8102E;
+    --pdli-rojo:        #D91B1D;
     --pdli-oliva:       #6B7A3A;
     --pdli-oliva-claro: #9CB64B;
     --pdli-negro:       #1A1A1A;
@@ -24,7 +24,7 @@
     --color-on-dark-muted: #BFB9A8;
 
     /* Acentos */
-    --color-red:        #C8102E;
+    --color-red:        #D91B1D;
     --color-red-dk:     #A30D24;
     --color-green:      #6B7A3A;
     --color-green-dk:   #525F29;
@@ -238,7 +238,6 @@ body {
     height: 44px;
     border-radius: 50%;
     background: #1A1A1A;
-    border: 2px solid var(--pdli-rojo);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -1358,7 +1357,7 @@ body {
     box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04);
 }
 
-.slot-card:hover { background: rgba(200, 16, 46, 0.08); }
+.slot-card:hover { background: rgba(217, 27, 29, 0.08); }
 .slot-card:active { transform: scale(0.97); }
 
 .slot-card.is-ocupada {
@@ -2122,8 +2121,8 @@ body {
 
 /* Bloque HOY (destacado rojo) */
 .susalud-hoy {
-    background: linear-gradient(160deg, rgba(200, 16, 46, 0.07), rgba(200, 16, 46, 0.02));
-    border: 1px solid rgba(200, 16, 46, 0.28);
+    background: linear-gradient(160deg, rgba(217, 27, 29, 0.07), rgba(217, 27, 29, 0.02));
+    border: 1px solid rgba(217, 27, 29, 0.28);
     border-radius: var(--radius);
     padding: 1rem;
     margin-bottom: 1.4rem;
@@ -2354,7 +2353,7 @@ body {
 }
 
 .cal-mes__nav:hover:not(:disabled) {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
     border-color: var(--pdli-rojo);
 }
 
@@ -2424,7 +2423,7 @@ body {
 }
 
 .cal-dia.is-disponible:hover {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
 }
 
 .cal-dia__punto {
@@ -2786,7 +2785,7 @@ body {
 }
 
 .perro-pill--add:hover {
-    background: rgba(200, 16, 46, 0.06);
+    background: rgba(217, 27, 29, 0.06);
     color: var(--pdli-rojo);
     border-color: var(--pdli-rojo);
 }
@@ -3495,7 +3494,7 @@ body {
     transition: background 180ms ease;
 }
 .herr-switch[aria-checked="true"] {
-    background: #C8102E;
+    background: #D91B1D;
 }
 .herr-switch__thumb {
     position: absolute;
@@ -3512,7 +3511,7 @@ body {
     transform: translateX(22px);
 }
 .herr-switch:focus-visible {
-    outline: 2px solid #C8102E;
+    outline: 2px solid #D91B1D;
     outline-offset: 2px;
 }
 
@@ -3779,7 +3778,7 @@ body {
 
 .reporte-repes__add:hover,
 .reporte-repes__add:focus-visible {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
     outline: none;
 }
 
@@ -4155,7 +4154,7 @@ body {
 .textarea-voz__btn:hover,
 .textarea-voz__btn:focus-visible {
     color: var(--pdli-rojo);
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
     outline: none;
 }
 
@@ -4171,8 +4170,8 @@ body {
 }
 
 @keyframes voz-pulso {
-    0%, 100% { box-shadow: 0 0 0 0   rgba(200, 16, 46, 0.45); }
-    50%      { box-shadow: 0 0 0 6px rgba(200, 16, 46, 0);    }
+    0%, 100% { box-shadow: 0 0 0 0   rgba(217, 27, 29, 0.45); }
+    50%      { box-shadow: 0 0 0 6px rgba(217, 27, 29, 0);    }
 }
 
 /* Glow oliva tras detener el dictado: guía visual hacia el botón
@@ -4310,8 +4309,8 @@ body {
 /* Tonalidades alineadas con .hist-tq del admin. */
 .mientreno-tq--1,
 .mientreno-tq--2 {
-    background: rgba(200, 16, 46, 0.18);
-    border-color: rgba(200, 16, 46, 0.45);
+    background: rgba(217, 27, 29, 0.18);
+    border-color: rgba(217, 27, 29, 0.45);
     color: var(--color-text);
 }
 
@@ -4546,7 +4545,7 @@ body {
 .lapiz-edit:hover, .lapiz-edit:focus-visible {
     color: var(--pdli-rojo);
     opacity: 1;
-    background: rgba(200, 35, 26, 0.06);
+    background: rgba(217, 27, 29, 0.06);
     outline: none;
 }
 
@@ -4901,9 +4900,9 @@ html.pdli-tour-open body { overflow: hidden; }
 .modal-ficha__seccion p{font-size:14px;line-height:1.55;margin:0 0 8px;}
 
 .bottom-nav__btn{position:relative;}
-.bottom-nav__badge{position:absolute;top:4px;left:50%;margin-left:6px;width:9px;height:9px;border-radius:50%;background:var(--pdli-rojo,#C8102E);box-shadow:0 0 0 2px var(--color-bg,#fff);}
-.feed-entry--admin{border-left:3px solid var(--pdli-rojo,#C8102E);padding-left:12px;background:rgba(200,16,46,0.05);}
-.feed-entry__from{font-size:12px;font-weight:600;color:var(--pdli-rojo,#C8102E);}
+.bottom-nav__badge{position:absolute;top:4px;left:50%;margin-left:6px;width:9px;height:9px;border-radius:50%;background:var(--pdli-rojo,#D91B1D);box-shadow:0 0 0 2px var(--color-bg,#fff);}
+.feed-entry--admin{border-left:3px solid var(--pdli-rojo,#D91B1D);padding-left:12px;background:rgba(217, 27, 29,0.05);}
+.feed-entry__from{font-size:12px;font-weight:600;color:var(--pdli-rojo,#D91B1D);}
 .feed-timeline{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 6px 4px 2px;border:1px solid var(--color-border,rgba(0,0,0,0.08));border-radius:14px;}
 .reporte-tarea{display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0 4px;text-align:center;}
 .reporte-tarea__hoy{font-size:15px;font-weight:600;margin:0;}
@@ -4929,7 +4928,7 @@ html.pdli-tour-open body { overflow: hidden; }
 #modal-reporte-ejercicio .rep-num{display:inline-flex;align-items:baseline;gap:6px;font-family:'Bebas Neue',Oswald,Impact,sans-serif;font-size:18px;letter-spacing:1.5px;text-transform:uppercase;color:#6B7A3A;}
 #modal-reporte-ejercicio .rep-num .hash{font-size:13px;color:#8A867E;}
 #modal-reporte-ejercicio .rep-del{width:28px;height:28px;border-radius:8px;border:1px solid transparent;background:transparent;color:#8A867E;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;transition:all .15s ease;}
-#modal-reporte-ejercicio .rep-del:hover{border-color:rgba(26,26,26,0.16);color:#C8102E;}
+#modal-reporte-ejercicio .rep-del:hover{border-color:rgba(26,26,26,0.16);color:#D91B1D;}
 #modal-reporte-ejercicio .rep-fields{display:flex;flex-direction:column;gap:14px;}
 #modal-reporte-ejercicio .field{min-width:0;}
 #modal-reporte-ejercicio .field-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8A867E;margin:0 0 6px;}
@@ -4960,7 +4959,7 @@ html.pdli-tour-open body { overflow: hidden; }
 .familia-fila__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .familia-fila__nombre { font-weight: 600; color: #1A1A1A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .familia-fila__rol { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #6B7A3A; }
-.familia-fila__quitar { flex: none; background: none; border: none; color: #C8102E; font-size: 14px; font-weight: 600; padding: 6px 8px; cursor: pointer; }
+.familia-fila__quitar { flex: none; background: none; border: none; color: #D91B1D; font-size: 14px; font-weight: 600; padding: 6px 8px; cursor: pointer; }
 .familia-invitar__titulo { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #1A1A1A; margin: 0 0 12px; }
 
 /* Permisos de rol: el familiar (secundario) no ve las acciones del titular. */
@@ -4995,7 +4994,7 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
 }
 .intro-ucm__ucm {
     font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
-    letter-spacing: 3px; text-transform: uppercase; color: #C8102E; margin: 0;
+    letter-spacing: 3px; text-transform: uppercase; color: #D91B1D; margin: 0;
     animation: introUp 0.7s ease-out 1.6s both;
 }
 @keyframes introLogoIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
@@ -5023,7 +5022,7 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
     border-radius: 999px; background: transparent; border: 2px solid rgba(128, 128, 128, 0.5);
 }
 .cat-step.is-now .cat-step__dot {
-    background: #C8102E; border-color: #C8102E; box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.18);
+    background: #D91B1D; border-color: #D91B1D; box-shadow: 0 0 0 4px rgba(217, 27, 29, 0.18);
 }
 .cat-step__tx { display: flex; flex-direction: column; gap: 3px; }
 .cat-step__t {
@@ -5035,7 +5034,7 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
 .cat-step__now {
     font-family: var(--font-body, 'Inter'), sans-serif;
     font-size: 9px; font-weight: 800; letter-spacing: 1px; color: #fff;
-    background: #C8102E; border-radius: 999px; padding: 2px 7px;
+    background: #D91B1D; border-radius: 999px; padding: 2px 7px;
 }
 .cat-step__s { font-size: 12.5px; line-height: 1.4; opacity: 0.68; }
 .cat-nota { margin-top: 14px; font-size: 11.5px; line-height: 1.5; opacity: 0.55; }
@@ -5056,9 +5055,9 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
    Reutiliza tokens de marca --pdli-*, --color-* y la .badge existente.
    ═══════════════════════════════════════════════════════════════════ */
 .badge--off {
-    background: rgba(200, 16, 46, 0.12);
+    background: rgba(217, 27, 29, 0.12);
     color: var(--pdli-rojo);
-    border: 1px solid rgba(200, 16, 46, 0.32);
+    border: 1px solid rgba(217, 27, 29, 0.32);
 }
 
 .guias-seccion { margin-top: 18px; }

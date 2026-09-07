@@ -1,12 +1,12 @@
 /* Asistente Jaime — cáscara visual aislada. Tokens propios con prefijo --jm-
    para no colisionar con el admin. Hereda las fuentes del admin. */
 :root{
-  --jm-rojo:#C8102E; --jm-rojo-deep:#a40d26; --jm-oliva:#6B7A3A; --jm-negro:#1A1A1A; --jm-crema:#F5EFE0;
+  --jm-rojo:#D91B1D; --jm-rojo-deep:#B21618; --jm-oliva:#6B7A3A; --jm-negro:#1A1A1A; --jm-crema:#F5EFE0;
   --jm-surface:#FBF7EC; --jm-surface-2:#F6F0E0; --jm-panel:#FBF7EC;
   --jm-txt:#1A1A1A; --jm-txt2:#6f665a; --jm-txt3:#a59c8c;
   --jm-line:rgba(26,20,12,0.13); --jm-line-soft:rgba(26,20,12,0.07);
   --jm-grabber:rgba(26,20,12,0.20); --jm-chip:rgba(26,20,12,0.045);
-  --jm-rojo-tint:rgba(200,16,46,0.10); --jm-track:rgba(26,20,12,0.10);
+  --jm-rojo-tint:rgba(217, 27, 29,0.10); --jm-track:rgba(26,20,12,0.10);
   --jm-backdrop:rgba(40,30,15,0.34); --jm-sheet-shadow:0 -18px 50px rgba(60,45,20,0.22);
 }
 @keyframes jmSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}

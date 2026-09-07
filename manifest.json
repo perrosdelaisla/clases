@@ -8,7 +8,7 @@
     "display": "standalone",
     "orientation": "portrait",
     "background_color": "#0F0F0F",
-    "theme_color": "#C8231A",
+    "theme_color": "#D91B1D",
     "icons": [
         {
             "src": "/clases/img/icon-192.png",

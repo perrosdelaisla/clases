@@ -27,17 +27,17 @@
   --c-text-3:#8A867E;
   --c-hair:rgba(26,26,26,0.10);
   --c-hair-2:rgba(26,26,26,0.16);
-  --c-rojo:#C8102E;
+  --c-rojo:#D91B1D;
   --c-oliva:#6B7A3A;
   --c-oliva-soft:rgba(107,122,58,0.12);
   --c-oliva-line:rgba(107,122,58,0.30);
 
   --sem-verde:#6E9A3C;
   --sem-amarillo:#E0A52E;
-  --sem-rojo:#C8102E;
+  --sem-rojo:#D91B1D;
   --sem-verde-soft:rgba(110,154,60,0.14);
   --sem-amarillo-soft:rgba(224,165,46,0.16);
-  --sem-rojo-soft:rgba(200,16,46,0.12);
+  --sem-rojo-soft:rgba(217, 27, 29,0.12);
   --cell-radius:11px;
 }
 .home[data-theme="oscuro"] #seguimiento-screen{

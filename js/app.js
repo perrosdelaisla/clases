@@ -58,7 +58,7 @@ const TELEFONO_PUBLICO = '622 922 173';
 
 // Paleta determinística para fallback de foto (cuando el perro no tiene foto)
 const PERRO_COLOR_PALETTE = [
-    '#C8102E', '#6B7A3A', '#1f6f8b', '#a05a2c', '#8e3b8e',
+    '#D91B1D', '#6B7A3A', '#1f6f8b', '#a05a2c', '#8e3b8e',
     '#3a7d3e', '#b8732a', '#3f5fa3',
 ];
 
@@ -4085,7 +4085,7 @@ async function renderRutinaPerroSeleccionado() {
 let _gruposFase = {};
 // Metadata de las 3 fases: puntitos llenos, color, etiqueta.
 const _FASES = {
-    preparatoria:        { dots: 1, color: '#C8102E', label: 'Fase preparatoria' },
+    preparatoria:        { dots: 1, color: '#D91B1D', label: 'Fase preparatoria' },
     abordaje:            { dots: 2, color: '#E8B62D', label: 'Fase de abordaje' },
     final_mantenimiento: { dots: 3, color: '#6E9E45', label: 'Fase final y mantenimiento' },
 };
@@ -4099,7 +4099,7 @@ function renderSelloFase(slug) {
 
 // Colores de la llave por posición del grupo (principal siempre rojo; los
 // complementarios rotan; "sin grupo" gris). Con transparencia para la barra.
-const _GRUPO_COLORES = ['#C8102E', '#4E7A9E', '#6B7A3A', '#D97962', '#E8B62D', '#8E6BA8'];
+const _GRUPO_COLORES = ['#D91B1D', '#4E7A9E', '#6B7A3A', '#D97962', '#E8B62D', '#8E6BA8'];
 function _grupoColor(idx, esSinGrupo) {
     if (esSinGrupo) return '#8A867E';
     return _GRUPO_COLORES[idx % _GRUPO_COLORES.length];
@@ -5205,7 +5205,7 @@ function _islaSpots(n, cx, cy, rx, ry, seed) {
     }
     return a.sort((p, q) => p[1] - q[1]);
 }
-const _ISLA_ROJO = '#C8102E', _ISLA_OLIVA = '#6B7A3A', _ISLA_OLIVA_CL = '#9CB64B', _ISLA_ORO = '#E8B62D';
+const _ISLA_ROJO = '#D91B1D', _ISLA_OLIVA = '#6B7A3A', _ISLA_OLIVA_CL = '#9CB64B', _ISLA_ORO = '#E8B62D';
 function _islaFlor(x, y, s, color) {
     let p = '';
     for (let k = 0; k < 5; k++) {

@@ -99,7 +99,7 @@
 .home .progreso-semana{ position:relative; flex:0 0 auto; width:11px; height:40px; border-radius:5px; background:var(--c-field); overflow:hidden; }
 .home[data-theme="claro"] .progreso-semana{ background:#E3DAC6; }
 .home .progreso-semana__fill{ position:absolute; left:0; right:0; bottom:0; border-radius:5px; transition:height .25s ease; }
-.home .progreso-semana--rojo  .progreso-semana__fill{ background:var(--pdli-rojo,#C8102E); }
+.home .progreso-semana--rojo  .progreso-semana__fill{ background:var(--pdli-rojo,#D91B1D); }
 .home .progreso-semana--verde .progreso-semana__fill{ background:var(--pdli-oliva,#6B7A3A); }
 .home .progreso-semana--azul  .progreso-semana__fill{ background:#1F4FA8; }
 .home .progreso-semana--sin   .progreso-semana__fill{ background:var(--c-text-3); }
@@ -134,9 +134,9 @@
 .home .rutina-card__head{ align-items:center; }
 .home .huella-btn{
     flex:0 0 auto; width:52px; height:52px; border-radius:50%; border:none;
-    background:var(--c-rojo, #C8102E); color:#F5EFE0;
+    background:var(--c-rojo, #D91B1D); color:#F5EFE0;
     display:grid; place-items:center; cursor:pointer; position:relative;
-    box-shadow:0 4px 14px rgba(200,16,46,.32);
+    box-shadow:0 4px 14px rgba(217, 27, 29,.32);
     transition:transform .12s ease, background .25s ease, box-shadow .25s ease;
 }
 .home .huella-btn svg{ width:28px; height:28px; display:block; }
@@ -413,7 +413,7 @@
 }
 /* Color de punto/halo por estado (fill/stroke = currentColor). */
 .home .progreso-spark .pk--verde{ color:var(--c-oliva, #6B7A3A); }
-.home .progreso-spark .pk--rojo{ color:var(--c-rojo, #C8102E); }
+.home .progreso-spark .pk--rojo{ color:var(--c-rojo, #D91B1D); }
 .home .progreso-spark .pk--azul{ color:#3F6FD0; }
 .home .progreso-spark .pk--sin{ color:var(--c-hair-2, #8A867E); }
 .home .progreso-spark .pk-halo{ opacity:.45; stroke-width:1.6; }

@@ -5,7 +5,7 @@
     --color-surface: #232323;
     --color-surface-2: #2c2c2c;
     --color-border: rgba(255, 255, 255, 0.08);
-    --color-red: #C8102E;
+    --color-red: #D91B1D;
     --color-red-dk: #A30D24;
     --color-green: #6B7A3A;
     --color-text: #F5EFE0;
@@ -19,7 +19,7 @@
     --tap: 48px;
 
     /* Aliases para reusar tal cual el CSS del calendario del cliente. */
-    --pdli-rojo: #C8102E;
+    --pdli-rojo: #D91B1D;
     --pdli-oliva: #6B7A3A;
 }
 
@@ -109,7 +109,6 @@ body {
     height: 44px;
     border-radius: 50%;
     background: #1A1A1A;
-    border: 2px solid var(--color-red);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -1478,7 +1477,7 @@ body {
 }
 
 .admin-tab:hover {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
     color: var(--color-text);
 }
 
@@ -1801,7 +1800,7 @@ body {
 }
 
 .form-error {
-    background: rgba(200, 16, 46, 0.12);
+    background: rgba(217, 27, 29, 0.12);
     border: 1px solid var(--color-red);
     border-radius: var(--radius-sm);
     padding: 10px 12px;
@@ -2118,7 +2117,7 @@ body {
 }
 
 .modal-footer .btn-eliminar-modal:hover {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
 }
 
 /* Línea de ayuda dentro del cuerpo de un modal (no es error, solo contexto). */
@@ -3123,9 +3122,9 @@ body {
 }
 
 .subtab.is-active {
-    background: rgba(200, 16, 46, 0.15);
+    background: rgba(217, 27, 29, 0.15);
     color: var(--color-red);
-    border-color: rgba(200, 16, 46, 0.4);
+    border-color: rgba(217, 27, 29, 0.4);
 }
 
 /* ===================== Stats — Navegación mes-a-mes ===================== */
@@ -3226,8 +3225,8 @@ body {
 .llamada-item--realizada { border-left: 3px solid #9CB64B; }
 .llamada-item--realizada .llamada-num { color: #9CB64B; }
 
-.llamada-item--cancelada { border-left: 3px solid #C8102E; }
-.llamada-item--cancelada .llamada-num { color: #C8102E; }
+.llamada-item--cancelada { border-left: 3px solid #D91B1D; }
+.llamada-item--cancelada .llamada-num { color: #D91B1D; }
 
 .llamada-item--no-show { border-left: 3px solid #8E8A82; }
 .llamada-item--no-show .llamada-num { color: #8E8A82; }
@@ -3282,8 +3281,8 @@ body {
 /* Color por categoría (paleta núcleo PDLI): generados rojo principal,
    abiertos verde acento, citas verde oliva, expirados gris, conversión
    marrón cálido — distingue sin salirse del canal B. */
-.vicky-item--generados  { border-left: 3px solid #C8102E; }
-.vicky-item--generados .vicky-num  { color: #C8102E; }
+.vicky-item--generados  { border-left: 3px solid #D91B1D; }
+.vicky-item--generados .vicky-num  { color: #D91B1D; }
 
 .vicky-item--abiertos   { border-left: 3px solid #9CB64B; }
 .vicky-item--abiertos .vicky-num   { color: #9CB64B; }
@@ -3717,7 +3716,7 @@ body {
 }
 
 .cal-mes__nav:hover:not(:disabled) {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
     border-color: var(--pdli-rojo);
 }
 
@@ -3787,7 +3786,7 @@ body {
 }
 
 .cal-dia.is-disponible:hover {
-    background: rgba(200, 16, 46, 0.08);
+    background: rgba(217, 27, 29, 0.08);
 }
 
 .cal-dia__punto {
@@ -4104,8 +4103,8 @@ body {
 /* Paleta de tranquilidad: 1-2 rojo suave, 3 neutro/oliva muted, 4-5 oliva. */
 .hist-tq--1,
 .hist-tq--2 {
-    background: rgba(200, 16, 46, 0.18);
-    border-color: rgba(200, 16, 46, 0.45);
+    background: rgba(217, 27, 29, 0.18);
+    border-color: rgba(217, 27, 29, 0.45);
     color: var(--color-text);
 }
 
@@ -4665,7 +4664,7 @@ body {
 }
 .aviso-item--unread {
     border-left: 3px solid var(--color-red);
-    background: linear-gradient(90deg, rgba(200, 16, 46, 0.06) 0%, var(--color-surface) 40%);
+    background: linear-gradient(90deg, rgba(217, 27, 29, 0.06) 0%, var(--color-surface) 40%);
 }
 
 .aviso-row {
@@ -4880,10 +4879,10 @@ body {
 .admin-responder{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
 .admin-responder__texto{width:100%;box-sizing:border-box;resize:vertical;min-height:72px;padding:12px 14px;border:1px solid var(--color-border,rgba(255,255,255,0.14));border-radius:12px;background:var(--color-surface-2,#2c2c2c);color:var(--color-text,#F5EFE0);font:inherit;line-height:1.4;}
 .admin-responder__texto::placeholder{color:var(--pdli-tinta-3,rgba(245,239,224,0.45));}
-.admin-responder__btn{align-self:flex-end;padding:9px 22px;border:none;border-radius:9px;background:var(--pdli-rojo,#C8102E);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:opacity .15s;}
+.admin-responder__btn{align-self:flex-end;padding:9px 22px;border:none;border-radius:9px;background:var(--pdli-rojo,#D91B1D);color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:opacity .15s;}
 .admin-responder__btn:hover{opacity:.9;}
 .admin-responder__btn:disabled{opacity:.5;cursor:default;}
-.admin-entry--mio{margin-left:24px;border-left:3px solid var(--color-red,#C8102E);background:rgba(200,16,46,0.06);}
+.admin-entry--mio{margin-left:24px;border-left:3px solid var(--color-red,#D91B1D);background:rgba(217, 27, 29,0.06);}
 #admin-mensajes-feed{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px;}
 
 /* Quién puede entrar a la app (miembros de la familia) — solo lectura */
@@ -5088,7 +5087,7 @@ body {
 }
 .actividad-item--nuevo {
     border-left: 3px solid var(--color-red);
-    background: linear-gradient(90deg, rgba(200, 16, 46, 0.06) 0%, var(--color-surface) 40%);
+    background: linear-gradient(90deg, rgba(217, 27, 29, 0.06) 0%, var(--color-surface) 40%);
 }
 
 .actividad-item-head {
@@ -5120,7 +5119,7 @@ body {
     text-align: center;
 }
 .actividad-tq--alerta {
-    background: rgba(200, 16, 46, 0.16);
+    background: rgba(217, 27, 29, 0.16);
     color: var(--color-red);
 }
 
@@ -5251,7 +5250,7 @@ body {
 .selector-grupo__opt--sin{ color:var(--color-muted,#8A867E); }
 .selector-grupo__cerrar{
     width:100%; padding:13px; border-radius:11px; border:none; margin-top:6px;
-    background:var(--color-red,#C8102E); color:#F5EFE0; font-weight:600; font-size:14.5px;
+    background:var(--color-red,#D91B1D); color:#F5EFE0; font-weight:600; font-size:14.5px;
     cursor:pointer; font-family:inherit;
 }
 
