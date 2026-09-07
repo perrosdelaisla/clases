@@ -2078,6 +2078,19 @@ const JAIME_CARAS = {
 let _jaimeEstado = 'normal';
 let _jaimeInactivTimer = null;
 
+// Precarga de las tres caritas al arrancar: el cambio a "durmiendo" o
+// "pensando" ya no depende de la red en ese momento (con señal floja salía el
+// icono de imagen rota, 06/09). Y si aun así una falla, se vuelve a la carita
+// normal: nunca un hueco.
+const _jaimePrecarga = Object.values(JAIME_CARAS).map((src) => { const i = new Image(); i.src = src; return i; });
+function _jaimeProtegerImg(img) {
+    if (!img || img.dataset.jmFallback) return;
+    img.dataset.jmFallback = '1';
+    img.addEventListener('error', () => {
+        if (img.getAttribute('src') !== JAIME_CARAS.normal) img.setAttribute('src', JAIME_CARAS.normal);
+    });
+}
+
 // Cambia la carita del FAB y, si el chat está abierto, la de su cabecera.
 // Sin parpadeos: solo reescribe el src si cambió. No toca las caritas por
 // mensaje del chat (esas son fijas).
@@ -2086,12 +2099,14 @@ function setJaimeCara(estado) {
     _jaimeEstado = estado;
     const src = JAIME_CARAS[estado];
     const fabImg = document.querySelector('#jaime-fab img');
+    _jaimeProtegerImg(fabImg);
     if (fabImg && fabImg.getAttribute('src') !== src) fabImg.setAttribute('src', src);
     // El "zzz" flotante solo se ve en estado dormido.
     document.getElementById('jaime-fab')?.classList.toggle('is-durmiendo', estado === 'durmiendo');
     const chat = document.getElementById('jaime-chat');
     if (chat && !chat.hasAttribute('hidden')) {
         const cabImg = chat.querySelector('.jaime-chat__cara');
+        _jaimeProtegerImg(cabImg);
         if (cabImg && cabImg.getAttribute('src') !== src) cabImg.setAttribute('src', src);
     }
 }

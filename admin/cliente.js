@@ -10,7 +10,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import { initJaime } from './jaime.js?v=19';
+import { initJaime } from './jaime.js?v=20';
 const supabase = getSupabase('admin');
 
 const SCREENS = {

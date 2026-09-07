@@ -51,16 +51,31 @@ const JM_CARAS = {
 let jmEstado = 'normal';
 let jmInactivTimer = null;
 
+// Precarga de las tres caritas al arrancar: el cambio a "durmiendo" o
+// "pensando" ya no depende de la red en ese momento (con señal floja salía el
+// icono de imagen rota, 06/09). Y si aun así una falla, se vuelve a la carita
+// normal: nunca un hueco.
+const jmPrecarga = Object.values(JM_CARAS).map((src) => { const i = new Image(); i.src = src; return i; });
+function jmProtegerImg(img) {
+  if (!img || img.dataset.jmFallback) return;
+  img.dataset.jmFallback = '1';
+  img.addEventListener('error', () => {
+    if (img.getAttribute('src') !== JM_CARAS.normal) img.setAttribute('src', JM_CARAS.normal);
+  });
+}
+
 function setJmCara(estado) {
   if (!JM_CARAS[estado]) estado = 'normal';
   jmEstado = estado;
   const src = JM_CARAS[estado];
   const fabImg = fabEl && fabEl.querySelector('.jm-img');
+  jmProtegerImg(fabImg);
   if (fabImg && fabImg.getAttribute('src') !== src) fabImg.setAttribute('src', src);
   // El "zzz" flotante solo se ve dormido.
   if (fabEl) fabEl.classList.toggle('is-durmiendo', estado === 'durmiendo');
   // Si el panel está abierto, la carita de la cabecera también.
   const cabImg = document.querySelector('#jm-overlay .jm-avatar .jm-img');
+  jmProtegerImg(cabImg);
   if (cabImg && cabImg.getAttribute('src') !== src) cabImg.setAttribute('src', src);
 }
 
