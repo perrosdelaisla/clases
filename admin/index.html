@@ -20,6 +20,12 @@
                 <span class="logo-text">PDLI</span>
             </div>
             <p class="muted">Cargando…</p>
+            <!-- Salida cuando el arranque se atasca. Oculto salvo que el
+                 vigilante de admin.js lo destape a los 12 s. -->
+            <div id="loading-atasco" hidden>
+                <p class="muted">Está tardando más de lo normal.</p>
+                <button type="button" class="btn-primary" id="loading-reintentar">Reintentar</button>
+            </div>
         </main>
     </section>
 
@@ -893,7 +899,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=93"></script>
+    <script type="module" src="./admin.js?v=94"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=3';
       function toast(msg) {

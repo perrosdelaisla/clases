@@ -39,7 +39,51 @@ function showScreen(name) {
         const el = document.getElementById('screen-' + s);
         if (el) el.hidden = (s !== name);
     });
+    if (name !== 'loading') pararVigilanteDeCarga();
 }
+
+/* ───────── Vigilante del arranque (08/09/2026) ─────────
+   Una app que se queda en "Cargando…" para siempre deja al usuario sin
+   salida: no sabe si esperar, si tiene mala cobertura o si está rota. Pasó
+   con una caché a medias en un móvil.
+
+   Esto NO interrumpe nada ni cambia de pantalla: a los 12 s, si seguimos en
+   la de carga, destapa un aviso con un botón. Si la carga termina después,
+   la pantalla cambia y el aviso se va con ella. Un arranque lento en 3G
+   sigue funcionando igual. */
+let _vigilanteCarga = null;
+
+function arrancarVigilanteDeCarga(ms = 12000) {
+    clearTimeout(_vigilanteCarga);
+    _vigilanteCarga = setTimeout(() => {
+        const pantalla = document.getElementById('screen-loading');
+        const aviso = document.getElementById('loading-atasco');
+        if (pantalla && !pantalla.hidden && aviso) aviso.hidden = false;
+    }, ms);
+}
+
+function pararVigilanteDeCarga() {
+    clearTimeout(_vigilanteCarga);
+    _vigilanteCarga = null;
+    const aviso = document.getElementById('loading-atasco');
+    if (aviso) aviso.hidden = true;
+}
+
+/* Reintento de verdad: vacía la caché de la app y recarga. Un location.reload()
+   a secas volvería a servir el mismo shell roto desde el service worker.
+   NO toca localStorage ni IndexedDB, así que la sesión se conserva. */
+async function reintentarCarga() {
+    try {
+        if (window.caches) {
+            const nombres = await caches.keys();
+            await Promise.all(nombres.map((n) => caches.delete(n)));
+        }
+    } catch (e) {
+        console.warn('[carga] no se pudo limpiar la cache:', e);
+    }
+    location.reload();
+}
+
 
 // ---------- Bootstrap ----------
 
@@ -50,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function bootstrap() {
     showScreen('loading');
+    arrancarVigilanteDeCarga();
     try {
         const { data: { session } } = await getSessionConTimeout(8000, 'admin');
         if (!session) {
@@ -73,6 +118,9 @@ function bindEvents() {
 
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+    const reintentarBtn = document.getElementById('loading-reintentar');
+    if (reintentarBtn) reintentarBtn.addEventListener('click', reintentarCarga);
 
     document.getElementById('estado-filtros').addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');

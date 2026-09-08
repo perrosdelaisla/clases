@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindEventos();
     registrarServiceWorker();
     bootstrapPwaBanner();
+    arrancarVigilanteDeCarga();
     bootstrap();
 
     supabase.auth.onAuthStateChange((event, session) => {
@@ -350,7 +351,10 @@ function bindEventos() {
     if (errorLogout) errorLogout.addEventListener('click', cerrarSesion);
 
     const errorCargaReintentar = document.getElementById('error-carga-reintentar');
-    if (errorCargaReintentar) errorCargaReintentar.addEventListener('click', () => location.reload());
+    if (errorCargaReintentar) errorCargaReintentar.addEventListener('click', reintentarCarga);
+
+    const loadingReintentar = document.getElementById('loading-reintentar');
+    if (loadingReintentar) loadingReintentar.addEventListener('click', reintentarCarga);
 
     // Welcome editorial (primer login)
     const welcomeBtn = document.getElementById('welcome-empezar');
@@ -7864,7 +7868,51 @@ function showScreen(name) {
         if (key === name) el.removeAttribute('hidden');
         else el.setAttribute('hidden', '');
     });
+    if (name !== 'loading') pararVigilanteDeCarga();
 }
+
+/* ───────── Vigilante del arranque (08/09/2026) ─────────
+   Una app que se queda en "Cargando…" para siempre deja al usuario sin
+   salida: no sabe si esperar, si tiene mala cobertura o si está rota. Pasó
+   con una caché a medias en un móvil.
+
+   Esto NO interrumpe nada ni cambia de pantalla: a los 12 s, si seguimos en
+   la de carga, destapa un aviso con un botón. Si la carga termina después,
+   la pantalla cambia y el aviso se va con ella. Un arranque lento en 3G
+   sigue funcionando igual. */
+let _vigilanteCarga = null;
+
+function arrancarVigilanteDeCarga(ms = 12000) {
+    clearTimeout(_vigilanteCarga);
+    _vigilanteCarga = setTimeout(() => {
+        const pantalla = document.getElementById('screen-loading');
+        const aviso = document.getElementById('loading-atasco');
+        if (pantalla && !pantalla.hidden && aviso) aviso.hidden = false;
+    }, ms);
+}
+
+function pararVigilanteDeCarga() {
+    clearTimeout(_vigilanteCarga);
+    _vigilanteCarga = null;
+    const aviso = document.getElementById('loading-atasco');
+    if (aviso) aviso.hidden = true;
+}
+
+/* Reintento de verdad: vacía la caché de la app y recarga. Un location.reload()
+   a secas volvería a servir el mismo shell roto desde el service worker.
+   NO toca localStorage ni IndexedDB, así que la sesión se conserva. */
+async function reintentarCarga() {
+    try {
+        if (window.caches) {
+            const nombres = await caches.keys();
+            await Promise.all(nombres.map((n) => caches.delete(n)));
+        }
+    } catch (e) {
+        console.warn('[carga] no se pudo limpiar la cache:', e);
+    }
+    location.reload();
+}
+
 
 function setText(id, value) {
     const el = document.getElementById(id);

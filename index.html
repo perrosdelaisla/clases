@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=75">
+    <link rel="stylesheet" href="./css/styles.css?v=76">
     <link rel="stylesheet" href="./css/home.css?v=37">
     <link rel="stylesheet" href="./css/home-bridge.css?v=41">
     <link rel="stylesheet" href="./css/seguimiento.css?v=5">
@@ -28,6 +28,12 @@
             </div>
             <p class="intro-ucm__slogan">Tu perro merece ser feliz hoy</p>
             <p class="intro-ucm__ucm">Bienvenido al UCM</p>
+            <!-- Salida cuando el arranque se atasca. Oculto salvo que el
+                 vigilante de app.js lo destape a los 12 s. -->
+            <div id="loading-atasco" class="intro-ucm__atasco" hidden>
+                <p>Está tardando más de lo normal.</p>
+                <button type="button" class="btn btn-primary" id="loading-reintentar">Reintentar</button>
+            </div>
         </div>
     </section>
 
@@ -1573,6 +1579,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=174"></script>
+    <script type="module" src="./js/app.js?v=175"></script>
 </body>
 </html>
