@@ -183,8 +183,13 @@
 }
 
 /* Caritas de la hoja post-registro (pedido de Charly 31/08) */
-.rapido-sheet__caras .reporte-pill{ font-size:23px; line-height:1; padding:9px 0; }
-.rapido-sheet__caras .reporte-pill.is-active{ transform:scale(1.12); }
+/* 10/09: las mismas caras en el modal de reporte (.reporte-pills--caras).
+   Antes ahi habia numeros 1-5 con anclas "Bajo/Alto" y se leian al reves:
+   los tutores puntuaban activacion, no bienestar. */
+.rapido-sheet__caras .reporte-pill,
+.reporte-pills--caras .reporte-pill{ font-size:23px; line-height:1; padding:9px 0; }
+.rapido-sheet__caras .reporte-pill.is-active,
+.reporte-pills--caras .reporte-pill.is-active{ transform:scale(1.12); }
 
 /* ────────────────────────────────────────────────────────────
    La semana florece (Fase 2 · registro lúdico) — reemplaza al
