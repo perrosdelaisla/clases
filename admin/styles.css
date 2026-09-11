@@ -1547,8 +1547,12 @@ body {
         flex-direction: row;
         border-right: none;
         border-top: 1px solid var(--color-border);
-        padding: 8px;
+        /* Menos aire a los lados: con 8px los cinco rótulos no entraban y la
+           barra se hacía más ancha que la pantalla, lo que desplazaba TODA la
+           página hacia un lado (11/09/2026). */
+        padding: 8px 4px;
         gap: 0;
+        box-sizing: border-box;
     }
 
     .admin-nav-brand,
@@ -1559,17 +1563,29 @@ body {
     .admin-nav-tabs {
         flex-direction: row;
         flex: 1;
-        gap: 4px;
+        gap: 2px;
+        min-width: 0;
     }
 
     .admin-tab {
         flex: 1;
         flex-direction: column;
         gap: 2px;
-        padding: 6px 4px;
+        padding: 6px 2px;
         font-size: 10px;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.2px;
         min-height: auto;
+        /* Sin esto, "Seguimiento" fija el ancho de su pestaña y la barra
+           entera desborda la pantalla. */
+        min-width: 0;
+    }
+
+    .admin-tab-label {
+        flex: none;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .admin-tab-icon {
@@ -2412,6 +2428,9 @@ body {
 
 .stats-periodo {
     display: flex;
+    /* Cuatro botones no caben en un móvil estrecho: que bajen de línea en vez
+       de empujar la página hacia un lado. */
+    flex-wrap: wrap;
     gap: 4px;
     background: rgba(245, 239, 224, 0.05);
     padding: 4px;
@@ -4858,13 +4877,27 @@ body {
     .avisos-toolbar {
         flex-direction: column;
         align-items: stretch;
+        /* En columna, `wrap` hace que la línea se mida por el hijo más ancho
+           (la fila de filtros) en vez de por el contenedor: de ahí que la fila
+           saliera fuera de la tarjeta y arrastrara la página entera. */
+        flex-wrap: nowrap;
+        min-width: 0;
     }
     .avisos-filtros {
         overflow-x: auto;
         flex-wrap: nowrap;
         -webkit-overflow-scrolling: touch;
         padding-bottom: 4px;
+        width: 100%;
+        min-width: 0;
+        scrollbar-width: none;
+        /* El corte a la derecha se difumina: así se lee como una fila que se
+           desliza y no como texto cortado por el borde de la tarjeta. */
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+                mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
     }
+    .avisos-filtros::-webkit-scrollbar { display: none; }
+    .avisos-filtro { flex: 0 0 auto; }
 }
 
 .nota-feed__item{padding:14px 16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);margin-bottom:10px;}
