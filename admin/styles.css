@@ -4,14 +4,32 @@
     --color-bg: #1A1A1A;
     --color-surface: #232323;
     --color-surface-2: #2c2c2c;
-    --color-border: rgba(255, 255, 255, 0.08);
+    /* Bordes. El valor viejo, blanco al 8 %, daba 1,25:1 contra el fondo:
+       por debajo de lo que el ojo separa con sol o con poco brillo, así que
+       tarjetas y botones parecían no tener límite (12/09/2026). */
+    --color-border: rgba(245, 239, 224, 0.22);      /* separadores: 1,9:1  */
+    --color-border-ui: rgba(245, 239, 224, 0.42);   /* controles:   3,5:1  */
     --color-red: #D91B1D;
     --color-red-dk: #A30D24;
     --color-green: #6B7A3A;
     --color-text: #F5EFE0;
-    --color-muted: #8a8a8a;
-    --color-warning: #d4a017;
-    --color-inactive: #7a3a32;
+    /* Texto secundario. Era #8a8a8a, un gris frío que sobre las tarjetas se
+       quedaba en 4,05:1 — por debajo del mínimo. Ahora es el gris CÁLIDO de
+       marca, un paso más claro para que aguante al sol: 6,0:1 en el peor
+       fondo. El valor exacto del manual (#A09990) queda como -dim para lo
+       decorativo, donde no hay que leer nada. */
+    --color-muted: #B0A99F;
+    --color-muted-dim: #A09990;
+    --color-warning: #E8B62D;   /* mostaza de marca; el viejo #d4a017 era más apagado */
+    --pdli-oliva-claro: #9CB64B;
+    /* El oliva de marca como TEXTO sobre fondo oscuro se queda en 2,97:1.
+       Este es el mismo verde de la app de clientes (--pdli-oliva-claro),
+       que llega a 6,1:1. El oliva de marca sigue intacto para fondos,
+       filetes y bordes. */
+    --color-green-txt: #9CB64B;
+    /* Era #7a3a32: sobre su propia pildora daba 1,68:1, o sea nada.
+       Mismo tono, mucho mas claro: 6,0:1 (12/09/2026). */
+    --color-inactive: #D69A8E;
     --font-display: 'Bebas Neue', sans-serif;
     --font-body: 'Inter', sans-serif;
     --radius: 10px;
@@ -175,7 +193,7 @@ body {
     min-height: var(--tap);
 }
 
-.btn-back:hover { color: var(--color-green); }
+.btn-back:hover { color: var(--color-green-txt); }
 
 .btn-big {
     display: flex;
@@ -395,9 +413,11 @@ body {
 }
 
 .chip.is-active {
-    background: var(--color-green);
+    /* El oliva oscuro con texto negro daba 3,7:1 y el chip activo no se leía.
+       Con el oliva claro de marca sube a 7,6:1 (12/09/2026). */
+    background: var(--pdli-oliva-claro);
     color: var(--color-bg);
-    border-color: var(--color-green);
+    border-color: var(--pdli-oliva-claro);
     font-weight: 600;
 }
 
@@ -486,7 +506,7 @@ body {
 .cliente-perro {
     font-family: var(--font-body);
     font-size: 0.875rem;
-    color: var(--color-green);
+    color: var(--color-green-txt);
     margin-top: 0.15rem;
 }
 
@@ -515,13 +535,13 @@ body {
 
 .badge-veterano {
     background: rgba(74, 125, 212, 0.15);
-    color: #4A7DD4;
+    color: #6E9BE8;
     border: 1px solid rgba(74, 125, 212, 0.3);
 }
 
 .badge-ex-cliente {
-    background: rgba(142, 138, 130, 0.15);
-    color: #8E8A82;
+    background: rgba(160, 153, 144, 0.18);
+    color: #A09990;
     border: 1px solid rgba(142, 138, 130, 0.3);
 }
 
@@ -862,7 +882,7 @@ body {
     align-self: flex-start;
 }
 
-.cat-chip--ejercicio { background: var(--color-cat-ejercicio); }
+.cat-chip--ejercicio { background: var(--pdli-oliva-claro); color: #1a1a1a; }
 .cat-chip--cambio_rutina { background: var(--color-cat-cambio); color: #1a1a1a; }
 .cat-chip--tarea { background: var(--color-cat-tarea); color: #1a1a1a; }
 .cat-chip--herramienta { background: var(--color-cat-herramienta); color: #e5e5e5; }
@@ -1267,7 +1287,7 @@ body {
     min-height: 44px;
     padding: 0 1rem;
     background: transparent;
-    color: var(--color-cat-ejercicio);
+    color: var(--color-green-txt);   /* el #6b7c2e como texto no se leia */
     border: 1px solid var(--color-cat-ejercicio);
     border-radius: var(--radius);
     font-family: var(--font-body);
@@ -1952,7 +1972,7 @@ body {
 }
 
 .cita-estado.pendiente   { background: rgba(212, 160, 23, 0.15); color: var(--color-warning); }
-.cita-estado.confirmada  { background: rgba(107, 122, 58, 0.18); color: var(--color-green); }
+.cita-estado.confirmada  { background: rgba(107, 122, 58, 0.18); color: var(--color-green-txt); }
 .cita-estado.cancelada   { background: rgba(122, 58, 50, 0.2);   color: var(--color-inactive); }
 .cita-estado.realizada   { background: rgba(255, 255, 255, 0.06); color: var(--color-muted); }
 
@@ -2040,7 +2060,7 @@ body {
 }
 
 .cita-acciones .btn-editar:hover {
-    color: var(--color-green);
+    color: var(--color-green-txt);
     border-color: var(--color-green);
 }
 
@@ -2259,7 +2279,7 @@ body {
 }
 
 .rc-escucha-estado--transcrita {
-    color: var(--color-green);
+    color: var(--color-green-txt);
 }
 
 .rc-escucha-estado--incorporada {
@@ -2475,7 +2495,7 @@ body {
 
 .kpi {
     background: rgba(245, 239, 224, 0.04);
-    border: 1px solid rgba(245, 239, 224, 0.08);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 24px 20px;
 }
@@ -2508,7 +2528,7 @@ body {
 
 .stats-card {
     background: rgba(245, 239, 224, 0.04);
-    border: 1px solid rgba(245, 239, 224, 0.08);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 16px;
@@ -2579,7 +2599,10 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 16px;
-    background: rgba(245, 239, 224, 0.03);
+    /* Fondo negro, no gris: sobre el gris el numero rojo se quedaba en 2,85:1
+       y a 30 px la norma pide 3. Sobre negro llega a 3,42 (12/09/2026). */
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
 }
 
@@ -2631,7 +2654,7 @@ body {
     gap: 6px;
     margin-top: 14px;
     padding-top: 14px;
-    border-top: 1px solid rgba(245, 239, 224, 0.08);
+    border-top: 1px solid var(--color-border);
 }
 
 .stats-tabla-fila {
@@ -2688,7 +2711,7 @@ body {
 
 .stats-mini-card {
     background: rgba(245, 239, 224, 0.04);
-    border: 1px solid rgba(245, 239, 224, 0.08);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 20px;
     display: flex;
@@ -2857,15 +2880,15 @@ body {
     letter-spacing: 1px;
     padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(31, 79, 168, 0.15);
-    color: #1F4FA8;
+    background: rgba(31, 79, 168, 0.18);
+    color: #6E9BE8;   /* el cobalto de marca sobre oscuro daba 1,89:1 */
     text-transform: uppercase;
 }
 
 /* Estados del badge llamada — paleta azul cobalto.
    La clase .cita-estado da estructura tipográfica; .llamada-estado.X
    sobrescribe colores. Espejado de .cita-estado.pendiente etc. */
-.cita-estado.llamada-estado.pendiente { background: rgba(31, 79, 168, 0.18); color: #1F4FA8; }
+.cita-estado.llamada-estado.pendiente { background: rgba(31, 79, 168, 0.18); color: #6E9BE8; }
 .cita-estado.llamada-estado.realizada { background: rgba(31, 79, 168, 0.08); color: var(--color-muted); }
 .cita-estado.llamada-estado.no_show   { background: rgba(122, 58, 50, 0.20); color: var(--color-inactive); }
 .cita-estado.llamada-estado.cancelada { background: rgba(122, 58, 50, 0.20); color: var(--color-inactive); }
@@ -3095,16 +3118,16 @@ body {
 /* Color por estado al estar activo */
 .estado-pill[data-estado="consulta"].is-active { color: #E8B62D; }
 .estado-pill[data-estado="activo"].is-active { color: #9CB64B; }
-.estado-pill[data-estado="inactivo"].is-active { color: #C77D3E; }
-.estado-pill[data-estado="veterano"].is-active { color: #4A7DD4; }
-.estado-pill[data-estado="ex_cliente"].is-active { color: #8E8A82; }
+.estado-pill[data-estado="inactivo"].is-active { color: #D9904E; }
+.estado-pill[data-estado="veterano"].is-active { color: #6E9BE8; }
+.estado-pill[data-estado="ex_cliente"].is-active { color: #A09990; }
 
 /* Punto coloreado siempre (incluso inactivo, sutil) */
 .estado-pill[data-estado="consulta"] .estado-pill__dot { background: #E8B62D; }
 .estado-pill[data-estado="activo"] .estado-pill__dot { background: #9CB64B; }
-.estado-pill[data-estado="inactivo"] .estado-pill__dot { background: #C77D3E; }
-.estado-pill[data-estado="veterano"] .estado-pill__dot { background: #4A7DD4; }
-.estado-pill[data-estado="ex_cliente"] .estado-pill__dot { background: #8E8A82; }
+.estado-pill[data-estado="inactivo"] .estado-pill__dot { background: #D9904E; }
+.estado-pill[data-estado="veterano"] .estado-pill__dot { background: #6E9BE8; }
+.estado-pill[data-estado="ex_cliente"] .estado-pill__dot { background: #A09990; }
 
 .estado-pill:disabled { opacity: 0.5; cursor: wait; }
 
@@ -3141,6 +3164,7 @@ body {
 }
 
 .subtab.is-active {
+    /* El texto lo pone crema la regla del final; aqui solo el filete. */
     background: rgba(217, 27, 29, 0.15);
     color: var(--color-red);
     border-color: rgba(217, 27, 29, 0.4);
@@ -3213,7 +3237,7 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 0.85rem 0.5rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-bg);   /* ver la nota de .deriv-item */
     border: 1px solid var(--color-border);
     border-radius: 10px;
     transition: border-color 0.18s;
@@ -3247,8 +3271,8 @@ body {
 .llamada-item--cancelada { border-left: 3px solid #D91B1D; }
 .llamada-item--cancelada .llamada-num { color: #D91B1D; }
 
-.llamada-item--no-show { border-left: 3px solid #8E8A82; }
-.llamada-item--no-show .llamada-num { color: #8E8A82; }
+.llamada-item--no-show { border-left: 3px solid #A09990; }
+.llamada-item--no-show .llamada-num { color: #A09990; }
 
 /* ===================== Stats — Reservas asistidas por Vicky (desglose) ===================== */
 
@@ -3273,7 +3297,7 @@ body {
     flex-direction: column;
     align-items: center;
     padding: 0.85rem 0.5rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-bg);   /* ver la nota de .deriv-item */
     border: 1px solid var(--color-border);
     border-radius: 10px;
     transition: border-color 0.18s;
@@ -3309,11 +3333,11 @@ body {
 .vicky-item--citas      { border-left: 3px solid #6B7A3A; }
 .vicky-item--citas .vicky-num      { color: #6B7A3A; }
 
-.vicky-item--expirados  { border-left: 3px solid #8E8A82; }
-.vicky-item--expirados .vicky-num  { color: #8E8A82; }
+.vicky-item--expirados  { border-left: 3px solid #A09990; }
+.vicky-item--expirados .vicky-num  { color: #A09990; }
 
-.vicky-item--conversion { border-left: 3px solid #8B7355; }
-.vicky-item--conversion .vicky-num { color: #8B7355; }
+.vicky-item--conversion { border-left: 3px solid #B39471; }
+.vicky-item--conversion .vicky-num { color: #B39471; }
 
 /* ===================== Tab Bienestar y felicidad (admin/perro) ===================== */
 
@@ -3327,7 +3351,7 @@ body {
 .admin-salud-kpi {
     text-align: center;
     padding: 0.85rem 0.5rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-bg);   /* ver la nota de .deriv-item */
     border: 1px solid var(--color-border);
     border-left: 3px solid #9CB64B;
     border-radius: 8px;
@@ -3348,7 +3372,7 @@ body {
 
 .admin-salud-total {
     padding: 0.85rem;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--color-bg);   /* ver la nota de .deriv-item */
     border-radius: 8px;
     color: var(--color-text);
     font-size: 0.92rem;
@@ -3357,7 +3381,10 @@ body {
 .admin-salud-total strong {
     font-family: var(--font-display);
     font-size: 1.4rem;
-    color: var(--color-red);
+    /* 22 px: por debajo de los 24 que permiten bajar el minimo a 3:1, asi que
+       el rojo sobre negro (3,42) no llega. Va en crema; el rojo se queda en
+       los filetes, que es lo que dice el manual de marca. */
+    color: var(--color-text);
     margin: 0 0.4rem;
 }
 
@@ -3822,7 +3849,7 @@ body {
 
 .cal-dia.is-seleccionado {
     background: var(--pdli-rojo);
-    color: var(--color-surface);
+    color: var(--color-text);   /* era --color-surface: 3,09:1 sobre el rojo */
 }
 
 .cal-dia.is-seleccionado .cal-dia__punto {
@@ -4218,7 +4245,7 @@ body {
     font-family: var(--font-display);
     font-size: 2rem;
     line-height: 1;
-    color: var(--color-green);
+    color: var(--color-green-txt);
     letter-spacing: 0.02em;
     font-weight: 400;
 }
@@ -4349,7 +4376,7 @@ body {
 .prog-admin-racha strong {
     font-family: var(--font-display);
     font-size: 1.1rem;
-    color: var(--color-green);
+    color: var(--color-green-txt);
     letter-spacing: 0.03em;
     font-weight: 400;
 }
@@ -4385,7 +4412,7 @@ body {
     font-family: var(--font-display);
     font-size: 0.95rem;
     line-height: 1;
-    color: var(--color-green);
+    color: var(--color-green-txt);
     letter-spacing: 0.03em;
     font-weight: 400;
 }
@@ -4458,7 +4485,7 @@ body {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-green);
+    color: var(--color-green-txt);
     margin-bottom: 0.35rem;
 }
 
@@ -4840,7 +4867,7 @@ body {
 }
 
 .aviso-copy-label {
-    color: var(--color-green);
+    color: var(--color-green-txt);
     font-family: var(--font-body);
     font-size: 11px;
     font-weight: 700;
@@ -5213,7 +5240,7 @@ body {
 }
 
 .actividad-visto {
-    color: var(--color-green);
+    color: var(--color-green-txt);
     font-family: var(--font-body);
     font-size: 13px;
     font-weight: 600;
@@ -5441,7 +5468,7 @@ body {
 /* Fila etiqueta / valor. */
 .a-row{
     display:flex; justify-content:space-between; align-items:center; gap:10px;
-    padding:9px 0; font-size:.86rem; border-top:1px solid rgba(255,255,255,.05);
+    padding:9px 0; font-size:.86rem; border-top:1px solid var(--color-border);
 }
 .a-row:first-of-type{ border-top:none; }
 .a-row > span:first-child{ color:var(--color-muted); flex:0 0 auto; }
@@ -5504,7 +5531,7 @@ body {
        etiqueta a la izquierda y valor a la derecha. */
     display:flex; flex-direction:row; justify-content:space-between;
     align-items:baseline; gap:12px;
-    padding:9px 0; border-top:1px solid rgba(255,255,255,.05); margin:0;
+    padding:9px 0; border-top:1px solid var(--color-border); margin:0;
 }
 .a-card .detalle-campos .campo:first-child{ border-top:none; }
 .a-card .detalle-campos dt{
@@ -5546,7 +5573,8 @@ body {
 }
 .agenda-subtab.active, .seguimiento-subtab.active{ font-weight:700; }
 /* El subrayado del activo, idéntico en las tres. */
-.tab.is-active, .agenda-subtab.active, .seguimiento-subtab.active{
+.tab.is-active, .agenda-subtab.active, .seguimiento-subtab.active,
+.actividad-subtab.active, .subtab.is-active{
     color:var(--color-text);
     border-bottom-color:var(--color-red);
 }
@@ -5615,7 +5643,7 @@ body {
     border-radius: 0;
     background: transparent;
     padding: 11px 0;
-    border-top: 1px solid rgba(255,255,255,.05);
+    border-top: 1px solid var(--color-border);
 }
 .agenda-grupo .cita-card:first-of-type{ border-top: none; }
 /* La franja azul de las llamadas se conserva, movida al filo izquierdo. */
@@ -5625,7 +5653,7 @@ body {
 .agenda-dia{
     font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
     color: var(--color-muted); margin: 14px 0 0; padding-top: 11px;
-    border-top: 1px dashed rgba(255,255,255,.09);
+    border-top: 1px dashed var(--color-border);
 }
 .agenda-dia:first-child{ border-top: none; padding-top: 0; margin-top: 0; }
 .agenda-dia + .cita-card{ border-top: none; }
@@ -5633,7 +5661,7 @@ body {
 /* Nota al pie de los bloqueos (los automáticos que se ocultan). */
 .agenda-nota{
     font-size: .72rem; color: var(--color-muted); line-height: 1.45;
-    margin: 11px 0 0; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,.09);
+    margin: 11px 0 0; padding-top: 10px; border-top: 1px dashed var(--color-border);
 }
 
 /* Variantes de color de las cifras. El semáforo de siempre: rojo lo que no
@@ -5645,7 +5673,7 @@ body {
 .a-card .avisos-list{ margin: 0; padding: 0; list-style: none; }
 .a-card .avisos-list .aviso-item{
     border: none; border-radius: 0; background: transparent;
-    padding: 10px 0; border-top: 1px solid rgba(255,255,255,.05);
+    padding: 10px 0; border-top: 1px solid var(--color-border);
 }
 .a-card .avisos-list .aviso-item:first-child{ border-top: none; }
 
@@ -5668,7 +5696,7 @@ body {
 .a-card .avisos-list > li,
 .a-card .actividad-lista > li{
     border:none; border-radius:0; background:transparent;
-    padding:10px 0; border-top:1px solid rgba(255,255,255,.05);
+    padding:10px 0; border-top:1px solid var(--color-border);
 }
 .a-card .avisos-list > li:first-child,
 .a-card .actividad-lista > li:first-child{ border-top:none; }
@@ -5715,7 +5743,7 @@ body {
 }
 .cita-camino__txt{
   font-family:var(--font-body); font-size:13px; font-weight:600;
-  color:var(--color-green); margin-right:auto;
+  color:var(--color-green-txt); margin-right:auto;
 }
 .cita-camino button{
   border:1px solid var(--color-border); background:var(--color-surface-2);
@@ -5724,7 +5752,8 @@ body {
   font-family:var(--font-body); font-size:13px; font-weight:600;
 }
 .cita-camino .btn-camino{
-  background:var(--color-green); border-color:var(--color-green); color:#F5EFE0;
+  /* Oliva oscuro con crema daba 4,1:1. Oliva claro con negro: 7,6:1. */
+  background:var(--pdli-oliva-claro); border-color:var(--pdli-oliva-claro); color:#1A1A1A;
 }
 .cita-camino button[disabled]{opacity:.55;cursor:default}
 
@@ -5742,7 +5771,7 @@ body {
   color:var(--color-muted); margin-right:2px;
 }
 .camino-opts button[data-action="camino-set"]{
-  background:transparent; border:1px solid var(--color-green); color:var(--color-green);
+  background:transparent; border:1px solid var(--color-green); color:var(--color-green-txt);
 }
 .camino-opts .camino-opts__x{
   margin-left:auto; border:none; background:none; color:var(--color-muted);
@@ -5752,7 +5781,7 @@ body {
 /* =====================================================================
    Editor de la escalera de desensibilización (03/09/2026)
    ===================================================================== */
-.registro-chip--esc{border-color:var(--color-green);color:var(--color-green)}
+.registro-chip--esc{border-color:var(--color-green);color:var(--color-green-txt)}
 
 /* Este panel es largo (hasta 12 peldanos): hace scroll dentro del propio panel
    y los botones quedan pegados al fondo, siempre a mano en un movil. */
@@ -5799,7 +5828,7 @@ body {
 /* Resumen de la escalera en la tarjeta del ejercicio */
 .esc-resumen{margin-top:10px;padding-top:10px;border-top:1px solid var(--color-border)}
 .esc-resumen__cab{margin:0 0 8px;font-family:var(--font-body);font-size:11.5px;font-weight:700;
-  letter-spacing:.6px;text-transform:uppercase;color:var(--color-green)}
+  letter-spacing:.6px;text-transform:uppercase;color:var(--color-green-txt)}
 .esc-resumen__vacio{margin:0;font-family:var(--font-body);font-size:12.5px;color:var(--color-muted)}
 .esc-res__p{display:flex;gap:8px;align-items:flex-start;padding:4px 0;
   font-family:var(--font-body);font-size:12.5px;line-height:1.35}
@@ -5820,3 +5849,117 @@ body {
 .esc-ed__check b{display:block;font-family:var(--font-body);font-size:13.5px;color:var(--color-text)}
 .esc-ed__check small{display:block;font-family:var(--font-body);font-size:12px;line-height:1.4;
   color:var(--color-muted);margin-top:2px}
+
+/* ============================================================================
+   CONTRASTE — 12/09/2026
+   Charly: "en el admin no distingo las letras ni los botones, es todo gris,
+   y con sol o con poco brillo no veo nada."
+
+   Medido: el borde de los controles estaba en 1,25:1 contra el fondo. La
+   norma pide 3:1 para el contorno de algo que se puede pulsar. Los tokens
+   de arriba suben el borde general; este bloque sube SOLO el de los
+   controles, que son los que hay que distinguir del fondo para saber que
+   se pueden tocar. Va al final a propósito: se quita entero si molesta.
+   ========================================================================== */
+
+.btn-big,
+.btn-secondary,
+.chip,
+.avisos-filtro,
+.actividad-filtro,
+.registro-chip,
+.btn-reordenar,
+.admin-toggle,
+.cita-acciones button,
+.cita-camino button,
+.esc-ed__plt button,
+.field input,
+.search-wrapper input,
+.bottom-sheet__search input,
+.form-field input,
+.form-field select,
+.form-field textarea,
+.admin-widget__row input[type="number"],
+.admin-widget__row .btn-secondary,
+.esc-ed__input {
+    border-color: var(--color-border-ui);
+}
+
+/* El chip activo ya lleva su propio color de borde: que no lo pise el de arriba. */
+.chip.is-active {
+    border-color: var(--pdli-oliva-claro);
+}
+
+/* Los botones de período de Estadísticas no tenían borde ninguno: se leían
+   como texto apagado, no como botones. */
+.stats-periodo-btn {
+    border: 1px solid var(--color-border-ui);
+}
+
+.stats-periodo-btn.active {
+    border-color: var(--color-red);
+}
+
+/* Las flechas de mes eran gris sobre gris dentro de una píldora sin contorno. */
+.stats-mes-btn {
+    border: 1px solid var(--color-border-ui);
+    color: var(--color-text);
+}
+
+/* ----------------------------------------------------------------------------
+   Rojo sobre fondo oscuro — 12/09/2026
+   PDLI_VISUAL.txt §1: "Sobre fondo oscuro el texto va en crema, y el rojo se
+   usa como bloque sólido o como filete. Nunca como texto pequeño rojo sobre
+   negro." Medido: el rojo de marca sobre las superficies del admin da 2,7-3,4:1
+   y para texto por debajo de 24 px hace falta 4,5. Así que estas líneas pasan a
+   crema y el rojo se queda donde el manual lo manda: en el filete y en el borde.
+   -------------------------------------------------------------------------- */
+
+.error-message,
+.reg-aviso {
+    color: var(--color-text);
+    border-left: 3px solid var(--color-red);
+    padding-left: 8px;
+}
+
+/* Estos ya viven dentro de un bloque con borde o fondo rojo: basta el texto. */
+.form-error,
+.rc-escucha-aviso--error,
+.rc-escucha-estado--error {
+    color: var(--color-text);
+}
+
+/* Texto corrido: el rojo se sustituye por crema en negrita. La palabra ya dice
+   lo que pasa ("vencido", "sin práctica"), no hace falta que además grite. */
+.pack-plazo--vencido,
+.actividad-sinpractica-dias--alerta,
+.actividad-tq--alerta,
+.funnel-row-warn .funnel-label,
+.admin-salud-historico-total,
+.nota-feed__ej,
+.progresion-link,
+.rc-indicador,
+.rc-escucha-timer,
+.form-fieldset legend,
+.salud-ev__tipo--medicacion,
+.salud-ev__tipo--cita_vet {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+/* Últimos tres rojos sobre oscuro que quedaban sueltos. */
+.pausado-btn--danger {
+    color: var(--color-text);
+    border-color: var(--color-red);   /* el rojo se queda en el borde */
+}
+
+.cal-dia.is-disponible {
+    /* Día con hueco libre: iba en rojo (2,7:1). Ahora en crema con el punto
+       rojo debajo, que es el que ya marcaba la disponibilidad. */
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.notas-ej-item__nuevo {
+    font-weight: 700;   /* 11 px de crema sobre rojo: con negrita ya cuenta como grande */
+}
