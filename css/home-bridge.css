@@ -794,11 +794,16 @@
 .home .isla-rayos      { animation: isla-gira 34s linear infinite; }
 .home .isla-aves       { animation: isla-vuela 13s linear infinite; }
 .home .isla-mariposa   { animation: isla-revolotea 5.2s ease-in-out infinite; }
+/* Palmera = peldano de escalera superado. Se mece mas lento y menos que la
+   hierba: es un arbol, no un yuyo, y ademas no se borra el lunes. */
+.home .isla-palmera    { animation: isla-mece-palma 6.8s ease-in-out infinite; }
 
 @keyframes isla-respira   { 0%,100% { transform: scale(1);     opacity: 1;   }
                             50%     { transform: scale(1.035); opacity: .88; } }
 @keyframes isla-mece      { 0%,100% { transform: rotate(-2.2deg); }
                             50%     { transform: rotate(2.2deg);  } }
+@keyframes isla-mece-palma{ 0%,100% { transform: rotate(-1.1deg); }
+                            50%     { transform: rotate(1.1deg);  } }
 @keyframes isla-gira      { to      { transform: rotate(360deg); } }
 @keyframes isla-vuela     { 0%   { transform: translate(0,0);        opacity: 0; }
                             10%  { opacity: .85; }
@@ -816,5 +821,6 @@
 
 @media (prefers-reduced-motion: reduce) {
     .home .isla-mar, .home .isla-hierba, .home .isla-flor, .home .isla-rayos,
-    .home .isla-aves, .home .isla-mariposa, .home .isla-svg--completa { animation: none; }
+    .home .isla-aves, .home .isla-mariposa, .home .isla-palmera,
+    .home .isla-svg--completa { animation: none; }
 }

@@ -3966,6 +3966,10 @@ async function renderRutinaPerroSeleccionado() {
                 if (esEscalera(filas[i]) && !_escaleraCache.has(filas[i].id)) filas.splice(i, 1);
             }
             presentarEscaleraSiToca(perro);
+        } else {
+            // Sin esto la cache se queda con las escaleras del perro anterior y
+            // sus palmeras aparecerian en la isla de otro perro.
+            _escaleraCache.clear();
         }
 
         // Registros de las últimas 8 semanas (para los días con huella y la
@@ -4361,8 +4365,10 @@ async function escaleraAvanzar(asignadoId) {
         const { error } = await supabase.rpc('escalera_avanzar', { p_asignado_id: asignadoId });
         if (error) throw error;
         await refrescarEscalera(asignadoId);
+        renderAnilloSemana();   // la palmera nueva tiene que verse ya
+        if (state.rutinaModo === 'progreso') renderAnilloProgreso();
         const esc = _escaleraCache.get(asignadoId);
-        toast(esc && esc.completa ? '🎉 ¡Escalera completa!' : 'Peldaño superado. A por el siguiente.');
+        toast(esc && esc.completa ? '🎉 ¡Escalera completa!' : '🌴 Peldaño superado: una palmera más en la isla.');
     } catch (e) {
         console.error('[escalera] avanzar:', e);
         toast('No hemos podido avanzar. Inténtalo de nuevo.', 'error');
@@ -5194,6 +5200,12 @@ function calcularIslaSemana() {
 const _ISLA_PATH='M 139.1 28.0 L 140.3 29.6 L 138.7 31.6 L 131.6 34.8 L 130.0 36.3 L 126.8 37.1 L 126.8 39.9 L 128.4 41.5 L 133.6 39.9 L 137.2 37.1 L 139.1 38.7 L 138.0 43.1 L 136.0 45.4 L 130.8 45.8 L 130.8 48.2 L 132.8 52.6 L 140.7 57.7 L 143.1 58.1 L 149.1 55.4 L 150.6 53.8 L 150.3 51.0 L 151.8 50.2 L 156.2 53.8 L 160.9 56.2 L 164.5 56.2 L 164.5 58.9 L 166.1 60.9 L 163.3 63.3 L 163.3 68.1 L 160.9 70.8 L 159.0 71.2 L 157.4 73.6 L 157.0 75.2 L 159.4 76.8 L 159.4 77.9 L 157.0 79.1 L 155.4 81.5 L 149.5 86.3 L 146.7 91.4 L 145.9 98.6 L 143.9 100.6 L 142.7 104.1 L 138.7 108.5 L 135.6 110.8 L 132.4 111.2 L 125.3 117.6 L 123.3 118.0 L 120.9 115.6 L 120.1 112.9 L 117.4 112.1 L 116.5 108.5 L 114.9 106.9 L 113.4 106.1 L 109.8 106.5 L 107.0 105.3 L 100.3 105.7 L 97.1 104.5 L 92.8 99.0 L 91.6 90.2 L 93.5 86.7 L 92.0 84.3 L 85.6 80.4 L 83.6 79.5 L 82.4 81.5 L 80.1 81.9 L 78.1 83.9 L 74.9 84.3 L 72.5 92.6 L 70.5 93.4 L 67.0 91.4 L 66.6 88.7 L 65.4 87.5 L 66.2 85.1 L 65.0 83.9 L 62.2 84.7 L 61.0 83.5 L 60.3 84.7 L 58.2 85.1 L 56.3 82.7 L 56.7 81.1 L 53.9 78.7 L 53.9 76.8 L 55.9 73.2 L 64.2 68.8 L 67.4 64.9 L 76.9 60.5 L 81.6 54.6 L 84.4 53.4 L 84.8 51.4 L 87.6 49.8 L 88.8 47.4 L 92.4 45.0 L 94.7 45.0 L 96.3 41.9 L 99.1 40.7 L 101.9 41.1 L 108.2 36.3 L 112.2 34.8 L 117.7 34.8 L 122.1 31.6 L 124.1 31.6 L 126.1 33.1 L 130.8 32.0 L 134.4 28.8 L 138.7 28.4 Z';
 const _ISLA_PTS=[[123.0,35.7,3.9],[116.3,39.4,4.6],[120.4,41.0,6.5],[108.9,41.6,4.6],[133.8,43.1,2.4],[116.3,43.6,8.8],[103.7,43.6,3.1],[125.2,44.3,4.3],[110.8,45.5,8.9],[120.4,46.1,8.9],[99.8,46.9,5.3],[94.6,48.9,3.9],[106.9,49.2,9.5],[118.2,49.4,10],[128.6,49.6,2.6],[90.6,49.7,2.6],[114.1,50.0,10],[124.3,50.2,6.8],[100.7,52.6,9.6],[109.9,53.5,10],[114.7,53.9,10],[119.6,53.9,10],[94.3,54.0,7.9],[126.8,54.1,6.1],[153.2,54.3,2.3],[104.7,54.5,10],[89.1,54.6,4.8],[133.0,55.8,2.5],[122.1,57.1,10],[97.4,57.2,10],[84.0,57.9,4.0],[113.7,58.1,10],[109.4,58.1,10],[93.2,58.5,10],[154.3,58.9,5.4],[104.0,58.9,10],[146.8,59.7,3.0],[129.4,60.0,8.0],[161.8,60.7,3.0],[134.0,61.2,6.6],[118.3,61.7,10],[125.7,61.7,10],[85.4,61.8,7.5],[98.0,61.9,10],[108.9,62.0,10],[90.4,62.3,10],[150.6,62.4,7.0],[140.7,62.7,5.0],[80.9,63.9,5.2],[94.8,64.2,10],[137.0,64.4,7.6],[146.5,64.7,7.4],[156.3,64.7,7.0],[132.1,64.8,10],[101.6,65.5,10],[71.4,65.8,2.5],[118.6,65.9,10],[114.0,66.0,10],[105.8,66.7,10],[89.2,66.8,10],[125.3,67.2,10],[77.1,67.3,6.3],[140.9,67.4,9.6],[135.5,68.3,10],[151.4,68.4,7.9],[158.1,68.9,2.4],[130.6,68.9,10],[111.1,68.9,10],[97.1,69.2,10],[116.2,69.4,10],[69.1,69.5,4.2],[81.5,69.8,9.9],[146.3,70.2,10],[86.1,70.9,9.0],[100.9,71.0,10],[138.1,71.3,10],[142.1,71.9,10],[120.2,72.1,10],[128.3,72.3,10],[106.5,72.5,10],[78.2,72.5,8.8],[134.4,72.6,10],[92.4,73.1,9.8],[62.1,73.2,2.9],[68.0,73.3,5.9],[154.3,73.4,3.1],[96.7,73.5,10],[110.4,73.5,10],[72.7,73.8,9.7],[115.8,74.3,10],[83.8,74.6,5.0],[124.1,74.8,10],[89.0,75.4,6.0],[132.1,75.8,10],[120.4,76.4,10],[127.7,76.6,10],[146.8,76.7,9.1],[151.8,77.0,5.5],[139.3,77.0,10],[65.3,77.1,6.8],[100.9,77.2,10],[57.0,77.3,2.9],[95.8,77.5,7.8],[112.0,77.5,10],[76.7,77.9,5.2],[107.2,78.4,10],[135.2,79.0,10],[61.3,79.2,4.3],[80.8,79.2,2.6],[144.2,79.9,8.4],[70.5,80.2,6.0],[118.1,80.2,10],[125.6,80.9,10],[93.7,81.0,3.7],[148.5,81.5,4.4],[74.9,81.5,2.7],[130.1,81.8,10],[140.6,81.9,9.9],[113.9,82.0,10],[109.9,82.6,10],[102.0,83.7,9.1],[106.2,84.3,10],[119.8,84.4,10],[137.0,84.8,10],[97.6,85.0,4.5],[69.0,85.0,2.8],[127.5,86.0,10],[133.0,86.3,10],[114.1,86.5,10],[143.2,87.5,5.0],[69.7,89.1,3.0],[130.2,89.2,10],[106.2,89.4,10],[96.3,89.4,3.8],[119.7,89.5,10],[111.1,89.6,10],[134.6,90.1,10],[100.5,90.5,7.9],[138.5,91.0,8.2],[115.9,91.2,10],[143.6,91.4,3.1],[126.6,91.5,10],[122.6,92.5,10],[94.5,93.2,2.5],[112.0,93.7,10],[131.1,95.4,10],[105.9,95.6,9.7],[136.9,95.7,8.6],[97.1,96.2,4.7],[141.5,96.3,4.6],[101.2,96.8,8.0],[123.0,96.9,10],[109.8,97.0,8.7],[114.1,97.1,9.0],[118.5,97.4,10],[127.8,99.0,10],[136.6,100.4,7.0],[131.5,101.0,10],[141.0,101.4,2.5],[118.2,101.4,6.4],[124.6,101.6,10],[98.7,101.7,3.0],[111.7,102.2,4.0],[105.5,102.8,2.6],[122.3,105.1,6.7],[116.6,105.1,2.4],[136.4,105.6,3.7],[129.3,107.6,4.7],[122.5,111.2,3.0],[127.9,112.2,2.3]];
 const _ISLA_ORDEN=[0,58,155,35,140,159,77,82,96,3,4,109,34,40,95,141,117,138,29,50,80,90,102,69,113,133,93,59,38,137,56,68,14,130,134,41,15,13,64,17,101,71,148,150,28,8,146,92,5,73,149,166,167,7,164,143,57,19,135,126,51,152,37,131,163,18,76,47,111,25,83,79,66,129,128,62,36,16,119,169,22,108,98,21,121,154,78,94,112,10,89,49,157,86,30,161,122,99,132,118,12,43,61,23,65,70,31,45,72,100,53,123,120,6,127,84,139,54,104,24,116,125,103,32,91,110,1,147,124,44,75,20,165,74,46,97,52,81,85,2,162,136,145,142,67,88,151,156,63,158,9,115,55,33,160,153,144,60,106,87,105,42,114,48,39,107,168,26,27,11];
+// Las palmeras de los peldanos: 9 sitios fijos, bien adentro de la isla y
+// separados entre si, elegidos de los propios _ISLA_PTS. Se reservan (salen
+// del relleno semanal) para que una palmera y una planta no se pisen nunca.
+const _ISLA_PALMERAS=[[118.2,49.4],[97.4,57.2],[132.1,64.8],[114.0,66.0],[96.7,73.5],[72.7,73.8],[125.6,80.9],[106.2,89.4],[123.0,96.9]];
+const _ISLA_PALM_IDX=new Set([13,29,53,57,86,88,112,132,151]);
+const _ISLA_ORDEN_V=_ISLA_ORDEN.filter((i)=>!_ISLA_PALM_IDX.has(i));
 
 // ── Isla "De seca a vergel", vista de mapa (14/09/2026) ──
 // Misma silueta y misma paleta que la isla de bienestar, para que las dos
@@ -5269,6 +5281,32 @@ function _ivPiedra(x, y, s) {
     return `<g><ellipse cx="${x}" cy="${y}" rx="${3.4 * s}" ry="${2.4 * s}" fill="${_IV.piedraOsc}"/>`
          + `<ellipse cx="${x - .6 * s}" cy="${y - .7 * s}" rx="${2.3 * s}" ry="${1.5 * s}" fill="${_IV.piedra}"/></g>`;
 }
+function _ivPalmera(x, y, s, i) {
+    // Peldano de escalera superado. No esta en la rotacion semanal a proposito:
+    // tiene que distinguirse de un vistazo de la hierba, la mata, el arbol y el
+    // helecho. Es mas alta que todo lo demas y no se borra el lunes.
+    // Alta a proposito: con la isla llena una palmera baja se pierde entre las
+    // matas. Tiene que sobresalir de la copa de todo lo demas.
+    const h = 27 * s, top = y - h;
+    let hojas = '', halo = '';
+    for (let k = 0; k < 7; k++) {
+        const a = -Math.PI / 2 + (k / 6 - .5) * 2.8;
+        const mx = x + Math.cos(a) * 8.5 * s,  my = top + Math.sin(a) * 6 * s;
+        const ex = x + Math.cos(a) * 14 * s,   ey = top + Math.sin(a) * 7.5 * s + 4.2 * s;
+        const d = `M${x} ${top} Q ${mx} ${my} ${ex} ${ey}`;
+        // Contorno oscuro detras: es lo que la separa del verde de abajo.
+        halo  += `<path d="${d}" stroke="#2E2A20" stroke-width="${3.6 * s}" fill="none" stroke-linecap="round" opacity=".28"/>`;
+        hojas += `<path d="${d}" stroke="${k % 2 ? _IV.verdeCl : _IV.verdeMed}" stroke-width="${2.2 * s}" fill="none" stroke-linecap="round"/>`;
+    }
+    return `<g class="isla-palmera" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 5) * .45}s">`
+         + `<ellipse cx="${x + 1.4 * s}" cy="${y + 1.6 * s}" rx="${5 * s}" ry="${2 * s}" fill="#2E2A20" opacity=".22"/>`
+         + `<path d="M${x} ${y} Q ${x - 3.2 * s} ${y - h * .55} ${x} ${top}" stroke="#2E2A20" stroke-width="${4.2 * s}" fill="none" stroke-linecap="round" opacity=".3"/>`
+         + `<path d="M${x} ${y} Q ${x - 3.2 * s} ${y - h * .55} ${x} ${top}" stroke="#7A5C3A" stroke-width="${2.9 * s}" fill="none" stroke-linecap="round"/>`
+         + `<path d="M${x - .5 * s} ${y - h * .3} Q ${x - 2.6 * s} ${y - h * .6} ${x - .4 * s} ${top + 1 * s}" stroke="#9B7748" stroke-width="${1 * s}" fill="none" stroke-linecap="round" opacity=".8"/>`
+         + `${halo}${hojas}<circle cx="${x}" cy="${top}" r="${1.7 * s}" fill="${_IV.verdeLuz}"/>`
+         + `<circle cx="${x + 2.1 * s}" cy="${top + 2.6 * s}" r="${1.5 * s}" fill="${_IV.oro}"/>`
+         + `<circle cx="${x - 1.4 * s}" cy="${top + 3.1 * s}" r="${1.2 * s}" fill="${_IV.oroOsc}"/></g>`;
+}
 function _ivPlanta(i, x, y, s, extra) {
     // La flor es acento, no alfombra: 1 de cada 8. Lo que llena es el verde.
     if (extra || i % 8 === 3) return _ivFlor(x, y, s * 1.05, i);
@@ -5299,8 +5337,32 @@ function _ivSol(x, y, op) {
     return `<g opacity="${op}"><g class="isla-rayos" style="transform-origin:${x}px ${y}px">${r}</g><circle cx="${x}" cy="${y}" r="7.5" fill="${_IV.oro}"/><circle cx="${x}" cy="${y}" r="7.5" fill="#FFF2C4" opacity=".45"/></g>`;
 }
 
+// Peldanos de escalera superados ALGUNA VEZ por el perro seleccionado.
+// Se cuenta 'alguna_vez' y no 'superado': retroceder es parte del metodo y no
+// debe costarle una palmera al tutor. El ?? deja la app en pie si la RPC
+// todavia devuelve la forma vieja (cache del navegador).
+function _islaPeldanos() {
+    let n = 0;
+    _escaleraCache.forEach((e) => {
+        (e && e.pasos || []).forEach((p) => { if (p.alguna_vez ?? p.superado) n += 1; });
+    });
+    return n;
+}
+
+// Devuelve [[y, svg], ...] para que se ordenen junto con la vegetacion.
+function _islaPalmerasPiezas(n) {
+    if (n <= 0) return [];
+    const sitios = _ISLA_PALMERAS.length;
+    // Pasado el ultimo sitio no se amontonan mas: crecen las que ya estan.
+    const crece = Math.min(Math.max(n - sitios, 0) / sitios, 1) * .45;
+    return _ISLA_PALMERAS.slice(0, Math.min(n, sitios)).map((p, k) => {
+        const s = .92 + _islaRnd(k * 17) * .16 + crece;
+        return [p[1], _ivPalmera(p[0], p[1], s, k)];
+    });
+}
+
 // t = 0..1. hechos = entrenos de la semana; objetivo = suma de minimos.
-function _islaPintarEscena(hechos, objetivo, t, svgId = 'isla-semana-svg') {
+function _islaPintarEscena(hechos, objetivo, t, svgId = 'isla-semana-svg', peldanos = 0) {
     const svg = document.getElementById(svgId);
     if (!svg) return;
     const done = t >= 1;
@@ -5337,15 +5399,16 @@ function _islaPintarEscena(hechos, objetivo, t, svgId = 'isla-semana-svg') {
         // Crece con curva, no en linea recta: si fuera lineal, al 25 % la isla ya
     // parece llena y las semanas flojas se ven igual que las buenas.
     const avance = Math.min(hechos / Math.max(objetivo, 1), 1.6);
-    const cupo = Math.min(Math.round(Math.pow(avance, 1.45) * 150) + (hechos > 0 ? 4 : 0), _ISLA_PTS.length);
-    const visibles = _ISLA_ORDEN.slice(0, cupo)
-        .map((i) => [i, _ISLA_PTS[i]])
-        .sort((a, b) => a[1][1] - b[1][1]);
-    let verde = '';
-    visibles.forEach(([i, p], n) => {
+    const cupo = Math.min(Math.round(Math.pow(avance, 1.45) * 150) + (hechos > 0 ? 4 : 0), _ISLA_ORDEN_V.length);
+    // Vegetacion de la semana y palmeras de los peldanos se ordenan JUNTAS por
+    // altura: si no, una palmera del fondo taparia una planta de delante.
+    const piezas = _ISLA_ORDEN_V.slice(0, cupo).map((i) => {
+        const p = _ISLA_PTS[i];
         const s = 0.92 + _islaRnd(i * 3) * 0.5 + Math.min(p[2], 10) * 0.035;
-        verde += _ivPlanta(i, p[0], p[1], s, extras > 0 && (i % 11) === 0);
-    });
+        return [p[1], _ivPlanta(i, p[0], p[1], s, extras > 0 && (i % 11) === 0)];
+    }).concat(_islaPalmerasPiezas(peldanos));
+    piezas.sort((a, b) => a[0] - b[0]);
+    const verde = piezas.map((q) => q[1]).join('');
 
     const luz = t > .55
         ? `<path d="${_ISLA_PATH}" fill="#FFE9A8" opacity="${(t - .55) / .45 * .17}" transform="translate(110 73) scale(1.06) translate(-113 -69)"/>` : '';
@@ -5432,7 +5495,7 @@ function renderIsla(prefix = 'isla-semana') {
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     setText(`${prefix}-perro`, perro?.nombre || 'tu perro');
 
-    _islaPintarEscena(hechosTotal, objetivo, Math.min(pct, 1), `${prefix}-svg`);
+    _islaPintarEscena(hechosTotal, objetivo, Math.min(pct, 1), `${prefix}-svg`, _islaPeldanos());
 
     const pctEntero = Math.min(100, Math.round(pct * 100));
     setText(`${prefix}-pct`, String(pctEntero));
@@ -5646,7 +5709,7 @@ function renderIslaGlobal() {
     setText(`${prefix}-perro`, nombre);
     setText(`${prefix}-perro2`, nombre);
     // La isla FLORECE con el esfuerzo (constancia). t = effortPct; sin extras.
-    _islaPintarEscena(0, 1, g.effortPct, `${prefix}-svg`);
+    _islaPintarEscena(0, 1, g.effortPct, `${prefix}-svg`, _islaPeldanos());
     // Avance por CLASES.
     setText(`${prefix}-clase-x`, String(g.X));
     setText(`${prefix}-clase-n`, String(g.N));
