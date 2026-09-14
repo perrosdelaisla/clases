@@ -7967,14 +7967,24 @@ function showScreen(name) {
    la pantalla cambia y el aviso se va con ella. Un arranque lento en 3G
    sigue funcionando igual. */
 let _vigilanteCarga = null;
+let _vigilanteMs = 15000;
 
-function arrancarVigilanteDeCarga(ms = 12000) {
+/* 14/09/2026 — el reloj cuenta SOLO mientras el usuario esta mirando.
+   Antes era un setTimeout a secas: si el movil mandaba la app a segundo plano
+   mientras arrancaba (o Android la congelaba), el temporizador quedaba
+   pendiente y saltaba de golpe al volver. El usuario tocaba el icono y el
+   aviso ya estaba ahi, sin haber esperado nada. Charly lo reporto asi:
+   "sale de una, en vez de aparecer a los 10 o mas segundos". */
+function arrancarVigilanteDeCarga(ms = 15000) {
+    _vigilanteMs = ms;
     clearTimeout(_vigilanteCarga);
+    _vigilanteCarga = null;
+    if (document.visibilityState !== 'visible') return;   // en segundo plano no corre
     _vigilanteCarga = setTimeout(() => {
         const pantalla = document.getElementById('screen-loading');
         const aviso = document.getElementById('loading-atasco');
         if (pantalla && !pantalla.hidden && aviso) aviso.hidden = false;
-    }, ms);
+    }, _vigilanteMs);
 }
 
 function pararVigilanteDeCarga() {
@@ -7983,6 +7993,22 @@ function pararVigilanteDeCarga() {
     const aviso = document.getElementById('loading-atasco');
     if (aviso) aviso.hidden = true;
 }
+
+/* Al volver de segundo plano el contador empieza de cero. Y mientras la app
+   esta oculta no corre: el tiempo que el movil estuvo dormido no es tiempo de
+   espera del usuario. */
+document.addEventListener('visibilitychange', () => {
+    const pantalla = document.getElementById('screen-loading');
+    if (!pantalla || pantalla.hidden) return;             // ya no estamos cargando
+    if (document.visibilityState === 'visible') {
+        const aviso = document.getElementById('loading-atasco');
+        if (aviso) aviso.hidden = true;
+        arrancarVigilanteDeCarga(_vigilanteMs);
+    } else {
+        clearTimeout(_vigilanteCarga);
+        _vigilanteCarga = null;
+    }
+});
 
 /* Reintento de verdad: vacía la caché de la app y recarga. Un location.reload()
    a secas volvería a servir el mismo shell roto desde el service worker.
