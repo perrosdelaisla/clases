@@ -782,3 +782,39 @@
 
 .esc-fin{padding:13px 14px;border-radius:12px;background:var(--c-oliva-soft);
   border:1px solid var(--c-oliva-line);font-family:var(--body,inherit);font-size:14px;line-height:1.45}
+/* ── Isla viva (14/09/2026) ───────────────────────────────────────────────
+   La escena la dibuja el JS; aqui solo el movimiento. Todo se apaga solo si
+   el movil pide "reducir movimiento", que es lo correcto y ademas lo que
+   pide la norma.
+   ------------------------------------------------------------------------ */
+
+.home .isla-mar        { animation: isla-respira 7s ease-in-out infinite; transform-origin: 110px 73px; }
+.home .isla-hierba     { animation: isla-mece 3.4s ease-in-out infinite; }
+.home .isla-flor       { animation: isla-mece 4.6s ease-in-out infinite; }
+.home .isla-rayos      { animation: isla-gira 34s linear infinite; }
+.home .isla-aves       { animation: isla-vuela 13s linear infinite; }
+.home .isla-mariposa   { animation: isla-revolotea 5.2s ease-in-out infinite; }
+
+@keyframes isla-respira   { 0%,100% { transform: scale(1);     opacity: 1;   }
+                            50%     { transform: scale(1.035); opacity: .88; } }
+@keyframes isla-mece      { 0%,100% { transform: rotate(-2.2deg); }
+                            50%     { transform: rotate(2.2deg);  } }
+@keyframes isla-gira      { to      { transform: rotate(360deg); } }
+@keyframes isla-vuela     { 0%   { transform: translate(0,0);        opacity: 0; }
+                            10%  { opacity: .85; }
+                            85%  { opacity: .85; }
+                            100% { transform: translate(150px,-14px); opacity: 0; } }
+@keyframes isla-revolotea { 0%,100% { transform: translate(0,0)      rotate(0deg);  }
+                            25%     { transform: translate(5px,-4px)  rotate(8deg);  }
+                            60%     { transform: translate(-4px,-7px) rotate(-7deg); } }
+
+/* Semana completa: la isla respira una vez, fuerte, y se queda. */
+.home .isla-svg--completa { animation: isla-festejo 1.6s cubic-bezier(.22,1.2,.36,1) 1; }
+@keyframes isla-festejo { 0%   { transform: scale(1);    }
+                          38%  { transform: scale(1.055); }
+                          100% { transform: scale(1);    } }
+
+@media (prefers-reduced-motion: reduce) {
+    .home .isla-mar, .home .isla-hierba, .home .isla-flor, .home .isla-rayos,
+    .home .isla-aves, .home .isla-mariposa, .home .isla-svg--completa { animation: none; }
+}

@@ -5191,8 +5191,16 @@ function calcularIslaSemana() {
              pct: objetivo > 0 ? (hechosCap / objetivo) : 0 };
 }
 
-// ── Escena "De seca a vergel" (aprobada por Charly 31/08) ──
-// Todo determinista (sin Math.random): el render es estable entre repintados.
+const _ISLA_PATH='M 139.1 28.0 L 140.3 29.6 L 138.7 31.6 L 131.6 34.8 L 130.0 36.3 L 126.8 37.1 L 126.8 39.9 L 128.4 41.5 L 133.6 39.9 L 137.2 37.1 L 139.1 38.7 L 138.0 43.1 L 136.0 45.4 L 130.8 45.8 L 130.8 48.2 L 132.8 52.6 L 140.7 57.7 L 143.1 58.1 L 149.1 55.4 L 150.6 53.8 L 150.3 51.0 L 151.8 50.2 L 156.2 53.8 L 160.9 56.2 L 164.5 56.2 L 164.5 58.9 L 166.1 60.9 L 163.3 63.3 L 163.3 68.1 L 160.9 70.8 L 159.0 71.2 L 157.4 73.6 L 157.0 75.2 L 159.4 76.8 L 159.4 77.9 L 157.0 79.1 L 155.4 81.5 L 149.5 86.3 L 146.7 91.4 L 145.9 98.6 L 143.9 100.6 L 142.7 104.1 L 138.7 108.5 L 135.6 110.8 L 132.4 111.2 L 125.3 117.6 L 123.3 118.0 L 120.9 115.6 L 120.1 112.9 L 117.4 112.1 L 116.5 108.5 L 114.9 106.9 L 113.4 106.1 L 109.8 106.5 L 107.0 105.3 L 100.3 105.7 L 97.1 104.5 L 92.8 99.0 L 91.6 90.2 L 93.5 86.7 L 92.0 84.3 L 85.6 80.4 L 83.6 79.5 L 82.4 81.5 L 80.1 81.9 L 78.1 83.9 L 74.9 84.3 L 72.5 92.6 L 70.5 93.4 L 67.0 91.4 L 66.6 88.7 L 65.4 87.5 L 66.2 85.1 L 65.0 83.9 L 62.2 84.7 L 61.0 83.5 L 60.3 84.7 L 58.2 85.1 L 56.3 82.7 L 56.7 81.1 L 53.9 78.7 L 53.9 76.8 L 55.9 73.2 L 64.2 68.8 L 67.4 64.9 L 76.9 60.5 L 81.6 54.6 L 84.4 53.4 L 84.8 51.4 L 87.6 49.8 L 88.8 47.4 L 92.4 45.0 L 94.7 45.0 L 96.3 41.9 L 99.1 40.7 L 101.9 41.1 L 108.2 36.3 L 112.2 34.8 L 117.7 34.8 L 122.1 31.6 L 124.1 31.6 L 126.1 33.1 L 130.8 32.0 L 134.4 28.8 L 138.7 28.4 Z';
+const _ISLA_PTS=[[123.0,35.7,3.9],[116.3,39.4,4.6],[120.4,41.0,6.5],[108.9,41.6,4.6],[133.8,43.1,2.4],[116.3,43.6,8.8],[103.7,43.6,3.1],[125.2,44.3,4.3],[110.8,45.5,8.9],[120.4,46.1,8.9],[99.8,46.9,5.3],[94.6,48.9,3.9],[106.9,49.2,9.5],[118.2,49.4,10],[128.6,49.6,2.6],[90.6,49.7,2.6],[114.1,50.0,10],[124.3,50.2,6.8],[100.7,52.6,9.6],[109.9,53.5,10],[114.7,53.9,10],[119.6,53.9,10],[94.3,54.0,7.9],[126.8,54.1,6.1],[153.2,54.3,2.3],[104.7,54.5,10],[89.1,54.6,4.8],[133.0,55.8,2.5],[122.1,57.1,10],[97.4,57.2,10],[84.0,57.9,4.0],[113.7,58.1,10],[109.4,58.1,10],[93.2,58.5,10],[154.3,58.9,5.4],[104.0,58.9,10],[146.8,59.7,3.0],[129.4,60.0,8.0],[161.8,60.7,3.0],[134.0,61.2,6.6],[118.3,61.7,10],[125.7,61.7,10],[85.4,61.8,7.5],[98.0,61.9,10],[108.9,62.0,10],[90.4,62.3,10],[150.6,62.4,7.0],[140.7,62.7,5.0],[80.9,63.9,5.2],[94.8,64.2,10],[137.0,64.4,7.6],[146.5,64.7,7.4],[156.3,64.7,7.0],[132.1,64.8,10],[101.6,65.5,10],[71.4,65.8,2.5],[118.6,65.9,10],[114.0,66.0,10],[105.8,66.7,10],[89.2,66.8,10],[125.3,67.2,10],[77.1,67.3,6.3],[140.9,67.4,9.6],[135.5,68.3,10],[151.4,68.4,7.9],[158.1,68.9,2.4],[130.6,68.9,10],[111.1,68.9,10],[97.1,69.2,10],[116.2,69.4,10],[69.1,69.5,4.2],[81.5,69.8,9.9],[146.3,70.2,10],[86.1,70.9,9.0],[100.9,71.0,10],[138.1,71.3,10],[142.1,71.9,10],[120.2,72.1,10],[128.3,72.3,10],[106.5,72.5,10],[78.2,72.5,8.8],[134.4,72.6,10],[92.4,73.1,9.8],[62.1,73.2,2.9],[68.0,73.3,5.9],[154.3,73.4,3.1],[96.7,73.5,10],[110.4,73.5,10],[72.7,73.8,9.7],[115.8,74.3,10],[83.8,74.6,5.0],[124.1,74.8,10],[89.0,75.4,6.0],[132.1,75.8,10],[120.4,76.4,10],[127.7,76.6,10],[146.8,76.7,9.1],[151.8,77.0,5.5],[139.3,77.0,10],[65.3,77.1,6.8],[100.9,77.2,10],[57.0,77.3,2.9],[95.8,77.5,7.8],[112.0,77.5,10],[76.7,77.9,5.2],[107.2,78.4,10],[135.2,79.0,10],[61.3,79.2,4.3],[80.8,79.2,2.6],[144.2,79.9,8.4],[70.5,80.2,6.0],[118.1,80.2,10],[125.6,80.9,10],[93.7,81.0,3.7],[148.5,81.5,4.4],[74.9,81.5,2.7],[130.1,81.8,10],[140.6,81.9,9.9],[113.9,82.0,10],[109.9,82.6,10],[102.0,83.7,9.1],[106.2,84.3,10],[119.8,84.4,10],[137.0,84.8,10],[97.6,85.0,4.5],[69.0,85.0,2.8],[127.5,86.0,10],[133.0,86.3,10],[114.1,86.5,10],[143.2,87.5,5.0],[69.7,89.1,3.0],[130.2,89.2,10],[106.2,89.4,10],[96.3,89.4,3.8],[119.7,89.5,10],[111.1,89.6,10],[134.6,90.1,10],[100.5,90.5,7.9],[138.5,91.0,8.2],[115.9,91.2,10],[143.6,91.4,3.1],[126.6,91.5,10],[122.6,92.5,10],[94.5,93.2,2.5],[112.0,93.7,10],[131.1,95.4,10],[105.9,95.6,9.7],[136.9,95.7,8.6],[97.1,96.2,4.7],[141.5,96.3,4.6],[101.2,96.8,8.0],[123.0,96.9,10],[109.8,97.0,8.7],[114.1,97.1,9.0],[118.5,97.4,10],[127.8,99.0,10],[136.6,100.4,7.0],[131.5,101.0,10],[141.0,101.4,2.5],[118.2,101.4,6.4],[124.6,101.6,10],[98.7,101.7,3.0],[111.7,102.2,4.0],[105.5,102.8,2.6],[122.3,105.1,6.7],[116.6,105.1,2.4],[136.4,105.6,3.7],[129.3,107.6,4.7],[122.5,111.2,3.0],[127.9,112.2,2.3]];
+const _ISLA_ORDEN=[0,58,155,35,140,159,77,82,96,3,4,109,34,40,95,141,117,138,29,50,80,90,102,69,113,133,93,59,38,137,56,68,14,130,134,41,15,13,64,17,101,71,148,150,28,8,146,92,5,73,149,166,167,7,164,143,57,19,135,126,51,152,37,131,163,18,76,47,111,25,83,79,66,129,128,62,36,16,119,169,22,108,98,21,121,154,78,94,112,10,89,49,157,86,30,161,122,99,132,118,12,43,61,23,65,70,31,45,72,100,53,123,120,6,127,84,139,54,104,24,116,125,103,32,91,110,1,147,124,44,75,20,165,74,46,97,52,81,85,2,162,136,145,142,67,88,151,156,63,158,9,115,55,33,160,153,144,60,106,87,105,42,114,48,39,107,168,26,27,11];
+
+// ── Isla "De seca a vergel", vista de mapa (14/09/2026) ──
+// Misma silueta y misma paleta que la isla de bienestar, para que las dos
+// apps se vean de la misma familia. Todo determinista: sin Math.random, el
+// repintado es estable. Las clases isla-* las anima el CSS, que se apaga
+// solo si el movil pide "reducir movimiento".
+
 const _islaRnd = (i) => { const x = Math.sin(i * 127.1) * 43758.5453; return x - Math.floor(x); };
 function _islaMix(a, b, t) {
     const p = (x) => parseInt(x, 16);
@@ -5200,138 +5208,153 @@ function _islaMix(a, b, t) {
     const bh = [b.slice(1, 3), b.slice(3, 5), b.slice(5, 7)].map(p);
     return '#' + ah.map((v, i) => Math.round(v + (bh[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
-function _islaSpots(n, cx, cy, rx, ry, seed) {
-    const a = [];
-    for (let i = 0; i < n; i++) {
-        const u = _islaRnd(i * 7 + seed), v = _islaRnd(i * 13 + seed + 99);
-        const ang = u * 2 * Math.PI, rad = Math.sqrt(v);
-        a.push([cx + Math.cos(ang) * rx * rad, cy + Math.sin(ang) * ry * rad]);
-    }
-    return a.sort((p, q) => p[1] - q[1]);
+
+// Paleta tomada de isla-nivel-4.svg (app de bienestar).
+const _IV = {
+    verdeOsc: '#3F6B2E', verdeMed: '#6E9E45', verdeCl: '#9CC368', verdeLuz: '#C7DC78',
+    hierba: '#9DAE7D', hierbaOsc: '#778864', tronco: '#4F6045',
+    oro: '#F2C84B', oroOsc: '#C99412',
+    naranja: '#E8753D', naranjaOsc: '#A14B1B',
+    lila: '#9B6FB5', lilaOsc: '#684685',
+    piedra: '#9E978A', piedraOsc: '#6B665B',
+    secoOsc: '#9F8A5C', seco: '#C9B68C', secoCl: '#DCC9A1',
+};
+
+function _ivMata(x, y, s, i) {
+    const r = 4.6 * s;
+    return `<g class="isla-mata"><ellipse cx="${x - r * .7}" cy="${y + r * .25}" rx="${r * .85}" ry="${r * .7}" fill="${_IV.verdeOsc}"/>`
+         + `<ellipse cx="${x + r * .7}" cy="${y + r * .2}" rx="${r * .9}" ry="${r * .72}" fill="${_IV.verdeMed}"/>`
+         + `<ellipse cx="${x}" cy="${y - r * .35}" rx="${r}" ry="${r * .8}" fill="${_IV.verdeMed}"/>`
+         + `<ellipse cx="${x - r * .25}" cy="${y - r * .6}" rx="${r * .5}" ry="${r * .38}" fill="${_IV.verdeCl}"/>`
+         + `<ellipse cx="${x + r * .3}" cy="${y - r * .75}" rx="${r * .3}" ry="${r * .22}" fill="${_IV.verdeLuz}" opacity=".9"/></g>`;
 }
-const _ISLA_ROJO = '#D91B1D', _ISLA_OLIVA = '#6B7A3A', _ISLA_OLIVA_CL = '#9CB64B', _ISLA_ORO = '#E8B62D';
-function _islaFlor(x, y, s, color) {
+function _ivArbol(x, y, s, i) {
+    const r = 6.4 * s;
+    return `<g class="isla-arbol"><ellipse cx="${x + 1.2}" cy="${y + r * .55}" rx="${r * .95}" ry="${r * .45}" fill="#2E2A20" opacity=".22"/>`
+         + `<ellipse cx="${x - r * .75}" cy="${y + r * .1}" rx="${r * .8}" ry="${r * .66}" fill="${_IV.verdeOsc}"/>`
+         + `<ellipse cx="${x + r * .75}" cy="${y + r * .05}" rx="${r * .82}" ry="${r * .68}" fill="${_IV.verdeOsc}"/>`
+         + `<ellipse cx="${x}" cy="${y - r * .3}" rx="${r * 1.05}" ry="${r * .85}" fill="${_IV.verdeMed}"/>`
+         + `<ellipse cx="${x - r * .3}" cy="${y - r * .62}" rx="${r * .55}" ry="${r * .42}" fill="${_IV.verdeCl}"/>`
+         + `<ellipse cx="${x + r * .15}" cy="${y - r * .8}" rx="${r * .32}" ry="${r * .24}" fill="${_IV.verdeLuz}"/></g>`;
+}
+function _ivHierba(x, y, s, i) {
+    let g = '';
+    for (let k = -2; k <= 2; k++) {
+        const c = k % 2 ? _IV.hierba : _IV.hierbaOsc;
+        g += `<path d="M${x} ${y} Q ${x + k * 1.9 * s} ${y - 4 * s} ${x + k * 2.7 * s} ${y - 7 * s}" stroke="${c}" stroke-width="${1.3 * s}" fill="none" stroke-linecap="round"/>`;
+    }
+    return `<g class="isla-hierba" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 7) * .32}s">${g}</g>`;
+}
+function _ivHelecho(x, y, s, i) {
+    let g = '';
+    for (let k = 0; k < 5; k++) {
+        const a = (k / 4 - .5) * 1.9;
+        g += `<path d="M${x} ${y} Q ${x + Math.sin(a) * 4 * s} ${y - 4.5 * s} ${x + Math.sin(a) * 7 * s} ${y - 7.5 * s - Math.cos(a) * 2 * s}" stroke="${k % 2 ? _IV.verdeMed : _IV.verdeOsc}" stroke-width="${1.5 * s}" fill="none" stroke-linecap="round"/>`;
+    }
+    return `<g class="isla-hierba" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 5) * .41}s">${g}</g>`;
+}
+const _IV_FLORES = [[_IV.oro, _IV.oroOsc], [_IV.naranja, _IV.naranjaOsc], [_IV.lila, _IV.lilaOsc]];
+function _ivFlor(x, y, s, i) {
+    const [c, co] = _IV_FLORES[i % 3];
     let p = '';
     for (let k = 0; k < 5; k++) {
         const a = k / 5 * 2 * Math.PI - Math.PI / 2;
-        p += `<circle cx="${x + Math.cos(a) * 3.2 * s}" cy="${y - 8 * s + Math.sin(a) * 3.2 * s}" r="${2.4 * s}" fill="${color}"/>`;
+        p += `<ellipse cx="${x + Math.cos(a) * 2.3 * s}" cy="${y - 5.5 * s + Math.sin(a) * 2.3 * s}" rx="${1.8 * s}" ry="${1.5 * s}" fill="${k < 3 ? c : co}"/>`;
     }
-    return `<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 7 * s}" stroke="${_ISLA_OLIVA}" stroke-width="${2 * s}" stroke-linecap="round"/>${p}<circle cx="${x}" cy="${y - 8 * s}" r="${1.6 * s}" fill="#F2C84B"/>`;
+    return `<g class="isla-flor" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 9) * .27}s">`
+         + `<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 5 * s}" stroke="${_IV.tronco}" stroke-width="${1.2 * s}" stroke-linecap="round"/>`
+         + `${p}<circle cx="${x}" cy="${y - 5.5 * s}" r="${1.1 * s}" fill="${_IV.oro}"/></g>`;
 }
-function _islaMata(x, y, s) {
-    return `<circle cx="${x - 4 * s}" cy="${y - 4 * s}" r="${4.5 * s}" fill="${_ISLA_OLIVA}"/><circle cx="${x + 4 * s}" cy="${y - 4 * s}" r="${4.5 * s}" fill="${_ISLA_OLIVA}"/><circle cx="${x}" cy="${y - 8 * s}" r="${5 * s}" fill="${_ISLA_OLIVA_CL}"/>`;
+function _ivPiedra(x, y, s) {
+    return `<g><ellipse cx="${x}" cy="${y}" rx="${3.4 * s}" ry="${2.4 * s}" fill="${_IV.piedraOsc}"/>`
+         + `<ellipse cx="${x - .6 * s}" cy="${y - .7 * s}" rx="${2.3 * s}" ry="${1.5 * s}" fill="${_IV.piedra}"/></g>`;
 }
-function _islaPasto(x, y, s) {
-    let g = '';
-    for (let k = -2; k <= 2; k++) {
-        g += `<path d="M${x} ${y} Q ${x + k * 2.6 * s} ${y - 7 * s} ${x + k * 3.4 * s} ${y - 11 * s}" stroke="${k % 2 ? _ISLA_OLIVA_CL : _ISLA_OLIVA}" stroke-width="${1.6 * s}" fill="none" stroke-linecap="round"/>`;
-    }
-    return g;
+function _ivPlanta(i, x, y, s, extra) {
+    // La flor es acento, no alfombra: 1 de cada 8. Lo que llena es el verde.
+    if (extra || i % 8 === 3) return _ivFlor(x, y, s * 1.05, i);
+    const t = i % 5;
+    if (t === 0) return _ivHierba(x, y, s, i);
+    if (t === 1) return _ivMata(x, y, s, i);
+    if (t === 2) return _ivMata(x, y, s * 1.12, i);
+    if (t === 3) return _ivArbol(x, y, s * .95, i);
+    return _ivHelecho(x, y, s, i);
 }
-function _islaArbusto(x, y, s, fl) {
-    let b = `<circle cx="${x}" cy="${y - 5 * s}" r="${7 * s}" fill="${_ISLA_OLIVA}"/><circle cx="${x - 6 * s}" cy="${y - 3 * s}" r="${5 * s}" fill="${_ISLA_OLIVA}"/><circle cx="${x + 6 * s}" cy="${y - 3 * s}" r="${5 * s}" fill="${_ISLA_OLIVA_CL}"/>`;
-    for (let k = 0; k < 3; k++) {
-        const a = _islaRnd(x + k * 7);
-        b += `<circle cx="${x - 6 * s + a * 12 * s}" cy="${y - 6 * s - _islaRnd(x * k + 3) * 4 * s}" r="${1.8 * s}" fill="${fl}"/>`;
-    }
-    return b;
-}
-function _islaBrote(x, y, s, c) {
-    return `<line x1="${x}" y1="${y}" x2="${x - 3 * s}" y2="${y - 7 * s}" stroke="${c}" stroke-width="${2 * s}" stroke-linecap="round"/><line x1="${x}" y1="${y}" x2="${x + 3 * s}" y2="${y - 7 * s}" stroke="${c}" stroke-width="${2 * s}" stroke-linecap="round"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y - 9 * s}" stroke="${c}" stroke-width="${2 * s}" stroke-linecap="round"/>`;
-}
-function _islaPlanta(i, x, y, extra) {
-    const s = 0.8 + _islaRnd(i * 3) * 0.5, t = i % 5, col = extra ? _ISLA_ORO : _ISLA_ROJO;
-    if (t === 0) return _islaFlor(x, y, s, col);
-    if (t === 1) return _islaMata(x, y, s);
-    if (t === 2) return _islaPasto(x, y, s);
-    if (t === 3) return _islaArbusto(x, y, s * 0.9, col);
-    return _islaBrote(x, y, s, extra ? _ISLA_ORO : _ISLA_OLIVA_CL);
-}
-function _islaPalmera(x, y, h) {
-    let hojas = '';
-    for (let k = 0; k < 5; k++) {
-        const a = (k / 4 - 0.5) * 2.2;
-        hojas += `<path d="M${x} ${y - h} Q ${x + Math.cos(a - 1.57) * 14} ${y - h - 8} ${x + Math.cos(a - 1.57) * 20} ${y - h + Math.sin(a) * 4}" stroke="${_ISLA_OLIVA}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
-    }
-    return `<path d="M${x - 2} ${y} Q ${x + 3} ${y - h * 0.6} ${x} ${y - h}" stroke="#6E5A3A" stroke-width="4" fill="none" stroke-linecap="round"/>${hojas}`;
-}
-function _islaOlivo(x, y, h, acei) {
-    const copa = h * 0.42;
-    let a = '';
-    for (let k = 0; k < acei; k++) {
-        const g = _islaRnd(k * 17) * 2 * Math.PI;
-        a += `<circle cx="${x + Math.cos(g) * copa * 0.75}" cy="${y - h + Math.sin(g) * copa * 0.55}" r="2.4" fill="${_ISLA_ORO}"/>`;
-    }
-    return `<path d="M${x} ${y} Q ${x - 4} ${y - h * 0.5} ${x} ${y - h * 0.8}" stroke="#6E5A3A" stroke-width="4.5" fill="none" stroke-linecap="round"/><circle cx="${x}" cy="${y - h}" r="${copa}" fill="${_ISLA_OLIVA}"/><circle cx="${x - copa * 0.8}" cy="${y - h + copa * 0.3}" r="${copa * 0.7}" fill="${_ISLA_OLIVA}"/><circle cx="${x + copa * 0.8}" cy="${y - h + copa * 0.3}" r="${copa * 0.7}" fill="${_ISLA_OLIVA_CL}"/><circle cx="${x}" cy="${y - h - copa * 0.45}" r="${copa * 0.55}" fill="${_ISLA_OLIVA_CL}"/>${a}`;
-}
-function _islaRoca(x, y, s) {
-    return `<path d="M${x - 5 * s} ${y} Q ${x - 4 * s} ${y - 5 * s} ${x} ${y - 6 * s} Q ${x + 5 * s} ${y - 5 * s} ${x + 5.5 * s} ${y} Z" fill="#6B665B"/><path d="M${x - 1 * s} ${y} Q ${x} ${y - 3.5 * s} ${x + 3 * s} ${y - 3 * s} L ${x + 3.5 * s} ${y} Z" fill="#7d786c"/>`;
-}
-function _islaMariposa(x, y, c) {
-    return `<g opacity=".9"><circle cx="${x - 2.4}" cy="${y}" r="2.4" fill="${c}"/><circle cx="${x + 2.4}" cy="${y}" r="2.4" fill="${c}"/><line x1="${x}" y1="${y - 2.5}" x2="${x}" y2="${y + 2.5}" stroke="#1A1A1A" stroke-width="1"/></g>`;
-}
-function _islaPajaros(x, y) {
+function _ivAves(x, y) {
     let p = '';
     for (let k = 0; k < 3; k++) {
-        const dx = k * 11, dy = (k % 2) * 4;
-        p += `<path d="M${x + dx - 4} ${y + dy} Q ${x + dx} ${y + dy - 3.5} ${x + dx + 4} ${y + dy} M${x + dx - 4} ${y + dy} Q ${x + dx - 8} ${y + dy - 3.5} ${x + dx - 12} ${y + dy}" stroke="#4A453B" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+        const dx = k * 9, dy = (k % 2) * 3.5;
+        p += `<path d="M${x + dx - 3.4} ${y + dy} Q ${x + dx} ${y + dy - 3} ${x + dx + 3.4} ${y + dy} M${x + dx - 3.4} ${y + dy} Q ${x + dx - 6.8} ${y + dy - 3} ${x + dx - 10.2} ${y + dy}" stroke="#5A5348" stroke-width="1.7" fill="none" stroke-linecap="round" opacity=".9"/>`;
     }
-    return p;
+    return `<g class="isla-aves">${p}</g>`;
 }
-function _islaNube(x, y, s, op) {
-    return `<g opacity="${op}"><ellipse cx="${x}" cy="${y}" rx="${13 * s}" ry="${5 * s}" fill="#6B665B"/><ellipse cx="${x + 9 * s}" cy="${y + 2 * s}" rx="${9 * s}" ry="${4 * s}" fill="#6B665B"/></g>`;
+function _ivMariposa(x, y, c, i) {
+    return `<g class="isla-mariposa" style="transform-origin:${x}px ${y}px;animation-delay:${i * .8}s"><ellipse cx="${x - 2.1}" cy="${y}" rx="2.1" ry="2.6" fill="${c}"/><ellipse cx="${x + 2.1}" cy="${y}" rx="2.1" ry="2.6" fill="${c}"/><line x1="${x}" y1="${y - 2.2}" x2="${x}" y2="${y + 2.2}" stroke="#2E2A20" stroke-width=".9"/></g>`;
 }
-function _islaSol(x, y) {
+function _ivSol(x, y, op) {
     let r = '';
-    for (let k = 0; k < 8; k++) {
-        const a = k / 8 * 2 * Math.PI;
-        r += `<line x1="${x + Math.cos(a) * 15}" y1="${y + Math.sin(a) * 15}" x2="${x + Math.cos(a) * 20}" y2="${y + Math.sin(a) * 20}" stroke="#F2C84B" stroke-width="2.4" stroke-linecap="round"/>`;
+    for (let k = 0; k < 10; k++) {
+        const a = k / 10 * 2 * Math.PI;
+        r += `<line x1="${x + Math.cos(a) * 9.5}" y1="${y + Math.sin(a) * 9.5}" x2="${x + Math.cos(a) * 13.5}" y2="${y + Math.sin(a) * 13.5}" stroke="${_IV.oro}" stroke-width="1.9" stroke-linecap="round"/>`;
     }
-    return `<circle cx="${x}" cy="${y}" r="11" fill="#F2C84B"/>${r}`;
+    return `<g opacity="${op}"><g class="isla-rayos" style="transform-origin:${x}px ${y}px">${r}</g><circle cx="${x}" cy="${y}" r="7.5" fill="${_IV.oro}"/><circle cx="${x}" cy="${y}" r="7.5" fill="#FFF2C4" opacity=".45"/></g>`;
 }
-const _islaSpotsFondo = _islaSpots(20, 110, 88, 64, 10, 55);
-const _islaSpotsFrente = _islaSpots(22, 110, 102, 72, 14, 21);
 
-// Pinta la escena completa en el <svg id="isla-semana-svg">.
-// hechos = entrenos totales de la semana; objetivo = Σ mínimos; t = pct 0..1.
+// t = 0..1. hechos = entrenos de la semana; objetivo = suma de minimos.
 function _islaPintarEscena(hechos, objetivo, t, svgId = 'isla-semana-svg') {
     const svg = document.getElementById(svgId);
     if (!svg) return;
     const done = t >= 1;
     const extras = Math.max(hechos - objetivo, 0);
-    const tierra = _islaMix('#9A855A', '#5F7233', t);
-    const tierraCl = _islaMix('#AD9663', '#6E823C', t);
-    const agua = _islaMix('#3A362F', '#4E7A6A', t);
-    const nFondo = Math.min(Math.round(hechos * 0.9), 20);
-    let fondo = '';
-    for (let i = 0; i < nFondo; i++) {
-        const [x, y] = _islaSpotsFondo[i];
-        const tp = i % 3;
-        fondo += tp === 0 ? _islaPasto(x, y, 0.65)
-               : tp === 1 ? _islaBrote(x, y, 0.7, _ISLA_OLIVA_CL)
-               : _islaMata(x, y, 0.6);
-    }
-    const nFrente = Math.min(hechos, 22);
-    let frente = '';
-    for (let i = 0; i < nFrente; i++) {
-        const [x, y] = _islaSpotsFrente[i];
-        frente += _islaPlanta(i, x, y, i >= objetivo);
-    }
-    const arboles = (t > 0.3 ? _islaPalmera(58, 102, 10 + 26 * t) : '')
-                  + (t > 0.5 ? _islaOlivo(158, 104, 12 + 30 * t, Math.min(extras, 6)) : '');
-    const rocas = _islaRoca(84, 112, 1) + _islaRoca(136, 114, 0.8) + _islaRoca(46, 106, 0.7);
-    const grietas = t < 0.5
-        ? `<path d="M70 96 Q76 92 82 96 M120 90 Q126 86 132 90 M96 106 Q102 102 108 106" stroke="${_islaMix('#7A6844', '#5F7233', t)}" stroke-width="1.6" fill="none" opacity="${1 - t * 2}"/>`
-        : '';
-    svg.innerHTML = `
-        ${_islaNube(48, 30, 1, Math.max(0, 0.8 - t))}${_islaNube(150, 22, 0.8, Math.max(0, 0.7 - t))}
-        <ellipse cx="110" cy="110" rx="92" ry="20" fill="${agua}" opacity=".5"/>
-        <ellipse cx="110" cy="110" rx="82" ry="16" fill="${agua}" opacity=".35"/>
-        <path d="M34 104 Q50 78 84 82 Q98 62 122 70 Q148 56 164 82 Q182 92 176 104 Q146 122 106 120 Q62 122 34 104 Z" fill="${tierra}"/>
-        <path d="M44 102 Q56 84 86 87 Q100 70 122 76 Q146 66 158 86 Q172 92 168 102 Q142 116 106 114 Q64 116 44 102 Z" fill="${tierraCl}" opacity=".5"/>
-        ${grietas}${rocas}${fondo}${arboles}${frente}
-        ${done ? _islaPajaros(60, 34) + _islaMariposa(88, 58, _ISLA_ROJO) + _islaMariposa(148, 50, _ISLA_ORO) : ''}
-        <g opacity="${done ? 1 : t * 0.5}">${_islaSol(192, 26)}</g>`;
+
+    // El suelo apenas verdea: en la isla de bienestar la tierra sigue siendo
+    // tierra y lo que cambia es lo que crece encima. Queda mucho mejor.
+    const tierra   = _islaMix(_IV.seco,    '#B4B87A', t * .55);
+    const tierraCl = _islaMix(_IV.secoCl,  '#C6C88C', t * .55);
+    const tierraOs = _islaMix(_IV.secoOsc, '#8C9456', t * .55);
+    const mar      = _islaMix('#8C8371', '#5FA08C', t);   // gris calido -> turquesa
+
+    // Mar: halos que siguen la forma de la isla.
+    const halo = (k, op) =>
+        `<path d="${_ISLA_PATH}" fill="${mar}" opacity="${op}" transform="translate(110 73) scale(${k}) translate(-110 -73)"/>`;
+    const agua = `<g class="isla-mar">${halo(1.30, .22)}${halo(1.17, .30)}${halo(1.07, .42)}</g>`;
+
+    // Relieve de la isla: sombra, terreno, luz y sombra interior.
+    const suelo =
+        `<path d="${_ISLA_PATH}" fill="#2E2A20" opacity=".22" transform="translate(2 3)"/>`
+      + `<path d="${_ISLA_PATH}" fill="${tierra}"/>`
+      + `<path d="${_ISLA_PATH}" fill="${tierraCl}" opacity=".5" transform="translate(110 73) scale(.985) translate(-112.5 -75.5)"/>`
+      + `<path d="${_ISLA_PATH}" fill="${tierraOs}" opacity=".38" transform="translate(110 73) scale(.965) translate(-107 -70)"/>`
+      + `<path d="${_ISLA_PATH}" fill="none" stroke="${_IV.secoCl}" stroke-width="1.1" opacity=".55"/>`;
+
+    // Textura: grietas cuando esta seca, curvas de nivel cuando verdea.
+    const textura = t < 0.55
+        ? `<path d="M78 62 Q88 57 97 63 M118 54 Q127 50 136 56 M92 92 Q101 87 110 93 M132 84 Q140 80 148 85" stroke="${tierraOs}" stroke-width="1.3" fill="none" opacity="${(1 - t / .55) * .75}"/>`
+        : `<path d="M80 64 Q96 58 112 64 M108 88 Q124 82 140 88" stroke="${tierraOs}" stroke-width="1" fill="none" opacity=".3"/>`;
+
+    const piedras = _ivPiedra(76, 96, 1) + _ivPiedra(132, 60, .85) + _ivPiedra(100, 108, .7) + _ivPiedra(146, 96, .8);
+
+    // Vegetacion: brota repartida por toda la isla, no por franjas.
+        // Crece con curva, no en linea recta: si fuera lineal, al 25 % la isla ya
+    // parece llena y las semanas flojas se ven igual que las buenas.
+    const avance = Math.min(hechos / Math.max(objetivo, 1), 1.6);
+    const cupo = Math.min(Math.round(Math.pow(avance, 1.45) * 150) + (hechos > 0 ? 4 : 0), _ISLA_PTS.length);
+    const visibles = _ISLA_ORDEN.slice(0, cupo)
+        .map((i) => [i, _ISLA_PTS[i]])
+        .sort((a, b) => a[1][1] - b[1][1]);
+    let verde = '';
+    visibles.forEach(([i, p], n) => {
+        const s = 0.92 + _islaRnd(i * 3) * 0.5 + Math.min(p[2], 10) * 0.035;
+        verde += _ivPlanta(i, p[0], p[1], s, extras > 0 && (i % 11) === 0);
+    });
+
+    const luz = t > .55
+        ? `<path d="${_ISLA_PATH}" fill="#FFE9A8" opacity="${(t - .55) / .45 * .17}" transform="translate(110 73) scale(1.06) translate(-113 -69)"/>` : '';
+    const sol = t > .45 ? _ivSol(194, 23, Math.min((t - .45) / .35, 1)) : '';
+    const aves = t >= .7 ? _ivAves(26, 30) : '';
+    const maripo = done ? _ivMariposa(84, 58, _IV.naranja, 0) + _ivMariposa(146, 74, _IV.lila, 1) : '';
+
+    svg.innerHTML = `${agua}${suelo}${textura}${piedras}${verde}${luz}${sol}${aves}${maripo}`;
+    svg.classList.toggle('isla-svg--completa', done);
 }
 
 const _ISLA_LEMAS = [
