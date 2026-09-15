@@ -5147,6 +5147,13 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
     align-items: center;
     gap: 12px;
 }
+/* 15/09/2026 — sin esto el aviso se veia SIEMPRE, desde el primer frame de la
+   intro y en todos los moviles. El `display:flex` de arriba es regla de autor
+   y pisa el `display:none` que el navegador aplica al atributo [hidden], asi
+   que el `hidden` del HTML no ocultaba nada: toda clienta nueva abria la app y
+   leia "Esta tardando mas de lo normal" con un boton de Reintentar durante los
+   4,5 s de la intro. El vigilante de app.js estaba bien; lo roto era el CSS. */
+.intro-ucm__atasco[hidden] { display: none; }
 .intro-ucm__atasco p {
     margin: 0;
     font-size: 14px;
