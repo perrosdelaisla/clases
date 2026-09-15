@@ -10,7 +10,7 @@
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
 import * as agenda from './agenda/api.js?v=15';
 import * as stats from './stats/api.js?v=5';
-import * as catalogo from './catalogo/api.js?v=5';
+import * as catalogo from './catalogo/api.js?v=6';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
 import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=6';
@@ -3734,11 +3734,16 @@ function renderCatalogoCard(ej) {
     const plantilla = ej.plantilla != null
         ? `<span class="catalogo-plantilla-tag">Plantilla ${escapeHTML(String(ej.plantilla))}</span>`
         : '';
+    // Columnas del SC-grama que levanta la ficha. Uso interno: nunca sale de aqui.
+    const bases = Array.isArray(ej.bases) && ej.bases.length
+        ? `<span class="bases-tag" title="Columnas que levanta">${escapeHTML(ej.bases.join(' '))}</span>`
+        : '';
 
     return `
         <li class="catalogo-card catalogo-card--editable" data-ejercicio-id="${escapeHTML(ej.id)}">
             <div class="catalogo-card-row">
                 <span class="catalogo-card-nombre">${nombre}</span>
+                ${bases}
                 ${plantilla}
                 <span class="catalogo-card-codigo">${codigo}</span>
             </div>

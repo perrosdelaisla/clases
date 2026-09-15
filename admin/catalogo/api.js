@@ -32,7 +32,7 @@ const supabase = getSupabase('admin');
 export async function obtenerCatalogo() {
     const { data, error } = await supabase
         .from('ejercicios')
-        .select('id, codigo, nombre, descripcion, como_se_hace, instrucciones, video_url, plantilla, categoria, tipo_tarea_defecto, orden_catalogo')
+        .select('id, codigo, nombre, descripcion, como_se_hace, instrucciones, video_url, plantilla, categoria, tipo_tarea_defecto, orden_catalogo, bases')
         .eq('activo', true)
         .order('orden_catalogo', { ascending: true });
     if (error) throw error;

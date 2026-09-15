@@ -1511,7 +1511,7 @@ async function cargarCatalogo() {
     if (state.catalogo) return; // cache
     const { data, error } = await supabase
         .from('ejercicios')
-        .select('id, codigo, nombre, descripcion, categoria, orden_catalogo')
+        .select('id, codigo, nombre, descripcion, categoria, orden_catalogo, bases')
         .eq('activo', true)
         .order('categoria', { ascending: true })
         .order('orden_catalogo', { ascending: true });
@@ -1577,6 +1577,14 @@ function renderModalLista() {
     }
 }
 
+// Columnas del SC-grama que levanta la ficha (f1, e4, s3...). Uso interno de
+// Charly: solo se pinta en el admin, nunca sale a la app de cliente.
+function basesTag(ej) {
+    return Array.isArray(ej.bases) && ej.bases.length
+        ? `<span class="bases-tag" title="Columnas que levanta">${escapeHTML(ej.bases.join(' '))}</span>`
+        : '';
+}
+
 function renderModalRow(ej) {
     const id = ej.id;
     const nombre = escapeHTML(ej.nombre || 'Sin nombre');
@@ -1590,6 +1598,7 @@ function renderModalRow(ej) {
             <div class="modal-row__info">
                 <span class="modal-row__nombre">${nombre}</span>
                 <span class="cat-chip cat-chip--${escapeHTML(categoria)} cat-chip--mini">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
+                ${basesTag(ej)}
                 ${desc ? `<span class="modal-row__desc">${desc}</span>` : ''}
             </div>
             <button type="button" class="toggle" role="switch" aria-checked="${isOn}" aria-label="${isOn ? 'Pausar' : 'Activar'} ${nombre}" data-ejercicio-id="${escapeHTML(id)}">
@@ -1655,6 +1664,7 @@ function renderModalRowProgresion(ej) {
             <div class="modal-row__info">
                 <span class="modal-row__nombre">${nombre}</span>
                 <span class="cat-chip cat-chip--${escapeHTML(categoria)} cat-chip--mini">${escapeHTML(CATEGORIA_LABEL[categoria] || categoria)}</span>
+                ${basesTag(ej)}
                 ${desc ? `<span class="modal-row__desc">${desc}</span>` : ''}
             </div>
             ${sufijo}
