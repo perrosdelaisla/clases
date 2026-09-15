@@ -2853,6 +2853,8 @@ body {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     white-space: nowrap;
+    align-self: flex-start;
+    width: fit-content;
 }
 
 .catalogo-plantilla-tag {
