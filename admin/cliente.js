@@ -205,7 +205,7 @@ function renderPerros(perros) {
 function renderPerroCard(p) {
     const nombre = escapeHTML(p.nombre || 'Sin nombre');
     const raza = p.raza ? escapeHTML(p.raza) : null;
-    const edad = formatearEdadMeses(p.edad_meses);
+    const edad = formatearEdadPerroAdmin(p);
     const meta = [raza, edad].filter(Boolean).join(' · ') || 'Sin datos';
 
     // Miniatura circular: la inicial vive siempre de fondo; si hay foto_url la
@@ -265,6 +265,15 @@ function renderMiembro(m) {
             <span class="miembro-rol">${etiqueta}</span>
         </li>
     `;
+}
+
+// Edad viva (17/09/2026): "unos 3 anos" cuando es la estimacion del tutor.
+function formatearEdadPerroAdmin(p) {
+    const texto = formatearEdadMeses(p?.edad_meses);
+    if (!texto) return null;
+    if (p.fecha_nacimiento) return texto;
+    if (p.edad_aprox_ref) return (texto.startsWith('1 ') ? 'alrededor de ' : 'unos ') + texto;
+    return texto;
 }
 
 function formatearEdadMeses(meses) {

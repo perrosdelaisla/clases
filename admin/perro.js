@@ -196,7 +196,9 @@ function renderPerro(p) {
     document.title = `${nombre} — Admin PDLI`;
 
     setText('perro-raza', p.raza || '—');
-    setText('perro-edad', formatearEdadMeses(p.edad_meses) || '—');
+    setText('perro-edad', formatearEdadPerroAdmin(p) || '—');
+    setText('perro-nacimiento', formatearFechaCortaAdmin(p.fecha_nacimiento) || '—');
+    setText('perro-adopcion', formatearFechaCortaAdmin(p.fecha_adopcion) || '—');
     setText('perro-peso', formatearPesoKg(p.peso_kg) || '—');
 
     const ppp = document.getElementById('perro-ppp');
@@ -218,6 +220,25 @@ function renderPerro(p) {
 }
 
 // ===================== Formato edad / peso =====================
+
+/* Edad viva (17/09/2026): con fecha de nacimiento es exacta; sin ella es la
+   estimacion del tutor corriendo desde el dia que la dijo, y se dice "unos".
+   Ver claude/PDLI_EDAD_DEL_PERRO.md. */
+const EDAD_MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function formatearFechaCortaAdmin(iso) {
+    if (!iso) return null;
+    const d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getDate()} ${EDAD_MESES_CORTO[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatearEdadPerroAdmin(p) {
+    const texto = formatearEdadMeses(p?.edad_meses);
+    if (!texto) return null;
+    if (p.fecha_nacimiento) return texto;
+    if (p.edad_aprox_ref) return (texto.startsWith('1 ') ? 'alrededor de ' : 'unos ') + texto;
+    return texto;
+}
 
 function formatearEdadMeses(meses) {
     if (meses == null) return null;

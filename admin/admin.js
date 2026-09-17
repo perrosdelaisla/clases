@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=15';
+import * as agenda from './agenda/api.js?v=16';
 import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=6';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -642,7 +642,11 @@ function bindAgendaModals() {
             const perro = {
                 nombre: (document.getElementById('cm-perro')?.value || '').trim(),
                 raza: (document.getElementById('cm-raza')?.value || '').trim(),
-                edad_meses: parseIntOrNull(document.getElementById('cm-edad')?.value),
+                fecha_nacimiento: (document.getElementById('cm-nacimiento')?.value || '') || null,
+                fecha_adopcion: (document.getElementById('cm-adopcion')?.value || '') || null,
+                // Con fecha de nacimiento la aproximada no se manda: la base la ignora igual.
+                edad_aprox_meses: (document.getElementById('cm-nacimiento')?.value || '')
+                    ? null : leerEdadPar('cm-anios', 'cm-meses'),
                 peso_kg: parseFloatOrNull(document.getElementById('cm-peso')?.value),
                 es_ppp: !!document.getElementById('cm-ppp')?.checked,
             };
@@ -719,6 +723,13 @@ function bindAgendaModals() {
     if (cmMapsInput && !cmMapsInput.__mapsBound) {
         cmMapsInput.__mapsBound = true;
         cmMapsInput.addEventListener('input', actualizarBotonMapsCm);
+    }
+
+    const cmNac = document.getElementById('cm-nacimiento');
+    if (cmNac && !cmNac.__edadBound) {
+        cmNac.__edadBound = true;
+        cmNac.addEventListener('change', sincronizarEdadAproxCm);
+        limitarFechasAHoyCm();
     }
 
     // "Guardar enlace": persiste SOLO ubicacion_maps del cliente existente
@@ -1403,7 +1414,8 @@ function actualizarBotonMapsCm() {
 function resetCmForm() {
     const ids = [
         'cm-nombre', 'cm-telefono', 'cm-direccion', 'cm-ubicacion-maps', 'cm-email', 'cm-cliente-id',
-        'cm-perro', 'cm-perro-id', 'cm-raza', 'cm-edad', 'cm-peso',
+        'cm-perro', 'cm-perro-id', 'cm-raza', 'cm-peso',
+        'cm-nacimiento', 'cm-adopcion', 'cm-anios', 'cm-meses',
         'cm-fecha', 'cm-hora', 'cm-modalidad', 'cm-zona', 'cm-notas',
         'cm-numero-clase',
     ];
@@ -1412,6 +1424,8 @@ function resetCmForm() {
         if (el) el.value = '';
     });
     actualizarBotonMapsCm();
+    limitarFechasAHoyCm();
+    sincronizarEdadAproxCm();
     const ppp = document.getElementById('cm-ppp');
     if (ppp) ppp.checked = false;
     const errBox = document.getElementById('cm-error');
@@ -1441,13 +1455,19 @@ function resetCmForm() {
 function aplicarDatosPerroAlForm(perro) {
     const elNombre = document.getElementById('cm-perro');
     const elRaza   = document.getElementById('cm-raza');
-    const elEdad   = document.getElementById('cm-edad');
+    const elNac    = document.getElementById('cm-nacimiento');
+    const elAdo    = document.getElementById('cm-adopcion');
     const elPeso   = document.getElementById('cm-peso');
     const elPpp    = document.getElementById('cm-ppp');
     const elId     = document.getElementById('cm-perro-id');
     if (elNombre) elNombre.value = perro?.nombre || '';
     if (elRaza)   elRaza.value   = perro?.raza   || '';
-    if (elEdad)   elEdad.value   = perro?.edad_meses != null ? String(perro.edad_meses) : '';
+    if (elNac)    elNac.value    = perro?.fecha_nacimiento ? String(perro.fecha_nacimiento).slice(0, 10) : '';
+    if (elAdo)    elAdo.value    = perro?.fecha_adopcion   ? String(perro.fecha_adopcion).slice(0, 10)   : '';
+    ponerEdadPar('cm-anios', 'cm-meses',
+        perro?.fecha_nacimiento ? null : (perro?.edad_aprox_meses ?? perro?.edad_meses ?? null));
+    limitarFechasAHoyCm();
+    sincronizarEdadAproxCm();
     if (elPeso)   elPeso.value   = perro?.peso_kg    != null ? String(perro.peso_kg)    : '';
     if (elPpp)    elPpp.checked  = !!perro?.es_ppp;
     if (elId)     elId.value     = perro?.id || '';
@@ -1728,6 +1748,76 @@ function formatearFechaCorta(fechaISO) {
 
 // Edad en años/meses (misma versión que admin/cliente.js y admin/perro.js):
 // <12 → "N meses"; ≥12 → "X años" exacto o "X años y M meses". null si inválido.
+/* ───────── Edad del perro (17/09/2026) ─────────
+   Ver claude/PDLI_EDAD_DEL_PERRO.md. `edad_meses` la mantiene al dia la base
+   (trigger + cron): aqui solo se pinta y se recogen las fechas. */
+
+// Par de selectores anos+meses -> un solo numero de meses, y al reves.
+function leerEdadPar(idAnios, idMeses) {
+    const a = document.getElementById(idAnios);
+    const m = document.getElementById(idMeses);
+    const va = (a && a.value !== '') ? parseInt(a.value, 10) : null;
+    const vm = (m && m.value !== '') ? parseInt(m.value, 10) : null;
+    if (va === null && vm === null) return null;
+    return (va || 0) * 12 + (vm || 0);
+}
+
+function ponerEdadPar(idAnios, idMeses, meses) {
+    const a = document.getElementById(idAnios);
+    const m = document.getElementById(idMeses);
+    if (meses == null) {
+        if (a) a.value = '';
+        if (m) m.value = '';
+        return;
+    }
+    if (a) a.value = String(Math.floor(meses / 12));
+    if (m) m.value = String(meses % 12);
+}
+
+// Con fecha de nacimiento la edad aproximada sobra: se apaga.
+function sincronizarEdadAproxCm() {
+    const nac = document.getElementById('cm-nacimiento');
+    const hayNac = !!(nac && nac.value);
+    ['cm-anios', 'cm-meses'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = hayNac;
+        if (hayNac) el.value = '';
+    });
+    const lbl = document.getElementById('cm-aprox-label');
+    if (lbl) lbl.textContent = hayNac
+        ? 'Con la fecha de nacimiento no hace falta nada m\u00e1s'
+        : 'Si no sabe la fecha, edad aproximada';
+}
+
+function limitarFechasAHoyCm() {
+    const hoy = new Date();
+    const iso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+    ['cm-nacimiento', 'cm-adopcion'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.max = iso;
+    });
+}
+
+// 'YYYY-MM-DD' -> '10 jun 2025'. Para la ficha y las listas.
+const EDAD_MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function formatearFechaCorta(iso) {
+    if (!iso) return null;
+    const d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getDate()} ${EDAD_MESES_CORTO[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// Igual que formatearEdadMeses pero sabiendo si el dato es exacto o estimado.
+// Solo se usa donde tenemos la fila entera del perro.
+function formatearEdadPerroAdmin(p) {
+    const texto = formatearEdadMeses(p?.edad_meses);
+    if (!texto) return null;
+    if (p.fecha_nacimiento) return texto;
+    if (p.edad_aprox_ref) return (texto.startsWith('1 ') ? 'alrededor de ' : 'unos ') + texto;
+    return texto;
+}
+
 function formatearEdadMeses(meses) {
     if (meses == null) return null;
     const n = Number(meses);
@@ -1883,7 +1973,7 @@ function renderUnificado(items) {
             : perros.map((p) => {
                 const partes = [p.nombre];
                 if (p.raza) partes.push(p.raza);
-                { const e = formatearEdadMeses(p.edad_meses); if (e) partes.push(e); }
+                { const e = formatearEdadPerroAdmin(p); if (e) partes.push(e); }
                 if (p.problematica) partes.push(`— ${p.problematica}`);
                 return partes.join(' · ');
             }).join(' / ');

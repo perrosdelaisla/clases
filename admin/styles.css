@@ -5980,3 +5980,12 @@ body {
 .notas-ej-item__nuevo {
     font-weight: 700;   /* 11 px de crema sobre rojo: con negrita ya cuenta como grande */
 }
+
+/* Edad en dos selectores: anos y meses (17/09/2026). Mismo criterio que la app
+   de clientes: un perro de 15 meses tiene que poder escribirse sin hacer cuentas. */
+.edad-par {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.edad-par select[disabled] { opacity: .45; }

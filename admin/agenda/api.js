@@ -534,7 +534,8 @@ export async function actualizarUbicacionMapsCliente(clienteId, ubicacionMaps) {
  *
  * @param {string} clienteId - UUID del cliente.
  * @returns {Promise<Array<{id:string, nombre:string, raza:string|null,
- *   edad_meses:number|null, peso_kg:number|null, es_ppp:boolean|null,
+ *   edad_meses:number|null, fecha_nacimiento:string|null, fecha_adopcion:string|null,
+ *   edad_aprox_meses:number|null, peso_kg:number|null, es_ppp:boolean|null,
  *   created_at:string|null}>>}
  *   Vacío si el cliente no tiene perros registrados.
  *
@@ -547,7 +548,7 @@ export async function obtenerPerrosDeCliente(clienteId) {
     if (!clienteId) return [];
     const { data, error } = await supabase
         .from('perros')
-        .select('id, nombre, raza, edad_meses, peso_kg, es_ppp, created_at')
+        .select('id, nombre, raza, edad_meses, fecha_nacimiento, fecha_adopcion, edad_aprox_meses, edad_aprox_ref, peso_kg, es_ppp, created_at')
         .eq('cliente_id', clienteId)
         .order('created_at', { ascending: true, nullsFirst: true });
     if (error) throw error;
@@ -767,7 +768,12 @@ export async function crearCitaManual(datos) {
             const perroUpd = {};
             if (perro.nombre)             perroUpd.nombre = perro.nombre;
             if (perro.raza)               perroUpd.raza = perro.raza;
-            if (perro.edad_meses != null) perroUpd.edad_meses = perro.edad_meses;
+            // La edad viva: mandan las fechas; edad_aprox_meses solo si no hay
+            // fecha de nacimiento. `edad_meses` la recalcula el trigger.
+            if (perro.fecha_nacimiento !== undefined) perroUpd.fecha_nacimiento = perro.fecha_nacimiento;
+            if (perro.fecha_adopcion   !== undefined) perroUpd.fecha_adopcion   = perro.fecha_adopcion;
+            if (perro.edad_aprox_meses != null)       perroUpd.edad_aprox_meses = perro.edad_aprox_meses;
+            if (perro.edad_meses != null)             perroUpd.edad_meses = perro.edad_meses;
             if (perro.peso_kg != null)    perroUpd.peso_kg = perro.peso_kg;
             if (perro.es_ppp)             perroUpd.es_ppp = true;
             if (perro.problematica)       perroUpd.problematica = perro.problematica;
@@ -785,6 +791,9 @@ export async function crearCitaManual(datos) {
         } else {
             const perroBody = { cliente_id: clienteId, nombre: perro.nombre };
             if (perro.raza)               perroBody.raza = perro.raza;
+            if (perro.fecha_nacimiento) perroBody.fecha_nacimiento = perro.fecha_nacimiento;
+            if (perro.fecha_adopcion)   perroBody.fecha_adopcion   = perro.fecha_adopcion;
+            if (perro.edad_aprox_meses != null) perroBody.edad_aprox_meses = perro.edad_aprox_meses;
             if (perro.edad_meses != null) perroBody.edad_meses = perro.edad_meses;
             if (perro.peso_kg != null)    perroBody.peso_kg = perro.peso_kg;
             if (perro.es_ppp)             perroBody.es_ppp = true;
