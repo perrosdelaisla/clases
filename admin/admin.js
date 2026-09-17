@@ -1799,15 +1799,6 @@ function limitarFechasAHoyCm() {
     });
 }
 
-// 'YYYY-MM-DD' -> '10 jun 2025'. Para la ficha y las listas.
-const EDAD_MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-function formatearFechaCorta(iso) {
-    if (!iso) return null;
-    const d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
-    if (Number.isNaN(d.getTime())) return null;
-    return `${d.getDate()} ${EDAD_MESES_CORTO[d.getMonth()]} ${d.getFullYear()}`;
-}
-
 // Igual que formatearEdadMeses pero sabiendo si el dato es exacto o estimado.
 // Solo se usa donde tenemos la fila entera del perro.
 function formatearEdadPerroAdmin(p) {
