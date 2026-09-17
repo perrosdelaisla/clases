@@ -69,20 +69,12 @@ function pararVigilanteDeCarga() {
     if (aviso) aviso.hidden = true;
 }
 
-/* Reintento de verdad: vacía la caché de la app y recarga. Un location.reload()
-   a secas volvería a servir el mismo shell roto desde el service worker.
-   NO toca localStorage ni IndexedDB, así que la sesión se conserva. */
-async function reintentarCarga() {
-    try {
-        if (window.caches) {
-            const nombres = await caches.keys();
-            await Promise.all(nombres.map((n) => caches.delete(n)));
-        }
-    } catch (e) {
-        console.warn('[carga] no se pudo limpiar la cache:', e);
-    }
-    location.reload();
-}
+/* El reintento (vaciar cachés, dar de baja el service worker y recargar) vive
+   en index.html, en el bloque SALIDA DE EMERGENCIA. Aquí no, y es deliberado:
+   el 17/09 una función duplicada en ESTE archivo impidió parsear el módulo, el
+   admin se quedó en "Cargando" y el botón de Reintentar estaba muerto porque lo
+   encendía el propio archivo roto. Si hiciera falta lanzarlo desde aquí:
+   window.__pdliReintentar(). */
 
 
 // ---------- Bootstrap ----------
@@ -119,8 +111,9 @@ function bindEvents() {
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-    const reintentarBtn = document.getElementById('loading-reintentar');
-    if (reintentarBtn) reintentarBtn.addEventListener('click', reintentarCarga);
+    // El botón de Reintentar NO se bindea aquí: lo maneja la SALIDA DE
+    // EMERGENCIA de index.html con un listener delegado, para que siga
+    // funcionando aunque este módulo no llegue a ejecutarse.
 
     document.getElementById('estado-filtros').addEventListener('click', (e) => {
         const chip = e.target.closest('.chip');

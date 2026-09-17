@@ -13,6 +13,117 @@
 </head>
 <body>
 
+    <!-- ───────── SALIDA DE EMERGENCIA (17/09/2026) ─────────
+         Script normal, en línea y sin imports: NO es un módulo y no depende de
+         app.js / admin.js. Si ese módulo no se parsea (un error de sintaxis, un
+         despliegue a medias, una caché mezclada), este bloque sigue corriendo y
+         es lo único que permite al usuario salir de la pantalla de carga.
+
+         El 17/09 pasó de verdad: una función duplicada en admin.js impedía
+         parsear el módulo, el admin se quedaba en "Cargando" para siempre, y el
+         botón de Reintentar estaba muerto porque quien lo encendía era el propio
+         archivo roto. La salida de emergencia dependía de lo que había fallado.
+
+         Qué hace, y por qué así:
+         - El click se escucha DELEGADO en document, así que funciona desde el
+           primer instante y sin esperar a nada.
+         - Borra las cachés Y DA DE BAJA al service worker. Solo borrar cachés no
+           basta: el propio SW puede volver a servir el shell roto.
+         - Recarga con un parámetro nuevo en la URL, porque un location.reload()
+           a secas puede volver a resolverse contra el SW.
+         - NO toca localStorage ni IndexedDB: la sesión se conserva.
+         - Reloj de respaldo a los 25 s, y SOLO cuenta con la app en primer plano
+           (si no, Android la congela y el aviso salta de golpe al volver, que es
+           el fallo que Charly reportó el 14/09). El vigilante normal de la app
+           sigue en su sitio a los 15 s; esto es la red por debajo.
+    ───────────────────────────────────────────────────────── -->
+    <script>
+    (function () {
+        'use strict';
+        var SELECTORES = '#loading-reintentar';
+        var limpiando = false;
+
+        function limpiar() {
+            if (limpiando) return;
+            limpiando = true;
+            var btn = document.getElementById('loading-reintentar');
+            if (btn) { btn.disabled = true; btn.textContent = 'Limpiando\u2026'; }
+
+            var tareas = [];
+            try {
+                if (window.caches && caches.keys) {
+                    tareas.push(caches.keys().then(function (ns) {
+                        return Promise.all(ns.map(function (n) { return caches.delete(n); }));
+                    }));
+                }
+            } catch (e) { /* modo privado, o sin soporte */ }
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+                    tareas.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+                        return Promise.all(rs.map(function (r) { return r.unregister(); }));
+                    }));
+                }
+            } catch (e) { /* idem */ }
+
+            var blindadas = tareas.map(function (p) {
+                return p && p.catch ? p.catch(function () {}) : p;
+            });
+
+            // Pase lo que pase, recargamos: mejor recargar sin haber limpiado
+            // que dejar al usuario mirando un boton que no hace nada.
+            var yaFue = false;
+            function recargar() {
+                if (yaFue) return;
+                yaFue = true;
+                var q = location.search.replace(/[?&]_r=\d+/g, '');
+                if (q && q.charAt(0) !== '?') q = '?' + q;
+                location.replace(location.pathname + q + (q ? '&' : '?') + '_r=' + Date.now());
+            }
+            setTimeout(recargar, 4000);
+            Promise.all(blindadas).then(recargar, recargar);
+        }
+
+        // Cualquier chat futuro: esta es la unica implementacion del reintento.
+        window.__pdliReintentar = limpiar;
+
+        document.addEventListener('click', function (ev) {
+            var t = ev.target;
+            if (!t || !t.closest) return;
+            if (t.closest(SELECTORES)) { ev.preventDefault(); limpiar(); }
+        });
+
+        // ── Reloj de respaldo ──
+        var RESPALDO_MS = 25000;
+        var reloj = null;
+
+        function cargando() {
+            var p = document.getElementById('screen-loading');
+            return !!(p && !p.hasAttribute('hidden'));
+        }
+
+        function destapar() {
+            if (!cargando()) return;
+            var aviso = document.getElementById('loading-atasco');
+            if (aviso) aviso.hidden = false;
+        }
+
+        function arrancar() {
+            clearTimeout(reloj);
+            reloj = null;
+            if (document.visibilityState !== 'visible') return;
+            reloj = setTimeout(destapar, RESPALDO_MS);
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (!cargando()) { clearTimeout(reloj); reloj = null; return; }
+            if (document.visibilityState === 'visible') arrancar();
+            else { clearTimeout(reloj); reloj = null; }
+        });
+
+        arrancar();
+    })();
+    </script>
+
     <section class="screen" id="screen-loading" aria-busy="true">
         <main class="centered">
             <div class="logo">
@@ -934,7 +1045,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=97"></script>
+    <script type="module" src="./admin.js?v=98"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=3';
       function toast(msg) {

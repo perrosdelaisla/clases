@@ -350,11 +350,10 @@ function bindEventos() {
     const errorLogout = document.getElementById('error-logout');
     if (errorLogout) errorLogout.addEventListener('click', cerrarSesion);
 
-    const errorCargaReintentar = document.getElementById('error-carga-reintentar');
-    if (errorCargaReintentar) errorCargaReintentar.addEventListener('click', reintentarCarga);
-
-    const loadingReintentar = document.getElementById('loading-reintentar');
-    if (loadingReintentar) loadingReintentar.addEventListener('click', reintentarCarga);
+    // Los dos botones de Reintentar (el de la pantalla de carga y el de la de
+    // error) los maneja la SALIDA DE EMERGENCIA de index.html, con un listener
+    // delegado. A proposito no se bindean aqui: si este modulo no se parsea, el
+    // boton tiene que seguir funcionando. Ver el comentario de ese <script>.
 
     // Welcome editorial (primer login)
     const welcomeBtn = document.getElementById('welcome-empezar');
@@ -8106,20 +8105,10 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-/* Reintento de verdad: vacía la caché de la app y recarga. Un location.reload()
-   a secas volvería a servir el mismo shell roto desde el service worker.
-   NO toca localStorage ni IndexedDB, así que la sesión se conserva. */
-async function reintentarCarga() {
-    try {
-        if (window.caches) {
-            const nombres = await caches.keys();
-            await Promise.all(nombres.map((n) => caches.delete(n)));
-        }
-    } catch (e) {
-        console.warn('[carga] no se pudo limpiar la cache:', e);
-    }
-    location.reload();
-}
+/* El reintento (vaciar cachés, dar de baja el service worker y recargar) vive
+   en index.html, en el bloque SALIDA DE EMERGENCIA. Aquí no, y es deliberado:
+   el 17/09 un error de sintaxis en un módulo dejó su propio botón de Reintentar
+   muerto. Si desde este archivo hiciera falta lanzarlo: window.__pdliReintentar(). */
 
 
 function setText(id, value) {
