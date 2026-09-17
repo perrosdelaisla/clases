@@ -5989,3 +5989,13 @@ body {
     gap: 8px;
 }
 .edad-par select[disabled] { opacity: .45; }
+
+/* 17/09/2026 — los <input type="date"> no se estiraban dentro de .form-field.
+   Los de texto si (son items flex con align-items:stretch), pero Chrome le da
+   al control de fecha un ancho intrinseco y se quedaba a media anchura, con la
+   flecha del selector pegada al texto. En el movil de Charly se veia asi en
+   "Fecha de nacimiento" y "Llego a casa" del modal de cita manual. */
+.form-field input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+}
