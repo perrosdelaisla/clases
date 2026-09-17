@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="PDLI Clases">
     <link rel="apple-touch-icon" href="/clases/img/icon-192.png">
 
-    <link rel="stylesheet" href="./css/styles.css?v=77">
+    <link rel="stylesheet" href="./css/styles.css?v=78">
     <link rel="stylesheet" href="./css/home.css?v=37">
     <link rel="stylesheet" href="./css/home-bridge.css?v=44">
     <link rel="stylesheet" href="./css/seguimiento.css?v=5">
@@ -1291,38 +1291,62 @@
                 </div>
 
                 <div class="form-field">
-                    <label class="form-field__label" for="agregar-perro-edad">Edad</label>
-                    <select class="select-pdli" id="agregar-perro-edad" name="edad_meses" required>
-                        <option value="" disabled selected>Selecciona la edad</option>
-                        <option value="0">Menos de 1 mes</option>
-                        <option value="1">1 mes</option>
-                        <option value="2">2 meses</option>
-                        <option value="3">3 meses</option>
-                        <option value="4">4 meses</option>
-                        <option value="5">5 meses</option>
-                        <option value="6">6 meses</option>
-                        <option value="7">7 meses</option>
-                        <option value="8">8 meses</option>
-                        <option value="9">9 meses</option>
-                        <option value="10">10 meses</option>
-                        <option value="11">11 meses</option>
-                        <option value="12">1 año</option>
-                        <option value="24">2 años</option>
-                        <option value="36">3 años</option>
-                        <option value="48">4 años</option>
-                        <option value="60">5 años</option>
-                        <option value="72">6 años</option>
-                        <option value="84">7 años</option>
-                        <option value="96">8 años</option>
-                        <option value="108">9 años</option>
-                        <option value="120">10 años</option>
-                        <option value="132">11 años</option>
-                        <option value="144">12 años</option>
-                        <option value="156">13 años</option>
-                        <option value="168">14 años</option>
-                        <option value="180">15 años</option>
-                        <option value="192">Más de 15 años</option>
-                    </select>
+                    <label class="form-field__label" for="agregar-perro-nacimiento">Fecha de nacimiento</label>
+                    <input type="date" class="input-pdli" id="agregar-perro-nacimiento" name="fecha_nacimiento">
+                    <p class="form-field__ayuda">Si la sabes, su edad se pone al día sola.</p>
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" id="agregar-perro-aprox-label">Si no la sabes, su edad ahora</label>
+                    <div class="edad-par" role="group" aria-labelledby="agregar-perro-aprox-label">
+                        <select class="select-pdli" id="agregar-perro-anios" aria-label="Años">
+                            <option value="">Años</option>
+                            <option value="0">0 años</option>
+                            <option value="1">1 año</option>
+                            <option value="2">2 años</option>
+                            <option value="3">3 años</option>
+                            <option value="4">4 años</option>
+                            <option value="5">5 años</option>
+                            <option value="6">6 años</option>
+                            <option value="7">7 años</option>
+                            <option value="8">8 años</option>
+                            <option value="9">9 años</option>
+                            <option value="10">10 años</option>
+                            <option value="11">11 años</option>
+                            <option value="12">12 años</option>
+                            <option value="13">13 años</option>
+                            <option value="14">14 años</option>
+                            <option value="15">15 años</option>
+                            <option value="16">16 años</option>
+                            <option value="17">17 años</option>
+                            <option value="18">18 años</option>
+                            <option value="19">19 años</option>
+                            <option value="20">20 años</option>
+                            <option value="21">21 años</option>
+                            <option value="22">22 años</option>
+                        </select>
+                        <select class="select-pdli" id="agregar-perro-meses" aria-label="Meses">
+                            <option value="">Meses</option>
+                            <option value="0">0 meses</option>
+                            <option value="1">1 mes</option>
+                            <option value="2">2 meses</option>
+                            <option value="3">3 meses</option>
+                            <option value="4">4 meses</option>
+                            <option value="5">5 meses</option>
+                            <option value="6">6 meses</option>
+                            <option value="7">7 meses</option>
+                            <option value="8">8 meses</option>
+                            <option value="9">9 meses</option>
+                            <option value="10">10 meses</option>
+                            <option value="11">11 meses</option>
+                        </select>
+                    </div>
+                    <p class="form-field__ayuda">A partir de hoy la vamos sumando nosotros.</p>
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" for="agregar-perro-adopcion">¿Qué día llegó a casa?</label>
+                    <input type="date" class="input-pdli" id="agregar-perro-adopcion" name="fecha_adopcion">
                 </div>
 
                 <div class="form-field">
@@ -1446,25 +1470,62 @@
                     <input type="text" class="input-pdli" id="edit-perro-raza" maxlength="80" placeholder="Border collie, mestizo…">
                 </div>
                 <div class="form-field">
-                    <label class="form-field__label" for="edit-perro-edad-meses">Edad</label>
-                    <select class="select-pdli" id="edit-perro-edad-meses" name="edad_meses">
-                        <option value="" disabled>Selecciona la edad</option>
-                        <option value="0">Menos de 1 mes</option>
-                        <option value="1">1 mes</option><option value="2">2 meses</option>
-                        <option value="3">3 meses</option><option value="4">4 meses</option>
-                        <option value="5">5 meses</option><option value="6">6 meses</option>
-                        <option value="7">7 meses</option><option value="8">8 meses</option>
-                        <option value="9">9 meses</option><option value="10">10 meses</option>
-                        <option value="11">11 meses</option>
-                        <option value="12">1 año</option><option value="24">2 años</option>
-                        <option value="36">3 años</option><option value="48">4 años</option>
-                        <option value="60">5 años</option><option value="72">6 años</option>
-                        <option value="84">7 años</option><option value="96">8 años</option>
-                        <option value="108">9 años</option><option value="120">10 años</option>
-                        <option value="132">11 años</option><option value="144">12 años</option>
-                        <option value="156">13 años</option><option value="168">14 años</option>
-                        <option value="180">15 años</option><option value="192">Más de 15 años</option>
-                    </select>
+                    <label class="form-field__label" for="edit-perro-nacimiento">Fecha de nacimiento</label>
+                    <input type="date" class="input-pdli" id="edit-perro-nacimiento" name="fecha_nacimiento">
+                    <p class="form-field__ayuda">Si la sabes, su edad se pone al día sola.</p>
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" id="edit-perro-aprox-label">Si no la sabes, su edad ahora</label>
+                    <div class="edad-par" role="group" aria-labelledby="edit-perro-aprox-label">
+                        <select class="select-pdli" id="edit-perro-anios" aria-label="Años">
+                            <option value="">Años</option>
+                            <option value="0">0 años</option>
+                            <option value="1">1 año</option>
+                            <option value="2">2 años</option>
+                            <option value="3">3 años</option>
+                            <option value="4">4 años</option>
+                            <option value="5">5 años</option>
+                            <option value="6">6 años</option>
+                            <option value="7">7 años</option>
+                            <option value="8">8 años</option>
+                            <option value="9">9 años</option>
+                            <option value="10">10 años</option>
+                            <option value="11">11 años</option>
+                            <option value="12">12 años</option>
+                            <option value="13">13 años</option>
+                            <option value="14">14 años</option>
+                            <option value="15">15 años</option>
+                            <option value="16">16 años</option>
+                            <option value="17">17 años</option>
+                            <option value="18">18 años</option>
+                            <option value="19">19 años</option>
+                            <option value="20">20 años</option>
+                            <option value="21">21 años</option>
+                            <option value="22">22 años</option>
+                        </select>
+                        <select class="select-pdli" id="edit-perro-meses" aria-label="Meses">
+                            <option value="">Meses</option>
+                            <option value="0">0 meses</option>
+                            <option value="1">1 mes</option>
+                            <option value="2">2 meses</option>
+                            <option value="3">3 meses</option>
+                            <option value="4">4 meses</option>
+                            <option value="5">5 meses</option>
+                            <option value="6">6 meses</option>
+                            <option value="7">7 meses</option>
+                            <option value="8">8 meses</option>
+                            <option value="9">9 meses</option>
+                            <option value="10">10 meses</option>
+                            <option value="11">11 meses</option>
+                        </select>
+                    </div>
+                    <p class="form-field__ayuda">A partir de hoy la vamos sumando nosotros.</p>
+                </div>
+
+                <div class="form-field">
+                    <label class="form-field__label" for="edit-perro-adopcion">¿Qué día llegó a casa?</label>
+                    <input type="date" class="input-pdli" id="edit-perro-adopcion" name="fecha_adopcion">
                 </div>
                 <div class="form-field">
                     <label class="form-field__label" for="edit-perro-peso">Peso</label>
@@ -1579,6 +1640,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=178"></script>
+    <script type="module" src="./js/app.js?v=179"></script>
 </body>
 </html>

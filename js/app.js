@@ -1797,6 +1797,37 @@ function presentarEscaleraSiToca(perro) {
     if (esc) mostrarNovedadEscalera(esc, perro);
 }
 
+/* ───────── Aniversario de la llegada a casa (17/09/2026) ─────────
+   Charly: la fecha de adopcion no es solo un dato para el admin. El dia que se
+   cumplen años de su llegada, Jaime lo felicita. Una vez por perro y por año;
+   la marca vive en el movil del tutor, no en la base. */
+function aniversarioVisto(perroId, anio) {
+    try { return localStorage.getItem(`pdli_aniv_${perroId}_${anio}`) === '1'; }
+    catch (_e) { return false; }
+}
+function marcarAniversarioVisto(perroId, anio) {
+    try { localStorage.setItem(`pdli_aniv_${perroId}_${anio}`, '1'); } catch (_e) { /* modo privado */ }
+}
+
+function mostrarAniversarioSiToca(perro) {
+    const anios = aniversarioAdopcionHoy(perro);
+    if (!anios) return false;
+    const anioActual = new Date().getFullYear();
+    if (aniversarioVisto(perro.id, anioActual)) return false;
+
+    const nombre = perro.nombre || 'tu perro';
+    const cuanto = anios === 1 ? 'un año' : `${anios} años`;
+    _jaimeAvisoActual = {
+        texto: `Hoy hace ${cuanto} que ${nombre} llegó a casa. Felicidades a los dos: `
+             + 'todo lo que habéis construido desde entonces empezó ese día.',
+        ctaLabel: '',
+        ctaAccion: null,
+    };
+    marcarAniversarioVisto(perro.id, anioActual);
+    abrirBurbujaJaime();
+    return true;
+}
+
 function mostrarNovedadEscalera(esc, perro) {
     const nom = primerNombreTutor();
     const hola = nom ? `¡Hola, ${nom}!` : '¡Hola!';
@@ -1870,6 +1901,10 @@ async function cargarAvisoJaime() {
         mostrarNovedadEscalera(escNueva, perro);
         return;
     }
+
+    // Aniversario de su llegada a casa. Una vez al año, el dia que toca, y
+    // solo si el tutor nos dio la fecha de adopcion (17/09/2026).
+    if (perro && mostrarAniversarioSiToca(perro)) return;
 
     if (!perro) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
@@ -3885,7 +3920,8 @@ async function renderRutinaPerroSeleccionado() {
     // Hero
     hero.removeAttribute('hidden');
     heroNombre.textContent = perro.nombre || 'Tu perro';
-    const partesMeta = [perro.raza, formatearEdadPerro(perro)].filter(Boolean);
+    const partesMeta = [perro.raza, formatearEdadPerro(perro), textoConvivencia(perro)]
+        .filter(Boolean);
     heroMeta.textContent = partesMeta.join(' · ');
 
     // Card "Evalúa el bienestar y la felicidad"
@@ -7317,6 +7353,10 @@ async function abrirModalFichaProtocolo() {
 function abrirModalAgregarPerro() {
     const form = document.getElementById('form-agregar-perro');
     if (form) form.reset();
+    // form.reset() vacia los campos pero no vuelve a habilitar los selectores
+    // de edad ni repone el rotulo, que dependen de la fecha de nacimiento.
+    limitarFechasAHoy();
+    sincronizarEdadAprox('agregar-perro');
     const err = document.getElementById('agregar-perro-error');
     if (err) { err.textContent = ''; err.hidden = true; }
     const btn = document.getElementById('agregar-perro-guardar');
@@ -7334,11 +7374,14 @@ function abrirModalAgregarPerro() {
 function validarFormAgregarPerro() {
     const nombre = (document.getElementById('agregar-perro-nombre')?.value || '').trim();
     const raza   = (document.getElementById('agregar-perro-raza')?.value   || '').trim();
-    const edad   = document.getElementById('agregar-perro-edad')?.value || '';
     const peso   = document.getElementById('agregar-perro-peso')?.value   || '';
+    const nac    = document.getElementById('agregar-perro-nacimiento')?.value || '';
+    const aprox  = leerEdadPar('agregar-perro-anios', 'agregar-perro-meses');
+    // Vale con una de las dos: la fecha de nacimiento o la edad aproximada.
+    const hayEdad = nac !== '' || aprox !== null;
     const ok = nombre.length > 0
             && raza.length > 0
-            && edad !== ''
+            && hayEdad
             && peso !== '' && parseFloat(peso) > 0;
     const btn = document.getElementById('agregar-perro-guardar');
     if (btn) btn.disabled = !ok;
@@ -7363,8 +7406,10 @@ async function onSubmitAgregarPerro(ev) {
 
     const nombre = document.getElementById('agregar-perro-nombre').value.trim();
     const raza   = document.getElementById('agregar-perro-raza').value.trim();
-    const edad   = parseInt(document.getElementById('agregar-perro-edad').value, 10);
     const peso   = parseFloat(document.getElementById('agregar-perro-peso').value);
+    const nacimiento = document.getElementById('agregar-perro-nacimiento').value || null;
+    const adopcion   = document.getElementById('agregar-perro-adopcion').value || null;
+    const edadAprox  = nacimiento ? null : leerEdadPar('agregar-perro-anios', 'agregar-perro-meses');
 
     const proximaPrioridad = (state.perros || []).reduce(
         (max, p) => Math.max(max, p.prioridad || 0),
@@ -7384,7 +7429,9 @@ async function onSubmitAgregarPerro(ev) {
                 cliente_id: clienteId,
                 nombre,
                 raza,
-                edad_meses: edad,
+                fecha_nacimiento: nacimiento,
+                fecha_adopcion: adopcion,
+                edad_aprox_meses: edadAprox,
                 peso_kg: peso,
                 prioridad: proximaPrioridad,
             })
@@ -7422,7 +7469,9 @@ async function onSubmitAgregarPerro(ev) {
 function bindFormAgregarPerro() {
     const form = document.getElementById('form-agregar-perro');
     if (!form) return;
-    ['agregar-perro-nombre','agregar-perro-raza','agregar-perro-edad','agregar-perro-peso']
+    ['agregar-perro-nombre','agregar-perro-raza','agregar-perro-peso',
+     'agregar-perro-nacimiento','agregar-perro-adopcion',
+     'agregar-perro-anios','agregar-perro-meses']
         .forEach((id) => {
             const el = document.getElementById(id);
             if (el) {
@@ -7430,6 +7479,11 @@ function bindFormAgregarPerro() {
                 el.addEventListener('change', validarFormAgregarPerro);
             }
         });
+    document.getElementById('agregar-perro-nacimiento')?.addEventListener('change', () => {
+        sincronizarEdadAprox('agregar-perro');
+        validarFormAgregarPerro();
+    });
+    limitarFechasAHoy();
     form.addEventListener('submit', onSubmitAgregarPerro);
 }
 
@@ -7467,7 +7521,11 @@ function normalizarUrlMaps(valor) {
 const EDIT_PERRO_FIELDS = [
     { col: 'nombre',        id: 'edit-perro-nombre',        tipo: 'text' },
     { col: 'raza',          id: 'edit-perro-raza',          tipo: 'text' },
-    { col: 'edad_meses',    id: 'edit-perro-edad-meses',    tipo: 'int' },
+    { col: 'fecha_nacimiento', id: 'edit-perro-nacimiento', tipo: 'date' },
+    { col: 'fecha_adopcion',   id: 'edit-perro-adopcion',   tipo: 'date' },
+    // Par de selectores años+meses que viaja como un solo entero de meses.
+    { col: 'edad_aprox_meses', id: 'edit-perro-anios', tipo: 'edadpar',
+      idAnios: 'edit-perro-anios', idMeses: 'edit-perro-meses' },
     { col: 'peso_kg',       id: 'edit-perro-peso',          tipo: 'num' },
     { col: 'es_ppp',        id: 'edit-perro-ppp',           tipo: 'bool' },
     { col: 'problematica',  id: 'edit-perro-problematica',  tipo: 'text' },
@@ -7478,6 +7536,7 @@ const EDIT_PERRO_FIELDS = [
 // Lee un campo del input según su tipo, devuelve valor normalizado
 // listo para comparar/persistir. Strings vacíos → null.
 function leerCampo(field) {
+    if (field.tipo === 'edadpar') return leerEdadPar(field.idAnios, field.idMeses);
     const el = document.getElementById(field.id);
     if (!el) return null;
     if (field.tipo === 'bool') return Boolean(el.checked);
@@ -7499,11 +7558,12 @@ function leerCampo(field) {
 function normalizarValor(val, tipo) {
     if (tipo === 'bool') return Boolean(val);
     if (val === null || val === undefined) return null;
+    if (tipo === 'date') return String(val).slice(0, 10);
     if (typeof val === 'string') {
         const trimmed = val.trim();
         return trimmed === '' ? null : trimmed;
     }
-    if (tipo === 'int') return Number.isInteger(val) ? val : null;
+    if (tipo === 'int' || tipo === 'edadpar') return Number.isInteger(val) ? val : null;
     if (tipo === 'num') return Number.isFinite(Number(val)) ? Number(val) : null;
     return val;
 }
@@ -7512,9 +7572,14 @@ function normalizarValor(val, tipo) {
 // el snapshot para detectar cambios.
 function cargarFormulario(fields, fuente, snapshot) {
     fields.forEach((f) => {
+        const val = fuente?.[f.col];
+        if (f.tipo === 'edadpar') {
+            snapshot[f.col] = normalizarValor(val, f.tipo);
+            ponerEdadPar(f.idAnios, f.idMeses, snapshot[f.col]);
+            return;
+        }
         const el = document.getElementById(f.id);
         if (!el) return;
-        const val = fuente?.[f.col];
         snapshot[f.col] = normalizarValor(val, f.tipo);
         if (f.tipo === 'bool') {
             el.checked = Boolean(val);
@@ -7641,6 +7706,8 @@ function abrirModalEditarPerro() {
     _editPerroCtx.perroId = perro.id;
     _editPerroCtx.snapshot = {};
     cargarFormulario(EDIT_PERRO_FIELDS, perro, _editPerroCtx.snapshot);
+    limitarFechasAHoy();
+    sincronizarEdadAprox('edit-perro');
     const err = document.getElementById('edit-perro-error');
     if (err) { err.textContent = ''; err.hidden = true; }
     refrescarBotonGuardar(EDIT_PERRO_FIELDS, _editPerroCtx.snapshot, 'edit-perro-guardar', true);
@@ -7660,9 +7727,24 @@ async function onSubmitEditarPerro(ev) {
         if (err) { err.textContent = 'El nombre no puede quedar vacío.'; err.hidden = false; }
         return;
     }
-    if (cambios.edad_meses !== undefined && cambios.edad_meses !== null
-        && (cambios.edad_meses < 0 || cambios.edad_meses > 360)) {
-        if (err) { err.textContent = 'La edad en meses debe estar entre 0 y 360.'; err.hidden = false; }
+    if (cambios.edad_aprox_meses !== undefined && cambios.edad_aprox_meses !== null
+        && (cambios.edad_aprox_meses < 0 || cambios.edad_aprox_meses > 360)) {
+        if (err) { err.textContent = 'La edad no puede pasar de 30 años.'; err.hidden = false; }
+        return;
+    }
+    const hoyISO = new Date().toISOString().slice(0, 10);
+    for (const campo of ['fecha_nacimiento', 'fecha_adopcion']) {
+        if (cambios[campo] && cambios[campo] > hoyISO) {
+            if (err) { err.textContent = 'Esa fecha todavía no ha llegado.'; err.hidden = false; }
+            return;
+        }
+    }
+    const nacFinal = cambios.fecha_nacimiento !== undefined
+        ? cambios.fecha_nacimiento : _editPerroCtx.snapshot.fecha_nacimiento;
+    const adoFinal = cambios.fecha_adopcion !== undefined
+        ? cambios.fecha_adopcion : _editPerroCtx.snapshot.fecha_adopcion;
+    if (nacFinal && adoFinal && adoFinal < nacFinal) {
+        if (err) { err.textContent = 'No pudo llegar a casa antes de nacer.'; err.hidden = false; }
         return;
     }
     if (cambios.peso_kg !== undefined && cambios.peso_kg !== null
@@ -7671,25 +7753,30 @@ async function onSubmitEditarPerro(ev) {
         return;
     }
 
-    // Si se edita edad_meses, también nulleamos el campo legacy `edad` (text)
-    // para que las dos representaciones no diverjan.
-    if (cambios.edad_meses !== undefined) {
+    // Si se toca la edad, nulleamos el campo legacy `edad` (text) para que las
+    // dos representaciones no diverjan.
+    if (cambios.edad_aprox_meses !== undefined || cambios.fecha_nacimiento !== undefined) {
         cambios.edad = null;
     }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
 
     try {
-        const { error } = await supabase
+        // .select() porque `edad_meses` y `edad_aprox_ref` los recalcula el
+        // trigger en la base: si copiaramos solo `cambios`, la copia local
+        // mostraria la edad vieja hasta el siguiente refresco.
+        const { data: fila, error } = await supabase
             .from('perros')
             .update(cambios)
-            .eq('id', _editPerroCtx.perroId);
+            .eq('id', _editPerroCtx.perroId)
+            .select()
+            .single();
         if (error) throw error;
 
         // Sincronizar el row local en state.perros.
         const idx = state.perros.findIndex((p) => p.id === _editPerroCtx.perroId);
         if (idx >= 0) {
-            Object.assign(state.perros[idx], cambios);
+            Object.assign(state.perros[idx], fila || cambios);
         }
 
         // Re-render del hero del perro.
@@ -7708,14 +7795,23 @@ async function onSubmitEditarPerro(ev) {
 function bindFormEditarPerro() {
     const form = document.getElementById('form-editar-perro');
     if (!form) return;
+    const handler = () => refrescarBotonGuardar(
+        EDIT_PERRO_FIELDS, _editPerroCtx.snapshot, 'edit-perro-guardar', true,
+    );
+    const ids = new Set();
     EDIT_PERRO_FIELDS.forEach((f) => {
-        const el = document.getElementById(f.id);
+        if (f.tipo === 'edadpar') { ids.add(f.idAnios); ids.add(f.idMeses); }
+        else ids.add(f.id);
+    });
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
         if (!el) return;
-        const handler = () => refrescarBotonGuardar(
-            EDIT_PERRO_FIELDS, _editPerroCtx.snapshot, 'edit-perro-guardar', true,
-        );
         el.addEventListener('input', handler);
         el.addEventListener('change', handler);
+    });
+    document.getElementById('edit-perro-nacimiento')?.addEventListener('change', () => {
+        sincronizarEdadAprox('edit-perro');
+        handler();
     });
     form.addEventListener('submit', onSubmitEditarPerro);
 
@@ -8070,16 +8166,123 @@ function colorParaPerro(perroId) {
     return PERRO_COLOR_PALETTE[hash % PERRO_COLOR_PALETTE.length];
 }
 
+/* ───────── Edad del perro (17/09/2026) ─────────
+   La edad ya no es un numero congelado el dia del alta. En la base manda
+   `fecha_nacimiento`; si no la hay, `edad_aprox_meses` + `edad_aprox_ref`
+   (el dia en que el tutor la declaro). `edad_meses` la mantiene al dia un
+   trigger y un cron nocturno, asi que aqui solo hay que pintarla. */
+
+// 15 meses son "1 año y 3 meses", nunca "15 meses". Charly, 17/09: "no quiero
+// que las edades esten solo en meses, si no estoy sacando cuentas".
+function mesesATexto(meses) {
+    if (meses == null) return '';
+    const n = Number(meses);
+    if (!Number.isFinite(n) || n < 0) return '';
+    if (n === 0) return 'menos de 1 mes';
+    const anios = Math.floor(n / 12);
+    const rem = n % 12;
+    const parteMeses = `${rem} ${rem === 1 ? 'mes' : 'meses'}`;
+    if (anios === 0) return parteMeses;
+    const parteAnios = `${anios} ${anios === 1 ? 'año' : 'años'}`;
+    return rem === 0 ? parteAnios : `${parteAnios} y ${parteMeses}`;
+}
+
+// Con fecha de nacimiento la edad es exacta. Sin ella es una estimacion del
+// tutor que corre desde el dia que la dijo, y eso se dice: "unos 3 años".
 function formatearEdadPerro(perro) {
-    if (perro.edad_meses != null) {
-        const m = perro.edad_meses;
-        if (m < 12) return `${m} ${m === 1 ? 'mes' : 'meses'}`;
-        const años = Math.floor(m / 12);
-        const rem = m % 12;
-        const parteAnios = `${años} ${años === 1 ? 'año' : 'años'}`;
-        return rem === 0 ? parteAnios : `${parteAnios} y ${rem} ${rem === 1 ? 'mes' : 'meses'}`;
+    if (!perro) return '';
+    if (perro.edad_meses == null) return perro.edad || '';
+    const texto = mesesATexto(perro.edad_meses);
+    if (!texto) return perro.edad || '';
+    if (perro.fecha_nacimiento) return texto;
+    if (perro.edad_aprox_ref) {
+        return (texto.startsWith('1 ') ? 'alrededor de ' : 'unos ') + texto;
     }
-    return perro.edad || '';
+    return texto;
+}
+
+// 'YYYY-MM-DD' -> Date local, sin que la zona horaria reste un dia.
+function fechaLocalDesdeISO(iso) {
+    if (!iso) return null;
+    const d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function mesesDesde(fecha) {
+    const d = fechaLocalDesdeISO(fecha);
+    if (!d) return null;
+    const hoy = new Date();
+    let m = (hoy.getFullYear() - d.getFullYear()) * 12 + (hoy.getMonth() - d.getMonth());
+    if (hoy.getDate() < d.getDate()) m -= 1;
+    return m < 0 ? null : m;
+}
+
+// "lleva 2 años contigo". Solo si nos dieron la fecha de adopcion.
+function textoConvivencia(perro) {
+    const m = mesesDesde(perro?.fecha_adopcion);
+    if (m == null) return '';
+    if (m === 0) return 'recién llegado a casa';
+    return `lleva ${mesesATexto(m)} contigo`;
+}
+
+// Cuantos años cumple HOY de su llegada a casa (0 = hoy no es el dia).
+function aniversarioAdopcionHoy(perro) {
+    const d = fechaLocalDesdeISO(perro?.fecha_adopcion);
+    if (!d) return 0;
+    const hoy = new Date();
+    if (d.getDate() !== hoy.getDate() || d.getMonth() !== hoy.getMonth()) return 0;
+    const anios = hoy.getFullYear() - d.getFullYear();
+    return anios >= 1 ? anios : 0;
+}
+
+// Lee/escribe el par de selectores años+meses como un solo numero de meses.
+function leerEdadPar(idAnios, idMeses) {
+    const a = document.getElementById(idAnios);
+    const m = document.getElementById(idMeses);
+    const va = (a && a.value !== '') ? parseInt(a.value, 10) : null;
+    const vm = (m && m.value !== '') ? parseInt(m.value, 10) : null;
+    if (va === null && vm === null) return null;
+    return (va || 0) * 12 + (vm || 0);
+}
+
+function ponerEdadPar(idAnios, idMeses, meses) {
+    const a = document.getElementById(idAnios);
+    const m = document.getElementById(idMeses);
+    if (meses == null) {
+        if (a) a.value = '';
+        if (m) m.value = '';
+        return;
+    }
+    if (a) a.value = String(Math.floor(meses / 12));
+    if (m) m.value = String(meses % 12);
+}
+
+// Con fecha de nacimiento puesta, la edad aproximada sobra: se apaga para que
+// el tutor no rellene dos cosas que dicen lo mismo.
+function sincronizarEdadAprox(pref) {
+    const nac = document.getElementById(pref + '-nacimiento');
+    const hayNac = !!(nac && nac.value);
+    [pref + '-anios', pref + '-meses'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = hayNac;
+        if (hayNac) el.value = '';
+    });
+    const lbl = document.getElementById(pref + '-aprox-label');
+    if (lbl) lbl.textContent = hayNac
+        ? 'Con la fecha de nacimiento no hace falta nada más'
+        : 'Si no la sabes, su edad ahora';
+}
+
+// Los <input type="date"> no deberian permitir el futuro.
+function limitarFechasAHoy() {
+    const hoy = new Date();
+    const iso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+    ['agregar-perro-nacimiento', 'agregar-perro-adopcion',
+     'edit-perro-nacimiento', 'edit-perro-adopcion'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.max = iso;
+    });
 }
 
 const DIAS_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

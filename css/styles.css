@@ -5159,3 +5159,19 @@ body.es-secundario .cita-cancelar-btn { display: none !important; }
     font-size: 14px;
     opacity: .75;
 }
+
+/* Edad en dos selectores: años y meses (17/09/2026). Antes era un desplegable
+   unico de meses que saltaba de "11 meses" a "1 año": un perro de 15 meses no
+   se podia escribir sin hacer cuentas. */
+.edad-par {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.form-field__ayuda {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--color-muted, #8a8a8a);
+}
+.edad-par select[disabled] { opacity: .45; }
