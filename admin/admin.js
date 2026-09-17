@@ -13,7 +13,7 @@ import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=6';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
 import { initSwipeTabs } from '../js/swipe-tabs.js';
-import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=6';
+import { initAvisos, precargarBadgeAvisos } from './avisos.js?v=7';
 import { initAtencion, precargarBadgeAtencion } from './atencion.js?v=5';
 import { initJaime, jaimeEscuchando } from './jaime.js?v=20';
 const supabase = getSupabase('admin');

@@ -70,6 +70,8 @@ function esc(s) {
     }[c]));
 }
 
+// Sin uso desde el 17/09 (se fueron con los bloques copiables). Se quedan por
+// si vuelven a hacer falta; no molestan a nadie.
 function fmtFechaCita(fechaIso) {
     if (!fechaIso) return '';
     const [y, m, d] = String(fechaIso).split('-');
@@ -175,56 +177,6 @@ async function marcarTodosLeidos() {
 
 // ---- Bloques copiables para citas ----
 
-function normalizarTelefonoWa(tel) {
-    if (!tel) return '';
-    return String(tel).replace(/[^\d+]/g, '');
-}
-
-function construirMensajeWhatsApp(aviso, det) {
-    const cli = det && det.cliente ? det.cliente.nombre : '';
-    const nombrePila = (cli || '').split(' ')[0] || '';
-    const fecha = det ? fmtFechaCita(det.fecha) : '';
-    const hora = det ? fmtHora(det.hora) : '';
-    const modalidad = det ? (det.modalidad || '') : '';
-    const zona = det ? (det.zona || '') : '';
-
-    switch (aviso.tipo) {
-        case 'cita_nueva':
-            return `Hola ${nombrePila}! Recibimos tu solicitud para el ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. Te confirmo en cuanto la valide. ¡Gracias!`;
-        case 'cita_estado': {
-            const estadoCita = det ? (det.estado || '') : '';
-            if (estadoCita === 'cancelada') {
-                return `Hola ${nombrePila}! Queda cancelada la cita del ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. Cuando quieras la reagendamos, avisame.`;
-            }
-            if (estadoCita === 'realizada') {
-                return `Hola ${nombrePila}! Gracias por la clase de hoy. Cualquier duda con lo que trabajamos, escribime.`;
-            }
-            return `Hola ${nombrePila}! Te confirmo la cita del ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. ¡Nos vemos!`;
-        }
-        case 'cita_reagendada':
-            return `Hola ${nombrePila}! Reagendamos la cita: ${fecha} a las ${hora}${modalidad ? ` (${modalidad})` : ''}${zona ? ` — ${zona}` : ''}. Cualquier cosa, avisame.`;
-        case 'cita_pago':
-            return `Hola ${nombrePila}! Recibí la seña, queda confirmada la cita del ${fecha} a las ${hora}. ¡Gracias!`;
-        default:
-            return `Hola ${nombrePila}!`;
-    }
-}
-
-function construirResumenInterno(aviso, det) {
-    const piezas = [];
-    piezas.push(`${aviso.titulo}`);
-    if (aviso.cuerpo) piezas.push(aviso.cuerpo);
-    if (det) {
-        const linea = [];
-        if (det.modalidad) linea.push(det.modalidad);
-        if (det.zona) linea.push(det.zona);
-        if (det.protocolo) linea.push(det.protocolo);
-        if (linea.length) piezas.push(linea.join(' · '));
-        if (det.cliente && det.cliente.telefono) piezas.push(`Tel: ${det.cliente.telefono}`);
-    }
-    return piezas.join('\n');
-}
-
 async function copiar(texto) {
     try {
         await navigator.clipboard.writeText(texto);
@@ -277,31 +229,14 @@ function renderItem(a) {
     partes.push(`</div>`);
     partes.push(`</div>`);
 
-    // Bloques copiables sólo para avisos de cita
-    if (cat === 'cita') {
-        const wa = construirMensajeWhatsApp(a, det);
-        const interno = construirResumenInterno(a, det);
-        const telWa = det && det.cliente ? normalizarTelefonoWa(det.cliente.telefono) : '';
-        partes.push(`<div class="aviso-copiables">`);
-
-        partes.push(`<div class="aviso-copy">`);
-        partes.push(`<div class="aviso-copy-head"><span class="aviso-copy-label">Mensaje WhatsApp</span>`);
-        partes.push(`<button type="button" class="aviso-btn aviso-btn--primary" data-action="copy-wa">Copiar</button>`);
-        if (telWa) partes.push(`<a class="aviso-btn aviso-btn--ghost" href="https://wa.me/${esc(telWa)}?text=${encodeURIComponent(wa)}" target="_blank" rel="noopener">Abrir WhatsApp</a>`);
-        partes.push(`</div>`);
-        partes.push(`<pre class="aviso-copy-text" data-text-wa>${esc(wa)}</pre>`);
-        partes.push(`</div>`);
-
-        partes.push(`<div class="aviso-copy">`);
-        partes.push(`<div class="aviso-copy-head"><span class="aviso-copy-label">Resumen interno</span>`);
-        partes.push(`<button type="button" class="aviso-btn aviso-btn--primary" data-action="copy-interno">Copiar</button>`);
-        partes.push(`</div>`);
-        partes.push(`<pre class="aviso-copy-text" data-text-interno>${esc(interno)}</pre>`);
-        partes.push(`</div>`);
-
-        partes.push(`</div>`);
-    }
-
+    // 17/09/2026 — aqui iban dos bloques mas por cada aviso de cita: "Mensaje
+    // WhatsApp" y "Resumen interno", cada uno con su boton de Copiar. Charly:
+    // "los dos que dicen whatsapp y resumen interno no son necesarios... asi
+    // queda mas escueto, porque sino son 3 mensajes juntos por una cita".
+    // El de WhatsApp ademas salia roto ("Recibimos tu solicitud para el a las
+    // .") porque `det` viene null muy a menudo: state.detallesCita solo se
+    // rellena para las citas que la consulta logra cruzar. El resumen interno
+    // era una copia literal del titulo y el cuerpo que ya se ven arriba.
     partes.push(`</li>`);
     return partes.join('');
 }
@@ -427,7 +362,7 @@ function bindLista() {
 
         const accion = ev.target.closest('[data-action]')?.dataset.action;
 
-        if (!accion && !ev.target.closest('a') && !ev.target.closest('.aviso-copiables')) {
+        if (!accion && !ev.target.closest('a')) {
             const url = item.dataset.url;
             const a = state.items.find((x) => x.id === id);
             if (a && !a.leido) {
@@ -446,19 +381,6 @@ function bindLista() {
             return;
         }
 
-        if (accion === 'copy-wa') {
-            ev.preventDefault();
-            const txt = item.querySelector('[data-text-wa]')?.textContent || '';
-            await copiar(txt);
-            return;
-        }
-
-        if (accion === 'copy-interno') {
-            ev.preventDefault();
-            const txt = item.querySelector('[data-text-interno]')?.textContent || '';
-            await copiar(txt);
-            return;
-        }
     });
 }
 
