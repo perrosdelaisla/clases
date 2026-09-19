@@ -9268,29 +9268,10 @@ function renderReporteControl() {
     if (!cont) return;
     const tipo = tipoReporteDeCampos(_reporteCampos);
 
-    if (tipo === 'tiempo') {
-        cont.innerHTML = `
-            <label class="reporte-label">Tu mejor marca de este entreno</label>
-            <div class="time-ctrl">
-                <span class="seg"><input type="number" id="reporte-marca-min" inputmode="numeric" min="0" step="1" placeholder="0"><span class="u">min</span></span>
-                <span class="colon">:</span>
-                <span class="seg"><input type="number" id="reporte-marca-seg" inputmode="numeric" min="0" max="59" step="1" placeholder="00"><span class="u">seg</span></span>
-            </div>`;
-    } else if (tipo === 'distancia') {
-        cont.innerHTML = `
-            <label class="reporte-label">Tu mejor marca (pasos)</label>
-            <div class="num-ctrl">
-                <input type="number" id="reporte-marca" inputmode="numeric" min="0" step="1" placeholder="—">
-                <span class="u">pasos</span>
-            </div>`;
-    } else {
-        cont.innerHTML = `
-            <label class="reporte-label">¿Cuántas repeticiones hiciste?</label>
-            <div class="num-ctrl">
-                <input type="number" id="reporte-marca" inputmode="numeric" min="0" step="1" placeholder="—">
-                <span class="u">reps</span>
-            </div>`;
-    }
+    // 19/09/2026: el tutor ya NO carga marcas. Los objetivos los pone Charly en
+    // clase y bajan a la ficha como pauta de solo lectura (#reporte-specs).
+    // `tipo` se conserva porque las specs de abajo lo siguen usando.
+    cont.innerHTML = '';
 
     // Specs del adiestrador, solo lectura. El objetivo se muestra según el
     // tipo; valor de comida y dificultad si están definidos.
@@ -9298,13 +9279,20 @@ function renderReporteControl() {
     if (specsEl) {
         const s = _reporteSpecs || {};
         const chips = [];
-        if (tipo === 'tiempo' && s.objetivoSeg != null) {
+        // 19/09/2026: ya NO se filtra por el tipo del catálogo. Cualquier
+        // asignación puede llevar cualquier objetivo; se muestra lo que Charly
+        // haya dejado relleno en la clase y nada más.
+        if (s.objetivoSeg != null) {
             chips.push(`Objetivo: ${fmtSegToMinSeg(s.objetivoSeg)}`);
-        } else if (tipo === 'distancia' && s.objetivoDistancia != null) {
+        }
+        if (s.objetivoDistancia != null) {
             const n = Number(s.objetivoDistancia);
             chips.push(`Objetivo: ${n} ${n === 1 ? 'paso' : 'pasos'}`);
         }
-        if (s.valorComida != null) chips.push(`Valor de comida: ${Number(s.valorComida)}`);
+        // `valor_comida` NO se le enseña al tutor: es una escala del 1 al 5 que
+        // solo significa algo para Charly, y el número suelto confunde. Cuando
+        // esté la pauta, aquí irá el NOMBRE de la comida sacado del ranking
+        // del perro. Decisión de Charly, 19/09/2026.
         if (s.dificultad != null) chips.push(`Dificultad: ${Number(s.dificultad)}`);
         // Repeticiones sugeridas (guía del adiestrador). Rango si min≠max; un
         // solo número si solo hay min o min===max. Sin min → no se muestra.
@@ -9440,22 +9428,8 @@ function abrirModalReporteEdicion(reg) {
     } : null;
     renderReporteControl();
 
-    // Prefill de la marca desde datos_registro (solo forma v:2).
-    const datos = reg.datos_registro || {};
-    const tipo = tipoReporteDeCampos(_reporteCampos);
-    if (tipo === 'tiempo' && datos.mejor_seg != null) {
-        const seg = Math.max(0, Math.floor(Number(datos.mejor_seg) || 0));
-        const minEl = document.getElementById('reporte-marca-min');
-        const segEl = document.getElementById('reporte-marca-seg');
-        if (minEl) minEl.value = String(Math.floor(seg / 60));
-        if (segEl) segEl.value = String(seg % 60);
-    } else if (tipo === 'distancia' && datos.mejor_pasos != null) {
-        const el = document.getElementById('reporte-marca');
-        if (el) el.value = String(datos.mejor_pasos);
-    } else if (tipo === 'reps' && datos.reps != null) {
-        const el = document.getElementById('reporte-marca');
-        if (el) el.value = String(datos.reps);
-    }
+    // 19/09/2026: ya no hay marca que rellenar. Los registros viejos conservan
+    // la suya en datos_registro y se siguen viendo en el historial.
 
     // Prefill de tranquilidad: activa la pill correspondiente.
     _reporteTranquilidad = (reg.tranquilidad != null) ? Number(reg.tranquilidad) : null;
@@ -10047,42 +10021,12 @@ async function guardarReporteEjercicio() {
     const nota = document.getElementById('reporte-nota').value.trim() || null;
     const trq = _reporteTranquilidad;
 
-    // Marca única según el tipo de ejercicio. Forma NUEVA de datos_registro:
-    // { v: 2, ... } con UNA sola clave de marca (mejor_seg / mejor_pasos / reps).
-    const tipo = tipoReporteDeCampos(_reporteCampos);
+    // 19/09/2026: el tutor ya no carga marcas. Solo queda constancia de que lo
+    // hizo y de cómo lo pasó el perro.
     const datos_registro = { v: 2 };
-    let tieneValor = false;
-    if (tipo === 'tiempo') {
-        const minRaw = (document.getElementById('reporte-marca-min')?.value || '').trim();
-        const segRaw = (document.getElementById('reporte-marca-seg')?.value || '').trim();
-        if (minRaw !== '' || segRaw !== '') {
-            const m = minRaw === '' ? 0 : Number(minRaw);
-            const s = segRaw === '' ? 0 : Number(segRaw);
-            if (!Number.isInteger(m) || m < 0 || !Number.isInteger(s) || s < 0 || s > 59) {
-                showErr('Revisá tu marca (enteros, segundos hasta 59).'); return;
-            }
-            const total = m * 60 + s;
-            if (total > 0) { datos_registro.mejor_seg = total; tieneValor = true; }
-        }
-    } else if (tipo === 'distancia') {
-        const raw = (document.getElementById('reporte-marca')?.value || '').trim();
-        if (raw !== '') {
-            const n = Number(raw);
-            if (!Number.isInteger(n) || n < 0) { showErr('Revisá tu marca (entero ≥ 0).'); return; }
-            if (n > 0) { datos_registro.mejor_pasos = n; tieneValor = true; }
-        }
-    } else {
-        const raw = (document.getElementById('reporte-marca')?.value || '').trim();
-        if (raw !== '') {
-            const n = Number(raw);
-            if (!Number.isInteger(n) || n < 0) { showErr('Revisá las repeticiones (entero ≥ 0).'); return; }
-            if (n > 0) { datos_registro.reps = n; tieneValor = true; }
-        }
-    }
 
-    const tieneTrq = trq != null;
-    if (!tieneValor && !tieneTrq) {
-        showErr('Cargá tu marca o el estado emocional para reportar.');
+    if (trq == null) {
+        showErr('Marcá cómo lo pasó tu perro.');
         return;
     }
 
