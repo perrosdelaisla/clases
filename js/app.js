@@ -5130,7 +5130,7 @@ function abrirRapidoSheet() {
         if (sub) sub.textContent = 'Con este paso. De ahí sale cuándo pasar al siguiente.';
     } else {
         if (tit) tit.textContent = '¿Cómo ha estado tu perro?';
-        if (sub) sub.textContent = 'Opcional — su estado emocional en este entreno.';
+        if (sub) sub.textContent = 'Opcional — toca una cara y listo.';
     }
 
     _rapidoTranquilidad = null;
@@ -5190,12 +5190,17 @@ function bindRapidoSheet() {
     sheet.querySelectorAll('.reporte-pill').forEach((btn) => {
         btn.addEventListener('click', () => {
             const valor = Number(btn.dataset.valor);
-            _rapidoTranquilidad = (_rapidoTranquilidad === valor) ? null : valor;
+            _rapidoTranquilidad = valor;
             sheet.querySelectorAll('.reporte-pill').forEach((p) => {
-                const activa = Number(p.dataset.valor) === _rapidoTranquilidad;
+                const activa = Number(p.dataset.valor) === valor;
                 p.classList.toggle('is-active', activa);
                 p.setAttribute('aria-checked', activa ? 'true' : 'false');
             });
+            // 19/09/2026: UN SOLO TOQUE. Antes hacia falta tocar la cara y
+            // ademas "Guardar", con un "Omitir" al lado: mas de la mitad de los
+            // entrenos se quedaban sin cara (46% desde el 31/08). La cara
+            // guarda y cierra; el boton Guardar queda oculto.
+            rapidoSheetGuardar();
         });
     });
     document.getElementById('rapido-sheet-guardar')?.addEventListener('click', rapidoSheetGuardar);
