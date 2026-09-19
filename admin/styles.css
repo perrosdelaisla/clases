@@ -5999,3 +5999,106 @@ body {
     width: 100%;
     box-sizing: border-box;
 }
+
+/* Panel de pautas de la clase (extraer-pautas). Lo dudoso se distingue del
+   resto por la barra mostaza de la izquierda: sin rojo, porque no es un
+   error, es algo que la máquina prefiere no decidir sola. */
+.rc-pautas {
+    margin: 14px 0 6px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface);
+}
+
+.rc-pautas-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.rc-pautas-titulo {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.rc-pautas-resumen {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.rc-pautas-lista {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rc-pauta {
+    padding: 9px 11px;
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-green);
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.rc-pauta--revisar {
+    border-left-color: var(--color-warning);
+}
+
+.rc-pauta-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.rc-pauta-ej {
+    font-weight: 600;
+}
+
+.rc-pauta-campo {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+
+.rc-pauta-valor {
+    margin-top: 2px;
+}
+
+.rc-pauta-antes {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--color-muted-dim);
+    text-decoration: line-through;
+}
+
+.rc-pauta-duda {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: var(--color-warning);
+}
+
+.rc-pauta-cita {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: var(--color-muted);
+    font-style: italic;
+    line-height: 1.35;
+}
+
+.rc-pauta-acciones {
+    margin-top: 7px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rc-pauta-acciones .btn-secondary {
+    padding: 4px 12px;
+    font-size: 12px;
+}

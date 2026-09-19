@@ -1156,7 +1156,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, valor_comida_nombre, nota_cliente, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -7249,6 +7249,7 @@ function abrirModalEjercicio(ej, ejercicioAsignadoId) {
         cargarMisEntrenos(ejercicioAsignadoId);
     }
 
+    renderPautaEjercicio(ejercicioAsignadoId);
     abrirModal('modal-ejercicio-detalle');
     // Las notas del canal "+ Añadir nota" se quitaron; el cliente deja notas
     // solo al reportar el entreno. Pero el flujo de reporte necesita saber qué
@@ -9279,6 +9280,46 @@ function fmtSegToMinSeg(seg) {
     return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
+// Pauta que dejó el adiestrador en la clase, en la propia ficha del ejercicio.
+// Es de SOLO LECTURA: la rellena sola la extracción de las escuchas y el tutor
+// no carga nada. Si en esa clase no se dijo nada concreto, el bloque no sale.
+function renderPautaEjercicio(asignadoId) {
+    const cont = document.getElementById('ejercicio-pauta');
+    const chipsEl = document.getElementById('ejercicio-pauta-chips');
+    const notaEl = document.getElementById('ejercicio-pauta-nota');
+    if (!cont || !chipsEl || !notaEl) return;
+    const fila = (state.rutinaFilas || []).find((f) => f.id === asignadoId);
+    if (!fila) { cont.hidden = true; return; }
+
+    const chips = [];
+    if (fila.objetivo_seg != null) chips.push(`Objetivo: ${fmtSegToMinSeg(fila.objetivo_seg)}`);
+    if (fila.objetivo_distancia != null) {
+        const n = Number(fila.objetivo_distancia);
+        chips.push(`Objetivo: ${n} ${n === 1 ? 'paso' : 'pasos'}`);
+    }
+    // El número de la comida solo se enseña si hizo el ranking: es su posición
+    // en él. Sin ranking, el nombre a secas ya sirve.
+    if (fila.valor_comida_nombre) {
+        chips.push(fila.valor_comida != null
+            ? `Comida: ${fila.valor_comida_nombre} (la nº ${Number(fila.valor_comida)} de su ranking)`
+            : `Comida: ${fila.valor_comida_nombre}`);
+    }
+    if (fila.dificultad != null) chips.push(`Dificultad: ${Number(fila.dificultad)}`);
+    if (fila.reps_sugeridas_min != null) {
+        const rmin = Number(fila.reps_sugeridas_min);
+        const rmax = (fila.reps_sugeridas_max != null) ? Number(fila.reps_sugeridas_max) : null;
+        chips.push(`Repeticiones: ${(rmax != null && rmax !== rmin) ? `${rmin}-${rmax}` : `${rmin}`}`);
+    }
+    chipsEl.innerHTML = chips.map((t) => `<span class="reporte-spec">${escapeHTML(t)}</span>`).join('');
+    chipsEl.hidden = (chips.length === 0);
+
+    const nota = String(fila.nota_cliente || '').trim();
+    notaEl.textContent = nota;
+    notaEl.hidden = !nota;
+
+    cont.hidden = (chips.length === 0 && !nota);
+}
+
 // Pinta el control único de marca + las specs read-only del adiestrador.
 // Reutiliza time-ctrl / num-ctrl ya estilados en el modal del cliente.
 function renderReporteControl() {
@@ -9307,10 +9348,14 @@ function renderReporteControl() {
             const n = Number(s.objetivoDistancia);
             chips.push(`Objetivo: ${n} ${n === 1 ? 'paso' : 'pasos'}`);
         }
-        // `valor_comida` NO se le enseña al tutor: es una escala del 1 al 5 que
-        // solo significa algo para Charly, y el número suelto confunde. Cuando
-        // esté la pauta, aquí irá el NOMBRE de la comida sacado del ranking
-        // del perro. Decisión de Charly, 19/09/2026.
+        // La comida va por NOMBRE, nunca por número suelto: el 1-5 es la
+        // posición en el ranking del perro y solo significa algo si el tutor
+        // lo hizo. Decisión de Charly, 19/09/2026.
+        if (s.valorComidaNombre) {
+            chips.push(s.valorComida != null
+                ? `Comida: ${s.valorComidaNombre} (la nº ${Number(s.valorComida)} de su ranking)`
+                : `Comida: ${s.valorComidaNombre}`);
+        }
         if (s.dificultad != null) chips.push(`Dificultad: ${Number(s.dificultad)}`);
         // Repeticiones sugeridas (guía del adiestrador). Rango si min≠max; un
         // solo número si solo hay min o min===max. Sin min → no se muestra.
@@ -9373,6 +9418,7 @@ function abrirModalReporte() {
     const _filaRutina = (state.rutinaFilas || []).find((f) => f.id === _ejercicioModalActualId);
     _reporteSpecs = _filaRutina ? {
         valorComida: _filaRutina.valor_comida ?? null,
+        valorComidaNombre: _filaRutina.valor_comida_nombre ?? null,
         dificultad: _filaRutina.dificultad ?? null,
         objetivoSeg: _filaRutina.objetivo_seg ?? null,
         objetivoDistancia: _filaRutina.objetivo_distancia ?? null,
@@ -9438,6 +9484,7 @@ function abrirModalReporteEdicion(reg) {
     const _filaRutina = (state.rutinaFilas || []).find((f) => f.id === _ejercicioModalActualId);
     _reporteSpecs = _filaRutina ? {
         valorComida: _filaRutina.valor_comida ?? null,
+        valorComidaNombre: _filaRutina.valor_comida_nombre ?? null,
         dificultad: _filaRutina.dificultad ?? null,
         objetivoSeg: _filaRutina.objetivo_seg ?? null,
         objetivoDistancia: _filaRutina.objetivo_distancia ?? null,

@@ -829,3 +829,37 @@
     .home .isla-aves, .home .isla-mariposa, .home .isla-palmera,
     .home .isla-svg--completa { animation: none; }
 }
+
+/* ── Pauta de la clase en la ficha del ejercicio (19/09/2026) ──────────────
+   Lo que Charly dijo en clase baja solo hasta aquí. Va arriba del todo,
+   antes del "cómo se hace", porque es lo que cambia de una clase a otra: el
+   resto del texto es siempre el mismo. Sin rojo y sin alarma: es una pauta,
+   no un aviso. */
+.ejercicio-pauta {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--c-oliva, #6B7A3A);
+    background: rgba(107, 122, 58, 0.07);
+    border-radius: 0 8px 8px 0;
+}
+.ejercicio-pauta__titulo {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    font-weight: 400;
+    color: var(--color-text);
+    margin: 0 0 0.4rem;
+}
+.ejercicio-pauta__chips {
+    margin-bottom: 0;
+}
+.ejercicio-pauta__nota {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--color-text);
+    margin: 0.5rem 0 0;
+}
+.ejercicio-pauta__chips:not([hidden]) + .ejercicio-pauta__nota {
+    margin-top: 0.55rem;
+}

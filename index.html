@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=78">
     <link rel="stylesheet" href="./css/home.css?v=37">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=45">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=46">
     <link rel="stylesheet" href="./css/seguimiento.css?v=5">
 </head>
 <body class="app-cliente">
@@ -1165,6 +1165,14 @@
             </button>
             <h2 id="modal-ejercicio-titulo">Ejercicio</h2>
             <p class="modal-ejercicio__desc" id="modal-ejercicio-desc"></p>
+            <!-- Pauta de la clase. Solo lectura: se rellena sola con lo que
+                 Charly dice mientras explica el ejercicio (extraer-pautas).
+                 El tutor no carga nada aquí. -->
+            <section class="ejercicio-pauta" id="ejercicio-pauta" hidden>
+                <h3 class="ejercicio-pauta__titulo">De tu clase</h3>
+                <div class="reporte-specs ejercicio-pauta__chips" id="ejercicio-pauta-chips" hidden></div>
+                <p class="ejercicio-pauta__nota" id="ejercicio-pauta-nota" hidden></p>
+            </section>
             <section class="modal-ejercicio__comosehace" id="modal-ejercicio-comosehace" hidden>
                 <h3 class="modal-ejercicio__comosehace-titulo">Cómo se hace</h3>
                 <div class="modal-ejercicio__comosehace-cuerpo" id="modal-ejercicio-comosehace-cuerpo"></div>
@@ -1751,6 +1759,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=183"></script>
+    <script type="module" src="./js/app.js?v=184"></script>
 </body>
 </html>

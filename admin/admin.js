@@ -2674,6 +2674,7 @@ function setupResumenClase(cita) {
     const dictToggle = document.getElementById('rc-dictado-toggle');
     if (dictToggle) dictToggle.setAttribute('aria-expanded', 'false');
     refrescarEscuchas();
+    refrescarPautas();
 }
 
 // Bindeo único de los tres botones + el input del crudo. Idempotente.
@@ -2884,6 +2885,11 @@ function resetResumenClase() {
     actualizarBotonEscucha(false);
     const borrador = document.getElementById('rc-borrador');
     if (borrador) borrador.hidden = true;
+    const pautas = document.getElementById('rc-pautas');
+    if (pautas) pautas.hidden = true;
+    const pautasLista = document.getElementById('rc-pautas-lista');
+    if (pautasLista) pautasLista.innerHTML = '';
+    _pautasCache.clear();
 }
 
 /* ═══════════════════════════════════════════
@@ -2924,6 +2930,12 @@ function bindEscuchaClase() {
         supabase.functions.invoke('transcribir-escucha', { body: { escucha_id: id } })
             .then(() => refrescarEscuchas())
             .catch(() => refrescarEscuchas());
+    });
+    // Botones del panel de pautas (aplicar / descartar / deshacer).
+    const pautasLista = document.getElementById('rc-pautas-lista');
+    if (pautasLista) pautasLista.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.rc-pauta-btn');
+        if (btn) onPautaAccion(btn);
     });
     window.__escuchaClaseBound = true;
 }
@@ -3189,6 +3201,7 @@ async function generarBorradorEscuchas() {
             if (msg) msg.textContent = 'Borrador actualizado con las escuchas nuevas. Revisalo y guardá.';
             botonOk(borrador, 'Generado ✓', 'Generar borrador con las escuchas');
             await refrescarEscuchas();
+            await extraerPautas();
         } else {
             if (msg) msg.textContent = res?.error || error?.message || 'No se pudo generar el borrador.';
             if (borrador) { borrador.disabled = false; borrador.textContent = 'Generar borrador con las escuchas'; }
@@ -3226,6 +3239,7 @@ async function regenerarTodoEscuchas() {
             if (msg) msg.textContent = 'Resumen regenerado con todas las escuchas. Revisalo y guardá.';
             botonOk(btn, 'Regenerado ✓', 'Regenerar todo');
             await refrescarEscuchas();
+            await extraerPautas();
         } else {
             if (msg) msg.textContent = res?.error || error?.message || 'No se pudo regenerar el resumen.';
             if (btn) { btn.disabled = false; btn.textContent = 'Regenerar todo'; }
@@ -3234,6 +3248,212 @@ async function regenerarTodoEscuchas() {
         console.error('Error regenerarTodoEscuchas:', err);
         if (msg) msg.textContent = 'No se pudo regenerar el resumen.';
         if (btn) { btn.disabled = false; btn.textContent = 'Regenerar todo'; }
+    }
+}
+
+/* ═══════════════════════════════════════════
+   PAUTAS DE LA CLASE — extraer-pautas
+   Lo que Charly dicta en voz alta ("objetivo de cuatro pasos", "con
+   salchichas", "tres veces por semana") baja solo a la ficha del ejercicio,
+   sin volver a cargarlo a mano.
+
+   La regla, decidida el 19/09/2026: lo que sale de un tramo limpio se aplica
+   sin preguntar; lo dudoso no se toca y se queda aquí, al lado del resumen,
+   en la revisión que él ya hace en cada clase. Todo lo que se aplicó solo
+   lleva su "Deshacer" con el valor que había antes.
+   ═══════════════════════════════════════════ */
+
+const _pautasCache = new Map();
+
+const PAUTA_CAMPO_LABEL = {
+    objetivo_seg: 'Objetivo (tiempo)',
+    objetivo_distancia: 'Objetivo (pasos)',
+    dificultad: 'Dificultad',
+    reps_sugeridas_min: 'Repeticiones (mín.)',
+    reps_sugeridas_max: 'Repeticiones (máx.)',
+    min_semanal: 'Días por semana',
+    max_diario: 'Máximo al día',
+    valor_comida: 'Comida',
+    nota_cliente: 'Nota para el tutor',
+};
+
+// Cómo se lee el valor de una pauta en el panel. El número de la comida solo
+// existe si el tutor hizo el ranking; si no, se enseña el nombre a secas.
+function pautaValor(p) {
+    if (p.campo === 'valor_comida') {
+        if (!p.valor_texto) return '—';
+        return p.valor_num != null
+            ? p.valor_texto + ' (nº ' + p.valor_num + ' de su ranking)'
+            : p.valor_texto + ' (aún sin ranking)';
+    }
+    if (p.campo === 'nota_cliente') return p.valor_texto || '—';
+    if (p.campo === 'objetivo_seg' && p.valor_num != null) {
+        const s = Number(p.valor_num);
+        if (s < 60) return s + ' s';
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return r ? (m + ' min ' + r + ' s') : (m + ' min');
+    }
+    if (p.valor_num != null) return String(p.valor_num);
+    return p.valor_texto || '—';
+}
+
+// Traduce una pauta al UPDATE que le toca en ejercicios_asignados.
+function pautaPatch(p) {
+    if (p.campo === 'valor_comida') {
+        const patch = { valor_comida_nombre: p.valor_texto || null };
+        if (p.valor_num != null) patch.valor_comida = Number(p.valor_num);
+        return patch;
+    }
+    if (p.campo === 'nota_cliente') return { nota_cliente: p.valor_texto || null };
+    return { [p.campo]: (p.valor_num == null) ? null : Number(p.valor_num) };
+}
+
+// Deja el campo como estaba antes de que la máquina lo tocara. `valor_anterior`
+// se guardó como texto; para la comida puede venir "salchichas (3)", "3" o vacío.
+function pautaPatchDeshacer(p) {
+    const antes = (p.valor_anterior == null || p.valor_anterior === '') ? null : String(p.valor_anterior);
+    if (p.campo === 'valor_comida') {
+        if (!antes) return { valor_comida_nombre: null, valor_comida: null };
+        if (/^[1-5]$/.test(antes)) return { valor_comida_nombre: null, valor_comida: Number(antes) };
+        const m = antes.match(/^(.*?)\s\(([1-5])\)$/);
+        if (m) return { valor_comida_nombre: m[1], valor_comida: Number(m[2]) };
+        return { valor_comida_nombre: antes, valor_comida: null };
+    }
+    if (p.campo === 'nota_cliente') return { nota_cliente: antes };
+    return { [p.campo]: antes == null ? null : Number(antes) };
+}
+
+function itemPauta(p, pendiente) {
+    const ej = escapeHTML(p.ejercicio_texto || 'Ejercicio sin identificar');
+    const campo = escapeHTML(PAUTA_CAMPO_LABEL[p.campo] || p.campo);
+    const valor = escapeHTML(pautaValor(p));
+    const antes = p.valor_anterior
+        ? '<span class="rc-pauta-antes">antes: ' + escapeHTML(String(p.valor_anterior)) + '</span>'
+        : '';
+    const duda = (pendiente && p.motivo_duda)
+        ? '<p class="rc-pauta-duda">' + escapeHTML(p.motivo_duda) + '</p>' : '';
+    // La cita literal con su marca de tiempo es lo que le deja volver al audio.
+    const cita = p.cita_textual
+        ? '<p class="rc-pauta-cita">«' + escapeHTML(p.cita_textual) + '»</p>' : '';
+    const acciones = pendiente
+        ? '<button type="button" class="btn-secondary rc-pauta-btn" data-accion="aplicar" data-id="' + p.id + '"' + (p.asignado_id ? '' : ' disabled') + '>Aplicar</button>'
+          + '<button type="button" class="rc-linkbtn rc-pauta-btn" data-accion="descartar" data-id="' + p.id + '">Descartar</button>'
+        : '<button type="button" class="rc-linkbtn rc-pauta-btn" data-accion="deshacer" data-id="' + p.id + '">Deshacer</button>';
+    return '<li class="rc-pauta ' + (pendiente ? 'rc-pauta--revisar' : 'rc-pauta--ok') + '">'
+        + '<div class="rc-pauta-head"><span class="rc-pauta-ej">' + ej + '</span>'
+        + '<span class="rc-pauta-campo">' + campo + '</span></div>'
+        + '<div class="rc-pauta-valor">' + valor + antes + '</div>'
+        + duda + cita
+        + '<div class="rc-pauta-acciones">' + acciones + '</div></li>';
+}
+
+function renderPautas(filas) {
+    const cont = document.getElementById('rc-pautas');
+    const lista = document.getElementById('rc-pautas-lista');
+    const resumen = document.getElementById('rc-pautas-resumen');
+    const msg = document.getElementById('rc-pautas-msg');
+    if (!cont || !lista) return;
+    const aplicadas = filas.filter((f) => f.estado === 'aplicada' || f.estado === 'confirmada');
+    const pendientes = filas.filter((f) => f.estado === 'revisar');
+    // Lo dudoso primero: es lo único que le pide algo.
+    lista.innerHTML = pendientes.map((p) => itemPauta(p, true))
+        .concat(aplicadas.map((p) => itemPauta(p, false))).join('');
+    if (resumen) {
+        const partes = [];
+        if (aplicadas.length) partes.push(aplicadas.length + (aplicadas.length === 1 ? ' cargada en la ficha' : ' cargadas en las fichas'));
+        if (pendientes.length) partes.push(pendientes.length + (pendientes.length === 1 ? ' para que la mires' : ' para que las mires'));
+        resumen.textContent = partes.join(' · ');
+    }
+    const hayTexto = !!(msg && msg.textContent);
+    cont.hidden = !(filas.length || hayTexto);
+}
+
+async function refrescarPautas() {
+    const cita = resumenClaseCtx.cita;
+    const cont = document.getElementById('rc-pautas');
+    if (!cont) return;
+    if (!cita?.id) { cont.hidden = true; return; }
+    const { data, error } = await supabase.from('pautas_extraidas')
+        .select('id, asignado_id, ejercicio_texto, campo, valor_num, valor_texto, cita_textual, confianza, motivo_duda, estado, valor_anterior')
+        .eq('cita_id', cita.id)
+        .in('estado', ['aplicada', 'revisar', 'confirmada'])
+        .order('creado_en', { ascending: true });
+    if (error) { console.warn('[pautas] no se pudieron leer:', error); return; }
+    const filas = data || [];
+    _pautasCache.clear();
+    filas.forEach((f) => _pautasCache.set(f.id, f));
+    renderPautas(filas);
+}
+
+// Se dispara sola justo después de generar el borrador: las escuchas ya están
+// transcritas y es el momento en que él tiene la clase delante.
+async function extraerPautas() {
+    const cita = resumenClaseCtx.cita;
+    if (!cita?.id) return;
+    const cont = document.getElementById('rc-pautas');
+    const msg = document.getElementById('rc-pautas-msg');
+    if (cont) cont.hidden = false;
+    if (msg) msg.textContent = 'Buscando las pautas que diste en clase…';
+    try {
+        const { data, error } = await supabase.functions.invoke('extraer-pautas', {
+            body: { cita_id: cita.id },
+        });
+        let res = data;
+        if (error?.context && typeof error.context.json === 'function') {
+            res = await error.context.json().catch(() => null);
+        }
+        if (res?.ok) {
+            const n = (res.aplicadas?.length || 0) + (res.revisar?.length || 0);
+            if (msg) msg.textContent = n ? '' : 'En esta clase no dijiste ningún parámetro concreto, así que no hay nada que cargar.';
+        } else if (msg) {
+            const err = res?.error || error?.message || 'No se pudieron extraer las pautas.';
+            // "No hay escuchas nuevas" no es un fallo: es que ya se miraron.
+            msg.textContent = /No hay escuchas nuevas/.test(err) ? '' : err;
+        }
+    } catch (e) {
+        console.error('[pautas] error extrayendo:', e);
+        if (msg) msg.textContent = 'No se pudieron extraer las pautas.';
+    }
+    await refrescarPautas();
+}
+
+async function onPautaAccion(btn) {
+    const id = btn.dataset.id;
+    const accion = btn.dataset.accion;
+    const p = _pautasCache.get(id);
+    const msg = document.getElementById('rc-pautas-msg');
+    if (!p || !accion) return;
+    btn.disabled = true;
+    if (msg) msg.textContent = '';
+    const ahora = new Date().toISOString();
+    try {
+        if (accion === 'descartar') {
+            const { error } = await supabase.from('pautas_extraidas')
+                .update({ estado: 'descartada', resuelto_en: ahora }).eq('id', id);
+            if (error) throw error;
+        } else if (accion === 'aplicar') {
+            if (!p.asignado_id) throw new Error('Esta pauta no apunta a ningún ejercicio de la rutina.');
+            const { error } = await supabase.from('ejercicios_asignados')
+                .update({ ...pautaPatch(p), actualizado_en: ahora }).eq('id', p.asignado_id);
+            if (error) throw error;
+            const { error: e2 } = await supabase.from('pautas_extraidas')
+                .update({ estado: 'confirmada', resuelto_en: ahora }).eq('id', id);
+            if (e2) throw e2;
+        } else if (accion === 'deshacer') {
+            if (!p.asignado_id) throw new Error('Esta pauta no apunta a ningún ejercicio de la rutina.');
+            const { error } = await supabase.from('ejercicios_asignados')
+                .update({ ...pautaPatchDeshacer(p), actualizado_en: ahora }).eq('id', p.asignado_id);
+            if (error) throw error;
+            const { error: e2 } = await supabase.from('pautas_extraidas')
+                .update({ estado: 'descartada', resuelto_en: ahora }).eq('id', id);
+            if (e2) throw e2;
+        }
+        await refrescarPautas();
+    } catch (e) {
+        console.error('[pautas] acción fallida:', e);
+        if (msg) msg.textContent = (e && e.message) ? e.message : 'No se pudo guardar el cambio.';
+        btn.disabled = false;
     }
 }
 

@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin — Perros de la Isla</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="./styles.css?v=70">
+    <link rel="stylesheet" href="./styles.css?v=71">
     <link rel="preload" as="image" href="../img/jaime.png" fetchpriority="high">
     <link rel="stylesheet" href="./jaime.css?v=11">
 </head>
@@ -814,6 +814,16 @@
                         </div>
                     </div>
 
+                    <div id="rc-pautas" class="rc-pautas" hidden>
+                        <div class="rc-pautas-head">
+                            <h4 class="rc-pautas-titulo">Pautas de esta clase</h4>
+                            <span id="rc-pautas-resumen" class="rc-pautas-resumen"></span>
+                        </div>
+                        <p class="form-hint">Lo que dijiste con todas las letras ya está en la ficha del ejercicio. Lo que no se entendía bien no se ha tocado: lo tienes aquí abajo.</p>
+                        <ul id="rc-pautas-lista" class="rc-pautas-lista"></ul>
+                        <p id="rc-pautas-msg" class="rc-msg"></p>
+                    </div>
+
                     <label class="form-field">
                         <span>Resumen para el tutor</span>
                         <textarea id="rc-resumen" rows="6"></textarea>
@@ -1045,7 +1055,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="../js/vendor/supabase.umd.js?v=1"></script>
-    <script type="module" src="./admin.js?v=99"></script>
+    <script type="module" src="./admin.js?v=100"></script>
     <script type="module">
       import { activarNotificaciones, desactivarNotificaciones, probarPush, estadoNotificaciones } from './push.js?v=3';
       function toast(msg) {
