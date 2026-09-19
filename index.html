@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=78">
     <link rel="stylesheet" href="./css/home.css?v=37">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=46">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=47">
     <link rel="stylesheet" href="./css/seguimiento.css?v=5">
 </head>
 <body class="app-cliente">
@@ -1172,6 +1172,13 @@
                 <h3 class="ejercicio-pauta__titulo">De tu clase</h3>
                 <div class="reporte-specs ejercicio-pauta__chips" id="ejercicio-pauta-chips" hidden></div>
                 <p class="ejercicio-pauta__nota" id="ejercicio-pauta-nota" hidden></p>
+                <!-- Cómo fue la semana pasada: números, nunca veredicto. Y la
+                     serie entera plegada, que es donde se ve la evolución. -->
+                <p class="ejercicio-pauta__ultima" id="ejercicio-pauta-ultima" hidden></p>
+                <details class="ejercicio-serie" id="ejercicio-serie" hidden>
+                    <summary class="ejercicio-serie__resumen">Cómo ha ido</summary>
+                    <ol class="ejercicio-serie__lista" id="ejercicio-serie-lista"></ol>
+                </details>
             </section>
             <section class="modal-ejercicio__comosehace" id="modal-ejercicio-comosehace" hidden>
                 <h3 class="modal-ejercicio__comosehace-titulo">Cómo se hace</h3>
@@ -1759,6 +1766,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=184"></script>
+    <script type="module" src="./js/app.js?v=185"></script>
 </body>
 </html>

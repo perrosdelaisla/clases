@@ -9280,6 +9280,123 @@ function fmtSegToMinSeg(seg) {
     return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
+// "0:10" para diez segundos no se lee: en las pautas y en la revisión va el
+// formato hablado. fmtSegToMinSeg se queda como está para las marcas, que sí
+// son un cronómetro.
+function fmtSegHumano(seg) {
+    const s = Math.max(0, Math.floor(Number(seg) || 0));
+    if (s < 60) return s + ' s';
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return r ? (m + ' min ' + r + ' s') : (m + ' min');
+}
+
+// Las cifras de la revisión, en la unidad de su campo.
+function revCifra(n, campo) {
+    if (n == null) return '';
+    const v = Number(n);
+    if (campo === 'objetivo_seg') return fmtSegHumano(v);
+    if (campo === 'objetivo_distancia') return v + (v === 1 ? ' paso' : ' pasos');
+    if (campo === 'min_semanal') return v + (v === 1 ? ' día a la semana' : ' días a la semana');
+    if (campo === 'reps_sugeridas_min') return v + (v === 1 ? ' repetición' : ' repeticiones');
+    return String(v);
+}
+
+// Qué pasó con el ejercicio, en números. SIN VEREDICTO: nunca decimos
+// conseguido ni lo contrario, solo lo que hubo. Decisión de Charly, 19/09/2026.
+function revLineaCifras(r) {
+    const obj = revCifra(r.objetivo_anterior, r.campo);
+    // Los días a la semana no se "alcanzan", se hacen: "llegasteis a 0 días a
+    // la semana" no lo diría nadie.
+    const esDias = (r.campo === 'min_semanal');
+    const n = (r.alcanzado == null) ? null : Number(r.alcanzado);
+    const alc = esDias
+        ? (n == null ? '' : `${n} ${n === 1 ? 'día' : 'días'}`)
+        : revCifra(r.alcanzado, r.campo);
+    const verbo = esDias ? 'lo hicisteis' : 'llegasteis a';
+    if (obj && alc) return `objetivo ${obj}, ${verbo} ${alc}`;
+    if (obj) return `objetivo ${obj}`;
+    if (alc) return `${verbo} ${alc}`;
+    return '';
+}
+
+// Ficha abierta ahora mismo, para no pintar la serie de un ejercicio en la
+// ficha de otro si el tutor va rápido.
+let _serieCtxId = null;
+
+// La revisión de la semana: la última como línea, y la serie entera plegada.
+// Solo llegan aquí las que Charly dio por buenas: la RLS no deja salir ni lo
+// dudoso ni lo descartado.
+async function cargarSerieEjercicio(asignadoId) {
+    _serieCtxId = asignadoId;
+    const ultEl = document.getElementById('ejercicio-pauta-ultima');
+    const serieEl = document.getElementById('ejercicio-serie');
+    const listaEl = document.getElementById('ejercicio-serie-lista');
+    const cont = document.getElementById('ejercicio-pauta');
+    if (!ultEl || !serieEl || !listaEl) return;
+    ultEl.hidden = true; ultEl.innerHTML = '';
+    serieEl.hidden = true; serieEl.open = false; listaEl.innerHTML = '';
+
+    let filas = [];
+    try {
+        const { data, error } = await supabase
+            .from('revisiones_ejercicio')
+            .select('fecha, numero_clase, campo, objetivo_anterior, alcanzado, comentario')
+            .eq('asignado_id', asignadoId)
+            .order('fecha', { ascending: true })
+            .order('creado_en', { ascending: true });
+        if (error) throw error;
+        filas = data || [];
+    } catch (e) {
+        console.warn('[serie] no se pudo leer la revisión:', e);
+        return;
+    }
+    if (_serieCtxId !== asignadoId) return;   // cambió de ficha mientras tanto
+    if (!filas.length) return;
+
+    // ── La línea: lo último que pasó ──
+    const ult = filas[filas.length - 1];
+    const cifras = revLineaCifras(ult);
+    const com = String(ult.comentario || '').trim();
+    const cuerpo = com
+        ? escapeHTML(com) + (cifras ? ` <span class="ejercicio-pauta__cifra">(${escapeHTML(cifras)})</span>` : '')
+        : (cifras ? escapeHTML(cifras.charAt(0).toUpperCase() + cifras.slice(1)) + '.' : '');
+    if (cuerpo) {
+        ultEl.innerHTML = '<b>La clase pasada:</b> ' + cuerpo;
+        ultEl.hidden = false;
+    }
+
+    // ── La serie: solo tiene sentido con dos o más ──
+    // Con una sola revisión basta la línea; y si ni siquiera eso salió, el
+    // bloque se queda como lo dejó renderPautaEjercicio.
+    if (filas.length < 2) { if (cont && !ultEl.hidden) cont.hidden = false; return; }
+    const items = filas.map((r) => {
+        const cuando = (r.numero_clase != null)
+            ? `Clase ${r.numero_clase}`
+            : fmtFechaSerie(r.fecha);
+        const txt = revLineaCifras(r) || String(r.comentario || '').trim() || '—';
+        return `<li><span class="ejercicio-serie__cuando">${escapeHTML(cuando)}</span> ${escapeHTML(txt)}</li>`;
+    });
+    // Y dónde está el listón ahora, para cerrar la serie con el presente.
+    const fila = (state.rutinaFilas || []).find((f) => f.id === asignadoId);
+    const campoAhora = ult.campo;
+    const ahora = (fila && campoAhora && fila[campoAhora] != null)
+        ? revCifra(fila[campoAhora], campoAhora) : '';
+    if (ahora) {
+        items.push(`<li class="ejercicio-serie__ahora"><span class="ejercicio-serie__cuando">Ahora</span> objetivo ${escapeHTML(ahora)}</li>`);
+    }
+    listaEl.innerHTML = items.join('');
+    serieEl.hidden = false;
+    if (cont) cont.hidden = false;
+}
+
+function fmtFechaSerie(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
 // Pauta que dejó el adiestrador en la clase, en la propia ficha del ejercicio.
 // Es de SOLO LECTURA: la rellena sola la extracción de las escuchas y el tutor
 // no carga nada. Si en esa clase no se dijo nada concreto, el bloque no sale.
@@ -9292,7 +9409,7 @@ function renderPautaEjercicio(asignadoId) {
     if (!fila) { cont.hidden = true; return; }
 
     const chips = [];
-    if (fila.objetivo_seg != null) chips.push(`Objetivo: ${fmtSegToMinSeg(fila.objetivo_seg)}`);
+    if (fila.objetivo_seg != null) chips.push(`Objetivo: ${fmtSegHumano(fila.objetivo_seg)}`);
     if (fila.objetivo_distancia != null) {
         const n = Number(fila.objetivo_distancia);
         chips.push(`Objetivo: ${n} ${n === 1 ? 'paso' : 'pasos'}`);
@@ -9317,7 +9434,10 @@ function renderPautaEjercicio(asignadoId) {
     notaEl.textContent = nota;
     notaEl.hidden = !nota;
 
+    // La revisión llega por separado (es otra consulta) y puede abrir el
+    // bloque aunque hoy no haya ni chips ni nota.
     cont.hidden = (chips.length === 0 && !nota);
+    cargarSerieEjercicio(asignadoId);
 }
 
 // Pinta el control único de marca + las specs read-only del adiestrador.
@@ -9342,7 +9462,7 @@ function renderReporteControl() {
         // asignación puede llevar cualquier objetivo; se muestra lo que Charly
         // haya dejado relleno en la clase y nada más.
         if (s.objetivoSeg != null) {
-            chips.push(`Objetivo: ${fmtSegToMinSeg(s.objetivoSeg)}`);
+            chips.push(`Objetivo: ${fmtSegHumano(s.objetivoSeg)}`);
         }
         if (s.objetivoDistancia != null) {
             const n = Number(s.objetivoDistancia);
