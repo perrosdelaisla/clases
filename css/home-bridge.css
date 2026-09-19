@@ -162,6 +162,11 @@
 .home .rutina-dots__dot{ width:11px; height:11px; border-radius:50%; border:1.5px solid var(--c-hair-2, #8A867E); }
 .home .rutina-dots__dot--f{ background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A); }
 .home .rutina-dots__dot--extra{ background:#E8B62D; border-color:#E8B62D; }
+/* Objetivo semanal cumplido (19/09/2026). Hereda el color de texto de la card
+   para que funcione igual en crema y en oscuro; el oliva se reserva para la
+   parte en negrita, que es decorativa. Nada de rojo: informa, no advierte. */
+.home .rutina-dots__logro{ flex:1 0 100%; margin-top:5px; font-size:12.5px; line-height:1.35; }
+.home .rutina-dots__logro b{ color:var(--c-oliva, #6B7A3A); font-weight:700; }
 
 /* Acción dentro del toast (Deshacer) — #toast vive fuera de .home */
 .toast__accion{

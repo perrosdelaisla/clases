@@ -4919,7 +4919,15 @@ function renderDotsSemana(asignadoId) {
     }
     const extras = Math.min(Math.max(hechos - min, 0), 7);
     for (let i = 0; i < extras; i++) dots += '<span class="rutina-dots__dot rutina-dots__dot--extra"></span>';
-    return `<div class="rutina-dots" aria-label="${hechos} de ${row.min_semanal} esta semana">${dots}</div>`;
+    // 19/09/2026 (Charly): cuando ya llego al minimo de la semana hay que
+    // DECIRSELO, no solo cambiar el color. Refuerza al que cumple y le avisa
+    // de que lo de mas es voluntario, que es lo que quita la sensacion de
+    // deber infinito. Vive dentro de .rutina-dots a proposito: asi se
+    // actualiza sola en cada toque via actualizarCardProgreso.
+    const logro = _ejercicioCumplido(row)
+        ? '<span class="rutina-dots__logro"><b>Objetivo de la semana cumplido.</b> Buen trabajo: a partir de aqu\u00ed es opcional.</span>'
+        : '';
+    return `<div class="rutina-dots" aria-label="${hechos} de ${row.min_semanal} esta semana">${dots}${logro}</div>`;
 }
 
 // Refresca en su sitio los puntos y el estado de la huella de UNA card,
@@ -5028,6 +5036,9 @@ async function registrarEntrenoRapido(btn) {
         _rapidoAsignadoId = asignadoId;
 
         const estadoAntes = evaluarProgresoEjercicio(_progresoCache.get(asignadoId));
+        // Si la semana YA estaba hecha antes de este toque, el cartel lo dice:
+        // no es lo mismo cumplir que sumar de mas.
+        const cumplidoAntes = _ejercicioCumplido(_progresoCache.get(asignadoId));
         try { await cargarProgresoPerro(perroId); } catch (e) {
             console.error('[huella] no se pudo refrescar progreso:', e);
         }
@@ -5051,7 +5062,9 @@ async function registrarEntrenoRapido(btn) {
             btn,
             logroSemana ? '\u{1F389} \u00a1Objetivo de la semana cumplido!'
                         : (esCambio ? '\u{1F43E} \u00a1Hecho!'
-                                    : '\u{1F43E} \u00a1Entreno registrado!'),
+                                    : (cumplidoAntes
+                                        ? '\u{1F43E} \u00a1Registrado! La semana ya estaba hecha.'
+                                        : '\u{1F43E} \u00a1Entreno registrado!')),
             logroSemana);
         pausarHuella(btn, asignadoId);
 
