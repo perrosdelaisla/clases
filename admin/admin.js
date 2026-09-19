@@ -3277,6 +3277,40 @@ const PAUTA_CAMPO_LABEL = {
     nota_cliente: 'Nota para el tutor',
 };
 
+const REV_LOGRO_LABEL = {
+    conseguido: 'conseguido',
+    parcial: 'a medias',
+    no_llego: 'no llegó',
+    no_practicado: 'no lo practicaron',
+    sin_dato: '',
+};
+
+// Las cifras de la revisión van en la unidad de su campo. Sin campo no hay
+// números: fue un repaso solo de palabra y manda el comentario.
+function revCifra(n, campo) {
+    if (n == null) return '';
+    const v = Number(n);
+    if (campo === 'objetivo_seg') {
+        if (v < 60) return v + ' s';
+        const m = Math.floor(v / 60);
+        const r = v % 60;
+        return r ? (m + ' min ' + r + ' s') : (m + ' min');
+    }
+    if (campo === 'objetivo_distancia') return v + (v === 1 ? ' paso' : ' pasos');
+    if (campo === 'min_semanal') return v + (v === 1 ? ' día/semana' : ' días/semana');
+    if (campo === 'reps_sugeridas_min') return v + (v === 1 ? ' repetición' : ' repeticiones');
+    return String(v);
+}
+
+function revisionValor(r) {
+    const partes = [];
+    if (r.objetivo_anterior != null) partes.push('Objetivo: ' + revCifra(r.objetivo_anterior, r.campo));
+    if (r.alcanzado != null) partes.push('llegó a ' + revCifra(r.alcanzado, r.campo));
+    const l = REV_LOGRO_LABEL[r.logro];
+    if (l) partes.push(l);
+    return partes.join(' · ') || (r.comentario ? '' : '—');
+}
+
 // Cómo se lee el valor de una pauta en el panel. El número de la comida solo
 // existe si el tutor hizo el ranking; si no, se enseña el nombre a secas.
 function pautaValor(p) {
@@ -3348,20 +3382,49 @@ function itemPauta(p, pendiente) {
         + '<div class="rc-pauta-acciones">' + acciones + '</div></li>';
 }
 
+function itemRevision(r, pendiente) {
+    const ej = escapeHTML(r.ejercicio_texto || 'Ejercicio');
+    const valor = escapeHTML(revisionValor(r));
+    const com = r.comentario
+        ? '<p class="rc-pauta-com">' + escapeHTML(r.comentario) + '</p>' : '';
+    const duda = (pendiente && r.motivo_duda)
+        ? '<p class="rc-pauta-duda">' + escapeHTML(r.motivo_duda) + '</p>' : '';
+    const cita = r.cita_textual
+        ? '<p class="rc-pauta-cita">«' + escapeHTML(r.cita_textual) + '»</p>' : '';
+    const acciones = pendiente
+        ? '<button type="button" class="btn-secondary rc-pauta-btn" data-tipo="revision" data-accion="guardar" data-id="' + r.id + '">Guardar</button>'
+          + '<button type="button" class="rc-linkbtn rc-pauta-btn" data-tipo="revision" data-accion="descartar" data-id="' + r.id + '">Descartar</button>'
+        : '<button type="button" class="rc-linkbtn rc-pauta-btn" data-tipo="revision" data-accion="descartar" data-id="' + r.id + '">Quitar</button>';
+    return '<li class="rc-pauta rc-pauta--rev ' + (pendiente ? 'rc-pauta--revisar' : 'rc-pauta--ok') + '">'
+        + '<div class="rc-pauta-head"><span class="rc-pauta-ej">' + ej + '</span>'
+        + '<span class="rc-pauta-campo">Cómo fue la semana</span></div>'
+        + (valor ? '<div class="rc-pauta-valor">' + valor + '</div>' : '')
+        + com + duda + cita
+        + '<div class="rc-pauta-acciones">' + acciones + '</div></li>';
+}
+
 function renderPautas(filas) {
     const cont = document.getElementById('rc-pautas');
     const lista = document.getElementById('rc-pautas-lista');
     const resumen = document.getElementById('rc-pautas-resumen');
     const msg = document.getElementById('rc-pautas-msg');
     if (!cont || !lista) return;
-    const aplicadas = filas.filter((f) => f.estado === 'aplicada' || f.estado === 'confirmada');
-    const pendientes = filas.filter((f) => f.estado === 'revisar');
+    // Dentro de cada grupo, la revisión de un ejercicio va justo antes de su
+    // pauta nueva: se lee "llegó a 4, nuevo objetivo 10", que es como lo pensaste.
+    const orden = (a, b) => {
+        const ea = (a.ejercicio_texto || '').localeCompare(b.ejercicio_texto || '');
+        if (ea !== 0) return ea;
+        return (a._tipo === 'revision' ? 0 : 1) - (b._tipo === 'revision' ? 0 : 1);
+    };
+    const pinta = (f, pendiente) => (f._tipo === 'revision') ? itemRevision(f, pendiente) : itemPauta(f, pendiente);
+    const hechas = filas.filter((f) => f.estado === 'aplicada' || f.estado === 'confirmada' || f.estado === 'registrada').sort(orden);
+    const pendientes = filas.filter((f) => f.estado === 'revisar').sort(orden);
     // Lo dudoso primero: es lo único que le pide algo.
-    lista.innerHTML = pendientes.map((p) => itemPauta(p, true))
-        .concat(aplicadas.map((p) => itemPauta(p, false))).join('');
+    lista.innerHTML = pendientes.map((f) => pinta(f, true))
+        .concat(hechas.map((f) => pinta(f, false))).join('');
     if (resumen) {
         const partes = [];
-        if (aplicadas.length) partes.push(aplicadas.length + (aplicadas.length === 1 ? ' cargada en la ficha' : ' cargadas en las fichas'));
+        if (hechas.length) partes.push(hechas.length + (hechas.length === 1 ? ' registrada' : ' registradas'));
         if (pendientes.length) partes.push(pendientes.length + (pendientes.length === 1 ? ' para que la mires' : ' para que las mires'));
         resumen.textContent = partes.join(' · ');
     }
@@ -3374,13 +3437,30 @@ async function refrescarPautas() {
     const cont = document.getElementById('rc-pautas');
     if (!cont) return;
     if (!cita?.id) { cont.hidden = true; return; }
-    const { data, error } = await supabase.from('pautas_extraidas')
-        .select('id, asignado_id, ejercicio_texto, campo, valor_num, valor_texto, cita_textual, confianza, motivo_duda, estado, valor_anterior')
-        .eq('cita_id', cita.id)
-        .in('estado', ['aplicada', 'revisar', 'confirmada'])
-        .order('creado_en', { ascending: true });
-    if (error) { console.warn('[pautas] no se pudieron leer:', error); return; }
-    const filas = data || [];
+    const [resPautas, resRev] = await Promise.all([
+        supabase.from('pautas_extraidas')
+            .select('id, asignado_id, ejercicio_texto, campo, valor_num, valor_texto, cita_textual, confianza, motivo_duda, estado, valor_anterior')
+            .eq('cita_id', cita.id)
+            .in('estado', ['aplicada', 'revisar', 'confirmada'])
+            .order('creado_en', { ascending: true }),
+        // El nombre del ejercicio no se duplica en la tabla: se trae por la
+        // asignación, que es la única fuente buena si lo renombra.
+        supabase.from('revisiones_ejercicio')
+            .select('id, asignado_id, campo, objetivo_anterior, alcanzado, logro, comentario, cita_textual, confianza, motivo_duda, estado, numero_clase, ejercicios_asignados ( ejercicios ( nombre ) )')
+            .eq('cita_id', cita.id)
+            .in('estado', ['registrada', 'revisar', 'confirmada'])
+            .order('creado_en', { ascending: true }),
+    ]);
+    if (resPautas.error) { console.warn('[pautas] no se pudieron leer:', resPautas.error); return; }
+    if (resRev.error) console.warn('[pautas] no se pudo leer la revisión:', resRev.error);
+
+    const filas = (resPautas.data || []).map((f) => ({ ...f, _tipo: 'pauta' }));
+    (resRev.data || []).forEach((r) => {
+        filas.push({
+            ...r, _tipo: 'revision',
+            ejercicio_texto: r?.ejercicios_asignados?.ejercicios?.nombre || null,
+        });
+    });
     _pautasCache.clear();
     filas.forEach((f) => _pautasCache.set(f.id, f));
     renderPautas(filas);
@@ -3394,7 +3474,7 @@ async function extraerPautas() {
     const cont = document.getElementById('rc-pautas');
     const msg = document.getElementById('rc-pautas-msg');
     if (cont) cont.hidden = false;
-    if (msg) msg.textContent = 'Buscando las pautas que diste en clase…';
+    if (msg) msg.textContent = 'Buscando el repaso y las pautas que diste en clase…';
     try {
         const { data, error } = await supabase.functions.invoke('extraer-pautas', {
             body: { cita_id: cita.id },
@@ -3404,8 +3484,8 @@ async function extraerPautas() {
             res = await error.context.json().catch(() => null);
         }
         if (res?.ok) {
-            const n = (res.aplicadas?.length || 0) + (res.revisar?.length || 0);
-            if (msg) msg.textContent = n ? '' : 'En esta clase no dijiste ningún parámetro concreto, así que no hay nada que cargar.';
+            const n = (res.aplicadas?.length || 0) + (res.revisar?.length || 0) + (res.revisiones?.length || 0);
+            if (msg) msg.textContent = n ? '' : 'En esta clase no dijiste ningún parámetro concreto ni repasaste ningún ejercicio, así que no hay nada que registrar.';
         } else if (msg) {
             const err = res?.error || error?.message || 'No se pudieron extraer las pautas.';
             // "No hay escuchas nuevas" no es un fallo: es que ya se miraron.
@@ -3428,6 +3508,16 @@ async function onPautaAccion(btn) {
     if (msg) msg.textContent = '';
     const ahora = new Date().toISOString();
     try {
+        // La revisión es un registro histórico: no toca la ficha del ejercicio,
+        // así que guardarla o quitarla es solo cambiarle el estado.
+        if (btn.dataset.tipo === 'revision') {
+            const nuevo = (accion === 'guardar') ? 'confirmada' : 'descartada';
+            const { error } = await supabase.from('revisiones_ejercicio')
+                .update({ estado: nuevo, resuelto_en: ahora }).eq('id', id);
+            if (error) throw error;
+            await refrescarPautas();
+            return;
+        }
         if (accion === 'descartar') {
             const { error } = await supabase.from('pautas_extraidas')
                 .update({ estado: 'descartada', resuelto_en: ahora }).eq('id', id);

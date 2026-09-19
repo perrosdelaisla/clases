@@ -6,6 +6,10 @@
 // "tres veces por semana". Hasta ahora eso había que volver a cargarlo a
 // mano en la ficha de cada ejercicio. Esta función lo baja solo.
 //
+// Y antes de poner pautas nuevas repasa cómo fue la semana. Eso también se
+// dice en voz alta, así que también se registra: `revisiones_ejercicio`
+// guarda, clase a clase, cuál era el objetivo y hasta dónde llegaron.
+//
 // REGLA DE SEGURIDAD (decidida con Charly el 19/09/2026):
 //   - Lo que sale de un tramo LIMPIO se aplica solo.
 //   - Lo dudoso NO se aplica: queda señalado junto al resumen, en la
@@ -14,8 +18,9 @@
 // todo lo que el modelo propone pasa además por un filtro del servidor:
 //   1. el ejercicio tiene que ser uno REAL de la rutina de ese perro,
 //   2. el valor tiene que caer dentro del rango de su columna,
-//   3. la frase citada tiene que existir DE VERDAD en la transcripción.
-// Cualquiera de las tres que falle degrada la pauta a 'dudosa'.
+//   3. la frase citada tiene que existir DE VERDAD en la transcripción,
+//   4. y en la revisión, los números no pueden contradecir al veredicto.
+// Cualquiera de las cuatro que falle degrada la entrada a 'dudosa'.
 //
 // Nunca borra nada: si una pauta no se entiende, el campo se queda como
 // estaba. Todo lo propuesto queda registrado en `pautas_extraidas`.
@@ -42,6 +47,10 @@ const RANGOS: Record<string, { min: number; max: number; entero: boolean }> = {
 };
 const CAMPOS_TEXTO = new Set(['valor_comida', 'nota_cliente']);
 const NOTA_MAX = 240;
+// Lo que se puede medir en la revisión de la semana. Menos que RANGOS: de la
+// comida o la dificultad no tiene sentido decir "llegó" o "no llegó".
+const CAMPOS_REVISION = new Set(['objetivo_seg', 'objetivo_distancia', 'reps_sugeridas_min', 'min_semanal']);
+const LOGROS = new Set(['conseguido', 'parcial', 'no_llego', 'no_practicado', 'sin_dato']);
 
 // ───────────────────────────────────────────────────────────
 // Utilidades de texto
@@ -105,7 +114,7 @@ Si falla cualquiera de las cuatro, confianza "dudosa" y explica en motivo_duda, 
 TRAMPAS REALES DE ESTAS CLASES (comprobadas sobre sus transcripciones; en todas ellas NO hay pauta que aplicar):
 - "el no en tres pasos" / "en tres pasos": es el nombre de una técnica, los pasos de un procedimiento. NO es una distancia. Nunca lo conviertas en objetivo_distancia.
 - "refuerzos cada 10 segundos", "le das cada 15 segundos": eso es cada cuánto premia, no la duración objetivo del ejercicio. No es objetivo_seg: si acaso va en la nota.
-- Lo que MIDIÓ en clase no es una pauta: "hoy estuvo sentado 15 segundos", "aguanta unos 4 o 5 segundos" describen lo que pasó. Solo cuenta el valor que él marca como objetivo para casa: "el objetivo es…", "para la próxima…", "vamos a poner…", "tiene que llegar a…".
+- Lo que MIDIÓ en clase no es una pauta: "hoy estuvo sentado 15 segundos", "aguanta unos 4 o 5 segundos" describen lo que pasó. Solo cuenta el valor que él marca como objetivo para casa: "el objetivo es…", "para la próxima…", "vamos a poner…", "tiene que llegar a…". (Esas cifras de lo que pasó sí valen para la revisión de abajo.)
 - Cuando describe una progresión ("subiendo de a 30 segundos hasta 3 minutos"), el objetivo es la cifra FINAL; la progresión va en la nota.
 - Listas de comidas como ideas o ejemplos ("rellena el Kong con paté, chuches o queso", "pienso contra chuches, después chuches contra salchichas") no son la comida de un ejercicio: son opciones o el ranking. No devuelvas valor_comida por ellas.
 - Si en la misma frase se corrige o duda ("cuatro pasos, tres, cuatro"), confianza "dudosa".
@@ -114,9 +123,19 @@ Si el perro es uno de varios de la misma casa, y la clase no deja claro para cu�
 
 cita_textual: copia LITERAL del tramo de la transcripción donde él lo dice, con su marca de tiempo si la tiene. Cópiala tal cual aparece, sin arreglar las palabras. Es lo que le permite volver al audio. Una pauta sin cita literal exacta se descarta.
 
-Responde SOLO con un objeto JSON, sin texto alrededor y sin markdown:
-{"pautas":[{"ref":"E3","campo":"objetivo_distancia","valor_num":4,"valor_texto":null,"cita_textual":"[00:12:31] vamos a ponerle objetivo de cuatro pasos","confianza":"alta","motivo_duda":null}]}
-Para campos de texto (valor_comida, nota_cliente) usa valor_texto y deja valor_num en null. Si no detectas ninguna pauta, devuelve {"pautas":[]}.`;
+SEGUNDA TAREA — LA REVISIÓN DE LA SEMANA:
+Antes de poner pautas nuevas, el adiestrador repasa en voz alta cómo fue cada ejercicio de la semana ("el espera se quedó en cuatro segundos", "la permanencia la clavó", "esto no lo habéis practicado"). Devuelve también ese repaso, una entrada por ejercicio repasado. Reglas:
+- "logro" es el veredicto que da ÉL, con sus palabras, nunca tu cálculo: "conseguido" | "parcial" | "no_llego" | "no_practicado" | "sin_dato" (usa sin_dato cuando comenta el ejercicio pero no dice si llegó).
+- "alcanzado": solo si dice una cifra concreta de hasta dónde llegaron, en la misma unidad que "campo" (segundos, pasos, repeticiones). Si no da cifra, null.
+- "campo": qué se estaba midiendo — "objetivo_seg", "objetivo_distancia", "reps_sugeridas_min" o "min_semanal". Si el repaso es solo de palabra, sin números, deja campo y alcanzado en null.
+- "objetivo_anterior": el objetivo que él recuerda que tenían. Puede ir en null; el servidor ya lo sabe y solo lo usa para comprobarte.
+- "comentario": UNA frase corta, dirigida al tutor, de tú, en español de España, contando qué pasó con ese ejercicio. Sin juicio, sin reproche, sin felicitar de más: el hecho. La va a leer el tutor.
+- Si un ejercicio no se repasa en esta clase, NO devuelvas entrada. Mejor ninguna que inventada.
+- La misma exigencia de confianza y la misma cita literal que en las pautas.
+
+Responde SOLO con un objeto JSON, sin texto alrededor y sin markdown, con los dos arrays y las revisiones primero:
+{"revisiones":[{"ref":"E2","campo":"objetivo_seg","objetivo_anterior":10,"alcanzado":4,"logro":"no_llego","comentario":"El espera se ha quedado en cuatro segundos.","cita_textual":"[00:03:12] el espera se quedó en cuatro segundos, no llegamos a los diez","confianza":"alta","motivo_duda":null}],"pautas":[{"ref":"E3","campo":"objetivo_distancia","valor_num":4,"valor_texto":null,"cita_textual":"[00:12:31] vamos a ponerle objetivo de cuatro pasos","confianza":"alta","motivo_duda":null}]}
+Para campos de texto (valor_comida, nota_cliente) usa valor_texto y deja valor_num en null. Si no detectas nada, devuelve los arrays vacíos.`;
 
 // ───────────────────────────────────────────────────────────
 
@@ -170,7 +189,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ── Cita y perros de la casa ──
     const { data: cita, error: citaErr } = await admin
-      .from('citas').select('id, cliente_id, numero_clase, modalidad').eq('id', citaId).maybeSingle();
+      .from('citas').select('id, cliente_id, numero_clase, modalidad, fecha').eq('id', citaId).maybeSingle();
     if (citaErr || !cita) return json({ ok: false, error: 'No se encontró la cita' }, 404);
 
     const { data: perros, error: perrosErr } = await admin
@@ -264,7 +283,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         model: MODEL, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT,
         messages: [
           { role: 'user', content: lineas.join('\n\n') },
-          { role: 'assistant', content: '{"pautas":[' },
+          { role: 'assistant', content: '{"revisiones":[' },
         ],
       }),
     });
@@ -279,15 +298,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     let parsed: any = null;
     try {
-      parsed = JSON.parse('{"pautas":[' + salida);
+      parsed = JSON.parse('{"revisiones":[' + salida);
     } catch (_e) {
-      // Segundo intento: recortar hasta el último cierre de array.
-      const corte = salida.lastIndexOf(']');
-      if (corte > 0) { try { parsed = JSON.parse('{"pautas":[' + salida.slice(0, corte + 1) + '}'); } catch (_e2) { /* noop */ } }
+      // Segundo intento: recortar hasta el último cierre de objeto.
+      const corte = salida.lastIndexOf('}');
+      if (corte > 0) { try { parsed = JSON.parse('{"revisiones":[' + salida.slice(0, corte + 1)); } catch (_e2) { /* noop */ } }
     }
-    if (!parsed || !Array.isArray(parsed.pautas)) {
-      return json({ ok: false, error: 'La IA no devolvió pautas legibles.' }, 502);
+    if (!parsed || (!Array.isArray(parsed.pautas) && !Array.isArray(parsed.revisiones))) {
+      return json({ ok: false, error: 'La IA no devolvió nada legible.' }, 502);
     }
+    if (!Array.isArray(parsed.pautas)) parsed.pautas = [];
 
     // ── Filtro del servidor ──
     // Cada pauta tiene que sobrevivir a tres comprobaciones. Lo que no las
@@ -403,6 +423,91 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // ── La revisión de la semana ──
+    // Ojo al orden: `filas` se leyó ANTES de aplicar nada de esta clase, así
+    // que los objetivos que tiene en memoria son los de la semana pasada. Eso
+    // es justo lo que hay que guardar como `objetivo_anterior`, y por eso lo
+    // pone el servidor y no el modelo: la base ya lo sabe con certeza.
+    const revisiones: any[] = [];
+    const fechaClase = String(cita.fecha ?? new Date().toISOString().slice(0, 10));
+
+    // Charly graba por rondas: explica un ejercicio, genera, explica el
+    // siguiente, vuelve a generar. En la segunda ronda la ficha ya lleva los
+    // objetivos nuevos de la primera, así que leerla daría el objetivo de HOY
+    // y no el de la semana pasada. Por eso, si en esta misma clase ya se tocó
+    // ese campo, el objetivo anterior lo sacamos de lo que se guardó entonces.
+    const previoEnEstaClase = new Map<string, number>();
+    {
+      const { data: yaTocado } = await admin.from('pautas_extraidas')
+        .select('asignado_id, campo, valor_anterior, creado_en')
+        .eq('cita_id', citaId).in('estado', ['aplicada', 'confirmada'])
+        .order('creado_en', { ascending: true });
+      for (const t of (yaTocado ?? [])) {
+        const n = Number(t?.valor_anterior);
+        if (!t?.asignado_id || !Number.isFinite(n)) continue;
+        const k = `${t.asignado_id}|${t.campo}`;
+        if (!previoEnEstaClase.has(k)) previoEnEstaClase.set(k, n);  // gana la primera ronda
+      }
+    }
+
+    for (const r of (Array.isArray(parsed.revisiones) ? parsed.revisiones : [])) {
+      const fila = refDe.get(String(r?.ref ?? '').trim());
+      if (!fila) continue;  // sin ejercicio real no hay historia que escribir
+      const citaTxt = String(r?.cita_textual ?? '').trim();
+      let confianza = (r?.confianza === 'alta') ? 'alta' : 'dudosa';
+      let motivo: string | null = r?.motivo_duda ? String(r.motivo_duda).slice(0, 300) : null;
+      const degradar = (m: string) => { confianza = 'dudosa'; motivo = motivo ? `${m} · ${motivo}` : m; };
+
+      if (!citaExiste(citaTxt, transcripcionesNorm)) {
+        degradar('La frase citada no aparece literalmente en la transcripción.');
+      }
+
+      const campoRaw = String(r?.campo ?? '').trim();
+      const campo = CAMPOS_REVISION.has(campoRaw) ? campoRaw : null;
+      const objetivoAnterior = !campo ? null
+        : (previoEnEstaClase.has(`${fila.id}|${campo}`)
+            ? previoEnEstaClase.get(`${fila.id}|${campo}`)!
+            : (fila[campo] != null ? Number(fila[campo]) : null));
+
+      let alcanzado = (r?.alcanzado == null) ? null : intOrNull(r.alcanzado);
+      if (alcanzado != null && campo) {
+        const rango = RANGOS[campo];
+        if (rango && (alcanzado < 0 || alcanzado > rango.max)) {
+          degradar(`La cifra ${alcanzado} no es posible en ese campo.`);
+          alcanzado = null;
+        }
+      }
+      const logro = LOGROS.has(String(r?.logro ?? '')) ? String(r.logro) : 'sin_dato';
+
+      // Cuarta red, solo para la revisión: si los números contradicen el
+      // veredicto, algo se entendió mal. No decidimos nosotros cuál de los dos
+      // tiene razón — lo mandamos a revisar y que lo mire Charly.
+      if (objetivoAnterior != null && alcanzado != null) {
+        if (alcanzado >= objetivoAnterior && logro === 'no_llego') {
+          degradar('Dice que no llegó, pero la cifra alcanza el objetivo que tenía puesto.');
+        }
+        if (alcanzado < objetivoAnterior && logro === 'conseguido') {
+          degradar('Dice conseguido, pero la cifra se queda por debajo del objetivo que tenía puesto.');
+        }
+      }
+      // Y si la IA recordaba otro objetivo que el que hay en la ficha, tampoco
+      // nos fiamos del resto de esa entrada.
+      const objModelo = (r?.objetivo_anterior == null) ? null : intOrNull(r.objetivo_anterior);
+      if (objetivoAnterior != null && objModelo != null && objModelo !== objetivoAnterior) {
+        degradar(`En la ficha el objetivo era ${objetivoAnterior} y la IA entendió ${objModelo}.`);
+      }
+
+      revisiones.push({
+        cita_id: citaId, perro_id: fila.perro_id, asignado_id: fila.id, escucha_id: escuchaIds[0],
+        fecha: fechaClase, numero_clase: cita.numero_clase ?? null,
+        campo, objetivo_anterior: objetivoAnterior, alcanzado, logro,
+        comentario: String(r?.comentario ?? '').trim().slice(0, NOTA_MAX) || null,
+        cita_textual: citaTxt.slice(0, 600) || null,
+        confianza, motivo_duda: motivo,
+        estado: (confianza === 'alta') ? 'registrada' : 'revisar',
+      });
+    }
+
     // ── Escritura ──
     // Primero los UPDATE de la rutina (agrupados por asignación, un UPDATE por
     // ejercicio), después el registro de auditoría, y al final la marca en las
@@ -424,6 +529,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     if (!dryRun) {
+      // Al reprocesar una clase, lo de la pasada anterior no se borra: se marca
+      // como descartada, con su motivo. Así no se duplica y no se pierde nada.
+      if (reprocesar) {
+        const ahora = new Date().toISOString();
+        const fuera = { estado: 'descartada', motivo_duda: 'Reemplazada al reprocesar la clase.', resuelto_en: ahora };
+        await admin.from('pautas_extraidas').update(fuera).eq('cita_id', citaId).in('estado', ['aplicada', 'revisar']);
+        await admin.from('revisiones_ejercicio').update(fuera).eq('cita_id', citaId).in('estado', ['registrada', 'revisar']);
+      }
       for (const [asignadoId, patch] of porAsignado) {
         patch.actualizado_en = new Date().toISOString();
         const { error: upErr } = await admin.from('ejercicios_asignados').update(patch).eq('id', asignadoId);
@@ -442,6 +555,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const { error: insErr } = await admin.from('pautas_extraidas').insert(registros);
         if (insErr) console.warn('[pautas] no se pudo registrar la auditoría:', insErr);
       }
+      if (revisiones.length) {
+        const { error: revErr } = await admin.from('revisiones_ejercicio').insert(revisiones);
+        if (revErr) console.warn('[pautas] no se pudo registrar la revisión:', revErr);
+      }
       const { error: marcaErr } = await admin.from('escuchas_clase')
         .update({ pautas_en: new Date().toISOString() }).in('id', escuchaIds);
       if (marcaErr) console.warn('[pautas] no se pudieron marcar las escuchas:', marcaErr);
@@ -454,6 +571,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       escuchas_usadas: escuchaIds,
       ejercicios_tocados: porAsignado.size,
       aplicadas, revisar,
+      revisiones,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -6102,3 +6102,21 @@ body {
     padding: 4px 12px;
     font-size: 12px;
 }
+
+/* La revisión de la semana: mismo bloque que las pautas pero con la barra en
+   el rojo de marca, para distinguir de un vistazo "cómo fue" de "qué toca
+   ahora". No es una alarma: es el otro lado de la misma clase. */
+.rc-pauta--rev {
+    border-left-color: var(--color-red);
+}
+
+.rc-pauta--rev.rc-pauta--revisar {
+    border-left-color: var(--color-warning);
+}
+
+.rc-pauta-com {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--color-text);
+}
