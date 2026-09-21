@@ -1854,9 +1854,18 @@ function mostrarNovedadEscalera(esc, perro) {
 // INACTIVA en la cara, la app le pedía constancia un lunes a mediodía. Y
 // Katerina es de las que más entrena con su perra.
 //
-// Un aviso que le reclama entreno al tutor solo se sostiene si se cumplen
-// las tres cosas. Si falla una, Jaime no dice nada: no hay ningún mensaje
-// que valga más que la relación con el cliente.
+// 21/09, más tarde: con la base ya accesible se leyó la RPC y quedó claro
+// que el disparador NO era una comparación con su hábito. `get_avisos_jaime_base`
+// hace, literalmente, `min_semanal - registros_de_esta_semana > 0`, sin mirar
+// qué día es. Con el objetivo de Layla, 7 A LA SEMANA, eso es cierto desde el
+// lunes hasta que se registran los siete: casi toda la semana, todas las
+// semanas. El texto hablaba de "lo habitual", pero ahí no hay ningún hábito
+// con el que comparar. Y los registros de Katerina SÍ estaban: 25 en ese
+// ejercicio, el último el día anterior.
+//
+// Un aviso que le reclama entreno al tutor solo se sostiene si sigue en
+// clases y si de verdad va atrasada. Si falla una, Jaime no dice nada: no hay
+// ningún mensaje que valga más que la relación con el cliente.
 // ──────────────────────────────────────────────────────────
 
 // 1. Que siga en clases. Solo silenciamos a quien sabemos que YA NO lo está;
@@ -1867,40 +1876,50 @@ function jaimeYaNoEstaEnClases() {
     return est === 'inactivo' || est === 'veterano' || est === 'ex_cliente';
 }
 
-// 2. Que la semana haya dado de sí. Un lunes nadie puede ir "por debajo de lo
-//    habitual": la semana no ha empezado. getDay(): 0 domingo … 6 sábado.
-function jaimeSemanaConRecorrido() {
-    const d = new Date().getDay();
-    return !(d === 1 || d === 2 || d === 3);
+// 2. Que vaya atrasada DE VERDAD, no solo por el día que es. La RPC manda
+//    `faltan` = lo que queda para el objetivo de la semana, contando desde el
+//    lunes. Eso es mayor que cero casi siempre, así que por sí solo no dice
+//    nada. Solo avisamos cuando **ya no le da el tiempo**.
+//
+//    OJO, que aquí estuvo el error: `min_semanal` son veces A LA SEMANA, no
+//    días. 7 no es "todos los días": puede hacer tres en una tarde. Lo que
+//    limita cuánto puede recuperar es `max_diario`, el tope diario que pone
+//    Charly al asignar, y que en 41 de las 43 asignaciones con objetivo 7
+//    vale 2. Así que la capacidad que le queda es días_restantes x tope.
+//
+//    Con 7 a la semana y tope 2: el lunes le caben 14, no salta nunca. El
+//    viernes sin nada hecho le caben 6 y necesita 7, ahí sí. El sábado con
+//    tres hechos le caben 4 y necesita 4: justo llega, no se le dice nada.
+//
+//    Sin tope diario puede recuperar cuando quiera, así que la imposibilidad
+//    no existe: en ese caso solo el domingo, que es un hecho por sí mismo
+//    (se acaba la semana y queda esto).
+function jaimeVaRealmenteAtrasado(faltan, maxDiario) {
+    const n = Number(faltan);
+    if (!Number.isFinite(n) || n <= 0) return false;
+    const d = new Date().getDay();              // 0 domingo … 6 sábado
+    const diaSemana = (d === 0) ? 7 : d;        // 1 lunes … 7 domingo
+    const diasQueQuedan = 7 - diaSemana + 1;    // incluido hoy
+    const tope = Number(maxDiario);
+    if (!Number.isFinite(tope) || tope <= 0) return diaSemana === 7;
+    return n > diasQueQuedan * tope;
 }
 
-// 3. Que sepamos cuánto entrena. "Menos práctica de lo habitual" es una
-//    comparación, y sin un hábito con el que comparar es una afirmación sin
-//    respaldo. Pedimos al menos 3 semanas distintas con registros en las 8
-//    últimas, sin contar la semana en curso. Si la consulta falla, callarse.
-const JAIME_SEMANAS_BASE = 3;
-async function jaimeHayBaseDeHabito(asignadoId) {
-    if (!asignadoId) return false;
-    const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
-    const desde = new Date(Date.now() - 8 * SEMANA_MS).toISOString();
+// El tope diario de esa asignación. La RPC no lo manda, así que se busca en
+// la rutina ya cargada y, si el aviso llega antes que ella, se pregunta. Si
+// no se puede saber, null → solo el domingo, que es lo prudente.
+async function jaimeTopeDiario(asignadoId) {
+    if (!asignadoId) return null;
+    const fila = (state.rutinaFilas || []).find((f) => f.id === asignadoId);
+    if (fila) return (fila.max_diario != null) ? Number(fila.max_diario) : null;
     try {
         const { data, error } = await supabase
-            .from('registros_ejercicio')
-            .select('registrado_en')
-            .eq('ejercicio_asignado_id', asignadoId)
-            .gte('registrado_en', desde);
+            .from('ejercicios_asignados').select('max_diario').eq('id', asignadoId).maybeSingle();
         if (error) throw error;
-        const corte = new Date(inicioSemanaLocalIso()).getTime();
-        const semanas = new Set();
-        (data || []).forEach((r) => {
-            const t = new Date(r.registrado_en).getTime();
-            if (!Number.isFinite(t) || t >= corte) return;   // la semana en curso no cuenta
-            semanas.add(Math.floor((corte - t) / SEMANA_MS));
-        });
-        return semanas.size >= JAIME_SEMANAS_BASE;
+        return (data && data.max_diario != null) ? Number(data.max_diario) : null;
     } catch (e) {
-        console.warn('[jaime] sin datos de entreno para comparar:', e);
-        return false;
+        console.warn('[jaime] no se pudo leer el tope diario:', e);
+        return null;
     }
 }
 
@@ -1915,10 +1934,11 @@ function jaimeAvisoReclama(data) {
     return false;
 }
 
-// Los que además AFIRMAN algo sobre cuánto entrena, y por eso necesitan base.
-function jaimeAvisoCompara(data) {
-    return !!data && (data.tipo === 'flojo' || data.tipo === 'tarea_floja');
-}
+// Nota sobre 'tarea_floja': su consulta exige una fila de `registros_tarea` de
+// la semana pasada, y esa tabla dejó de alimentarse el 01/09/2026 (4 filas en
+// total, la última del 25/08). O sea que ese aviso ya no puede saltar. Si
+// algún día las tareas vuelven a guardar historia, habrá que darle su propia
+// regla de ritmo, como la de arriba.
 
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
@@ -2009,19 +2029,15 @@ async function cargarAvisoJaime() {
     }
     if (!data || !data.tipo) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
-    // Las tres reglas de silencio (ver arriba). Se aplican aquí, después de la
-    // RPC y antes de redactar nada: si el aviso no se sostiene, no se redacta.
+    // Las reglas de silencio (ver arriba). Se aplican aquí, después de la RPC y
+    // antes de redactar nada: si el aviso no se sostiene, no se redacta.
     if (jaimeAvisoReclama(data)) {
         if (jaimeYaNoEstaEnClases()) {
             _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
         }
-        if (jaimeAvisoCompara(data)) {
-            if (!jaimeSemanaConRecorrido()) {
-                _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
-            }
-            if (!(await jaimeHayBaseDeHabito(data.ejercicio_asignado_id))) {
-                _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
-            }
+        if (data.tipo === 'flojo'
+            && !jaimeVaRealmenteAtrasado(data.faltan, await jaimeTopeDiario(data.ejercicio_asignado_id))) {
+            _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
         }
     }
 
