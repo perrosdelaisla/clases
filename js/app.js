@@ -1156,7 +1156,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, valor_comida_nombre, nota_cliente, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
+        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, valor_comida_nombre, nota_cliente, parametros, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -1929,6 +1929,7 @@ async function jaimeTopeDiario(asignadoId) {
 function jaimeAvisoReclama(data) {
     if (!data) return false;
     if (data.tipo === 'flojo' || data.tipo === 'tarea_floja') return true;
+    if (data.tipo === 'tarea_pendiente') return true;
     if (data.tipo === 'sin_entrenar') return true;
     if (data.tipo === 'checkin') return !data.sin_agendar;
     return false;
@@ -2104,6 +2105,17 @@ async function cargarAvisoJaime() {
             ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'tarea');
             break;
         }
+        case 'tarea_pendiente': {
+            // Ofrecimiento, no recordatorio. En plural, como equipo, y sin
+            // decirle cuántos días lleva: eso sería pasarle factura.
+            const tp = (data.tarea || '').trim();
+            texto = tp
+                ? `Se nos quedó pendiente '${tp}'. ¿Necesitáis una mano con ella? Escribidnos y la sacamos en un momento.`
+                : `Se nos quedó una tarea pendiente. ¿Necesitáis una mano? Escribidnos y la sacamos en un momento.`;
+            ctaLabel = 'Ir a la tarea';
+            ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'tarea');
+            break;
+        }
         case 'al_dia':
             texto = `¡${nombre} viene constante! Seguid así. Cualquier duda, escríbenos.`;
             ctaLabel = '';
@@ -2204,6 +2216,16 @@ async function cargarAvisoJaime() {
         }
         if (diasDesde >= 3) {
             localStorage.setItem(KEY, hoyIso);
+            abrirBurbujaJaime();
+        } else {
+            cerrarBurbujaJaime();
+        }
+    } else if (data.tipo === 'tarea_pendiente') {
+        // Se ofrece UNA vez por tarea. Si no la hacen, ya está: insistir con
+        // algo que lleva meses parado no lo desatasca, solo molesta.
+        const clavePend = 'jaime_tarea_pend_' + (data.ejercicio_asignado_id || '');
+        if (!localStorage.getItem(clavePend)) {
+            localStorage.setItem(clavePend, '1');
             abrirBurbujaJaime();
         } else {
             cerrarBurbujaJaime();
@@ -4590,7 +4612,9 @@ function rutinaCardHTML(row, { tag, superado }) {
     const esMontaje = esTarea && tipoTarea === 'montaje';
     const seEntrena = (prog?.se_entrena !== false);
     const seUsa = !!prog?.se_usa;
-    const hecho = (prog?.estado_cliente === 'hecho');
+    const hecho = (esLista || esMontaje)
+        ? tareaUnaVezHecha(row.id, tipoTarea, prog)
+        : (prog?.estado_cliente === 'hecho');
     const tieneHerr = (prog?.estado_cliente === 'tiene');
 
     // La huella (práctica planificada) va en ejercicios, cambios de rutina y
@@ -4665,6 +4689,24 @@ function renderChipProgreso(asignadoId) {
 const MAX_FOTOS_CLIENTE = 2;
 
 const _SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+// Una tarea de una sola vez está hecha cuando el tutor ya dejó la prueba.
+// Decisión de Charly (21/09/2026): escribir la lista YA es hacerla, y una foto
+// del montaje también; no hace falta además confirmar con una ✓ que de 24
+// tareas no había pulsado nadie. Mismo criterio que `tarea_una_vez_hecha` en
+// la base, que es quien alimenta el historial de `tareas_hechas`.
+function tareaUnaVezHecha(asignadoId, tipoTarea, prog) {
+    if (prog?.estado_cliente === 'hecho') return true;
+    if (tipoTarea === 'montaje') {
+        return Array.isArray(prog?.fotos_cliente) && prog.fotos_cliente.length > 0;
+    }
+    if (tipoTarea === 'lista') {
+        const fila = (state.rutinaFilas || []).find((f) => f.id === asignadoId);
+        const items = fila?.parametros?.items;
+        return Array.isArray(items) && items.some((x) => typeof x === 'string' && x.trim() !== '');
+    }
+    return false;
+}
 
 function checkHechoHTML(asignadoId, hecho, esLista) {
     const etiqueta = esLista ? 'Marcar la lista como enviada' : 'Marcar como hecho';
@@ -4777,6 +4819,18 @@ async function onCheckHecho(btn) {
     const asignadoId = btn.dataset.asignadoId;
     if (!asignadoId || _hechoEnCurso.has(asignadoId)) return;
     const prog = _progresoCache.get(asignadoId);
+    // Si ya está hecha porque escribió la lista o subió la foto, desmarcarla
+    // aquí no haría nada visible (la prueba sigue ahí) y el botón parecería
+    // roto. Se lo decimos en vez de dejar un clic muerto.
+    const _tipoT = prog?.tipo_tarea || null;
+    if ((_tipoT === 'lista' || _tipoT === 'montaje')
+        && prog?.estado_cliente !== 'hecho'
+        && tareaUnaVezHecha(asignadoId, _tipoT, prog)) {
+        toast(_tipoT === 'lista'
+            ? 'Ya la tienes hecha: tu lista está guardada.'
+            : 'Ya la tienes hecha: tu foto está guardada.', 'info', 2600);
+        return;
+    }
     const eraHecho = (prog?.estado_cliente === 'hecho');
     const nuevo = eraHecho ? null : 'hecho';
     _hechoEnCurso.add(asignadoId);
