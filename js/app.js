@@ -2066,15 +2066,24 @@ async function cargarAvisoJaime() {
             break;
         }
         case 'flojo':
-            texto = `Esta semana '${data.ejercicio}' va con menos práctica de lo habitual. ¿Todo bien con él? Si se os complica o tenéis dudas, escribidnos y lo vemos juntos.`;
+            // 21/09/2026: el texto abría con un veredicto sobre el tutor ("va
+            // con menos práctica de lo habitual") y eso se lee como examen,
+            // por muy bien intencionado que esté el final. Ahora pregunta y
+            // ofrece: el disparador sigue siendo el mismo, lo que cambia es que
+            // la app ya no le dice a nadie lo poco que ha entrenado.
+            texto = `¿Cómo lleváis '${data.ejercicio}'? Si se os está atascando o tenéis dudas, escribidnos y lo vemos juntos.`;
             ctaLabel = 'Ir al ejercicio';
             ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'ejercicio');
             break;
         case 'tarea_floja': {
             const tNom = (data.tarea || '').trim();
+            // Mismo criterio que 'flojo'. Y de paso deja de afirmar "no hemos
+            // visto registros": las tareas no guardan historia semanal desde el
+            // 01/09/2026, así que esa frase era cierta para todo el mundo
+            // siempre, y sonaba a reproche sin tener con qué sostenerlo.
             texto = tNom
-                ? `Esta semana no hemos visto registros de '${tNom}' para ${nombre}. ¿Va todo bien? Si necesitáis una mano con ella, aquí estamos.`
-                : `Esta semana no hemos visto registros de esta tarea para ${nombre}. ¿Va todo bien? Si necesitáis una mano, aquí estamos.`;
+                ? `¿Cómo lleváis '${tNom}'? Si necesitáis una mano con ella, aquí estamos.`
+                : `¿Cómo lleváis esta tarea? Si necesitáis una mano, aquí estamos.`;
             ctaLabel = 'Ir a la tarea';
             ctaAccion = () => irAItemRutina(data.ejercicio_asignado_id, 'tarea');
             break;
