@@ -1847,6 +1847,79 @@ function mostrarNovedadEscalera(esc, perro) {
     abrirBurbujaJaime();
 }
 
+// ──────────────────────────────────────────────────────────
+// CUÁNDO SE CALLA JAIME (21/09/2026)
+//
+// Vino de un caso real: a Katerina, con el pack terminado y la etiqueta
+// INACTIVA en la cara, la app le pedía constancia un lunes a mediodía. Y
+// Katerina es de las que más entrena con su perra.
+//
+// Un aviso que le reclama entreno al tutor solo se sostiene si se cumplen
+// las tres cosas. Si falla una, Jaime no dice nada: no hay ningún mensaje
+// que valga más que la relación con el cliente.
+// ──────────────────────────────────────────────────────────
+
+// 1. Que siga en clases. Solo silenciamos a quien sabemos que YA NO lo está;
+//    si el estado no viene, se deja pasar (callar a todo el mundo por un dato
+//    que falta sería peor que el problema que arreglamos).
+function jaimeYaNoEstaEnClases() {
+    const est = state.cliente?.estado;
+    return est === 'inactivo' || est === 'veterano' || est === 'ex_cliente';
+}
+
+// 2. Que la semana haya dado de sí. Un lunes nadie puede ir "por debajo de lo
+//    habitual": la semana no ha empezado. getDay(): 0 domingo … 6 sábado.
+function jaimeSemanaConRecorrido() {
+    const d = new Date().getDay();
+    return !(d === 1 || d === 2 || d === 3);
+}
+
+// 3. Que sepamos cuánto entrena. "Menos práctica de lo habitual" es una
+//    comparación, y sin un hábito con el que comparar es una afirmación sin
+//    respaldo. Pedimos al menos 3 semanas distintas con registros en las 8
+//    últimas, sin contar la semana en curso. Si la consulta falla, callarse.
+const JAIME_SEMANAS_BASE = 3;
+async function jaimeHayBaseDeHabito(asignadoId) {
+    if (!asignadoId) return false;
+    const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+    const desde = new Date(Date.now() - 8 * SEMANA_MS).toISOString();
+    try {
+        const { data, error } = await supabase
+            .from('registros_ejercicio')
+            .select('registrado_en')
+            .eq('ejercicio_asignado_id', asignadoId)
+            .gte('registrado_en', desde);
+        if (error) throw error;
+        const corte = new Date(inicioSemanaLocalIso()).getTime();
+        const semanas = new Set();
+        (data || []).forEach((r) => {
+            const t = new Date(r.registrado_en).getTime();
+            if (!Number.isFinite(t) || t >= corte) return;   // la semana en curso no cuenta
+            semanas.add(Math.floor((corte - t) / SEMANA_MS));
+        });
+        return semanas.size >= JAIME_SEMANAS_BASE;
+    } catch (e) {
+        console.warn('[jaime] sin datos de entreno para comparar:', e);
+        return false;
+    }
+}
+
+// Qué avisos le reclaman algo al tutor. El check-in tiene dos caras: la de
+// "os queda una clase por reservar" es útil siempre y no se toca; la de "hace
+// días que no tenemos noticias" sí reclama.
+function jaimeAvisoReclama(data) {
+    if (!data) return false;
+    if (data.tipo === 'flojo' || data.tipo === 'tarea_floja') return true;
+    if (data.tipo === 'sin_entrenar') return true;
+    if (data.tipo === 'checkin') return !data.sin_agendar;
+    return false;
+}
+
+// Los que además AFIRMAN algo sobre cuánto entrena, y por eso necesitan base.
+function jaimeAvisoCompara(data) {
+    return !!data && (data.tipo === 'flojo' || data.tipo === 'tarea_floja');
+}
+
 async function cargarAvisoJaime() {
     const fab = document.getElementById('jaime-fab');
     if (!fab) return;
@@ -1935,6 +2008,22 @@ async function cargarAvisoJaime() {
         return;
     }
     if (!data || !data.tipo) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
+
+    // Las tres reglas de silencio (ver arriba). Se aplican aquí, después de la
+    // RPC y antes de redactar nada: si el aviso no se sostiene, no se redacta.
+    if (jaimeAvisoReclama(data)) {
+        if (jaimeYaNoEstaEnClases()) {
+            _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
+        }
+        if (jaimeAvisoCompara(data)) {
+            if (!jaimeSemanaConRecorrido()) {
+                _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
+            }
+            if (!(await jaimeHayBaseDeHabito(data.ejercicio_asignado_id))) {
+                _jaimeAvisoActual = null; cerrarBurbujaJaime(); return;
+            }
+        }
+    }
 
     const nombre = data.perro || perro.nombre || 'tu perro';
     let texto = '';
@@ -2074,8 +2163,10 @@ async function cargarAvisoJaime() {
     // · cita_salud (recordatorio de salud): auto-abre UNA VEZ AL DÍA (flag
     //   diario propio en localStorage).
     // · al_dia: nunca auto-abre.
-    // · Resto (informe/mensaje/sin_entrenar/flojo/tarea_floja): gate diario
-    //   descartadoHoy, exactamente como antes.
+    // · flojo/tarea_floja: UNA VEZ POR SEMANA y por ejercicio. Antes el gate
+    //   era diario y global, así que la tutora lo cerraba y al día siguiente
+    //   volvía a salir sola: eso es insistir, no acompañar (21/09/2026).
+    // · Resto (informe/mensaje): gate diario descartadoHoy, como antes.
     const TIPOS_FELICITACION = ['racha', 'regreso', 'semana_redonda'];
     if (data.tipo === 'checkin' || data.tipo === 'sin_entrenar' || data.tipo === 'agendar_clase') {
         // Check-in "¿va todo bien?": reaparece cada 3 días (no machaca a diario).
@@ -2088,6 +2179,15 @@ async function cargarAvisoJaime() {
         }
         if (diasDesde >= 3) {
             localStorage.setItem(KEY, hoyIso);
+            abrirBurbujaJaime();
+        } else {
+            cerrarBurbujaJaime();
+        }
+    } else if (data.tipo === 'flojo' || data.tipo === 'tarea_floja') {
+        const claveFlojo = 'jaime_flojo_' + (data.ejercicio_asignado_id || data.tipo)
+            + '_' + inicioSemanaLocalFecha();
+        if (!localStorage.getItem(claveFlojo)) {
+            localStorage.setItem(claveFlojo, '1');
             abrirBurbujaJaime();
         } else {
             cerrarBurbujaJaime();
