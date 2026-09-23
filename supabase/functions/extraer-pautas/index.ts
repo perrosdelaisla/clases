@@ -22,6 +22,10 @@
 //   4. y en la revisión, los números no pueden contradecir al veredicto.
 // Cualquiera de las cuatro que falle degrada la entrada a 'dudosa'.
 //
+// CÓMO SE DISPARA: desde el admin (botón de generar borrador) con el JWT de
+// Charly, o sola — el cron lanzar-pautas barre cada 5 minutos las escuchas
+// transcritas que aún no pasaron por aquí y llama con un token de un uso.
+//
 // Nunca borra nada: si una pauta no se entiende, el campo se queda como
 // estaba. Todo lo propuesto queda registrado en `pautas_extraidas`.
 // =====================================================================
@@ -62,7 +66,7 @@ const LOGROS = new Set(['conseguido', 'parcial', 'no_llego', 'no_practicado', 's
 function norm(t: string): string {
   return String(t ?? '')
     .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
@@ -168,16 +172,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   });
 
   try {
-    // ── Auth: solo admin (mismo patrón que resumir-clase) ──
-    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
-    if (!token) return json({ ok: false, error: 'Falta autenticación' }, 401);
-    const { data: userData, error: userErr } = await admin.auth.getUser(token);
-    if (userErr || !userData?.user) return json({ ok: false, error: 'No autorizado' }, 401);
-    const { data: adminRow, error: adminErr } = await admin
-      .from('admins').select('auth_user_id').eq('auth_user_id', userData.user.id).maybeSingle();
-    if (adminErr) return json({ ok: false, error: 'No se pudo verificar el rol de admin' }, 500);
-    if (!adminRow) return json({ ok: false, error: 'Solo un administrador puede extraer pautas' }, 403);
-
     const body = await req.json().catch(() => null);
     const citaId = String(body?.cita_id ?? '').trim();
     if (!UUID_RE.test(citaId)) return json({ ok: false, error: 'Falta la cita' }, 400);
@@ -186,6 +180,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // reprocesar: vuelve a mirar TODAS las escuchas de la cita, no solo las
     // que aún no pasaron por aquí.
     const reprocesar = body?.reprocesar === true;
+
+    // ── Auth: el admin desde la app, o el cron con un token de un solo uso ──
+    // El barrido lanzar_pautas_pendientes() guarda un token por cita en
+    // pautas_auto_cola y lo manda en x-pautas-token. Aquí se canjea: la RPC
+    // devuelve la cita a la que pertenece y lo invalida en el mismo golpe, así
+    // que no vale para una segunda llamada ni para otra clase.
+    const tokenInterno = (req.headers.get('x-pautas-token') ?? '').trim();
+    let esInterna = false;
+    if (tokenInterno) {
+      const { data: citaDelToken, error: tokErr } = await admin.rpc('consumir_token_pautas', { p_token: tokenInterno });
+      if (!tokErr && citaDelToken && String(citaDelToken) === citaId) esInterna = true;
+    }
+
+    if (!esInterna) {
+      // ── Auth: solo admin (mismo patrón que resumir-clase) ──
+      const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+      if (!token) return json({ ok: false, error: 'Falta autenticación' }, 401);
+      const { data: userData, error: userErr } = await admin.auth.getUser(token);
+      if (userErr || !userData?.user) return json({ ok: false, error: 'No autorizado' }, 401);
+      const { data: adminRow, error: adminErr } = await admin
+        .from('admins').select('auth_user_id').eq('auth_user_id', userData.user.id).maybeSingle();
+      if (adminErr) return json({ ok: false, error: 'No se pudo verificar el rol de admin' }, 500);
+      if (!adminRow) return json({ ok: false, error: 'Solo un administrador puede extraer pautas' }, 403);
+    }
 
     // ── Cita y perros de la casa ──
     const { data: cita, error: citaErr } = await admin
@@ -283,7 +301,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
         model: MODEL, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT,
         messages: [
           { role: 'user', content: lineas.join('\n\n') },
-          { role: 'assistant', content: '{"revisiones":[' },
         ],
       }),
     });
@@ -296,13 +313,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       ? data.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
       : '').trim();
 
+    // El modelo devuelve el objeto entero: claude-sonnet-4-6 no admite que le
+    // dejemos empezada la respuesta, así que se lo pedimos completo y lo que
+    // venga de más (una valla de markdown, un "aquí tienes") se limpia aquí.
+    const limpio = salida.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let parsed: any = null;
     try {
-      parsed = JSON.parse('{"revisiones":[' + salida);
+      parsed = JSON.parse(limpio);
     } catch (_e) {
-      // Segundo intento: recortar hasta el último cierre de objeto.
-      const corte = salida.lastIndexOf('}');
-      if (corte > 0) { try { parsed = JSON.parse('{"revisiones":[' + salida.slice(0, corte + 1)); } catch (_e2) { /* noop */ } }
+      // Segundo intento: quedarnos con lo que va de la primera llave a la última.
+      const a = limpio.indexOf('{');
+      const b = limpio.lastIndexOf('}');
+      if (a >= 0 && b > a) { try { parsed = JSON.parse(limpio.slice(a, b + 1)); } catch (_e2) { /* noop */ } }
     }
     if (!parsed || (!Array.isArray(parsed.pautas) && !Array.isArray(parsed.revisiones))) {
       return json({ ok: false, error: 'La IA no devolvió nada legible.' }, 502);
