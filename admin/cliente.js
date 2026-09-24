@@ -1121,7 +1121,11 @@ function pintarPlazoPack(p) {
         ? new Date(p.caduca_en).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
         : '';
     el.classList.remove('pack-plazo--vencido', 'pack-plazo--cerca');
-    if (p.caducado) {
+    if (p.caducado && p.clase_extra) {
+        // Pagó la seña de la próxima: el plazo del pack venció, pero reservar sí puede.
+        el.classList.add('pack-plazo--cerca');
+        el.textContent = `Plazo vencido el ${fecha} · puede reservar la siguiente (seña)`;
+    } else if (p.caducado) {
         el.classList.add('pack-plazo--vencido');
         el.textContent = `Plazo vencido el ${fecha} · no puede reservar`;
     } else if (dias <= 30) {
