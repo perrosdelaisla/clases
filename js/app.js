@@ -177,7 +177,24 @@ async function bootstrap() {
     await onSesionLista(session);
 }
 
-async function onSesionLista(session) {
+// bootstrap() y onAuthStateChange('INITIAL_SESSION') llaman los dos aquí, y
+// Supabase dispara el evento inicial justo cuando bootstrap ya está en marcha.
+// Sin cerrojo el arranque entero corría 2 o 3 veces EN PARALELO: triple
+// consulta de usuarios_cliente / clientes / citas y tres procesos escribiendo
+// el mismo `state`. Ahora el segundo que llega se engancha al primero en vez
+// de duplicarlo. Se libera al terminar, así que un login posterior arranca
+// normal. (24/09/2026, auditoría del arranque.)
+let _arranqueEnCurso = null;
+
+function onSesionLista(session) {
+    if (_arranqueEnCurso) return _arranqueEnCurso;
+    _arranqueEnCurso = arrancarSesion(session).finally(() => {
+        _arranqueEnCurso = null;
+    });
+    return _arranqueEnCurso;
+}
+
+async function arrancarSesion(session) {
     state.session = session;
     showScreen('loading');
 
@@ -8668,6 +8685,37 @@ function bindBotonesDictado() {
 
 // ===================== Service Worker =====================
 
+// Una recarga cuando llega una versión nueva del SW está bien. El bucle
+// empieza porque el cerrojo que la limita vive SOLO en memoria: la propia
+// recarga lo borra, la página nace limpia y vuelve a estar dispuesta a
+// recargarse. Si el servidor sigue devolviendo un SW que parece nuevo (pasa
+// mientras un despliegue se propaga por GitHub Pages, que no sirve lo mismo
+// desde todos sus nodos), eso es un ciclo cada pocos segundos. Y de paso mata
+// la SALIDA DE EMERGENCIA, que necesita 15 s de pantalla de carga seguidos
+// para aparecer. Por eso el cerrojo pasa a sessionStorage.
+const SW_RECARGA_SESION = 'pdli_sw_recargado';
+const SW_RECARGA_TS = 'pdli_sw_recargado_ts';
+const SW_RECARGA_MIN_MS = 60000;
+
+function puedeRecargarPorSw() {
+    try {
+        // Una sola recarga por sesión de navegación: si hay versión nueva de
+        // verdad, con una basta; si algo va mal, no insistimos.
+        if (sessionStorage.getItem(SW_RECARGA_SESION)) return false;
+        // Y ni aunque la sesión sea nueva: dos recargas en menos de un minuto
+        // son un bucle, no una actualización.
+        const ultima = Number(localStorage.getItem(SW_RECARGA_TS)) || 0;
+        if (Date.now() - ultima < SW_RECARGA_MIN_MS) return false;
+        sessionStorage.setItem(SW_RECARGA_SESION, '1');
+        localStorage.setItem(SW_RECARGA_TS, String(Date.now()));
+        return true;
+    } catch (_e) {
+        // Sin storage (modo privado) queda el cerrojo de memoria de siempre:
+        // no empeora respecto a como estaba.
+        return true;
+    }
+}
+
 function registrarServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
 
@@ -8678,20 +8726,29 @@ function registrarServiceWorker() {
     const habiaSwAntes = !!navigator.serviceWorker.controller;
     let recargandoPorSw = false;
     let reg = null;
+    const SW_UPDATE_CADA_MS = 30 * 60 * 1000;
+    let _ultimoUpdateSw = Date.now();
 
     navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!habiaSwAntes) return;
         if (recargandoPorSw) return;
+        if (!puedeRecargarPorSw()) {
+            console.warn('[app] SW nuevo, pero ya recargué por eso hace poco: no insisto.');
+            return;
+        }
         recargandoPorSw = true;
         window.location.reload();
     });
 
-    // Al volver a la tab (PWA reanudada, vuelta de background), forzamos un
-    // chequeo de versión nueva. reg se asigna tras el register de abajo.
+    // Al volver a la tab (PWA reanudada, vuelta de background) miramos si hay
+    // versión nueva, pero NO en cada vuelta: preguntarlo cada vez es lo que
+    // alimentaba el ciclo. Con mirarlo cada media hora sobra, y el register()
+    // de abajo ya comprueba en cada carga.
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && reg) {
-            reg.update();
-        }
+        if (document.visibilityState !== 'visible' || !reg) return;
+        if (Date.now() - _ultimoUpdateSw < SW_UPDATE_CADA_MS) return;
+        _ultimoUpdateSw = Date.now();
+        reg.update();
     });
 
     window.addEventListener('load', () => {
