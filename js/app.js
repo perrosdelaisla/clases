@@ -1145,7 +1145,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado')
+        .select('id, nombre, apellido1, apellido2, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -7728,6 +7728,8 @@ let _editPerroCtx = { snapshot: null, perroId: null };
 // Campos editables del cliente y sus IDs de input.
 const EDIT_CLI_FIELDS = [
     { col: 'nombre',    id: 'edit-cli-nombre',    tipo: 'text' },
+    { col: 'apellido1', id: 'edit-cli-apellido1', tipo: 'text' },
+    { col: 'apellido2', id: 'edit-cli-apellido2', tipo: 'text' },
     { col: 'telefono',  id: 'edit-cli-telefono',  tipo: 'text' },
     { col: 'email',     id: 'edit-cli-email',     tipo: 'text' },
     { col: 'direccion', id: 'edit-cli-direccion', tipo: 'text' },

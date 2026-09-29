@@ -8,7 +8,7 @@
 // =====================================================================
 
 import { getSupabase, getSessionConTimeout } from '../js/supabase.js';
-import * as agenda from './agenda/api.js?v=16';
+import * as agenda from './agenda/api.js?v=17';
 import * as stats from './stats/api.js?v=5';
 import * as catalogo from './catalogo/api.js?v=6';
 import { CATEGORIA_LABEL, ORDEN_CATEGORIAS } from './catalogo-labels.js';
@@ -393,7 +393,7 @@ async function cargarClientes() {
     // ajustar acá.
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, estado, created_at, perros (id, nombre)')
+        .select('id, nombre, apellido1, apellido2, telefono, estado, created_at, perros (id, nombre)')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -436,7 +436,7 @@ function filtrarClientes(clientes) {
             if (estado !== state.filtroEstado) return false;
         }
         if (state.busqueda) {
-            const haystack = `${c.nombre || ''} ${c.telefono || ''}`.toLowerCase();
+            const haystack = `${nombreCompletoCliente(c)} ${c.telefono || ''}`.toLowerCase();
             if (!haystack.includes(state.busqueda)) return false;
         }
         return true;
@@ -444,7 +444,7 @@ function filtrarClientes(clientes) {
 }
 
 function renderClienteCard(c) {
-    const nombre = escapeHTML(c.nombre || 'Sin nombre');
+    const nombre = escapeHTML(nombreCompletoCliente(c) || 'Sin nombre');
     const telefono = escapeHTML(c.telefono || 'sin teléfono');
     const primerPerro = Array.isArray(c.perros) && c.perros.length > 0
         ? c.perros[0]?.nombre
@@ -2404,7 +2404,7 @@ function setupAutocompleteCliente(cfg) {
         }
         dropdownEl.innerHTML = currentMatches.map((c, i) => `
             <div class="ac-item ${i === activeIdx ? 'active' : ''}" data-idx="${i}" role="option">
-                <span class="ac-item-nombre">${escapeHTML(c.nombre || '(sin nombre)')}</span>
+                <span class="ac-item-nombre">${escapeHTML(nombreCompletoCliente(c) || '(sin nombre)')}</span>
                 <span class="ac-item-tel">${escapeHTML(c.telefono || '')}</span>
             </div>
         `).join('');
@@ -2415,14 +2415,14 @@ function setupAutocompleteCliente(cfg) {
         if (q.length < 2) return null;
         const cache = state.clientesCache || [];
         return cache.filter((c) => {
-            const n = normalizarTexto(c.nombre);
+            const n = normalizarTexto(nombreCompletoCliente(c));
             const t = normalizarTexto(c.telefono);
             return n.includes(q) || t.includes(q);
         }).slice(0, 8);
     }
 
     function seleccionar(cliente) {
-        inputEl.value = cliente.nombre || '';
+        inputEl.value = nombreCompletoCliente(cliente) || '';
         hiddenEl.value = cliente.id;
         cerrar();
         if (typeof onSelect === 'function') onSelect(cliente);
@@ -4141,6 +4141,14 @@ function renderCatalogoCard(ej) {
    reportados por clientes. Lee la vista actividad_registros_admin (RLS es_admin).
    El admin marca "visto" / comenta sobre registros_ejercicio (UPDATE).
    ═══════════════════════════════════════════ */
+
+// Nombre + los dos apellidos, sin huecos si faltan. Espejo de
+// public.nombre_completo_cliente() en la base (29/09/2026).
+function nombreCompletoCliente(c) {
+    if (!c) return '';
+    return [c.nombre, c.apellido1, c.apellido2]
+        .map((x) => (x || '').trim()).filter(Boolean).join(' ');
+}
 
 const actividadState = {
     registros: [],

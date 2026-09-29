@@ -141,7 +141,8 @@ async function cargarYRender(clienteId) {
 
 function renderCliente(c, tieneUsuario) {
     state.cliente = c;
-    setText('cliente-nombre', c.nombre || 'Sin nombre');
+    setText('cliente-nombre', [c.nombre, c.apellido1, c.apellido2]
+        .map((x) => (x || '').trim()).filter(Boolean).join(' ') || 'Sin nombre');
     setText('cliente-telefono', c.telefono || '—');
     setText('cliente-email', c.email || '—');
     setText('cliente-zona', c.zona || '—');

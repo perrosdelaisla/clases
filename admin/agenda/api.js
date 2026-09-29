@@ -494,7 +494,7 @@ export async function actualizarCita(citaId, parches) {
 export async function obtenerClientesParaAutocomplete() {
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, telefono, email, direccion, ubicacion_maps, zona, estado')
+        .select('id, nombre, apellido1, apellido2, telefono, email, direccion, ubicacion_maps, zona, estado')
         .order('nombre', { ascending: true });
     if (error) throw error;
     return data || [];
