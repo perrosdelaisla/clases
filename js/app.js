@@ -4515,6 +4515,18 @@ function escaleraCuerpoHTML(asignadoId) {
     const dias = Number(esc.dias_en_paso || 1);
     const diasTxt = dias === 1 ? 'Primer día en este paso' : `Llevas ${dias} días en este paso`;
 
+    // Sugerencia de avanzar (29/09/2026). La base ya calculaba `sugerir_avanzar`
+    // —racha de días con la peor tranquilidad del día en 4 o más— y no lo leía
+    // nadie. Criterio de Charly: "si lleva días tranquilos, se lo puede SUGERIR
+    // al tutor, no darle una indicación de que avance". Por eso el texto ofrece
+    // las dos salidas y deja la decisión donde tiene que estar: en el tutor.
+    const tranq = Number(esc.dias_tranquilos || 0);
+    const tranqTxt = tranq === 1 ? 'Lleva un día tranquilo' : `Lleva ${tranq} días seguidos tranquilo`;
+    const sugerencia = esc.sugerir_avanzar
+        ? `<div class="esc-sug"><b>${escapeHTML(tranqTxt)}</b> en este paso.
+             Si lo ves preparado, puedes darlo por superado; si prefieres asegurar, no hay prisa.</div>`
+        : '';
+
     return `<div class="esc" data-asignado-id="${escapeHTML(asignadoId)}">
         <div class="esc-barra">${barra}</div>
         <div class="esc-paso">
@@ -4523,6 +4535,7 @@ function escaleraCuerpoHTML(asignadoId) {
             <div class="esc-paso__obj">${escapeHTML(objetivo)} · ${escapeHTML(diasTxt.toLowerCase())}</div>
         </div>
         <div class="esc-hoy"><span class="esc-hoy__n">${reps}</span> hoy</div>
+        ${sugerencia}
         ${escaleraListaHTML(esc)}
         <div class="esc-acciones">
             <button type="button" class="esc-atras" data-asignado-id="${escapeHTML(asignadoId)}">Volvemos un paso</button>

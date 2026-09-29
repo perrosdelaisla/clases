@@ -758,6 +758,14 @@
 .esc-paso__obj{margin-top:7px;font-family:var(--body,inherit);font-size:12.5px;line-height:1.45;color:var(--c-text-2)}
 
 .esc-hoy{margin-top:10px;font-family:var(--body,inherit);font-size:13px;color:var(--c-text-2)}
+
+/* Sugerencia de avanzar de paso. Es una SUGERENCIA, no un aviso: la decisión es
+   del tutor. Por eso va en oliva y en tono bajo, nunca en rojo ni como alerta.
+   Usa solo variables semánticas, así vale igual en crema y en oscuro. */
+.esc-sug{margin-top:10px;padding:10px 12px;border-left:3px solid var(--c-oliva);
+  border-radius:0 10px 10px 0;background:var(--c-oliva-soft, rgba(107,122,58,.12));
+  font-family:var(--body,inherit);font-size:13px;line-height:1.45;color:var(--c-text-2)}
+.esc-sug b{color:var(--c-text);font-weight:700}
 .esc-hoy__n{font-family:var(--display,inherit);font-size:22px;line-height:1;color:var(--c-text);margin-right:3px}
 
 .esc-vermas{display:block;width:100%;margin-top:12px;padding:7px;background:none;border:none;
