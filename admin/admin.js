@@ -4175,14 +4175,31 @@ async function cargarRegistrosActividad() {
     if (!lista) return;
     lista.innerHTML = '';
     if (empty) { empty.hidden = false; empty.textContent = 'Cargando registros…'; }
+    const COLS = 'registro_id, registrado_en, tranquilidad, nota, nota_cierre, visto_por_admin, comentario_admin, visto_en, cliente_nombre, perro_nombre, ejercicio_nombre, ejercicio_categoria, video_path';
     try {
-        const { data, error } = await supabase
-            .from('actividad_registros_admin')
-            .select('registro_id, registrado_en, tranquilidad, nota, nota_cierre, visto_por_admin, comentario_admin, visto_en, cliente_nombre, perro_nombre, ejercicio_nombre, ejercicio_categoria, video_path')
-            .order('registrado_en', { ascending: false })
-            .limit(50);
-        if (error) throw error;
-        actividadState.registros = data || [];
+        // Dos consultas: los ultimos 50 (ventana de lectura) + TODOS los
+        // pendientes, por viejos que sean. Si no, un pendiente fuera de los 50
+        // contaba en el badge pero no se podia ver ni despachar (29/09/2026).
+        const [recientes, pendientes] = await Promise.all([
+            supabase
+                .from('actividad_registros_admin')
+                .select(COLS)
+                .order('registrado_en', { ascending: false })
+                .limit(50),
+            supabase
+                .from('actividad_registros_admin')
+                .select(COLS)
+                .eq('visto_por_admin', false)
+                .order('registrado_en', { ascending: false })
+                .limit(200),
+        ]);
+        if (recientes.error) throw recientes.error;
+        if (pendientes.error) throw pendientes.error;
+        const porId = new Map();
+        for (const r of (recientes.data || [])) porId.set(r.registro_id, r);
+        for (const r of (pendientes.data || [])) porId.set(r.registro_id, r);
+        actividadState.registros = Array.from(porId.values())
+            .sort((a, b) => String(b.registrado_en || '').localeCompare(String(a.registrado_en || '')));
         renderRegistrosActividad();
         renderBadgeActividad();
     } catch (err) {
