@@ -1,4 +1,20 @@
 // =====================================================================
+// !!! ATENCION: ESTA COPIA ESTA DESACTUALIZADA. NO DESPLEGAR DESDE AQUI. !!!
+//
+// 29/09/2026: esta copia del repo se quedo en la v4 y produccion va por la
+// v15. Desplegar este archivo haria retroceder a Jaime once versiones y le
+// quitaria, entre otras cosas, la normativa y la guia de la app.
+//
+// La fuente buena es la funcion desplegada. Para trabajar sobre ella:
+//   get_edge_function(project_id, 'asistente-cliente')  ->  y de ahi se edita.
+//
+// Desde la v15 la GUIA DE LA APP ya NO vive en este archivo: esta en la tabla
+// public.jaime_guia. Para que Jaime aprenda una funcion nueva NO hay que tocar
+// codigo ni desplegar nada, basta con:
+//   insert into jaime_guia (seccion, orden, titulo, cuerpo) values (...);
+// =====================================================================
+
+// =====================================================================
 // asistente-cliente — edge function (proyecto sydzfwwiruxqaxojymdz).
 // Chat conversacional de "Jaime" para el CLIENTE de la app Clases.
 // Multi-turno: el tutor pregunta y Jaime responde en texto plano.
