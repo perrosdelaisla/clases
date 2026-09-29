@@ -3283,7 +3283,8 @@ async function abrirEditorEscalera(asignadoId) {
     const nombre = (esc && esc.nombre) || '';
     const repsMin = (esc && esc.reps_min) || 4;
     const repsMax = (esc && esc.reps_max) || 8;
-    const criterio = (esc && esc.criterio_dias) || 3;
+    // 29/09/2026: por defecto 4 días tranquilos seguidos, no 3 (criterio de Charly).
+    const criterio = (esc && esc.criterio_dias) || 4;
 
     cont.innerHTML = `
         <div class="modal__overlay" data-cerrar="1"></div>
