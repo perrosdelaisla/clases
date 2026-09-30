@@ -24,7 +24,7 @@ import {
     textoChipFrecuencia,
     textoObjetivoBajoNombre,
 } from './frecuencia.js?v=1';
-import { activarNotificaciones, estadoNotificaciones } from './push-cliente.js?v=1';
+import { activarNotificaciones, desactivarNotificaciones, estadoNotificaciones } from './push-cliente.js?v=1';
 
 // Intro UCM: duración mínima del telón de arranque para que la animación se
 // vea entera aunque los datos carguen rápido.
@@ -245,6 +245,7 @@ async function arrancarSesion(session) {
         renderCategoriaAcceso();
         renderEnCamino();
         actualizarAvisoPushInicio();
+        pintarEntradaAvisos();
         await renderRutinaPerroSeleccionado();
         aplicarModoManada();
         actualizarBadgeMensajes();
@@ -994,8 +995,74 @@ function ejecutarItemAvatar(id) {
         // No cerramos el menú: deja alternar y ver el cambio al toque.
     }
     else if (id === 'hero-editar-manada') { cerrarMenuAvatar(); abrirModalEditarMisDatos(); }
+    else if (id === 'avisos-btn') alternarAvisos();
     // "Ver el tutorial" (lo monta tutorial.js dentro del menú): abre el tour.
     else if (id === 'btn-tutorial') { cerrarMenuAvatar(); window.PdliTour?.abrir?.(0); }
+}
+
+// ── Avisos: un solo sitio ────────────────────────────────────────────
+// Los avisos se piden UNA vez, en la franja del inicio. Aquí, dentro del
+// menú del avatar, viven de forma permanente como ajuste: quien cerró la
+// franja puede activarlos, y quien los tiene puestos puede quitarlos.
+// Antes había una segunda invitación dentro de Salud > Su salud que no
+// respetaba el "ahora no" de la franja: se le pedía al cliente dos veces
+// lo mismo. Se quitó el 30/09/2026 a petición de Charly.
+
+let _avisosOcupado = false;
+
+async function pintarEntradaAvisos() {
+    const btn = document.getElementById('avisos-btn');
+    const lbl = document.getElementById('avisos-btn-lbl');
+    if (!btn || !lbl) return;
+    let estado;
+    try { estado = await estadoNotificaciones(); } catch (_e) { estado = 'no-soportado'; }
+    // En un navegador que no los admite (iOS sin instalar la app) no se
+    // enseña la opción: no lleva a ninguna parte.
+    if (estado === 'no-soportado') { btn.hidden = true; return; }
+    btn.hidden = false;
+    btn.dataset.estado = estado;
+    lbl.textContent = estado === 'activo'     ? 'Avisos activados'
+                    : estado === 'bloqueado'  ? 'Avisos bloqueados'
+                    :                           'Activar avisos';
+}
+
+async function alternarAvisos() {
+    if (_avisosOcupado) return;
+    const btn = document.getElementById('avisos-btn');
+    const lbl = document.getElementById('avisos-btn-lbl');
+    if (!btn || !lbl) return;
+    const estado = btn.dataset.estado;
+
+    if (estado === 'bloqueado') {
+        cerrarMenuAvatar();
+        toast('Los avisos están bloqueados para este sitio. Actívalos desde los ajustes de tu navegador, en el candado junto a la dirección.', 'error', 6000);
+        return;
+    }
+
+    _avisosOcupado = true;
+    const antes = lbl.textContent;
+    lbl.textContent = estado === 'activo' ? 'Quitando…' : 'Activando…';
+    try {
+        if (estado === 'activo') {
+            await desactivarNotificaciones();
+            toast('Avisos desactivados', 'ok');
+        } else {
+            await activarNotificaciones();
+            toast('Avisos activados', 'ok');
+            // Si la franja del inicio seguía puesta, ya no hace falta.
+            const franja = document.getElementById('aviso-push-inicio');
+            if (franja) franja.hidden = true;
+        }
+    } catch (err) {
+        console.error('[push-cliente] desde el menú:', err);
+        lbl.textContent = antes;
+        toast(clasificarErrorPush(err) === 'denied'
+            ? 'Has bloqueado los avisos para este sitio. Actívalos en los ajustes de tu navegador.'
+            : 'No se pudieron activar. Inténtalo otra vez en un momento.', 'error', 6000);
+    } finally {
+        _avisosOcupado = false;
+        pintarEntradaAvisos();
+    }
 }
 
 // ===================== Mi familia (cliente principal) =====================
@@ -3089,43 +3156,7 @@ function cambiarSaludModo(modo) {
     });
     if (modo === 'susalud') {
         cargarSuSalud();
-        actualizarAvisoPush();
     }
-}
-
-// Muestra el aviso para activar notificaciones si aún no están activas.
-// Copys del aviso de notificaciones según el estado / el error de activación.
-const AVISO_PUSH_COPY = {
-    prompt: {
-        titulo: 'Activa las notificaciones',
-        sub: 'Para no perderte los recordatorios de salud de tu perro.',
-        btn: 'Activar',
-    },
-    blocked_push: {
-        titulo: 'Notificaciones bloqueadas',
-        sub: "Tu navegador está bloqueando las notificaciones. Si usas Brave, actívalas en Configuración → Privacidad → 'Usar los servicios de Google para la mensajería push', o abre la app en Chrome.",
-        btn: 'Reintentar',
-    },
-    denied: {
-        titulo: 'Notificaciones bloqueadas',
-        sub: 'Has bloqueado las notificaciones para este sitio. Actívalas desde los ajustes del navegador (icono del candado junto a la dirección).',
-        btn: 'Reintentar',
-    },
-    error: {
-        titulo: 'No se pudieron activar',
-        sub: 'No se han podido activar las notificaciones. Inténtalo de nuevo más tarde.',
-        btn: 'Reintentar',
-    },
-};
-
-function pintarAvisoPush(kind) {
-    const copy = AVISO_PUSH_COPY[kind] || AVISO_PUSH_COPY.prompt;
-    const t = document.getElementById('susalud-aviso-titulo');
-    const s = document.getElementById('susalud-aviso-sub');
-    const b = document.getElementById('susalud-aviso-activar');
-    if (t) t.textContent = copy.titulo;
-    if (s) s.textContent = copy.sub;
-    if (b) b.textContent = copy.btn;
 }
 
 // Clasifica el fallo de activarNotificaciones() para elegir el copy de ayuda.
@@ -3136,26 +3167,6 @@ function clasificarErrorPush(err) {
     const msg = (err && err.message) || '';
     if (name === 'AbortError' || /push service|Registration failed/i.test(msg)) return 'blocked_push';
     return 'error';
-}
-
-async function actualizarAvisoPush() {
-    const aviso = document.getElementById('susalud-aviso-push');
-    if (!aviso) return;
-    let estado;
-    try {
-        estado = await estadoNotificaciones();
-    } catch (e) {
-        aviso.hidden = true;
-        return;
-    }
-    if (estado === 'activo') {
-        // Ya está suscrito: nada que hacer, no mostramos el aviso.
-        aviso.hidden = true;
-        return;
-    }
-    // 'inactivo' / 'no-soportado' → CTA normal; 'bloqueado' → ayuda de permiso.
-    pintarAvisoPush(estado === 'bloqueado' ? 'denied' : 'prompt');
-    aviso.hidden = false;
 }
 
 async function cargarSuSalud() {
@@ -3522,8 +3533,7 @@ function bindAvisoPushInicio() {
             const aviso = document.getElementById('aviso-push-inicio');
             if (aviso) aviso.hidden = true;
             toast('Avisos activados', 'ok');
-            // El aviso gemelo de Su salud tiene que enterarse.
-            actualizarAvisoPush();
+            pintarEntradaAvisos();
         } catch (err) {
             console.error('[push-cliente] activar desde inicio:', err);
             const kind = clasificarErrorPush(err);
@@ -3646,26 +3656,6 @@ function bindSuSalud() {
     ['susalud-add', 'susalud-empty-add'].forEach((id) => {
         const btn = document.getElementById(id);
         if (btn) btn.addEventListener('click', () => abrirSheetEvento(null));
-    });
-
-    // Activar notificaciones push desde el aviso de Su salud.
-    document.getElementById('susalud-aviso-activar')?.addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        btn.disabled = true;
-        try {
-            await activarNotificaciones();
-            const aviso = document.getElementById('susalud-aviso-push');
-            if (aviso) aviso.hidden = true;
-            mostrarToastSusalud('Notificaciones activadas');
-        } catch (err) {
-            // El usuario tiene que VER el motivo: reemplazamos el copy del
-            // propio aviso (no un alert ni solo consola). El aviso ya está
-            // visible; el botón queda disponible para reintentar.
-            console.error('[push-cliente] activar:', err);
-            pintarAvisoPush(clasificarErrorPush(err));
-        } finally {
-            btn.disabled = false;
-        }
     });
 
     // Cierre de la hoja.
