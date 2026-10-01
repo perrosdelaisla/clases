@@ -20,6 +20,34 @@ const supabase = getSupabase('admin');
 // Chart.js cargado vía <script> UMD en index.html (window.Chart)
 const Chart = window.Chart;
 
+/* =====================================================================
+   Service worker del admin — 01/10/2026
+   El admin nunca registraba service-worker.js: lo hacía solo la app del
+   cliente (js/app.js). Y admin/push.js registraba push-sw.js SIN scope, o
+   sea en /clases/admin/, que al ser más específico tapaba al SW de caché.
+   Resultado: el admin quedaba controlado por un SW sin manejador `fetch`,
+   Chrome no lo veía instalable, lo bajaba como ATAJO en vez de como app, y
+   dejaba fija la notificación "Toca para copiar la URL de esta aplicación".
+   Aquí liberamos el scope viejo y registramos el SW de caché, que sí tiene
+   `fetch` y cubre /clases/ entero, admin incluido.
+   ===================================================================== */
+(async function prepararServiceWorkerAdmin() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+        const { migrarScopePush } = await import('./push.js?v=4');
+        await migrarScopePush();
+    } catch (e) {
+        console.warn('[sw-admin] migración de scope:', e);
+    }
+    try {
+        await navigator.serviceWorker.register('/clases/service-worker.js', {
+            scope: '/clases/', updateViaCache: 'none',
+        });
+    } catch (e) {
+        console.warn('[sw-admin] no se pudo registrar el SW de caché:', e);
+    }
+}());
+
 // Estado en memoria del admin actual y la lista cargada de clientes.
 const state = {
     admin: null,            // { auth_user_id, email, nombre }
