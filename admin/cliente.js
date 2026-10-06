@@ -236,10 +236,15 @@ async function cargarMiembros(clienteId) {
     const lista = document.getElementById('miembros-lista');
     const empty = document.getElementById('miembros-empty');
     if (!lista || !empty) return;
+    // 06/10/2026 — Solo quien ha entrado de verdad, con su email y su ultimo
+    // acceso. Antes se listaba usuarios_cliente en crudo y cada invitacion
+    // reenviada sumaba una fila fantasma (caso Laura/Kira: tres "Laura
+    // Principal"). Ver la vista public.miembros_cliente.
     const { data, error } = await supabase
-        .from('usuarios_cliente')
-        .select('id, nombre, rol')
+        .from('miembros_cliente')
+        .select('id, nombre, rol, email, ultimo_acceso')
         .eq('cliente_id', clienteId)
+        .eq('ha_entrado', true)
         .order('rol', { ascending: true })       // principal antes que secundario
         .order('creado_en', { ascending: true });
     if (error) {
@@ -260,12 +265,35 @@ async function cargarMiembros(clienteId) {
 function renderMiembro(m) {
     const nombre = escapeHTML(m.nombre || 'Sin nombre');
     const etiqueta = m.rol === 'principal' ? 'Principal' : 'Familiar';
+    const email = m.email ? `<span class="miembro-email">${escapeHTML(m.email)}</span>` : '';
+    const acceso = m.ultimo_acceso
+        ? `<span class="miembro-acceso">Última vez: ${escapeHTML(formatearUltimoAcceso(m.ultimo_acceso))}</span>`
+        : '';
+    const meta = (email || acceso)
+        ? `<div class="miembro-meta">${email}${email && acceso ? ' · ' : ''}${acceso}</div>`
+        : '';
     return `
         <li class="miembro-fila">
-            <span class="miembro-nombre">${nombre}</span>
-            <span class="miembro-rol">${etiqueta}</span>
+            <div class="miembro-cab">
+                <span class="miembro-nombre">${nombre}</span>
+                <span class="miembro-rol">${etiqueta}</span>
+            </div>
+            ${meta}
         </li>
     `;
+}
+
+// Hoy / Ayer / 3 oct 2026 — para el ultimo inicio de sesion del tutor.
+function formatearUltimoAcceso(valor) {
+    const d = new Date(valor);
+    if (Number.isNaN(d.getTime())) return '';
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const dia = new Date(d); dia.setHours(0, 0, 0, 0);
+    const dias = Math.round((hoy - dia) / 86400000);
+    if (dias === 0) return 'hoy';
+    if (dias === 1) return 'ayer';
+    if (dias < 7) return `hace ${dias} días`;
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // Edad viva (17/09/2026): "unos 3 anos" cuando es la estimacion del tutor.

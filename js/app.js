@@ -1080,10 +1080,16 @@ async function abrirModalFamilia() {
 async function cargarYRenderMiembros() {
     const cont = document.getElementById('familia-lista');
     if (!cont) return;
+    // 06/10/2026 — Solo los que han entrado alguna vez. La invitacion crea la
+    // cuenta al enviarla, asi que una invitacion que nunca se uso aparecia aqui
+    // como un miembro mas: a una clienta le salieron tres veces su propio
+    // nombre porque el correo no le llegaba y se reintento. Ver la vista
+    // public.miembros_cliente.
     const { data, error } = await supabase
-        .from('usuarios_cliente')
+        .from('miembros_cliente')
         .select('id, nombre, rol')
         .eq('cliente_id', state.usuarioCliente.cliente_id)
+        .eq('ha_entrado', true)
         .order('rol', { ascending: true })   // 'principal' antes que 'secundario'
         .order('creado_en', { ascending: true });
     if (error) {
