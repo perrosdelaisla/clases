@@ -5491,6 +5491,36 @@ body {
 .a-row > span:first-child{ color:var(--color-muted); flex:0 0 auto; }
 .a-row__v{ display:flex; align-items:center; gap:9px; }
 
+/* Permiso de grabación. Es la única .a-row con un botón de texto largo
+   dentro: en un móvil, la etiqueta + el estado + "Cancelar solicitud" no
+   caben en una línea, el estado se partía en tres y el botón se salía de la
+   tarjeta (06/10/2026). Ahora, cuando no cabe, el bloque del valor baja a su
+   propia línea en vez de desbordar. */
+.a-row--grab{ flex-wrap:wrap; row-gap:9px; }
+.a-row--grab > span:first-child{ flex:1 1 auto; }
+.a-row--grab .a-row__v{ flex:0 0 auto; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
+
+/* El estado, con el mismo aspecto que las píldoras de estado de las citas.
+   Antes era texto suelto y el color se lo ponía el JS a mano, con valores
+   pensados para fondo claro: el rojo se quedaba en 2,43:1 sobre la tarjeta. */
+.grab-chip{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px;
+    padding:4px 10px; border-radius:999px; font-family:var(--font-display);
+    white-space:nowrap;
+    background:rgba(255,255,255,0.06); color:var(--color-muted);
+}
+.grab-chip--espera   { background:rgba(212,160,23,0.15); color:var(--color-warning); }
+.grab-chip--concedido{ background:rgba(107,122,58,0.18); color:var(--color-green-txt); }
+.grab-chip--rechazado{ background:rgba(122,58,50,0.20);  color:var(--color-inactive); }
+
+/* En el móvil el bloque del valor baja a su propia línea: que la ocupe entera,
+   con el estado debajo de la etiqueta y el botón a la derecha. Así se lee en
+   el orden natural — qué es, cómo está, qué puedo hacer — en vez de dejar un
+   hueco vacío a la izquierda. */
+@media (max-width: 767px) {
+    .a-row--grab .a-row__v{ flex:1 1 100%; margin-left:0; justify-content:space-between; }
+}
+
 .a-hint{ font-size:.72rem; color:var(--color-muted); line-height:1.45; margin:7px 0 0; }
 
 /* Acciones al pie de una tarjeta. */

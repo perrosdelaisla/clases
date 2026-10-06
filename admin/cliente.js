@@ -772,11 +772,15 @@ let toastTimer = null;
 // El admin pide/retira el permiso; el estado real lo fija el cliente desde su
 // app (RPC set_grabacion_consentimiento). Acá solo movemos a 'solicitado' /
 // 'no_solicitado' y mostramos en qué anda. Cambios logueados por trigger.
+// El color ya no se pone aquí: cada estado lleva su clase y el color vive en
+// el CSS, con los tokens del admin. Los valores que había (#b45309, #b91c1c…)
+// eran de paleta clara y sobre la tarjeta oscura se quedaban en 2,4-3,2:1.
+// Y "Solicitado — esperando" decía dos veces lo mismo y partía la píldora.
 const CFG_GRAB = {
-    no_solicitado: { chip: 'Sin pedir',              color: '#6b7280', btn: 'Pedir permiso',      destino: 'solicitado'    },
-    solicitado:    { chip: 'Solicitado \u2014 esperando', color: '#b45309', btn: 'Cancelar solicitud', destino: 'no_solicitado' },
-    concedido:     { chip: 'Concedido \u2713',        color: '#15803d', btn: 'Retirar permiso',    destino: 'no_solicitado' },
-    rechazado:     { chip: 'Rechazado',              color: '#b91c1c', btn: 'Volver a pedir',     destino: 'solicitado'    },
+    no_solicitado: { chip: 'Sin pedir',   clase: '',                    btn: 'Pedir permiso',      destino: 'solicitado'    },
+    solicitado:    { chip: 'Esperando',   clase: 'grab-chip--espera',    btn: 'Cancelar solicitud', destino: 'no_solicitado' },
+    concedido:     { chip: 'Concedido',   clase: 'grab-chip--concedido', btn: 'Retirar permiso',    destino: 'no_solicitado' },
+    rechazado:     { chip: 'Rechazado',   clase: 'grab-chip--rechazado', btn: 'Volver a pedir',     destino: 'solicitado'    },
 };
 
 function renderGrabacion(c) {
@@ -785,7 +789,10 @@ function renderGrabacion(c) {
     const chip = document.getElementById('cli-grab-chip');
     const btn = document.getElementById('cli-grab-btn');
     const fecha = document.getElementById('cli-grab-fecha');
-    if (chip) { chip.textContent = cfg.chip; chip.style.color = cfg.color; }
+    if (chip) {
+        chip.textContent = cfg.chip;
+        chip.className = 'grab-chip' + (cfg.clase ? ' ' + cfg.clase : '');
+    }
     if (btn) { btn.textContent = cfg.btn; btn.dataset.destino = cfg.destino; btn.hidden = false; }
     if (fecha) {
         if (c.grabacion_actualizado_en && estado !== 'no_solicitado') {
