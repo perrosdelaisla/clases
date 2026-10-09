@@ -2157,7 +2157,19 @@ async function cargarAvisoJaime() {
         case 'agendar_clase': { // compat RPC viejo → tratar como sin agendar
             const silencio   = data.tipo === 'sin_entrenar' ? true : !!data.silencio;
             const sinAgendar = data.tipo === 'agendar_clase' ? true : !!data.sin_agendar;
-            if (silencio && sinAgendar) {
+            // 09/10/2026: 'nunca' = el silencio es de alguien que todavía no ha
+            // registrado nada en su vida. A ese no se le puede decir que hace
+            // días que no tenemos noticias (nunca las tuvimos): se le pregunta
+            // si ha podido empezar. La RPC solo lo marca cuando ya hace >=5 días
+            // que tiene rutina asignada; sin rutina no manda nada.
+            const nunca = !!data.nunca && silencio;
+            if (nunca) {
+                texto = sinAgendar
+                    ? `¿Habéis podido empezar con la rutina de ${nombre}? Os queda además una clase por reservar. Si os cuesta arrancar o tenéis dudas, escribidnos: estamos aquí. 🐾`
+                    : `¿Habéis podido empezar con la rutina de ${nombre}? Si os cuesta arrancar, tenéis dudas o necesitáis cualquier cosa, escribidnos: estamos aquí. 🐾`;
+                ctaLabel = 'Escríbenos';
+                ctaAccion = () => showTab('mensajes');
+            } else if (silencio && sinAgendar) {
                 texto = `Hace unos días que no tenemos noticias de ${nombre}. ¿Va todo bien? Os queda además una clase por reservar. Si queréis que os echemos una mano con lo que sea, escribidnos. 🐾`;
                 ctaLabel = 'Escríbenos';
                 ctaAccion = () => showTab('mensajes');
