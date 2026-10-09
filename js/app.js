@@ -28,10 +28,34 @@ import { activarNotificaciones, desactivarNotificaciones, estadoNotificaciones }
 
 // Intro UCM: duración mínima del telón de arranque para que la animación se
 // vea entera aunque los datos carguen rápido.
+//
+// 09/10/2026 — Solo la PRIMERA apertura del día. Android mata el proceso de la
+// app en cuanto pasas a WhatsApp (un Redmi con MIUI, en segundos), así que al
+// volver la app nace de cero: eso no se puede impedir desde la web. Lo que sí
+// se puede es que nacer de cero no cueste 4,5 s. El tutor nuevo y la primera
+// apertura de cada día siguen viendo la intro entera; el resto del día la app
+// aparece en cuanto los datos están, con un suelo corto para que no parpadee.
 const APP_ARRANQUE = Date.now();
-const INTRO_MIN_MS = 4500;
+const INTRO_LARGA_MS = 4500;
+const INTRO_CORTA_MS = 600;
+const INTRO_DIA_KEY  = 'pdli_intro_dia';
+
+function introDeHoyYaVista() {
+    // Sin storage (modo privado) se queda con la intro larga: es lo que hacía
+    // siempre, así que no empeora nada.
+    try {
+        const hoy = formatearFechaLocal(new Date());
+        if (localStorage.getItem(INTRO_DIA_KEY) === hoy) return true;
+        localStorage.setItem(INTRO_DIA_KEY, hoy);
+        return false;
+    } catch (_e) {
+        return false;
+    }
+}
+
 function esperarIntro() {
-    const falta = INTRO_MIN_MS - (Date.now() - APP_ARRANQUE);
+    const minimo = introDeHoyYaVista() ? INTRO_CORTA_MS : INTRO_LARGA_MS;
+    const falta = minimo - (Date.now() - APP_ARRANQUE);
     return falta > 0 ? new Promise((r) => setTimeout(r, falta)) : Promise.resolve();
 }
 
@@ -255,7 +279,7 @@ async function arrancarSesion(session) {
         // la sección "Nuestro enfoque", así que ya no desviamos al welcome.
         await esperarIntro();
         showScreen('app');
-        showTab(state.currentTab);
+        showTab(tabRecordada() || state.currentTab);
     } catch (err) {
         // Error transitorio (red, timeout, un 401 que no llego a recuperarse):
         // NO es un problema de la cuenta, asi que no mandamos a error-vinculo.
@@ -2916,11 +2940,40 @@ async function llamarPuedeReservar() {
 
 // ===================== Tabs =====================
 
+// 09/10/2026 — La pestaña se guarda para sobrevivir a que Android mate la app.
+// sessionStorage no sirve: muere con el proceso. Con localStorage y una
+// caducidad corta, volver de WhatsApp te deja donde estabas; abrir la app al
+// día siguiente empieza en Rutina, como siempre.
+const TAB_KEY      = 'pdli_tab';
+const TAB_TS_KEY   = 'pdli_tab_ts';
+const TAB_VIVE_MS  = 30 * 60 * 1000;
+const TABS_VALIDAS = ['rutina', 'reservar', 'mis-citas', 'salud', 'mensajes'];
+
+function recordarTab(name) {
+    try {
+        localStorage.setItem(TAB_KEY, name);
+        localStorage.setItem(TAB_TS_KEY, String(Date.now()));
+    } catch (_e) {}
+}
+
+function tabRecordada() {
+    try {
+        const t = localStorage.getItem(TAB_KEY);
+        const ts = Number(localStorage.getItem(TAB_TS_KEY)) || 0;
+        if (!t || !TABS_VALIDAS.includes(t)) return null;
+        if (Date.now() - ts > TAB_VIVE_MS) return null;
+        return t;
+    } catch (_e) {
+        return null;
+    }
+}
+
 function showTab(name) {
     if (!name) return;
     if (name === 'reservar' && !esPrincipal()) name = 'rutina';
     const prev = state.currentTab;
     state.currentTab = name;
+    recordarTab(name);
 
     // Si el usuario sale de Reservar sin completar una modificación,
     // descartamos el estado de modificación.

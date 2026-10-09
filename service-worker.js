@@ -13,7 +13,7 @@
 // resuelve cada request al SW del scope más específico.
 // =====================================================================
 
-const CACHE_VERSION = 'v339';
+const CACHE_VERSION = 'v340';
 const CACHE_NAME = `clases-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -85,30 +85,52 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(req));
 });
 
+// Cuánto se le espera a la red antes de tirar de la copia guardada.
+const HTML_ESPERA_MS = 2000;
+
 async function networkFirstHTML(req) {
-    try {
-        // `cache: 'no-store'` es la clave: un fetch normal respeta el cache
-        // HTTP del navegador, y GitHub Pages sirve el HTML con 10 minutos de
-        // vida. Sin esto, tras un despliegue el móvil seguía recibiendo el
-        // HTML viejo durante 10 minutos — y con él, los `?v=` viejos de CSS y
-        // JS, así que "no se veía el cambio" aunque estuviera publicado.
-        // Solo afecta a navegaciones (HTML): los assets siguen con su
-        // cacheFirst de siempre, que ya se invalida con el `?v=`.
-        const fresh = await fetch(req, { cache: 'no-store' });
-        // Guardamos CADA página en su propia clave, no todas bajo la home.
-        // Antes se cacheaba siempre como '/clases/index.html', así que sin red
-        // una página del admin devolvía la app del cliente.
-        if (fresh && fresh.ok) {
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(req, fresh.clone()).catch(() => {});
-        }
-        return fresh;
-    } catch (_err) {
-        // Sin red: primero la propia página; si nunca se visitó, la home.
-        const cached = (await caches.match(req))
-                    || (await caches.match('/clases/index.html'));
-        return cached || Response.error();
+    // `cache: 'no-store'` es la clave: un fetch normal respeta el cache
+    // HTTP del navegador, y GitHub Pages sirve el HTML con 10 minutos de
+    // vida. Sin esto, tras un despliegue el móvil seguía recibiendo el
+    // HTML viejo durante 10 minutos — y con él, los `?v=` viejos de CSS y
+    // JS, así que "no se veía el cambio" aunque estuviera publicado.
+    // Solo afecta a navegaciones (HTML): los assets siguen con su
+    // cacheFirst de siempre, que ya se invalida con el `?v=`.
+    const red = fetch(req, { cache: 'no-store' })
+        .then((fresh) => {
+            // Guardamos CADA página en su propia clave, no todas bajo la home.
+            // Antes se cacheaba siempre como '/clases/index.html', así que sin
+            // red una página del admin devolvía la app del cliente.
+            if (fresh && fresh.ok) {
+                caches.open(CACHE_NAME)
+                    .then((cache) => cache.put(req, fresh.clone()).catch(() => {}))
+                    .catch(() => {});
+            }
+            return fresh;
+        })
+        .catch(() => null);
+
+    // Sin red: primero la propia página; si nunca se visitó, la home.
+    const cached = (await caches.match(req))
+                || (await caches.match('/clases/index.html'));
+
+    // Primera visita, o página que nunca se guardó: no hay alternativa.
+    if (!cached) {
+        const fresh = await red;
+        return (fresh && fresh.ok) ? fresh : (fresh || Response.error());
     }
+
+    // 09/10/2026 — Antes esto esperaba a la red SIN LÍMITE. Con buena cobertura
+    // son 300 ms, pero con mala eso es la app parada en la pantalla de carga
+    // antes de que corra una sola línea de JS, y Android mata el proceso cada
+    // vez que sales a WhatsApp, así que se pagaba en cada vuelta. Ahora la red
+    // tiene 2 s: si no llega, sale la copia guardada y la red sigue por detrás
+    // dejando la caché al día para la próxima vez.
+    const ganador = await Promise.race([
+        red,
+        new Promise((r) => setTimeout(() => r(null), HTML_ESPERA_MS)),
+    ]);
+    return (ganador && ganador.ok) ? ganador : cached;
 }
 
 async function cacheFirst(req) {
