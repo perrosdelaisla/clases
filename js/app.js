@@ -29,32 +29,50 @@ import { activarNotificaciones, desactivarNotificaciones, estadoNotificaciones }
 // Intro UCM: duración mínima del telón de arranque para que la animación se
 // vea entera aunque los datos carguen rápido.
 //
-// 09/10/2026 — Solo la PRIMERA apertura del día. Android mata el proceso de la
-// app en cuanto pasas a WhatsApp (un Redmi con MIUI, en segundos), así que al
-// volver la app nace de cero: eso no se puede impedir desde la web. Lo que sí
-// se puede es que nacer de cero no cueste 4,5 s. El tutor nuevo y la primera
-// apertura de cada día siguen viendo la intro entera; el resto del día la app
-// aparece en cuanto los datos están, con un suelo corto para que no parpadee.
+// 09/10/2026 — La intro se ve al ABRIR la app, no al volver de echar un ojo a
+// otra. El problema: Android mata el proceso en segundo plano (un Redmi con
+// MIUI, en segundos), así que al volver de WhatsApp la app nace de cero
+// exactamente igual que si la hubieras abierto desde el icono. Desde dentro no
+// hay forma de distinguir las dos cosas: no existe ninguna señal en la web que
+// diga "me han relanzado" frente a "me han reanudado".
+//
+// Lo único observable es el tiempo. Así que la app va dejando su huella
+// mientras está en pantalla, y al arrancar mira cuánto hace de la última:
+//   · hace poco  → estabas en otra app y volviste: nada de intro (suelo corto
+//                   para que no dé un tirón)
+//   · hace rato / nunca → estás abriendo la app: intro entera, con su
+//                   "Bienvenido al UCM"
 const APP_ARRANQUE = Date.now();
 const INTRO_LARGA_MS = 4500;
 const INTRO_CORTA_MS = 600;
-const INTRO_DIA_KEY  = 'pdli_intro_dia';
+const VIVO_KEY   = 'pdli_app_vivo';
+const VUELTA_MS  = 60 * 60 * 1000;   // menos de una hora fuera = una vuelta
+const LATIDO_MS  = 20 * 1000;        // cada cuánto se refresca la huella
 
-function introDeHoyYaVista() {
-    // Sin storage (modo privado) se queda con la intro larga: es lo que hacía
-    // siempre, así que no empeora nada.
-    try {
-        const hoy = formatearFechaLocal(new Date());
-        if (localStorage.getItem(INTRO_DIA_KEY) === hoy) return true;
-        localStorage.setItem(INTRO_DIA_KEY, hoy);
-        return false;
-    } catch (_e) {
-        return false;
-    }
+function marcarAppViva() {
+    try { localStorage.setItem(VIVO_KEY, String(Date.now())); } catch (_e) {}
 }
 
+// Se lee ANTES de pisarla: este valor es el de la vida anterior de la app.
+// Sin storage (modo privado) sale 0 → intro entera, como hacía siempre.
+const ES_VUELTA = (() => {
+    let ultima = 0;
+    try { ultima = Number(localStorage.getItem(VIVO_KEY)) || 0; } catch (_e) {}
+    return ultima > 0 && (Date.now() - ultima) < VUELTA_MS;
+})();
+
+marcarAppViva();
+// La huella se refresca mientras la app está delante, y se sella justo al
+// pasar a segundo plano — que es el último momento en que corre código antes
+// de que el sistema se la lleve por delante.
+setInterval(() => { if (document.visibilityState === 'visible') marcarAppViva(); }, LATIDO_MS);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') marcarAppViva();
+});
+window.addEventListener('pagehide', marcarAppViva);
+
 function esperarIntro() {
-    const minimo = introDeHoyYaVista() ? INTRO_CORTA_MS : INTRO_LARGA_MS;
+    const minimo = ES_VUELTA ? INTRO_CORTA_MS : INTRO_LARGA_MS;
     const falta = minimo - (Date.now() - APP_ARRANQUE);
     return falta > 0 ? new Promise((r) => setTimeout(r, falta)) : Promise.resolve();
 }
