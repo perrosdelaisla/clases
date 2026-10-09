@@ -2219,7 +2219,17 @@ async function cargarAvisoJaime() {
             break;
         }
         case 'al_dia':
-            texto = `¡${nombre} viene constante! Seguid así. Cualquier duda, escríbenos.`;
+            // 09/10/2026: este es el cajon de sastre, y por ahi pasan tambien
+            // los que todavia no tienen rutina y los que la tienen sin
+            // estrenar. Felicitarles por constantes es tan falso como
+            // reclamarles silencio, asi que cada situacion dice lo suyo.
+            if (data.sin_rutina) {
+                texto = `Todavía no hemos activado la rutina de ${nombre}. En cuanto esté lista os avisamos por aquí. Si tenéis cualquier duda, escribidnos.`;
+            } else if (data.nunca) {
+                texto = `La rutina de ${nombre} ya está lista. Cuando hagáis el primer ejercicio lo registráis aquí y lo vamos siguiendo juntos. Si tenéis dudas, escribidnos.`;
+            } else {
+                texto = `¡${nombre} viene constante! Seguid así. Cualquier duda, escríbenos.`;
+            }
             ctaLabel = '';
             ctaAccion = null;
             break;
