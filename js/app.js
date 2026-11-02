@@ -5567,6 +5567,7 @@ function bindRapidoSheet() {
 
 let _statsPeriodo = '7d';
 let _semanaCompleta = false;
+let _regsAnio = [];               // registros_ejercicio del último año del perro seleccionado
 let _condCache = null;            // { segs:[{id,nombre}], regs:[{seguimiento_id,fecha,color}] }
 let _bienCache = null;            // evaluaciones del test de bienestar, la más nueva primero
 const _asignadoDesde = new Map(); // asignadoId → ms de asignado_en
