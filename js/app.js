@@ -564,6 +564,7 @@ function bindEventos() {
 
     // Toggle Rutina / Mi progreso dentro del tab Rutina.
     bindRutinaModo();
+    bindStatsPeriodo();
 
     // Toggle Bienestar / Su salud + CRUD de eventos de salud.
     bindSaludModo();
@@ -1288,7 +1289,7 @@ async function cargarCitasCliente() {
 async function cargarRutinaDelPerro(perroId) {
     const { data, error } = await supabase
         .from('ejercicios_asignados')
-        .select('id, ejercicio_id, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, valor_comida_nombre, nota_cliente, parametros, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
+        .select('id, ejercicio_id, asignado_en, posicion_rutina, progresa_de, min_semanal, max_diario, valor_comida, valor_comida_nombre, nota_cliente, parametros, dificultad, objetivo_seg, objetivo_distancia, reps_sugeridas_min, reps_sugeridas_max, grupo_protocolo, ejercicios (id, codigo, nombre, descripcion, categoria, como_se_hace, instrucciones, video_url, es_escalera)')
         .eq('perro_id', perroId)
         .eq('activo', true)
         .order('posicion_rutina', { ascending: true });
@@ -2870,6 +2871,7 @@ async function cargarHistorialSemanal(perroId) {
     asignados.forEach((a) => {
         const inicio = new Date(a.asignado_en).getTime();
         if (!Number.isFinite(inicio)) return;
+        _asignadoDesde.set(a.id, inicio);
         const totalSemanas = Math.max(1, Math.ceil((ahora - inicio) / SEMANA_MS));
         const counts = new Array(totalSemanas).fill(0);
 
@@ -4255,30 +4257,33 @@ async function renderRutinaPerroSeleccionado() {
             }
             presentarEscaleraSiToca(perro);
         } else {
-            // Sin esto la cache se queda con las escaleras del perro anterior y
-            // sus palmeras aparecerian en la isla de otro perro.
+            // Sin esto la cache se queda con las escaleras del perro anterior.
             _escaleraCache.clear();
         }
 
-        // Registros de las últimas 8 semanas (para los días con huella y la
-        // racha de la isla). Aditivo: si falla, la isla se pinta sin días.
-        _islaRegs = [];
+        // Un año de registros: con esto la pestaña de stats calcula los tres
+        // periodos (7 días / mes / año) sin volver a consultar. Aditivo: si
+        // falla, los gráficos salen en su estado vacío.
+        _regsAnio = [];
+        _asignadoDesde.clear();
+        filas.forEach((f) => {
+            const t = new Date(f.asignado_en).getTime();
+            if (Number.isFinite(t)) _asignadoDesde.set(f.id, t);
+        });
         try {
-            const idsEj = filas
-                .filter((f) => (f.ejercicios?.categoria || 'ejercicio') === 'ejercicio')
-                .map((f) => f.id);
-            if (idsEj.length > 0) {
-                const desde = new Date(Date.now() - 8 * 7 * 86400000).toISOString();
-                const { data: regsIsla, error: errIsla } = await supabase
+            const ids = filas.map((f) => f.id);
+            if (ids.length > 0) {
+                const desde = new Date(Date.now() - 365 * 86400000).toISOString();
+                const { data: regs, error: errRegs } = await supabase
                     .from('registros_ejercicio')
                     .select('ejercicio_asignado_id, registrado_en')
-                    .in('ejercicio_asignado_id', idsEj)
+                    .in('ejercicio_asignado_id', ids)
                     .gte('registrado_en', desde);
-                if (errIsla) throw errIsla;
-                _islaRegs = regsIsla || [];
+                if (errRegs) throw errRegs;
+                _regsAnio = regs || [];
             }
         } catch (e) {
-            console.error('[isla] no se pudieron cargar los días/racha:', e);
+            console.error('[stats] no se pudieron cargar los registros del año:', e);
         }
 
         // (Se retiró la lectura de registros_tarea: las pastillas "0-7 días"
@@ -4669,7 +4674,7 @@ async function escaleraAvanzar(asignadoId) {
         renderAnilloSemana();   // la palmera nueva tiene que verse ya
         if (state.rutinaModo === 'progreso') renderAnilloProgreso();
         const esc = _escaleraCache.get(asignadoId);
-        toast(esc && esc.completa ? '🎉 ¡Escalera completa!' : '🌴 Peldaño superado: una palmera más en la isla.');
+        toast(esc && esc.completa ? '🎉 ¡Escalera completa!' : '🌴 Peldaño superado. ¡Un paso más!');
     } catch (e) {
         console.error('[escalera] avanzar:', e);
         toast('No hemos podido avanzar. Inténtalo de nuevo.', 'error');
@@ -4700,13 +4705,13 @@ function rutinaCardHTML(row, { tag, superado }) {
 
     // ── Modelo de registro (01/09/2026) ────────────────────────────────
     // Dos interruptores independientes por asignación, no categorías:
-    //   se_entrena → huella + objetivo semanal + puntitos (cuenta para la isla)
-    //   se_usa     → "Anotar uso" con contador aparte (NO cuenta para la isla)
+    //   se_entrena → huella + objetivo semanal + puntitos (cuenta como entreno)
+    //   se_usa     → "Anotar uso" con contador aparte (NO cuenta como entreno)
     // Y para las tareas, un tipo: lista | montaje | practica.
     const prog = _progresoCache.get(row.id);
 
     // Una escalera se pinta distinta: manda el peldaño, no el objetivo semanal.
-    // Conserva la huella (cuenta para la isla: es entrenamiento diario).
+    // Conserva la huella (cuenta como entreno: es entrenamiento diario).
     if (esEscalera(row) && _escaleraCache.has(row.id)) {
         const esc = _escaleraCache.get(row.id);
         const titulo = escapeHTML(esc.nombre || ej.nombre || 'Escalera');
@@ -5027,7 +5032,7 @@ async function onTengoBtn(btn) {
 const _usoEnCurso = new Set();
 
 // Un uso es un registro normal marcado con datos_registro.tipo = 'uso'.
-// La RPC lo excluye del objetivo semanal y de la isla a propósito.
+// La RPC lo excluye del objetivo semanal a propósito.
 async function registrarUso(asignadoId, btn) {
     const perroId = state.perroSeleccionadoId;
     if (!asignadoId || !perroId || _usoEnCurso.has(asignadoId)) return;
@@ -5343,7 +5348,7 @@ async function registrarEntrenoRapido(btn) {
         const row = _progresoCache.get(asignadoId);
         const estadoDespues = evaluarProgresoEjercicio(row);
 
-        _islaRegs.push({ ejercicio_asignado_id: asignadoId,
+        _regsAnio.push({ ejercicio_asignado_id: asignadoId,
                          registrado_en: new Date().toISOString() });
         actualizarCardProgreso(asignadoId);
         if (_escaleraCache.has(asignadoId)) { refrescarEscalera(asignadoId); }
@@ -5411,8 +5416,8 @@ async function deshacerEntrenoRapido(registroId, asignadoId) {
             .delete()
             .eq('id', registroId);
         if (error) throw error;
-        for (let i = _islaRegs.length - 1; i >= 0; i--) {
-            if (_islaRegs[i].ejercicio_asignado_id === asignadoId) { _islaRegs.splice(i, 1); break; }
+        for (let i = _regsAnio.length - 1; i >= 0; i--) {
+            if (_regsAnio[i].ejercicio_asignado_id === asignadoId) { _regsAnio.splice(i, 1); break; }
         }
         try { await cargarProgresoPerro(state.perroSeleccionadoId); } catch (e) { /* no bloquea */ }
         actualizarCardProgreso(asignadoId);
@@ -5526,365 +5531,524 @@ function bindRapidoSheet() {
 }
 
 // ───────────────────────────────────────────────────────────
-// "La semana florece" (Fase 2 · registro lúdico) — reemplaza al
-// anillo "N/M cumplidos". Mantiene el NOMBRE renderAnilloSemana
-// para no tocar ningún call site: mismo disparo, otra pintura.
-// Métrica granular: Σ min(count_semana, min_semanal) / Σ min_semanal
-// sobre los ejercicios con mínimo semanal → se mueve con CADA entreno.
-// La vegetación crece con el total de entrenos (los extras, en dorado).
+// Pestaña de stats ("Mi progreso") — 02/11/2026.
+//
+// Sustituye a las dos islas. Cuatro círculos comparables en la misma
+// pantalla, en el orden de la cadena real:
+//   1. lo que estáis trabajando  → asignados activos por categoría
+//   2. cuánto entrenáis          → registros vs mínimo semanal
+//   3. seguimiento de conductas  → verde / ámbar / rojo
+//   4. bienestar y felicidad     → el test de la isla
+// Arriba de todo, la fase de cada protocolo.
+//
+// Los donuts son SVG puro: un círculo de r=15.915 mide 100 de
+// circunferencia, así que el stroke-dasharray ES el porcentaje. Sin
+// librería de gráficos: no pesa nada y hereda el tema solo.
+//
+// Periodos: 7 días / 30 días / 365 días. Todo se calcula en el front
+// desde _regsAnio (un año de registros, ya cargado con la rutina), así
+// que cambiar de periodo no dispara ninguna consulta.
 // ───────────────────────────────────────────────────────────
 
-let _islaSemanaCompleta = false;
-let _islaRegs = [];   // registros_ejercicio (8 semanas) del perro seleccionado
+let _statsPeriodo = '7d';
+let _semanaCompleta = false;
+let _condCache = null;            // { segs:[{id,nombre}], regs:[{seguimiento_id,fecha,color}] }
+let _bienCache = null;            // evaluaciones del test de bienestar, la más nueva primero
+const _asignadoDesde = new Map(); // asignadoId → ms de asignado_en
 
-function calcularIslaSemana() {
-    const rows = [..._progresoCache.values()]
-        .filter((r) => r.min_semanal != null && r.min_semanal > 0);
-    const objetivo = rows.reduce((a, r) => a + r.min_semanal, 0);
-    const hechosTotal = rows.reduce((a, r) => a + Number(r.count_semana ?? 0), 0);
-    const hechosCap = rows.reduce(
-        (a, r) => a + Math.min(Number(r.count_semana ?? 0), r.min_semanal), 0);
-    return { objetivo, hechosTotal, hechosCap,
-             pct: objetivo > 0 ? (hechosCap / objetivo) : 0 };
-}
+const _ST_DIAS   = { '7d': 7, mes: 30, ano: 365 };
+const _ST_TITULO = { '7d': 'ÚLTIMOS 7 DÍAS', mes: 'ÚLTIMOS 30 DÍAS', ano: 'ÚLTIMO AÑO' };
 
-const _ISLA_PATH='M 139.1 28.0 L 140.3 29.6 L 138.7 31.6 L 131.6 34.8 L 130.0 36.3 L 126.8 37.1 L 126.8 39.9 L 128.4 41.5 L 133.6 39.9 L 137.2 37.1 L 139.1 38.7 L 138.0 43.1 L 136.0 45.4 L 130.8 45.8 L 130.8 48.2 L 132.8 52.6 L 140.7 57.7 L 143.1 58.1 L 149.1 55.4 L 150.6 53.8 L 150.3 51.0 L 151.8 50.2 L 156.2 53.8 L 160.9 56.2 L 164.5 56.2 L 164.5 58.9 L 166.1 60.9 L 163.3 63.3 L 163.3 68.1 L 160.9 70.8 L 159.0 71.2 L 157.4 73.6 L 157.0 75.2 L 159.4 76.8 L 159.4 77.9 L 157.0 79.1 L 155.4 81.5 L 149.5 86.3 L 146.7 91.4 L 145.9 98.6 L 143.9 100.6 L 142.7 104.1 L 138.7 108.5 L 135.6 110.8 L 132.4 111.2 L 125.3 117.6 L 123.3 118.0 L 120.9 115.6 L 120.1 112.9 L 117.4 112.1 L 116.5 108.5 L 114.9 106.9 L 113.4 106.1 L 109.8 106.5 L 107.0 105.3 L 100.3 105.7 L 97.1 104.5 L 92.8 99.0 L 91.6 90.2 L 93.5 86.7 L 92.0 84.3 L 85.6 80.4 L 83.6 79.5 L 82.4 81.5 L 80.1 81.9 L 78.1 83.9 L 74.9 84.3 L 72.5 92.6 L 70.5 93.4 L 67.0 91.4 L 66.6 88.7 L 65.4 87.5 L 66.2 85.1 L 65.0 83.9 L 62.2 84.7 L 61.0 83.5 L 60.3 84.7 L 58.2 85.1 L 56.3 82.7 L 56.7 81.1 L 53.9 78.7 L 53.9 76.8 L 55.9 73.2 L 64.2 68.8 L 67.4 64.9 L 76.9 60.5 L 81.6 54.6 L 84.4 53.4 L 84.8 51.4 L 87.6 49.8 L 88.8 47.4 L 92.4 45.0 L 94.7 45.0 L 96.3 41.9 L 99.1 40.7 L 101.9 41.1 L 108.2 36.3 L 112.2 34.8 L 117.7 34.8 L 122.1 31.6 L 124.1 31.6 L 126.1 33.1 L 130.8 32.0 L 134.4 28.8 L 138.7 28.4 Z';
-const _ISLA_PTS=[[123.0,35.7,3.9],[116.3,39.4,4.6],[120.4,41.0,6.5],[108.9,41.6,4.6],[133.8,43.1,2.4],[116.3,43.6,8.8],[103.7,43.6,3.1],[125.2,44.3,4.3],[110.8,45.5,8.9],[120.4,46.1,8.9],[99.8,46.9,5.3],[94.6,48.9,3.9],[106.9,49.2,9.5],[118.2,49.4,10],[128.6,49.6,2.6],[90.6,49.7,2.6],[114.1,50.0,10],[124.3,50.2,6.8],[100.7,52.6,9.6],[109.9,53.5,10],[114.7,53.9,10],[119.6,53.9,10],[94.3,54.0,7.9],[126.8,54.1,6.1],[153.2,54.3,2.3],[104.7,54.5,10],[89.1,54.6,4.8],[133.0,55.8,2.5],[122.1,57.1,10],[97.4,57.2,10],[84.0,57.9,4.0],[113.7,58.1,10],[109.4,58.1,10],[93.2,58.5,10],[154.3,58.9,5.4],[104.0,58.9,10],[146.8,59.7,3.0],[129.4,60.0,8.0],[161.8,60.7,3.0],[134.0,61.2,6.6],[118.3,61.7,10],[125.7,61.7,10],[85.4,61.8,7.5],[98.0,61.9,10],[108.9,62.0,10],[90.4,62.3,10],[150.6,62.4,7.0],[140.7,62.7,5.0],[80.9,63.9,5.2],[94.8,64.2,10],[137.0,64.4,7.6],[146.5,64.7,7.4],[156.3,64.7,7.0],[132.1,64.8,10],[101.6,65.5,10],[71.4,65.8,2.5],[118.6,65.9,10],[114.0,66.0,10],[105.8,66.7,10],[89.2,66.8,10],[125.3,67.2,10],[77.1,67.3,6.3],[140.9,67.4,9.6],[135.5,68.3,10],[151.4,68.4,7.9],[158.1,68.9,2.4],[130.6,68.9,10],[111.1,68.9,10],[97.1,69.2,10],[116.2,69.4,10],[69.1,69.5,4.2],[81.5,69.8,9.9],[146.3,70.2,10],[86.1,70.9,9.0],[100.9,71.0,10],[138.1,71.3,10],[142.1,71.9,10],[120.2,72.1,10],[128.3,72.3,10],[106.5,72.5,10],[78.2,72.5,8.8],[134.4,72.6,10],[92.4,73.1,9.8],[62.1,73.2,2.9],[68.0,73.3,5.9],[154.3,73.4,3.1],[96.7,73.5,10],[110.4,73.5,10],[72.7,73.8,9.7],[115.8,74.3,10],[83.8,74.6,5.0],[124.1,74.8,10],[89.0,75.4,6.0],[132.1,75.8,10],[120.4,76.4,10],[127.7,76.6,10],[146.8,76.7,9.1],[151.8,77.0,5.5],[139.3,77.0,10],[65.3,77.1,6.8],[100.9,77.2,10],[57.0,77.3,2.9],[95.8,77.5,7.8],[112.0,77.5,10],[76.7,77.9,5.2],[107.2,78.4,10],[135.2,79.0,10],[61.3,79.2,4.3],[80.8,79.2,2.6],[144.2,79.9,8.4],[70.5,80.2,6.0],[118.1,80.2,10],[125.6,80.9,10],[93.7,81.0,3.7],[148.5,81.5,4.4],[74.9,81.5,2.7],[130.1,81.8,10],[140.6,81.9,9.9],[113.9,82.0,10],[109.9,82.6,10],[102.0,83.7,9.1],[106.2,84.3,10],[119.8,84.4,10],[137.0,84.8,10],[97.6,85.0,4.5],[69.0,85.0,2.8],[127.5,86.0,10],[133.0,86.3,10],[114.1,86.5,10],[143.2,87.5,5.0],[69.7,89.1,3.0],[130.2,89.2,10],[106.2,89.4,10],[96.3,89.4,3.8],[119.7,89.5,10],[111.1,89.6,10],[134.6,90.1,10],[100.5,90.5,7.9],[138.5,91.0,8.2],[115.9,91.2,10],[143.6,91.4,3.1],[126.6,91.5,10],[122.6,92.5,10],[94.5,93.2,2.5],[112.0,93.7,10],[131.1,95.4,10],[105.9,95.6,9.7],[136.9,95.7,8.6],[97.1,96.2,4.7],[141.5,96.3,4.6],[101.2,96.8,8.0],[123.0,96.9,10],[109.8,97.0,8.7],[114.1,97.1,9.0],[118.5,97.4,10],[127.8,99.0,10],[136.6,100.4,7.0],[131.5,101.0,10],[141.0,101.4,2.5],[118.2,101.4,6.4],[124.6,101.6,10],[98.7,101.7,3.0],[111.7,102.2,4.0],[105.5,102.8,2.6],[122.3,105.1,6.7],[116.6,105.1,2.4],[136.4,105.6,3.7],[129.3,107.6,4.7],[122.5,111.2,3.0],[127.9,112.2,2.3]];
-const _ISLA_ORDEN=[0,58,155,35,140,159,77,82,96,3,4,109,34,40,95,141,117,138,29,50,80,90,102,69,113,133,93,59,38,137,56,68,14,130,134,41,15,13,64,17,101,71,148,150,28,8,146,92,5,73,149,166,167,7,164,143,57,19,135,126,51,152,37,131,163,18,76,47,111,25,83,79,66,129,128,62,36,16,119,169,22,108,98,21,121,154,78,94,112,10,89,49,157,86,30,161,122,99,132,118,12,43,61,23,65,70,31,45,72,100,53,123,120,6,127,84,139,54,104,24,116,125,103,32,91,110,1,147,124,44,75,20,165,74,46,97,52,81,85,2,162,136,145,142,67,88,151,156,63,158,9,115,55,33,160,153,144,60,106,87,105,42,114,48,39,107,168,26,27,11];
-// Las palmeras de los peldanos: 9 sitios fijos, bien adentro de la isla y
-// separados entre si, elegidos de los propios _ISLA_PTS. Se reservan (salen
-// del relleno semanal) para que una palmera y una planta no se pisen nunca.
-const _ISLA_PALMERAS=[[118.2,49.4],[97.4,57.2],[132.1,64.8],[114.0,66.0],[96.7,73.5],[72.7,73.8],[125.6,80.9],[106.2,89.4],[123.0,96.9]];
-const _ISLA_PALM_IDX=new Set([13,29,53,57,86,88,112,132,151]);
-const _ISLA_ORDEN_V=_ISLA_ORDEN.filter((i)=>!_ISLA_PALM_IDX.has(i));
-
-// ── Isla "De seca a vergel", vista de mapa (14/09/2026) ──
-// Misma silueta y misma paleta que la isla de bienestar, para que las dos
-// apps se vean de la misma familia. Todo determinista: sin Math.random, el
-// repintado es estable. Las clases isla-* las anima el CSS, que se apaga
-// solo si el movil pide "reducir movimiento".
-
-const _islaRnd = (i) => { const x = Math.sin(i * 127.1) * 43758.5453; return x - Math.floor(x); };
-function _islaMix(a, b, t) {
-    const p = (x) => parseInt(x, 16);
-    const ah = [a.slice(1, 3), a.slice(3, 5), a.slice(5, 7)].map(p);
-    const bh = [b.slice(1, 3), b.slice(3, 5), b.slice(5, 7)].map(p);
-    return '#' + ah.map((v, i) => Math.round(v + (bh[i] - v) * t).toString(16).padStart(2, '0')).join('');
-}
-
-// Paleta tomada de isla-nivel-4.svg (app de bienestar).
-const _IV = {
-    verdeOsc: '#3F6B2E', verdeMed: '#6E9E45', verdeCl: '#9CC368', verdeLuz: '#C7DC78',
-    hierba: '#9DAE7D', hierbaOsc: '#778864', tronco: '#4F6045',
-    oro: '#F2C84B', oroOsc: '#C99412',
-    naranja: '#E8753D', naranjaOsc: '#A14B1B',
-    lila: '#9B6FB5', lilaOsc: '#684685',
-    piedra: '#9E978A', piedraOsc: '#6B665B',
-    secoOsc: '#9F8A5C', seco: '#C9B68C', secoCl: '#DCC9A1',
+const _ST_CAT = {
+    ejercicio:     { lb: 'Ejercicios',        tk: '--st-1' },
+    cambio_rutina: { lb: 'Cambios de rutina', tk: '--st-2' },
+    herramienta:   { lb: 'Herramientas',      tk: '--st-3' },
+    tarea:         { lb: 'Tareas',            tk: '--st-4' },
 };
 
-function _ivMata(x, y, s, i) {
-    const r = 4.6 * s;
-    return `<g class="isla-mata"><ellipse cx="${x - r * .7}" cy="${y + r * .25}" rx="${r * .85}" ry="${r * .7}" fill="${_IV.verdeOsc}"/>`
-         + `<ellipse cx="${x + r * .7}" cy="${y + r * .2}" rx="${r * .9}" ry="${r * .72}" fill="${_IV.verdeMed}"/>`
-         + `<ellipse cx="${x}" cy="${y - r * .35}" rx="${r}" ry="${r * .8}" fill="${_IV.verdeMed}"/>`
-         + `<ellipse cx="${x - r * .25}" cy="${y - r * .6}" rx="${r * .5}" ry="${r * .38}" fill="${_IV.verdeCl}"/>`
-         + `<ellipse cx="${x + r * .3}" cy="${y - r * .75}" rx="${r * .3}" ry="${r * .22}" fill="${_IV.verdeLuz}" opacity=".9"/></g>`;
-}
-function _ivArbol(x, y, s, i) {
-    const r = 6.4 * s;
-    return `<g class="isla-arbol"><ellipse cx="${x + 1.2}" cy="${y + r * .55}" rx="${r * .95}" ry="${r * .45}" fill="#2E2A20" opacity=".22"/>`
-         + `<ellipse cx="${x - r * .75}" cy="${y + r * .1}" rx="${r * .8}" ry="${r * .66}" fill="${_IV.verdeOsc}"/>`
-         + `<ellipse cx="${x + r * .75}" cy="${y + r * .05}" rx="${r * .82}" ry="${r * .68}" fill="${_IV.verdeOsc}"/>`
-         + `<ellipse cx="${x}" cy="${y - r * .3}" rx="${r * 1.05}" ry="${r * .85}" fill="${_IV.verdeMed}"/>`
-         + `<ellipse cx="${x - r * .3}" cy="${y - r * .62}" rx="${r * .55}" ry="${r * .42}" fill="${_IV.verdeCl}"/>`
-         + `<ellipse cx="${x + r * .15}" cy="${y - r * .8}" rx="${r * .32}" ry="${r * .24}" fill="${_IV.verdeLuz}"/></g>`;
-}
-function _ivHierba(x, y, s, i) {
-    let g = '';
-    for (let k = -2; k <= 2; k++) {
-        const c = k % 2 ? _IV.hierba : _IV.hierbaOsc;
-        g += `<path d="M${x} ${y} Q ${x + k * 1.9 * s} ${y - 4 * s} ${x + k * 2.7 * s} ${y - 7 * s}" stroke="${c}" stroke-width="${1.3 * s}" fill="none" stroke-linecap="round"/>`;
-    }
-    return `<g class="isla-hierba" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 7) * .32}s">${g}</g>`;
-}
-function _ivHelecho(x, y, s, i) {
-    let g = '';
-    for (let k = 0; k < 5; k++) {
-        const a = (k / 4 - .5) * 1.9;
-        g += `<path d="M${x} ${y} Q ${x + Math.sin(a) * 4 * s} ${y - 4.5 * s} ${x + Math.sin(a) * 7 * s} ${y - 7.5 * s - Math.cos(a) * 2 * s}" stroke="${k % 2 ? _IV.verdeMed : _IV.verdeOsc}" stroke-width="${1.5 * s}" fill="none" stroke-linecap="round"/>`;
-    }
-    return `<g class="isla-hierba" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 5) * .41}s">${g}</g>`;
-}
-const _IV_FLORES = [[_IV.oro, _IV.oroOsc], [_IV.naranja, _IV.naranjaOsc], [_IV.lila, _IV.lilaOsc]];
-function _ivFlor(x, y, s, i) {
-    const [c, co] = _IV_FLORES[i % 3];
-    let p = '';
-    for (let k = 0; k < 5; k++) {
-        const a = k / 5 * 2 * Math.PI - Math.PI / 2;
-        p += `<ellipse cx="${x + Math.cos(a) * 2.3 * s}" cy="${y - 5.5 * s + Math.sin(a) * 2.3 * s}" rx="${1.8 * s}" ry="${1.5 * s}" fill="${k < 3 ? c : co}"/>`;
-    }
-    return `<g class="isla-flor" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 9) * .27}s">`
-         + `<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 5 * s}" stroke="${_IV.tronco}" stroke-width="${1.2 * s}" stroke-linecap="round"/>`
-         + `${p}<circle cx="${x}" cy="${y - 5.5 * s}" r="${1.1 * s}" fill="${_IV.oro}"/></g>`;
-}
-function _ivPiedra(x, y, s) {
-    return `<g><ellipse cx="${x}" cy="${y}" rx="${3.4 * s}" ry="${2.4 * s}" fill="${_IV.piedraOsc}"/>`
-         + `<ellipse cx="${x - .6 * s}" cy="${y - .7 * s}" rx="${2.3 * s}" ry="${1.5 * s}" fill="${_IV.piedra}"/></g>`;
-}
-function _ivPalmera(x, y, s, i) {
-    // Peldano de escalera superado. No esta en la rotacion semanal a proposito:
-    // tiene que distinguirse de un vistazo de la hierba, la mata, el arbol y el
-    // helecho. Es mas alta que todo lo demas y no se borra el lunes.
-    // Alta a proposito: con la isla llena una palmera baja se pierde entre las
-    // matas. Tiene que sobresalir de la copa de todo lo demas.
-    const h = 27 * s, top = y - h;
-    let hojas = '', halo = '';
-    for (let k = 0; k < 7; k++) {
-        const a = -Math.PI / 2 + (k / 6 - .5) * 2.8;
-        const mx = x + Math.cos(a) * 8.5 * s,  my = top + Math.sin(a) * 6 * s;
-        const ex = x + Math.cos(a) * 14 * s,   ey = top + Math.sin(a) * 7.5 * s + 4.2 * s;
-        const d = `M${x} ${top} Q ${mx} ${my} ${ex} ${ey}`;
-        // Contorno oscuro detras: es lo que la separa del verde de abajo.
-        halo  += `<path d="${d}" stroke="#2E2A20" stroke-width="${3.6 * s}" fill="none" stroke-linecap="round" opacity=".28"/>`;
-        hojas += `<path d="${d}" stroke="${k % 2 ? _IV.verdeCl : _IV.verdeMed}" stroke-width="${2.2 * s}" fill="none" stroke-linecap="round"/>`;
-    }
-    return `<g class="isla-palmera" style="transform-origin:${x}px ${y}px;animation-delay:${(i % 5) * .45}s">`
-         + `<ellipse cx="${x + 1.4 * s}" cy="${y + 1.6 * s}" rx="${5 * s}" ry="${2 * s}" fill="#2E2A20" opacity=".22"/>`
-         + `<path d="M${x} ${y} Q ${x - 3.2 * s} ${y - h * .55} ${x} ${top}" stroke="#2E2A20" stroke-width="${4.2 * s}" fill="none" stroke-linecap="round" opacity=".3"/>`
-         + `<path d="M${x} ${y} Q ${x - 3.2 * s} ${y - h * .55} ${x} ${top}" stroke="#7A5C3A" stroke-width="${2.9 * s}" fill="none" stroke-linecap="round"/>`
-         + `<path d="M${x - .5 * s} ${y - h * .3} Q ${x - 2.6 * s} ${y - h * .6} ${x - .4 * s} ${top + 1 * s}" stroke="#9B7748" stroke-width="${1 * s}" fill="none" stroke-linecap="round" opacity=".8"/>`
-         + `${halo}${hojas}<circle cx="${x}" cy="${top}" r="${1.7 * s}" fill="${_IV.verdeLuz}"/>`
-         + `<circle cx="${x + 2.1 * s}" cy="${top + 2.6 * s}" r="${1.5 * s}" fill="${_IV.oro}"/>`
-         + `<circle cx="${x - 1.4 * s}" cy="${top + 3.1 * s}" r="${1.2 * s}" fill="${_IV.oroOsc}"/></g>`;
-}
-function _ivPlanta(i, x, y, s, extra) {
-    // La flor es acento, no alfombra: 1 de cada 8. Lo que llena es el verde.
-    if (extra || i % 8 === 3) return _ivFlor(x, y, s * 1.05, i);
-    const t = i % 5;
-    if (t === 0) return _ivHierba(x, y, s, i);
-    if (t === 1) return _ivMata(x, y, s, i);
-    if (t === 2) return _ivMata(x, y, s * 1.12, i);
-    if (t === 3) return _ivArbol(x, y, s * .95, i);
-    return _ivHelecho(x, y, s, i);
-}
-function _ivAves(x, y) {
-    let p = '';
-    for (let k = 0; k < 3; k++) {
-        const dx = k * 9, dy = (k % 2) * 3.5;
-        p += `<path d="M${x + dx - 3.4} ${y + dy} Q ${x + dx} ${y + dy - 3} ${x + dx + 3.4} ${y + dy} M${x + dx - 3.4} ${y + dy} Q ${x + dx - 6.8} ${y + dy - 3} ${x + dx - 10.2} ${y + dy}" stroke="#5A5348" stroke-width="1.7" fill="none" stroke-linecap="round" opacity=".9"/>`;
-    }
-    return `<g class="isla-aves">${p}</g>`;
-}
-function _ivMariposa(x, y, c, i) {
-    return `<g class="isla-mariposa" style="transform-origin:${x}px ${y}px;animation-delay:${i * .8}s"><ellipse cx="${x - 2.1}" cy="${y}" rx="2.1" ry="2.6" fill="${c}"/><ellipse cx="${x + 2.1}" cy="${y}" rx="2.1" ry="2.6" fill="${c}"/><line x1="${x}" y1="${y - 2.2}" x2="${x}" y2="${y + 2.2}" stroke="#2E2A20" stroke-width=".9"/></g>`;
-}
-function _ivSol(x, y, op) {
-    let r = '';
-    for (let k = 0; k < 10; k++) {
-        const a = k / 10 * 2 * Math.PI;
-        r += `<line x1="${x + Math.cos(a) * 9.5}" y1="${y + Math.sin(a) * 9.5}" x2="${x + Math.cos(a) * 13.5}" y2="${y + Math.sin(a) * 13.5}" stroke="${_IV.oro}" stroke-width="1.9" stroke-linecap="round"/>`;
-    }
-    return `<g opacity="${op}"><g class="isla-rayos" style="transform-origin:${x}px ${y}px">${r}</g><circle cx="${x}" cy="${y}" r="7.5" fill="${_IV.oro}"/><circle cx="${x}" cy="${y}" r="7.5" fill="#FFF2C4" opacity=".45"/></g>`;
+// Lee un token del tema desde el panel, así el mismo gráfico sirve en
+// claro y en oscuro sin duplicar paletas en el JS.
+function stColor(token, fallback) {
+    const el = document.getElementById('progreso-vista');
+    if (!el) return fallback || '#6B7A3A';
+    const v = getComputedStyle(el).getPropertyValue(token).trim();
+    return v || fallback || '#6B7A3A';
 }
 
-// Peldanos de escalera superados ALGUNA VEZ por el perro seleccionado.
-// Se cuenta 'alguna_vez' y no 'superado': retroceder es parte del metodo y no
-// debe costarle una palmera al tutor. El ?? deja la app en pie si la RPC
-// todavia devuelve la forma vieja (cache del navegador).
-function _islaPeldanos() {
-    let n = 0;
-    _escaleraCache.forEach((e) => {
-        (e && e.pasos || []).forEach((p) => { if (p.alguna_vez ?? p.superado) n += 1; });
+function stDesdeMs() {
+    return Date.now() - (_ST_DIAS[_statsPeriodo] || 7) * 86400000;
+}
+
+// segs = [{ v, color }]. Devuelve el SVG del donut (sin el número del centro).
+function stDonutSVG(segs, grosor) {
+    const total = segs.reduce((a, s) => a + s.v, 0);
+    const w = grosor || 5.2;
+    const pista = stColor('--st-pista', 'rgba(26,26,26,.13)');
+    if (total <= 0) {
+        return `<svg viewBox="0 0 42 42" aria-hidden="true"><circle cx="21" cy="21" r="15.915" fill="none" stroke="${pista}" stroke-width="${w}"></circle></svg>`;
+    }
+    let acc = 0;
+    const arcos = segs.filter((s) => s.v > 0).map((s) => {
+        const pct = s.v * 100 / total;
+        const off = 100 - acc;
+        acc += pct;
+        return `<circle class="st-donut__arc" cx="21" cy="21" r="15.915" fill="none" stroke="${s.color}" stroke-width="${w}" stroke-dasharray="${pct.toFixed(2)} ${(100 - pct).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"></circle>`;
+    }).join('');
+    return `<svg viewBox="0 0 42 42" aria-hidden="true"><circle cx="21" cy="21" r="15.915" fill="none" stroke="${pista}" stroke-width="${w}"></circle>${arcos}</svg>`;
+}
+
+function stDonut(segs, numero, etiqueta) {
+    return `<div class="st-donut">${stDonutSVG(segs)}
+        <div class="st-donut__mid"><span class="st-donut__n">${escapeHTML(String(numero))}</span><span class="st-donut__lb">${escapeHTML(etiqueta)}</span></div>
+    </div>`;
+}
+
+// Filas de desglose bajo el donut: punto de color, etiqueta, número y %.
+function stFilas(items, total) {
+    return `<div class="st-desg">${items.map((it) => `
+        <div class="st-row"><span class="st-row__dot" style="background:${it.color}"></span>
+        <span class="st-row__lb">${escapeHTML(it.lb)}</span>
+        <span class="st-row__n">${it.n}</span>
+        <span class="st-row__p">${total > 0 ? (it.n * 100 / total).toFixed(1) : '0.0'}%</span></div>`).join('')}</div>`;
+}
+
+function stVacio(texto) {
+    return `<p class="st-vacio">${escapeHTML(texto)}</p>`;
+}
+
+// ── 0 · fase de cada protocolo ─────────────────────────────
+// Regla acordada con Charly (02/11/2026): por TERCIOS de las clases del
+// protocolo. Educación (8 clases) → 1-2 preparatoria, 3-5 abordaje, 6-8
+// final. Conducta (12) → 1-4, 5-8, 9-12. Sin clases, "sin empezar".
+// Si Charly marcó la fase a mano en el admin (grupos_fase), manda la suya.
+//
+// Ojo: las citas se guardan por cliente, no por perro, así que en un
+// cliente con dos perros los dos cuentan las mismas clases. La marca
+// manual es lo que corrige esos casos.
+function metaClasesProtocolo(perro, slug) {
+    if (perro?.clases_meta != null && perro.clases_meta > 0) return perro.clases_meta;
+    return _CLASES_PROTOCOLO[slug] ?? _CLASES_DEFAULT;
+}
+
+function faseDesdeClases(hechas, meta) {
+    if (!hechas || !meta || meta <= 0) return null;
+    const tercio = Math.min(Math.ceil((hechas * 3) / meta), 3);
+    return ['preparatoria', 'abordaje', 'final_mantenimiento'][tercio - 1];
+}
+
+function stFases(perro) {
+    const card = document.getElementById('st-card-fases');
+    const cont = document.getElementById('st-fases');
+    const sub  = document.getElementById('st-fases-sub');
+    if (!card || !cont) return;
+
+    const protos = [];
+    if (perro?.protocolo_principal) protos.push({ slug: perro.protocolo_principal, rol: 'Principal' });
+    (perro?.protocolos_complementarios || []).forEach((s) => {
+        if (s && !protos.some((p) => p.slug === s)) protos.push({ slug: s, rol: 'Complementario' });
     });
-    return n;
-}
+    if (protos.length === 0) { card.hidden = true; cont.innerHTML = ''; return; }
 
-// Devuelve [[y, svg], ...] para que se ordenen junto con la vegetacion.
-function _islaPalmerasPiezas(n) {
-    if (n <= 0) return [];
-    const sitios = _ISLA_PALMERAS.length;
-    // Pasado el ultimo sitio no se amontonan mas: crecen las que ya estan.
-    const crece = Math.min(Math.max(n - sitios, 0) / sitios, 1) * .45;
-    return _ISLA_PALMERAS.slice(0, Math.min(n, sitios)).map((p, k) => {
-        const s = .92 + _islaRnd(k * 17) * .16 + crece;
-        return [p[1], _ivPalmera(p[0], p[1], s, k)];
-    });
-}
-
-// t = 0..1. hechos = entrenos de la semana; objetivo = suma de minimos.
-function _islaPintarEscena(hechos, objetivo, t, svgId = 'isla-semana-svg', peldanos = 0) {
-    const svg = document.getElementById(svgId);
-    if (!svg) return;
-    const done = t >= 1;
-    const extras = Math.max(hechos - objetivo, 0);
-
-    // El suelo apenas verdea: en la isla de bienestar la tierra sigue siendo
-    // tierra y lo que cambia es lo que crece encima. Queda mucho mejor.
-    const tierra   = _islaMix(_IV.seco,    '#B4B87A', t * .55);
-    const tierraCl = _islaMix(_IV.secoCl,  '#C6C88C', t * .55);
-    const tierraOs = _islaMix(_IV.secoOsc, '#8C9456', t * .55);
-    const mar      = _islaMix('#8C8371', '#5FA08C', t);   // gris calido -> turquesa
-
-    // Mar: halos que siguen la forma de la isla.
-    const halo = (k, op) =>
-        `<path d="${_ISLA_PATH}" fill="${mar}" opacity="${op}" transform="translate(110 73) scale(${k}) translate(-110 -73)"/>`;
-    const agua = `<g class="isla-mar">${halo(1.30, .22)}${halo(1.17, .30)}${halo(1.07, .42)}</g>`;
-
-    // Relieve de la isla: sombra, terreno, luz y sombra interior.
-    const suelo =
-        `<path d="${_ISLA_PATH}" fill="#2E2A20" opacity=".22" transform="translate(2 3)"/>`
-      + `<path d="${_ISLA_PATH}" fill="${tierra}"/>`
-      + `<path d="${_ISLA_PATH}" fill="${tierraCl}" opacity=".5" transform="translate(110 73) scale(.985) translate(-112.5 -75.5)"/>`
-      + `<path d="${_ISLA_PATH}" fill="${tierraOs}" opacity=".38" transform="translate(110 73) scale(.965) translate(-107 -70)"/>`
-      + `<path d="${_ISLA_PATH}" fill="none" stroke="${_IV.secoCl}" stroke-width="1.1" opacity=".55"/>`;
-
-    // Textura: grietas cuando esta seca, curvas de nivel cuando verdea.
-    const textura = t < 0.55
-        ? `<path d="M78 62 Q88 57 97 63 M118 54 Q127 50 136 56 M92 92 Q101 87 110 93 M132 84 Q140 80 148 85" stroke="${tierraOs}" stroke-width="1.3" fill="none" opacity="${(1 - t / .55) * .75}"/>`
-        : `<path d="M80 64 Q96 58 112 64 M108 88 Q124 82 140 88" stroke="${tierraOs}" stroke-width="1" fill="none" opacity=".3"/>`;
-
-    const piedras = _ivPiedra(76, 96, 1) + _ivPiedra(132, 60, .85) + _ivPiedra(100, 108, .7) + _ivPiedra(146, 96, .8);
-
-    // Vegetacion: brota repartida por toda la isla, no por franjas.
-        // Crece con curva, no en linea recta: si fuera lineal, al 25 % la isla ya
-    // parece llena y las semanas flojas se ven igual que las buenas.
-    const avance = Math.min(hechos / Math.max(objetivo, 1), 1.6);
-    const cupo = Math.min(Math.round(Math.pow(avance, 1.45) * 150) + (hechos > 0 ? 4 : 0), _ISLA_ORDEN_V.length);
-    // Vegetacion de la semana y palmeras de los peldanos se ordenan JUNTAS por
-    // altura: si no, una palmera del fondo taparia una planta de delante.
-    const piezas = _ISLA_ORDEN_V.slice(0, cupo).map((i) => {
-        const p = _ISLA_PTS[i];
-        const s = 0.92 + _islaRnd(i * 3) * 0.5 + Math.min(p[2], 10) * 0.035;
-        return [p[1], _ivPlanta(i, p[0], p[1], s, extras > 0 && (i % 11) === 0)];
-    }).concat(_islaPalmerasPiezas(peldanos));
-    piezas.sort((a, b) => a[0] - b[0]);
-    const verde = piezas.map((q) => q[1]).join('');
-
-    const luz = t > .55
-        ? `<path d="${_ISLA_PATH}" fill="#FFE9A8" opacity="${(t - .55) / .45 * .17}" transform="translate(110 73) scale(1.06) translate(-113 -69)"/>` : '';
-    const sol = t > .45 ? _ivSol(194, 23, Math.min((t - .45) / .35, 1)) : '';
-    const aves = t >= .7 ? _ivAves(26, 30) : '';
-    const maripo = done ? _ivMariposa(84, 58, _IV.naranja, 0) + _ivMariposa(146, 74, _IV.lila, 1) : '';
-
-    svg.innerHTML = `${agua}${suelo}${textura}${piedras}${verde}${luz}${sol}${aves}${maripo}`;
-    svg.classList.toggle('isla-svg--completa', done);
-}
-
-const _ISLA_LEMAS = [
-    'La isla espera el primer entreno de la semana',
-    'La isla empieza a brotar',
-    'Buen ritmo — ya se nota el verde',
-    'La vegetación avanza',
-    'Semana muy verde',
-    'A un paso de florecer entera',
-];
-
-// Días de la semana (lun..dom) con al menos un entreno, desde _islaRegs.
-function _islaDiasConEntreno() {
-    const lunes = new Date(inicioSemanaLocalIso()).getTime();
-    const marcados = new Set();
-    _islaRegs.forEach((r) => {
-        const t = new Date(r.registrado_en).getTime();
-        if (!Number.isFinite(t) || t < lunes) return;
-        const idx = Math.floor((t - lunes) / 86400000);
-        if (idx >= 0 && idx <= 6) marcados.add(idx);
-    });
-    return marcados;
-}
-
-// Racha: semanas de calendario consecutivas (mirando hacia atrás desde la
-// anterior) en que se cumplió el 100% del objetivo, con los mínimos actuales.
-// Aproximación honesta y 100% frontend; la semana en curso suma solo si ya
-// está al 100%.
-function _islaRacha(pctActual) {
-    const rows = [..._progresoCache.values()]
-        .filter((r) => r.min_semanal != null && r.min_semanal > 0);
-    const objetivo = rows.reduce((a, r) => a + r.min_semanal, 0);
-    if (objetivo === 0) return 0;
-    const minPorAsignado = new Map(rows.map((r) => [r.ejercicio_asignado_id, r.min_semanal]));
-    const lunes = new Date(inicioSemanaLocalIso()).getTime();
-    const SEMANA = 7 * 86400000;
-    // counts[w][asignado] con w=1..8 semanas hacia atrás
-    const counts = new Map();
-    _islaRegs.forEach((r) => {
-        const t = new Date(r.registrado_en).getTime();
-        if (!Number.isFinite(t) || t >= lunes) return;
-        const w = Math.floor((lunes - t - 1) / SEMANA) + 1;
-        if (w < 1 || w > 8) return;
-        if (!counts.has(w)) counts.set(w, new Map());
-        const m = counts.get(w);
-        m.set(r.ejercicio_asignado_id, (m.get(r.ejercicio_asignado_id) || 0) + 1);
-    });
-    let racha = 0;
-    for (let w = 1; w <= 8; w++) {
-        const m = counts.get(w) || new Map();
-        let cap = 0;
-        minPorAsignado.forEach((min, id) => { cap += Math.min(m.get(id) || 0, min); });
-        if (cap >= objetivo) racha += 1; else break;
+    const hechas = (state.citas || []).filter((c) => c.estado === 'realizada').length;
+    card.hidden = false;
+    if (sub) {
+        sub.textContent = hechas === 1
+            ? '1 clase hecha. Cada protocolo avanza a su ritmo.'
+            : `${hechas} clases hechas. Cada protocolo avanza a su ritmo.`;
     }
-    if (pctActual >= 1) racha += 1;
-    return racha;
+
+    cont.innerHTML = protos.map((p) => {
+        const meta  = metaClasesProtocolo(perro, p.slug);
+        const clave = _gruposFase[p.slug] || faseDesdeClases(hechas, meta);
+        const f     = _FASES[clave];
+        let dots = '';
+        for (let i = 0; i < 3; i++) dots += `<i class="${(f && i < f.dots) ? 'on' : ''}"></i>`;
+        const color = f ? f.color : 'var(--c-text-3)';
+        return `<div class="st-fase" style="--fase-color:${color}">
+            <span class="st-fase__pr">${escapeHTML(PROTOCOLOS_LABEL[p.slug] || p.slug)}<span class="st-fase__rol">${p.rol}</span></span>
+            <span class="st-fase__cl">${Math.min(hechas, meta)} de ${meta} clases</span>
+            <span class="st-fase__lb"><span class="st-fase__dots">${dots}</span>${escapeHTML(f ? f.label : 'Sin empezar')}</span>
+        </div>`;
+    }).join('');
 }
 
-// Pinta la isla "La semana de X" en un contenedor. prefix = 'isla-semana'
-// (Rutina) o 'isla-progreso' (Mi progreso). Solo el de Rutina toca el estado
-// ambiental de fondo (_islaSemanaCompleta / aplicarAmbientalAnillo).
-function renderIsla(prefix = 'isla-semana') {
-    const esRutina = (prefix === 'isla-semana');
-    const box = document.getElementById(prefix);
-    if (!box) return;
-    const { objetivo, hechosTotal, pct } = calcularIslaSemana();
+// ── 1 · lo que estáis trabajando ───────────────────────────
+// No depende del periodo: es la foto de lo que el perro tiene hoy.
+function stRutina(perro) {
+    const cuerpo = document.getElementById('st-rutina-cuerpo');
+    const sub    = document.getElementById('st-rutina-sub');
+    const tile   = document.getElementById('st-t-rutina');
+    if (!cuerpo) return;
 
-    if (objetivo === 0) {
-        box.setAttribute('hidden', '');
-        if (esRutina) { _islaSemanaCompleta = false; aplicarAmbientalAnillo(); }
+    const filas = state.rutinaFilas || [];
+    const cuenta = {};
+    filas.forEach((f) => {
+        const cat = f.ejercicios?.categoria || 'ejercicio';
+        cuenta[cat] = (cuenta[cat] || 0) + 1;
+    });
+    const total = filas.length;
+    if (tile) tile.textContent = String(total);
+
+    if (total === 0) {
+        if (sub) sub.textContent = '';
+        cuerpo.innerHTML = stVacio('Todavía no hay nada activo en la rutina.');
         return;
     }
-    box.removeAttribute('hidden');
 
-    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    setText(`${prefix}-perro`, perro?.nombre || 'tu perro');
-
-    _islaPintarEscena(hechosTotal, objetivo, Math.min(pct, 1), `${prefix}-svg`, _islaPeldanos());
-
-    const pctEntero = Math.min(100, Math.round(pct * 100));
-    setText(`${prefix}-pct`, String(pctEntero));
-    const barra = document.getElementById(`${prefix}-barra`);
-    if (barra) barra.style.width = `${pctEntero}%`;
-
-    const marcados = _islaDiasConEntreno();
-    const diasEl = document.getElementById(`${prefix}-dias`);
-    if (diasEl) {
-        const letras = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-        diasEl.innerHTML = letras.map((l, i) =>
-            `<span class="isla-semana__dia${marcados.has(i) ? ' isla-semana__dia--f' : ''}">${marcados.has(i) ? '' : l}</span>`
-        ).join('');
+    const nombre = perro?.nombre || 'tu perro';
+    const conObjetivo = [..._progresoCache.values()].filter((r) => r.min_semanal != null && r.min_semanal > 0).length;
+    if (sub) {
+        sub.textContent = conObjetivo > 0
+            ? `${total} cosas activas en la rutina de ${nombre}. ${conObjetivo} con objetivo semanal.`
+            : `${total} cosas activas en la rutina de ${nombre}.`;
     }
 
-    const completo = pct >= 1;
-    const lema = completo
-        ? `¡La isla de ${perro?.nombre || 'tu perro'} floreció esta semana!`
-        : _ISLA_LEMAS[Math.min(Math.floor(pct * (_ISLA_LEMAS.length - 1) + (hechosTotal > 0 ? 1 : 0)), _ISLA_LEMAS.length - 1)];
-    setText(`${prefix}-lema`, hechosTotal === 0 ? _ISLA_LEMAS[0] : lema);
-
-    const racha = _islaRacha(pct);
-    const rachaEl = document.getElementById(`${prefix}-racha`);
-    if (rachaEl) {
-        if (racha >= 1) {
-            setText(`${prefix}-racha-n`, racha === 1 ? '1 semana' : `${racha} semanas`);
-            rachaEl.removeAttribute('hidden');
-        } else {
-            rachaEl.setAttribute('hidden', '');
-        }
-    }
-
-    if (esRutina) { _islaSemanaCompleta = completo; aplicarAmbientalAnillo(); }
+    const items = Object.keys(_ST_CAT)
+        .filter((cat) => (cuenta[cat] || 0) > 0)
+        .map((cat) => ({ lb: _ST_CAT[cat].lb, n: cuenta[cat], color: stColor(_ST_CAT[cat].tk) }));
+    cuerpo.innerHTML = stDonut(items.map((i) => ({ v: i.n, color: i.color })), total, 'activas')
+        + stFilas(items, total);
 }
 
-// Compat: los call sites existentes siguen llamando renderAnilloSemana (Rutina)
-// y renderAnilloProgreso (Mi progreso). Ahora ambos pintan la isla.
-function renderAnilloSemana() { renderIsla('isla-semana'); }
+// ── 2 · cuánto entrenáis ───────────────────────────────────
+// Objetivo del periodo = mínimo semanal × (días del periodo / 7), pero
+// contando solo desde el día en que se asignó el ejercicio: si lleva
+// dos semanas puesto, no se le puede pedir un año de entrenos.
+function stEntreno() {
+    const cuerpo = document.getElementById('st-entreno-cuerpo');
+    const sub    = document.getElementById('st-entreno-sub');
+    const tile   = document.getElementById('st-t-cumple');
+    if (!cuerpo) return;
+
+    const dias  = _ST_DIAS[_statsPeriodo] || 7;
+    const desde = stDesdeMs();
+    const ahora = Date.now();
+
+    const filas = [..._progresoCache.values()]
+        .filter((r) => r.min_semanal != null && r.min_semanal > 0)
+        .map((r) => {
+            const id = r.ejercicio_asignado_id;
+            const inicio = _asignadoDesde.get(id);
+            const ventana = Number.isFinite(inicio)
+                ? Math.max(0, Math.min(dias, (ahora - inicio) / 86400000))
+                : dias;
+            const objetivo = Math.max(1, Math.round((r.min_semanal * ventana) / 7));
+            const hecho = _regsAnio.reduce((a, x) => (
+                x.ejercicio_asignado_id === id && new Date(x.registrado_en).getTime() >= desde ? a + 1 : a
+            ), 0);
+            return { nombre: r.nombre || 'Ejercicio', hecho, objetivo };
+        })
+        .sort((a, b) => (a.hecho / a.objetivo) - (b.hecho / b.objetivo));
+
+    if (filas.length === 0) {
+        if (tile) tile.textContent = '—';
+        if (sub) sub.textContent = '';
+        cuerpo.innerHTML = stVacio('Todavía no hay ejercicios con objetivo semanal.');
+        _semanaCompleta = false;
+        return;
+    }
+
+    const hecho  = filas.reduce((a, f) => a + f.hecho, 0);
+    const pedido = filas.reduce((a, f) => a + f.objetivo, 0);
+    const pct    = pedido > 0 ? Math.round((hecho * 100) / pedido) : 0;
+    if (tile) tile.textContent = `${pct}%`;
+    if (_statsPeriodo === '7d') _semanaCompleta = (pct >= 100);
+    if (sub) {
+        const cuando = _statsPeriodo === 'ano'
+            ? 'Desde que le asignamos cada ejercicio'
+            : `En los últimos ${dias} días`;
+        sub.textContent = `${cuando} se hicieron ${hecho} de las ${pedido} veces pedidas.`;
+    }
+
+    const verde = stColor('--st-verde');
+    const ambar = stColor('--st-ambar');
+    const rojo  = stColor('--st-rojo');
+
+    const objHTML = `<div class="st-obj">${filas.map((f) => {
+        const w = Math.min(100, (f.hecho * 100) / f.objetivo);
+        const cl = w >= 100 ? 'ok' : (w >= 60 ? 'medio' : 'bajo');
+        const col = cl === 'ok' ? verde : (cl === 'medio' ? ambar : rojo);
+        return `<div class="st-o"><span class="st-o__nm">${escapeHTML(f.nombre)}</span>
+            <span class="st-o__ct st-o__ct--${cl}">${f.hecho}/${f.objetivo}</span>
+            <span class="st-o__bar"><i style="width:${w.toFixed(1)}%;background:${col}"></i></span></div>`;
+    }).join('')}</div>`;
+
+    cuerpo.innerHTML = stDonut(
+        [{ v: hecho, color: verde }, { v: Math.max(0, pedido - hecho), color: stColor('--st-pista') }],
+        `${pct}%`, 'del objetivo'
+    ) + objHTML + stConstancia();
+}
+
+// Barras de días con entreno: por día en la semana, por semana en el mes,
+// por mes en el año. Es el contexto que le falta al porcentaje.
+function stConstancia() {
+    const ahora = new Date();
+    const hoy0 = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
+    const diasConEntreno = new Set();
+    _regsAnio.forEach((r) => {
+        const t = new Date(r.registrado_en);
+        if (!Number.isFinite(t.getTime())) return;
+        diasConEntreno.add(new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime());
+    });
+
+    let titulo = '';
+    const barras = [];
+    if (_statsPeriodo === '7d') {
+        titulo = 'Días con entreno, últimos 7 días';
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(hoy0 - i * 86400000);
+            barras.push({ x: String(d.getDate()), v: diasConEntreno.has(d.getTime()) ? 1 : 0 });
+        }
+        return stBarras(titulo, barras, 1);
+    }
+    if (_statsPeriodo === 'mes') {
+        titulo = 'Días con entreno, últimas 8 semanas';
+        for (let s = 7; s >= 0; s--) {
+            const fin = hoy0 - s * 7 * 86400000;
+            const ini = fin - 6 * 86400000;
+            let n = 0;
+            diasConEntreno.forEach((t) => { if (t >= ini && t <= fin) n++; });
+            barras.push({ x: String(new Date(ini).getDate()), v: n });
+        }
+        return stBarras(titulo, barras, 7);
+    }
+    titulo = 'Días con entreno, por mes';
+    const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+        let n = 0;
+        diasConEntreno.forEach((t) => {
+            const x = new Date(t);
+            if (x.getFullYear() === d.getFullYear() && x.getMonth() === d.getMonth()) n++;
+        });
+        barras.push({ x: MES[d.getMonth()], v: n });
+    }
+    return stBarras(titulo, barras, 31);
+}
+
+function stBarras(titulo, barras, max) {
+    const cols = `repeat(${barras.length},1fr)`;
+    const tope = Math.max(max, ...barras.map((b) => b.v)) || 1;
+    return `<div class="st-sem"><span class="st-sem__t">${escapeHTML(titulo)}</span>
+        <div class="st-sem__bb" style="grid-template-columns:${cols}">${barras.map((b) => `
+            <div class="st-b"><em>${b.v}</em><i style="height:${((b.v * 100) / tope).toFixed(1)}%;background:${b.v > 0 ? 'var(--st-1)' : 'var(--st-pista)'}"></i></div>`).join('')}</div>
+        <div class="st-sem__xx" style="grid-template-columns:${cols}">${barras.map((b) => `<span>${escapeHTML(b.x)}</span>`).join('')}</div>
+    </div>`;
+}
+
+// ── 3 · seguimiento de conductas ───────────────────────────
+function stConductas() {
+    const cuerpo = document.getElementById('st-conductas-cuerpo');
+    const sub    = document.getElementById('st-conductas-sub');
+    const tile   = document.getElementById('st-t-verde');
+    const tileU  = document.getElementById('st-t-verde-u');
+    if (!cuerpo) return;
+
+    if (!_condCache || _condCache.segs.length === 0) {
+        if (tile) tile.textContent = '—';
+        if (tileU) tileU.textContent = 'en verde';
+        if (sub) sub.textContent = '';
+        cuerpo.innerHTML = stVacio('Todavía no hay conductas en seguimiento.');
+        return;
+    }
+
+    const desde = new Date(stDesdeMs());
+    const corte = `${desde.getFullYear()}-${String(desde.getMonth() + 1).padStart(2, '0')}-${String(desde.getDate()).padStart(2, '0')}`;
+    const regs = _condCache.regs.filter((r) => String(r.fecha) >= corte);
+
+    const tot = { verde: 0, amarillo: 0, rojo: 0 };
+    const porSeg = new Map();
+    regs.forEach((r) => {
+        if (tot[r.color] === undefined) return;
+        tot[r.color]++;
+        if (!porSeg.has(r.seguimiento_id)) porSeg.set(r.seguimiento_id, { verde: 0, amarillo: 0, rojo: 0 });
+        porSeg.get(r.seguimiento_id)[r.color]++;
+    });
+    const total = tot.verde + tot.amarillo + tot.rojo;
+
+    if (total === 0) {
+        if (tile) tile.textContent = '—';
+        if (tileU) tileU.textContent = 'sin apuntes';
+        if (sub) sub.textContent = '';
+        const n = _condCache.segs.length;
+        cuerpo.innerHTML = stVacio(n === 1
+            ? 'Hay una conducta en seguimiento, pero no hay apuntes en este periodo.'
+            : `Hay ${n} conductas en seguimiento, pero no hay apuntes en este periodo.`);
+        return;
+    }
+
+    if (tile) tile.textContent = `${Math.round((tot.verde * 100) / total)}%`;
+    if (tileU) tileU.textContent = `verde de ${total}`;
+    const nSeg = porSeg.size;
+    if (sub) {
+        sub.textContent = `${total} ${total === 1 ? 'día apuntado' : 'días apuntados'} en ${nSeg} ${nSeg === 1 ? 'conducta' : 'conductas'}.`
+            + (total < 8 ? ' Son pocos todavía para sacar conclusiones.' : '');
+    }
+
+    const cv = stColor('--st-verde'), ca = stColor('--st-ambar'), cr = stColor('--st-rojo');
+    const lista = _condCache.segs
+        .filter((s) => porSeg.has(s.id))
+        .map((s) => ({ nombre: s.nombre, ...porSeg.get(s.id) }))
+        .map((s) => ({ ...s, t: s.verde + s.amarillo + s.rojo }))
+        .sort((a, b) => b.t - a.t);
+
+    cuerpo.innerHTML = stDonut(
+        [{ v: tot.verde, color: cv }, { v: tot.amarillo, color: ca }, { v: tot.rojo, color: cr }],
+        total, total === 1 ? 'día apuntado' : 'días apuntados'
+    ) + stFilas([
+        { lb: 'Verde — bien',     n: tot.verde,     color: cv },
+        { lb: 'Ámbar — regular',  n: tot.amarillo,  color: ca },
+        { lb: 'Rojo — mal',       n: tot.rojo,      color: cr },
+    ], total) + `<div class="st-cond">${lista.map((s) => `
+        <div class="st-c"><div class="st-c__nm"><span>${escapeHTML(s.nombre)}</span><b>${s.t} ${s.t === 1 ? 'día' : 'días'}</b></div>
+        <div class="st-c__st">
+            <i style="width:${(s.verde * 100 / s.t).toFixed(1)}%;background:${cv}"></i>
+            <i style="width:${(s.amarillo * 100 / s.t).toFixed(1)}%;background:${ca}"></i>
+            <i style="width:${(s.rojo * 100 / s.t).toFixed(1)}%;background:${cr}"></i>
+        </div></div>`).join('')}</div>`;
+}
+
+// ── 4 · bienestar y felicidad ──────────────────────────────
+// El aro grande es siempre el último test, aunque sea de antes del
+// periodo: decirle a alguien "no hay datos" cuando sí los hay sería
+// esconderle su propio resultado. Lo que sí filtra el periodo es la
+// evolución de abajo.
+function stBienestar() {
+    const cuerpo = document.getElementById('st-bienestar-cuerpo');
+    const sub    = document.getElementById('st-bienestar-sub');
+    const tile   = document.getElementById('st-t-bien');
+    if (!cuerpo) return;
+
+    const evs = _bienCache || [];
+    if (evs.length === 0) {
+        if (tile) tile.textContent = '—';
+        if (sub) sub.textContent = '';
+        cuerpo.innerHTML = stVacio('Todavía no habéis hecho el test de bienestar y felicidad.');
+        return;
+    }
+
+    const ult = evs[0];
+    const totalSc = Number(ult.score_total) || 0;
+    if (tile) tile.textContent = String(totalSc);
+    if (sub) sub.textContent = `Último test del ${formatearFechaSalud(ult.created_at)}.`;
+
+    const oro   = stColor('--st-4');
+    const azul  = stColor('--st-2');
+    const dims = [
+        { lb: 'Física',    n: Number(ult.score_fisica) || 0 },
+        { lb: 'Emocional', n: Number(ult.score_emocional) || 0 },
+        { lb: 'Social',    n: Number(ult.score_social) || 0 },
+        { lb: 'Cognitiva', n: Number(ult.score_cognitiva) || 0 },
+    ];
+
+    const aro = `<div class="st-bien__big">${stDonutSVG([
+        { v: totalSc, color: oro }, { v: Math.max(0, 100 - totalSc), color: 'transparent' },
+    ], 5)}<div class="st-bien__lab"><b>${totalSc}</b><span>de 100</span></div></div>`;
+
+    const aritos = `<div class="st-dims">${dims.map((d) => `
+        <div class="st-dim"><span class="st-dim__r">${stDonutSVG([
+            { v: d.n, color: azul }, { v: Math.max(0, 100 - d.n), color: 'transparent' },
+        ], 4)}<b>${d.n}</b></span><span class="st-dim__tx">${escapeHTML(d.lb)}</span></div>`).join('')}</div>`;
+
+    // Evolución: los tests que caen dentro del periodo, del más viejo al
+    // más nuevo. Si no hay ninguno, se dice cuándo fue el último.
+    const desde = stDesdeMs();
+    const enPeriodo = evs.filter((e) => new Date(e.created_at).getTime() >= desde).slice().reverse();
+    let evo;
+    if (enPeriodo.length >= 2) {
+        evo = `<div class="st-evo"><span class="st-evo__t">${enPeriodo.length} tests</span>${
+            enPeriodo.map((e) => `<div class="st-evo__e"><b>${Number(e.score_total) || 0}</b><span>${escapeHTML(formatearFechaSalud(e.created_at))}</span></div>`)
+                     .join('<span class="st-evo__ar">→</span>')
+        }</div>`;
+    } else if (enPeriodo.length === 0) {
+        evo = stVacio(`No habéis hecho el test en este periodo. El último fue el ${formatearFechaSalud(ult.created_at)}.`);
+    } else {
+        evo = '';
+    }
+
+    cuerpo.innerHTML = `<div class="st-bien">${aro}${aritos}</div>${evo}`;
+}
+
+// ── carga de los datos que no vienen con la rutina ─────────
+async function cargarDatosStats(perroId) {
+    // Conductas. Aditivo: si falla, la tarjeta queda en su estado vacío.
+    try {
+        const { data: segs, error } = await supabase
+            .from('seguimientos_conducta')
+            .select('id, nombre')
+            .eq('perro_id', perroId)
+            .eq('activo', true)
+            .order('creado_en', { ascending: true });
+        if (error) throw error;
+        const ids = (segs || []).map((s) => s.id);
+        let regs = [];
+        if (ids.length > 0) {
+            const d = new Date(Date.now() - 365 * 86400000);
+            const corte = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const { data, error: e2 } = await supabase
+                .from('registros_conducta')
+                .select('seguimiento_id, fecha, color')
+                .in('seguimiento_id', ids)
+                .gte('fecha', corte);
+            if (e2) throw e2;
+            regs = data || [];
+        }
+        _condCache = { segs: segs || [], regs };
+    } catch (e) {
+        console.error('[stats] conductas:', e);
+        _condCache = null;
+    }
+
+    // Test de bienestar. Misma RPC que ya usa la pestaña Salud.
+    try {
+        const { data, error } = await supabase.rpc('listar_evaluaciones_perro', { p_perro_id: perroId });
+        if (error) throw error;
+        _bienCache = data || [];
+    } catch (e) {
+        console.error('[stats] bienestar:', e);
+        _bienCache = null;
+    }
+}
+
+// Pinta las cinco tarjetas. Cada una va en su try para que un fallo
+// suelto no deje la pestaña en blanco.
+function renderStats() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    const cab = document.getElementById('st-cabecera');
+    if (cab) cab.textContent = `${(perro?.nombre || 'Tu perro').toUpperCase()} · ${_ST_TITULO[_statsPeriodo]}`;
+    [
+        () => stFases(perro),
+        () => stRutina(perro),
+        () => stEntreno(),
+        () => stConductas(),
+        () => stBienestar(),
+    ].forEach((fn) => { try { fn(); } catch (e) { console.error('[stats]', e); } });
+    aplicarAmbientalAnillo();
+}
+
+function bindStatsPeriodo() {
+    const box = document.getElementById('st-periodo');
+    if (!box) return;
+    box.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.st-periodo__btn');
+        if (!btn || !btn.dataset.periodo || btn.dataset.periodo === _statsPeriodo) return;
+        _statsPeriodo = btn.dataset.periodo;
+        box.querySelectorAll('.st-periodo__btn').forEach((b) => {
+            const activo = b.dataset.periodo === _statsPeriodo;
+            b.classList.toggle('is-active', activo);
+            b.setAttribute('aria-selected', activo ? 'true' : 'false');
+        });
+        renderStats();
+    });
+}
+
+// La vista Rutina ya no pinta nada aquí: la isla se fue. Se mantiene el
+// nombre porque lo llaman cinco sitios, y sigue siendo el momento bueno
+// para refrescar el ambiental de la semana cerrada.
+function renderAnilloSemana() {
+    if (state.rutinaModo === 'progreso') renderStats();
+    else aplicarAmbientalAnillo();
+}
 
 // ───────────────────────────────────────────────────────────
 // Vista "Mi progreso" — toggle Rutina/Progreso, anillo grande,
@@ -5986,11 +6150,12 @@ async function cargarVistaProgreso() {
             _historialCache.clear();
         }
 
+        // Conductas y test de bienestar: solo los necesita esta pestaña.
+        await cargarDatosStats(perroId);
+
         renderAnilloProgreso();
         renderListaProgreso();
         loading.hidden = true;
-        // Medallero: hitos derivados de los datos. No bloquea la vista.
-        cargarMedallero();
     } catch (e) {
         console.error('[progreso]', e);
         if (!teniaCache) {
@@ -6003,93 +6168,18 @@ async function cargarVistaProgreso() {
     aplicarAmbientalAnillo();
 }
 
-// ── "El camino" (Mi progreso): el recorrido del PROTOCOLO. Pedido de Charly
-//    (01/09/2026). Dos ejes distintos, conectados:
-//      · AVANCE  = CLASES realizadas / N  → "Clase X de N" + puntitos. Avanza
-//        solo cuando se marca una clase como realizada (no con el calendario).
-//      · FLORACIÓN de la isla = ESFUERZO (constancia de entrenamiento). La isla
-//        florece con los entrenos, pase lo que pase con las clases.
-//    N (clases del protocolo más largo): educación 8 / conducta 12 por defecto,
-//    ampliable por caso desde el admin (perros.clases_meta).
+// Clases que suele llevar cada protocolo. Es la N con la que la pestaña de
+// stats calcula en qué fase va cada uno (por tercios). Ampliable por caso
+// desde el admin (perros.clases_meta), que tiene prioridad sobre esta tabla.
 const _CLASES_PROTOCOLO = {
     educacion_basica: 8, educacion_cachorro: 8,
     gestion_ansiedad: 12, reactividad_impulsividad: 12, proteccion_recursos: 12,
     depresion: 12, celos: 12, conflictividad_peleas: 12, miedos_fobias: 12,
 };
 const _CLASES_DEFAULT = 12;
-function metaClasesPerro(perro) {
-    // Override manual por caso (admin) tiene prioridad.
-    if (perro?.clases_meta != null && perro.clases_meta > 0) return perro.clases_meta;
-    const protos = [perro?.protocolo_principal, ...((perro?.protocolos_complementarios) || [])]
-        .filter(Boolean);
-    if (protos.length === 0) return _CLASES_DEFAULT;
-    return Math.max(...protos.map((p) => _CLASES_PROTOCOLO[p] ?? _CLASES_DEFAULT));
-}
-function calcularIslaGlobal() {
-    // Esfuerzo (para la floración de la isla): constancia acumulada = de todo lo
-    // que debería haber entrenado hasta ahora, cuánto entrenó realmente.
-    const rows = [..._progresoCache.values()]
-        .filter((r) => r.min_semanal != null && r.min_semanal > 0);
-    const objetivoSemanal = rows.reduce((a, r) => a + r.min_semanal, 0);
-    let hechosCap = 0, semanasElapsed = 0;
-    rows.forEach((r) => {
-        const hist = _historialCache.get(r.ejercicio_asignado_id) || [];
-        if (hist.length > semanasElapsed) semanasElapsed = hist.length;
-        hist.forEach((s) => { hechosCap += Math.min(Number(s.count || 0), r.min_semanal); });
-    });
-    const objetivoEsfuerzo = objetivoSemanal * Math.max(semanasElapsed, 1);
-    const effortPct = objetivoEsfuerzo > 0 ? Math.min(hechosCap / objetivoEsfuerzo, 1) : 0;
-    // Avance del protocolo (para "Clase X de N"): clases marcadas como realizada.
-    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    const N = metaClasesPerro(perro);
-    const X = (state.citas || []).filter((c) => c.estado === 'realizada').length;
-    const Xc = Math.min(X, N);
-    const classPct = N > 0 ? Math.min(X / N, 1) : 0;
-    return { effortPct, X, Xc, N, classPct, hayEjercicios: objetivoSemanal > 0 };
-}
-function renderIslaGlobal() {
-    const prefix = 'isla-progreso';
-    const box = document.getElementById(prefix);
-    if (!box) return;
-    const g = calcularIslaGlobal();
-    // Se muestra si hay algo real que contar: ejercicios para la isla o clases.
-    if (!g.hayEjercicios && g.X === 0) { box.setAttribute('hidden', ''); return; }
-    box.removeAttribute('hidden');
-    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    const nombre = perro?.nombre || 'tu perro';
-    setText(`${prefix}-perro`, nombre);
-    setText(`${prefix}-perro2`, nombre);
-    // La isla FLORECE con el esfuerzo (constancia). t = effortPct; sin extras.
-    _islaPintarEscena(0, 1, g.effortPct, `${prefix}-svg`, _islaPeldanos());
-    // Avance por CLASES.
-    setText(`${prefix}-clase-x`, String(g.X));
-    setText(`${prefix}-clase-n`, String(g.N));
-    setText(`${prefix}-pct`, String(Math.round(g.classPct * 100)));
-    const dots = document.getElementById(`${prefix}-dots`);
-    if (dots) {
-        let h = '';
-        for (let i = 1; i <= g.N; i++) {
-            const done = i <= g.Xc;
-            const next = (i === g.Xc + 1);
-            h += `<span class="camino-dot${done ? ' camino-dot--done' : next ? ' camino-dot--next' : ''}">${done ? '✓' : i}</span>`;
-        }
-        dots.innerHTML = h;
-    }
-    // Racha de constancia (entreno), igual que la isla de la semana.
-    const racha = _islaRacha(calcularIslaSemana().pct);
-    const rachaEl = document.getElementById(`${prefix}-racha`);
-    if (rachaEl) {
-        if (racha >= 1) {
-            setText(`${prefix}-racha-n`, racha === 1 ? '1 semana' : `${racha} semanas`);
-            rachaEl.removeAttribute('hidden');
-        } else {
-            rachaEl.setAttribute('hidden', '');
-        }
-    }
-}
-// "Mi progreso" muestra la isla GLOBAL (todo el plan), no la de la semana.
+// "Mi progreso" = la pestaña de stats.
 function renderAnilloProgreso() {
-    renderIslaGlobal();
+    renderStats();
 }
 
 function renderListaProgreso() {
@@ -6142,142 +6232,6 @@ function _lunesDe(ts) {
     const offset = (dia === 0) ? 6 : (dia - 1);
     const l = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset, 0, 0, 0, 0);
     return formatearFechaLocal(l);
-}
-
-async function cargarMedallero() {
-    const perroId = state.perroSeleccionadoId;
-    const cont = document.getElementById('medallero');
-    if (!cont || !perroId) return;
-    try {
-        // Ejercicios del perro (todos, para historia): ids + progresión + herramienta.
-        const { data: asignados, error: eA } = await supabase
-            .from('ejercicios_asignados')
-            .select('id, progresa_de, estado_cliente, ejercicios (categoria)')
-            .eq('perro_id', perroId);
-        if (eA) throw eA;
-        const ids = (asignados || []).map((a) => a.id);
-        const herramientasTiene = (asignados || [])
-            .filter((a) => a.ejercicios?.categoria === 'herramienta' && a.estado_cliente === 'tiene').length;
-        const progresiones = (asignados || []).filter((a) => a.progresa_de).length;
-
-        let regs = [];
-        if (ids.length > 0) {
-            const { data, error } = await supabase
-                .from('registros_ejercicio')
-                .select('registrado_en, tranquilidad, nota, video_path, ejercicio_asignado_id')
-                .in('ejercicio_asignado_id', ids);
-            if (error) throw error;
-            regs = data || [];
-        }
-
-        const total = regs.length;
-        const conTranq = regs.filter((r) => r.tranquilidad != null).length;
-        const conNota = regs.filter((r) => (r.nota && r.nota.trim()) || r.video_path).length;
-
-        // Días distintos y máxima racha de días consecutivos.
-        const dias = [...new Set(regs.map((r) => formatearFechaLocal(new Date(r.registrado_en))))].sort();
-        let maxDias = 0, run = 0, prev = null;
-        dias.forEach((d) => {
-            if (prev) {
-                const dif = (new Date(d) - new Date(prev)) / 86400000;
-                run = (Math.round(dif) === 1) ? run + 1 : 1;
-            } else run = 1;
-            if (run > maxDias) maxDias = run;
-            prev = d;
-        });
-
-        // Semanas al 100%: por semana, Σ min(count_ej, min_semanal) ≥ Σ min_semanal.
-        // Objetivo tomado de los targets actuales (_progresoCache) — aproximación honesta.
-        const targets = new Map();
-        _progresoCache.forEach((r, id) => { if (r.min_semanal) targets.set(id, r.min_semanal); });
-        const objetivo = [...targets.values()].reduce((a, b) => a + b, 0);
-        let semanas100 = 0, maxSemanas100 = 0;
-        if (objetivo > 0) {
-            const porSemana = new Map();   // lunes → Map(asignadoId → count)
-            regs.forEach((r) => {
-                const w = _lunesDe(r.registrado_en);
-                if (!porSemana.has(w)) porSemana.set(w, new Map());
-                const m = porSemana.get(w);
-                m.set(r.ejercicio_asignado_id, (m.get(r.ejercicio_asignado_id) || 0) + 1);
-            });
-            const semanasOrden = [...porSemana.keys()].sort();
-            let runW = 0, prevW = null;
-            semanasOrden.forEach((w) => {
-                const m = porSemana.get(w);
-                let cap = 0;
-                targets.forEach((min, id) => { cap += Math.min(m.get(id) || 0, min); });
-                const completa = cap >= objetivo;
-                if (completa) {
-                    semanas100 += 1;
-                    if (prevW) {
-                        const difW = Math.round((new Date(w) - new Date(prevW)) / 604800000);
-                        runW = (difW === 1) ? runW + 1 : 1;
-                    } else runW = 1;
-                    if (runW > maxSemanas100) maxSemanas100 = runW;
-                    prevW = w;
-                } else { runW = 0; prevW = null; }
-            });
-        }
-
-        renderMedallero({ total, conTranq, conNota, herramientasTiene, progresiones,
-                          maxDias, diasDistintos: dias.length, semanas100, maxSemanas100 });
-    } catch (e) {
-        console.error('[medallero] error:', e);
-        cont.setAttribute('hidden', '');
-    }
-}
-
-const _MEDALLAS = [
-    { grupo: 'Primeros pasos', medallas: [
-        { ic: '🐾', nom: 'Primera huella',  hint: 'Registra tu primer entreno',        ok: (d) => d.total >= 1 },
-        { ic: '🧰', nom: 'Nueva herramienta', hint: 'Consigue tu primera herramienta',  ok: (d) => d.herramientasTiene >= 1 },
-        { ic: '🌱', nom: 'Primer avance',   hint: 'Un ejercicio pasa a su siguiente versión', ok: (d) => d.progresiones >= 1 },
-    ]},
-    { grupo: 'Constancia', medallas: [
-        { ic: '📅', nom: 'Tres días',       hint: '3 días seguidos entrenando',        ok: (d) => d.maxDias >= 3 },
-        { ic: '🔥', nom: 'Semana sin fallar', hint: '7 días seguidos entrenando',       ok: (d) => d.maxDias >= 7 },
-        { ic: '🗓️', nom: '20 días de isla', hint: '20 días distintos de trabajo',      ok: (d) => d.diasDistintos >= 20 },
-    ]},
-    { grupo: 'La isla florece', medallas: [
-        { ic: '🌺', nom: 'Isla florecida',  hint: 'Completa una semana entera',         ok: (d) => d.semanas100 >= 1 },
-        { ic: '🌳', nom: 'Mes constante',   hint: '4 semanas completas seguidas',       ok: (d) => d.maxSemanas100 >= 4 },
-    ]},
-    { grupo: 'Camino recorrido', medallas: [
-        { ic: '🥉', nom: 'Primera decena',  hint: '10 entrenos',                        ok: (d) => d.total >= 10 },
-        { ic: '🥈', nom: 'En marcha',       hint: '30 entrenos',                        ok: (d) => d.total >= 30 },
-        { ic: '🥇', nom: 'Medio camino',    hint: '60 entrenos',                        ok: (d) => d.total >= 60 },
-        { ic: '🏆', nom: 'Leyenda de la isla', hint: '120 entrenos', oro: true,         ok: (d) => d.total >= 120 },
-    ]},
-    { grupo: 'Observador de tu perro', medallas: [
-        { ic: '👀', nom: 'Observador',      hint: '10 entrenos con estado emocional',   ok: (d) => d.conTranq >= 10 },
-        { ic: '✍️', nom: 'Cronista',        hint: '5 entrenos con nota o vídeo',        ok: (d) => d.conNota >= 5 },
-    ]},
-];
-
-function renderMedallero(d) {
-    const cont = document.getElementById('medallero');
-    const grupos = document.getElementById('medallero-grupos');
-    if (!cont || !grupos) return;
-    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
-    setText('medallero-perro', (perro?.nombre || 'tu perro').toUpperCase());
-
-    grupos.innerHTML = _MEDALLAS.map((g) => {
-        const cards = g.medallas.map((m) => {
-            const ganada = !!m.ok(d);
-            return `
-                <div class="medalla${ganada ? ' medalla--won' : ''}${(ganada && m.oro) ? ' medalla--oro' : ''}">
-                    <div class="medalla__ico">${m.ic}</div>
-                    <div class="medalla__nom">${escapeHTML(m.nom)}</div>
-                    <div class="medalla__hint">${escapeHTML(m.hint)}</div>
-                </div>`;
-        }).join('');
-        return `
-            <div class="medallero-grupo">
-                <div class="medallero-grupo__nom">${escapeHTML(g.grupo)}</div>
-                <div class="medallero-grupo__grid">${cards}</div>
-            </div>`;
-    }).join('');
-    cont.removeAttribute('hidden');
 }
 
 // Fila de barritas: una por semana desde la asignación, color por estado
@@ -6374,11 +6328,11 @@ function renderProgresoItem(row) {
 // el anillo cerró al 100%. Es estado del logro de la semana — aplica en
 // ambas sub-vistas (Rutina / Mi progreso) para no parpadear al cambiar.
 function aplicarAmbientalAnillo() {
-    // Desde la Fase 2 el estado "semana cerrada" vive en la isla, no en el
-    // anillo (que ya no existe en la vista Rutina).
+    // "Semana cerrada" = en los últimos 7 días se cumplió el objetivo entero.
+    // Lo calcula stEntreno(); aquí solo se refleja en el fondo del tab.
     const tab = document.getElementById('tab-rutina');
     if (!tab) return;
-    tab.classList.toggle('ambiental-cerrado', !!_islaSemanaCompleta);
+    tab.classList.toggle('ambiental-cerrado', !!_semanaCompleta);
 }
 
 // Mini-progreso dentro del modal de detalle del ejercicio.

@@ -196,119 +196,6 @@
 .rapido-sheet__caras .reporte-pill.is-active,
 .reporte-pills--caras .reporte-pill.is-active{ transform:scale(1.12); }
 
-/* ────────────────────────────────────────────────────────────
-   La semana florece (Fase 2 · registro lúdico) — reemplaza al
-   anillo "N/M cumplidos" en la vista Rutina. 31/08/2026.
-   ──────────────────────────────────────────────────────────── */
-.home .isla-semana{
-    background:var(--c-surface); border:1px solid var(--c-hair);
-    border-radius:16px; padding:14px 14px 12px; margin:4px 0 14px;
-    text-align:center;
-}
-.home .isla-semana[hidden]{ display:none; }
-.home .isla-semana__titulo{
-    font-family:var(--display, 'Bebas Neue'); font-size:15px; letter-spacing:1.5px;
-    color:var(--c-text-2); margin:0 0 2px;
-}
-.home .isla-semana__svg{ width:200px; height:136px; display:block; margin:0 auto; }
-.home .isla-semana__pct{
-    font-family:var(--display, 'Bebas Neue'); font-size:38px; line-height:1;
-    letter-spacing:1px; color:var(--c-text); margin-top:2px;
-}
-.home .isla-semana__pct small{ font-size:17px; color:var(--c-text-3); }
-.home .isla-semana__barra{
-    height:8px; border-radius:999px; background:rgba(138,134,126,.18);
-    overflow:hidden; margin:10px 8px 10px;
-}
-.home .isla-semana__barra i{
-    display:block; height:100%; width:0;
-    background:linear-gradient(90deg, var(--c-oliva, #6B7A3A), #9CB64B);
-    transition:width .5s ease; border-radius:999px;
-}
-.home .isla-semana__dias{ display:flex; justify-content:center; gap:8px; margin-bottom:8px; }
-.home .isla-semana__dia{
-    width:30px; height:30px; border-radius:50%;
-    border:1.5px solid var(--c-hair); display:grid; place-items:center;
-    font-size:12px; font-weight:600; color:var(--c-text-3);
-}
-.home .isla-semana__dia--f{
-    background:var(--c-oliva, #6B7A3A); border-color:var(--c-oliva, #6B7A3A);
-}
-.home .isla-semana__dia--f::before{
-    content:''; width:16px; height:16px; display:block;
-    background-color:#F5EFE0;
-    -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12.8c-2.6 0-5.4 2.3-5.4 4.8 0 1.5 1.1 2.5 2.6 2.5 1 0 1.9-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.6-1 2.6-2.5 0-2.5-2.8-4.8-5.4-4.8zM6.1 8.3c-1.1.3-1.7 1.7-1.4 3 .3 1.3 1.5 2.2 2.6 1.9 1.1-.3 1.7-1.7 1.4-3-.3-1.3-1.5-2.2-2.6-1.9zm11.8 0c-1.1-.3-2.3.6-2.6 1.9-.3 1.3.3 2.7 1.4 3 1.1.3 2.3-.6 2.6-1.9.3-1.3-.3-2.7-1.4-3zM9.7 4c-1.2.2-2 1.6-1.8 3 .2 1.4 1.4 2.4 2.6 2.2 1.2-.2 2-1.6 1.8-3-.2-1.4-1.4-2.4-2.6-2.2zm4.6 0c-1.2-.2-2.4.8-2.6 2.2-.2 1.4.6 2.8 1.8 3 1.2.2 2.4-.8 2.6-2.2.2-1.4-.6-2.8-1.8-3z'/></svg>") center/contain no-repeat;
-            mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12.8c-2.6 0-5.4 2.3-5.4 4.8 0 1.5 1.1 2.5 2.6 2.5 1 0 1.9-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.6-1 2.6-2.5 0-2.5-2.8-4.8-5.4-4.8zM6.1 8.3c-1.1.3-1.7 1.7-1.4 3 .3 1.3 1.5 2.2 2.6 1.9 1.1-.3 1.7-1.7 1.4-3-.3-1.3-1.5-2.2-2.6-1.9zm11.8 0c-1.1-.3-2.3.6-2.6 1.9-.3 1.3.3 2.7 1.4 3 1.1.3 2.3-.6 2.6-1.9.3-1.3-.3-2.7-1.4-3zM9.7 4c-1.2.2-2 1.6-1.8 3 .2 1.4 1.4 2.4 2.6 2.2 1.2-.2 2-1.6 1.8-3-.2-1.4-1.4-2.4-2.6-2.2zm4.6 0c-1.2-.2-2.4.8-2.6 2.2-.2 1.4.6 2.8 1.8 3 1.2.2 2.4-.8 2.6-2.2.2-1.4-.6-2.8-1.8-3z'/></svg>") center/contain no-repeat;
-}
-.home .isla-semana__lema{ font-size:12.5px; color:var(--c-text-2); margin:0 0 2px; }
-.home .isla-semana__racha{ font-size:12px; color:var(--c-text-3); margin:2px 0 0; }
-.home .isla-semana__racha b{
-    font-family:var(--display, 'Bebas Neue'); font-size:16px; letter-spacing:1px;
-    color:#E8B62D; font-weight:400;
-}
-
-/* ────────────────────────────────────────────────────────────
-   Agrupación de ejercicios por protocolo ("la llave") · Fase grupos.
-   Solo aplica cuando la lista tiene .rutina-lista--agrupada. 31/08/2026.
-   ──────────────────────────────────────────────────────────── */
-.home .rutina-lista--agrupada{ list-style:none; padding:0; margin:0; display:block; }
-.home .rutina-grupo{ display:flex; gap:10px; margin-bottom:16px; list-style:none; }
-.home .rutina-grupo__llave{
-    flex:0 0 auto; width:30px; display:flex; flex-direction:column; align-items:center;
-}
-.home .rutina-grupo__bar{
-    width:4px; flex:1; border-radius:4px; margin:5px 0;
-    background:var(--grupo-color, #8A867E);
-}
-.home .rutina-grupo__lbl{
-    writing-mode:vertical-rl; transform:rotate(180deg);
-    font-family:var(--display, 'Bebas Neue'); letter-spacing:1.2px; font-size:12px;
-    color:var(--grupo-color, #8A867E); white-space:nowrap; padding:2px 0;
-    max-height:220px; overflow:hidden; text-overflow:ellipsis;
-}
-.home .rutina-grupo__body{ flex:1; min-width:0; }
-.home .rutina-grupo__head{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
-.home .rutina-grupo__nom{
-    font-family:var(--display, 'Bebas Neue'); letter-spacing:.8px; font-size:16px; color:var(--c-text);
-}
-.home .rutina-grupo__cuenta{
-    font-size:11px; color:var(--c-text-3, #8A867E);
-    background:var(--c-surface-2, #2A2620); padding:2px 8px; border-radius:999px;
-}
-.home .rutina-grupo__body .rutina-card{ margin-bottom:9px; }
-
-/* ────────────────────────────────────────────────────────────
-   Medallero de la Manada (Fase 3 · registro lúdico). 31/08/2026.
-   ──────────────────────────────────────────────────────────── */
-.home .medallero{ margin-top:20px; }
-.home .medallero[hidden]{ display:none; }
-.home .medallero__titulo{
-    font-family:var(--display, 'Bebas Neue'); letter-spacing:1.5px; font-size:18px;
-    color:var(--c-text-2); margin:0 0 14px;
-}
-.home .medallero-grupo{ margin-bottom:18px; }
-.home .medallero-grupo__nom{
-    font-family:var(--display, 'Bebas Neue'); letter-spacing:1px; font-size:14px;
-    color:var(--c-text-3, #8A867E); margin-bottom:9px;
-}
-.home .medallero-grupo__grid{
-    display:grid; grid-template-columns:repeat(2, 1fr); gap:9px;
-}
-.home .medalla{
-    background:var(--c-surface); border:1px solid var(--c-hair); border-radius:13px;
-    padding:13px 11px; text-align:center; opacity:.4; transition:opacity .3s, transform .3s, border-color .3s;
-}
-.home .medalla--won{ opacity:1; }
-.home .medalla--oro.medalla--won{ border-color:#E8B62D; box-shadow:0 0 0 1px rgba(232,182,45,.35) inset; }
-.home .medalla__ico{ font-size:27px; line-height:1; }
-.home .medalla--won .medalla__ico{ filter:none; }
-.home .medalla:not(.medalla--won) .medalla__ico{ filter:grayscale(1); }
-.home .medalla__nom{
-    font-family:var(--display, 'Bebas Neue'); letter-spacing:.6px; font-size:14px;
-    color:var(--c-text); margin-top:6px;
-}
-.home .medalla__hint{ font-size:10.5px; color:var(--c-text-3, #8A867E); margin-top:2px; line-height:1.3; }
-
 /* ── Sello de fase en la llave (por grupo/protocolo). 31/08/2026 ── */
 .home .rutina-fase{
     display:inline-flex; align-items:center; gap:7px; margin:0 0 10px;
@@ -369,48 +256,6 @@
 .home .mas-card .health{ width:100%; margin:0; }
 /* La filosofía, ahora al pie como cierre discreto. */
 .home .philo--foot{ margin-top:22px; }
-/* La isla ya vive arriba de las subpestañas: un respiro bajo ella. */
-.home #rutina-vista > .isla-semana{ margin:2px 0 14px; }
-
-/* ════════════════════════════════════════════════════════════
-   Mi progreso — isla GLOBAL + línea de constancia. 01/09/2026
-   ════════════════════════════════════════════════════════════ */
-/* Subtítulo e hito de la isla global (el recorrido completo del plan). */
-.home .isla-global__sub{
-    font-size:11px; font-weight:600; letter-spacing:.2px;
-    color:var(--c-oliva); margin:-1px 0 4px; text-align:center;
-}
-.home .isla-global__hito{
-    font-family:var(--body); font-size:11px; font-weight:700; letter-spacing:.4px;
-    text-transform:uppercase; color:var(--c-text-3); margin:6px 0 2px; text-align:center;
-}
-/* El camino: la isla florece por el ENTRENO; el avance va por CLASES. 01/09/2026 */
-.home .camino-isla-cap{
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    font-size:11px; font-weight:600; color:var(--c-text-2); margin:8px 0 0; text-align:center;
-}
-.home .camino-isla-cap b{ color:var(--c-oliva); font-weight:700; }
-.home .camino-clase{
-    margin-top:13px; padding-top:13px; border-top:1px solid var(--c-hair);
-}
-.home .camino-clase__head{
-    display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px;
-}
-.home .camino-clase__big{
-    font-family:var(--display, 'Bebas Neue'); font-size:23px; letter-spacing:.6px; color:var(--c-text); line-height:1;
-}
-.home .camino-clase__big b{ color:var(--c-oliva); }
-.home .camino-clase__pct{ font-size:11px; font-weight:700; color:var(--c-text-3); white-space:nowrap; }
-.home .camino-clase__dots{ display:flex; flex-wrap:wrap; gap:7px; }
-.home .camino-dot{
-    width:20px; height:20px; border-radius:50%; border:2px solid var(--c-hair-2);
-    display:grid; place-items:center; font-size:9px; font-weight:800; color:var(--c-text-3); flex:0 0 auto;
-}
-.home .camino-dot--done{ background:var(--c-oliva); border-color:var(--c-oliva); color:#F5EFE0; }
-.home .camino-dot--next{ border-color:var(--c-oliva); border-style:dashed; color:var(--c-oliva); }
-.home .camino-clase__cap{
-    font-size:11px; color:var(--c-text-3); margin:9px 0 0; display:flex; align-items:center; gap:6px;
-}
 /* Línea de constancia (sparkline legible) — reemplaza las barritas por semana. */
 .home .progreso-spark{ position:relative; margin-top:11px; }
 .home .progreso-spark svg{ width:100%; height:auto; display:block; overflow:visible; }
@@ -611,7 +456,7 @@
 .home .fotoscli__hint{ margin:7px 0 0; font-size:11.2px; line-height:1.45; color:var(--c-text-3, #8A867E); }
 
 /* ── Anotar uso: azul, para que NO se confunda con el entreno ──
-   El uso no cuenta para el objetivo semanal ni para la isla, así que
+   El uso no cuenta para el objetivo semanal, así que
    tampoco usa el rojo/oliva del entreno. */
 .home .uso-linea{
     margin-top:10px; padding-top:10px; border-top:1px dashed var(--c-hair);
@@ -795,49 +640,6 @@
 
 .esc-fin{padding:13px 14px;border-radius:12px;background:var(--c-oliva-soft);
   border:1px solid var(--c-oliva-line);font-family:var(--body,inherit);font-size:14px;line-height:1.45}
-/* ── Isla viva (14/09/2026) ───────────────────────────────────────────────
-   La escena la dibuja el JS; aqui solo el movimiento. Todo se apaga solo si
-   el movil pide "reducir movimiento", que es lo correcto y ademas lo que
-   pide la norma.
-   ------------------------------------------------------------------------ */
-
-.home .isla-mar        { animation: isla-respira 7s ease-in-out infinite; transform-origin: 110px 73px; }
-.home .isla-hierba     { animation: isla-mece 3.4s ease-in-out infinite; }
-.home .isla-flor       { animation: isla-mece 4.6s ease-in-out infinite; }
-.home .isla-rayos      { animation: isla-gira 34s linear infinite; }
-.home .isla-aves       { animation: isla-vuela 13s linear infinite; }
-.home .isla-mariposa   { animation: isla-revolotea 5.2s ease-in-out infinite; }
-/* Palmera = peldano de escalera superado. Se mece mas lento y menos que la
-   hierba: es un arbol, no un yuyo, y ademas no se borra el lunes. */
-.home .isla-palmera    { animation: isla-mece-palma 6.8s ease-in-out infinite; }
-
-@keyframes isla-respira   { 0%,100% { transform: scale(1);     opacity: 1;   }
-                            50%     { transform: scale(1.035); opacity: .88; } }
-@keyframes isla-mece      { 0%,100% { transform: rotate(-2.2deg); }
-                            50%     { transform: rotate(2.2deg);  } }
-@keyframes isla-mece-palma{ 0%,100% { transform: rotate(-1.1deg); }
-                            50%     { transform: rotate(1.1deg);  } }
-@keyframes isla-gira      { to      { transform: rotate(360deg); } }
-@keyframes isla-vuela     { 0%   { transform: translate(0,0);        opacity: 0; }
-                            10%  { opacity: .85; }
-                            85%  { opacity: .85; }
-                            100% { transform: translate(150px,-14px); opacity: 0; } }
-@keyframes isla-revolotea { 0%,100% { transform: translate(0,0)      rotate(0deg);  }
-                            25%     { transform: translate(5px,-4px)  rotate(8deg);  }
-                            60%     { transform: translate(-4px,-7px) rotate(-7deg); } }
-
-/* Semana completa: la isla respira una vez, fuerte, y se queda. */
-.home .isla-svg--completa { animation: isla-festejo 1.6s cubic-bezier(.22,1.2,.36,1) 1; }
-@keyframes isla-festejo { 0%   { transform: scale(1);    }
-                          38%  { transform: scale(1.055); }
-                          100% { transform: scale(1);    } }
-
-@media (prefers-reduced-motion: reduce) {
-    .home .isla-mar, .home .isla-hierba, .home .isla-flor, .home .isla-rayos,
-    .home .isla-aves, .home .isla-mariposa, .home .isla-palmera,
-    .home .isla-svg--completa { animation: none; }
-}
-
 /* ── Pauta de la clase en la ficha del ejercicio (19/09/2026) ──────────────
    Lo que Charly dijo en clase baja solo hasta aquí. Va arriba del todo,
    antes del "cómo se hace", porque es lo que cambia de una clase a otra: el
@@ -930,4 +732,222 @@
 }
 .ejercicio-serie__ahora .ejercicio-serie__cuando {
     color: var(--c-oliva, #6B7A3A);
+}
+
+/* ════════════════════════════════════════════════════════════
+   Mi progreso = pestaña de stats. 02/11/2026.
+   Sustituye a las dos islas. Cuatro círculos comparables en la
+   misma pantalla (lo que trabajamos, cuánto entrena, cómo van las
+   conductas, cómo está el bienestar) y arriba la fase de cada
+   protocolo.
+
+   Los donuts son SVG puro: un círculo de r=15.915 tiene 100 de
+   circunferencia, así que el stroke-dasharray ES el porcentaje.
+   Sin librería de gráficos: no pesa nada y hereda el tema solo.
+   ════════════════════════════════════════════════════════════ */
+
+.home #progreso-vista{
+    --st-1:#6B7A3A;  /* ejercicios      */
+    --st-2:#2E6CA8;  /* cambios de rutina */
+    --st-3:#8B7355;  /* herramientas    */
+    --st-4:#C98A1E;  /* tareas / bienestar */
+    --st-verde:#5E7A2E;
+    --st-ambar:#C9941B;
+    --st-rojo:#C0171A;
+    --st-pista:rgba(26,26,26,.13);
+}
+.home[data-theme="oscuro"] #progreso-vista{
+    --st-1:#9CB64B;
+    --st-2:#6BA6DD;
+    --st-3:#B99A72;
+    --st-4:#E8B62D;
+    --st-verde:#9CB64B;
+    --st-ambar:#E8B62D;
+    --st-rojo:#E12640;
+    --st-pista:rgba(245,239,224,.12);
+}
+
+/* ── selector de periodo ── */
+.home .st-periodo{
+    display:flex; gap:5px; background:var(--c-field); border-radius:10px;
+    padding:3px; margin:2px 0 10px;
+}
+.home .st-periodo__btn{
+    flex:1; appearance:none; border:0; background:transparent; color:var(--c-text-2);
+    font-family:var(--body); font-size:12px; font-weight:600; padding:8px 0;
+    border-radius:8px; cursor:pointer;
+}
+.home .st-periodo__btn.is-active{
+    background:var(--c-surface); color:var(--c-text); box-shadow:0 1px 3px rgba(0,0,0,.12);
+}
+.home .st-cabecera{
+    font-family:var(--display, 'Bebas Neue'); font-size:14px; letter-spacing:1.4px;
+    color:var(--c-text-2); margin:0 0 9px;
+}
+
+/* ── tira de comparación ── */
+.home .st-tira{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
+.home .st-tile{
+    background:var(--c-surface); border:1px solid var(--c-hair); border-radius:11px;
+    padding:9px 11px; min-width:0;
+}
+.home .st-tile__k{
+    font-size:9px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
+    color:var(--c-text-3); display:block; line-height:1.3;
+}
+.home .st-tile__v{
+    font-family:var(--display, 'Bebas Neue'); font-size:25px; line-height:1.05;
+    letter-spacing:.5px; display:block; margin-top:3px; font-variant-numeric:tabular-nums;
+}
+.home .st-tile__u{ font-size:10px; color:var(--c-text-3); display:block; line-height:1.3; }
+.home .st-tile--1 .st-tile__v{ color:var(--st-1); }
+.home .st-tile--2 .st-tile__v{ color:var(--st-2); }
+.home .st-tile--3 .st-tile__v{ color:var(--st-verde); }
+.home .st-tile--4 .st-tile__v{ color:var(--st-4); }
+
+/* ── tarjeta ── */
+.home .st-card{
+    background:var(--c-surface); border:1px solid var(--c-hair); border-radius:14px;
+    padding:13px 14px 14px; margin-bottom:12px;
+}
+.home .st-card[hidden]{ display:none; }
+.home .st-card__t{
+    font-family:var(--display, 'Bebas Neue'); font-size:16px; letter-spacing:1.2px;
+    margin:0; line-height:1.15; color:var(--c-text);
+}
+.home .st-card__s{ font-size:11px; color:var(--c-text-3); margin:2px 0 0; line-height:1.4; }
+.home .st-vacio{ font-size:12px; color:var(--c-text-3); text-align:center; padding:18px 6px; line-height:1.5; }
+
+/* ── donut ── */
+.home .st-donut{ position:relative; width:168px; max-width:100%; margin:10px auto 2px; }
+.home .st-donut svg{ width:100%; height:auto; display:block; transform:rotate(-90deg); }
+.home .st-donut__mid{
+    position:absolute; inset:0; display:grid; place-content:center; text-align:center; pointer-events:none;
+}
+.home .st-donut__n{
+    font-family:var(--display, 'Bebas Neue'); font-size:34px; line-height:1; letter-spacing:.5px;
+    display:block; color:var(--c-text); font-variant-numeric:tabular-nums;
+}
+.home .st-donut__lb{
+    font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--c-text-3);
+}
+.home .st-donut__arc{ transition:stroke-dasharray .45s ease, stroke-dashoffset .45s ease; }
+
+/* ── desglose bajo el donut ── */
+.home .st-desg{
+    display:flex; flex-direction:column; gap:5px; margin-top:11px; padding-top:11px;
+    border-top:1px solid var(--c-hair);
+}
+.home .st-row{
+    display:grid; grid-template-columns:10px 1fr auto auto; gap:9px; align-items:center; font-size:12.5px;
+}
+.home .st-row__dot{ width:9px; height:9px; border-radius:50%; }
+.home .st-row__lb{ color:var(--c-text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.home .st-row__n{ font-weight:600; font-variant-numeric:tabular-nums; color:var(--c-text); }
+.home .st-row__p{ color:var(--c-text-3); font-size:11px; font-variant-numeric:tabular-nums; min-width:40px; text-align:right; }
+
+/* ── objetivos por ejercicio ── */
+.home .st-obj{
+    display:flex; flex-direction:column; gap:7px; margin-top:11px; padding-top:11px;
+    border-top:1px solid var(--c-hair);
+}
+.home .st-o{ display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+.home .st-o__nm{
+    font-size:12.5px; color:var(--c-text-2); min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.home .st-o__ct{
+    font-size:11px; font-weight:700; font-variant-numeric:tabular-nums;
+    padding:2px 7px; border-radius:999px;
+}
+.home .st-o__ct--bajo { background:rgba(217,27,29,.14);  color:var(--st-rojo); }
+.home .st-o__ct--medio{ background:rgba(232,182,45,.20); color:var(--st-ambar); }
+.home .st-o__ct--ok   { background:rgba(107,122,58,.18); color:var(--st-verde); }
+.home .st-o__bar{
+    grid-column:1/-1; height:5px; border-radius:999px; background:var(--st-pista); overflow:hidden;
+}
+.home .st-o__bar i{ display:block; height:100%; border-radius:999px; transition:width .45s ease; }
+
+/* ── barras de constancia ── */
+.home .st-sem{ margin-top:11px; padding-top:11px; border-top:1px solid var(--c-hair); }
+.home .st-sem__t{
+    font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--c-text-3);
+}
+.home .st-sem__bb{ display:grid; gap:5px; align-items:end; height:74px; margin-top:7px; }
+.home .st-b{ display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:3px; height:100%; }
+.home .st-b i{ display:block; width:100%; border-radius:4px 4px 0 0; background:var(--st-1); min-height:3px; }
+.home .st-b em{ font-style:normal; font-size:9px; color:var(--c-text-3); font-variant-numeric:tabular-nums; }
+.home .st-sem__xx{ display:grid; gap:5px; margin-top:4px; }
+.home .st-sem__xx span{ font-size:8px; color:var(--c-text-3); text-align:center; font-variant-numeric:tabular-nums; }
+
+/* ── conductas, una barra apilada por conducta ── */
+.home .st-cond{
+    display:flex; flex-direction:column; gap:9px; margin-top:11px; padding-top:11px;
+    border-top:1px solid var(--c-hair);
+}
+.home .st-c__nm{ display:flex; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--c-text-2); }
+.home .st-c__nm b{ color:var(--c-text-3); font-weight:600; font-size:11px; font-variant-numeric:tabular-nums; }
+.home .st-c__st{
+    display:flex; height:7px; border-radius:999px; overflow:hidden; margin-top:4px; background:var(--st-pista);
+}
+.home .st-c__st i{ display:block; height:100%; }
+
+/* ── bienestar: aro grande + cuatro aritos ── */
+.home .st-bien{ display:flex; align-items:center; gap:14px; margin-top:6px; }
+.home .st-bien__big{ flex:0 0 auto; position:relative; width:118px; height:118px; }
+.home .st-bien__big svg{ width:100%; height:100%; display:block; transform:rotate(-90deg); }
+.home .st-bien__lab{ position:absolute; inset:0; display:grid; place-content:center; text-align:center; }
+.home .st-bien__lab b{
+    font-family:var(--display, 'Bebas Neue'); font-size:36px; line-height:1; display:block;
+    color:var(--c-text); font-weight:400; font-variant-numeric:tabular-nums;
+}
+.home .st-bien__lab span{
+    font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--c-text-3);
+}
+.home .st-dims{ flex:1 1 auto; min-width:0; display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+.home .st-dim{ display:flex; align-items:center; gap:7px; min-width:0; }
+.home .st-dim__r{ flex:0 0 auto; width:38px; height:38px; position:relative; }
+.home .st-dim__r svg{ width:100%; height:100%; display:block; transform:rotate(-90deg); }
+.home .st-dim__r b{
+    position:absolute; inset:0; display:grid; place-content:center; font-size:11px; font-weight:700;
+    color:var(--c-text); font-variant-numeric:tabular-nums;
+}
+.home .st-dim__tx{ font-size:10px; font-weight:600; letter-spacing:.3px; color:var(--c-text-3); min-width:0; }
+.home .st-evo{
+    display:flex; align-items:center; gap:8px; margin-top:11px; padding-top:11px;
+    border-top:1px solid var(--c-hair);
+}
+.home .st-evo__t{
+    font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--c-text-3);
+    flex:0 0 52px; line-height:1.25;
+}
+.home .st-evo__e{ flex:1; text-align:center; min-width:0; }
+.home .st-evo__e b{
+    font-family:var(--display, 'Bebas Neue'); font-size:22px; line-height:1; display:block;
+    color:var(--st-4); font-weight:400; font-variant-numeric:tabular-nums;
+}
+.home .st-evo__e span{ font-size:9px; color:var(--c-text-3); }
+.home .st-evo__ar{ flex:0 0 auto; color:var(--c-text-3); font-size:13px; }
+
+/* ── fase de cada protocolo ── */
+.home .st-fases{ display:flex; flex-direction:column; gap:10px; margin-top:11px; }
+.home .st-fase{ display:grid; grid-template-columns:1fr auto; gap:4px 8px; align-items:baseline; }
+.home .st-fase__pr{ font-size:13px; font-weight:600; min-width:0; color:var(--c-text); }
+.home .st-fase__rol{
+    font-size:10px; font-weight:600; letter-spacing:.4px; text-transform:uppercase;
+    color:var(--c-text-3); display:block; margin-top:1px;
+}
+.home .st-fase__cl{
+    font-size:11px; color:var(--c-text-3); font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+.home .st-fase__lb{
+    grid-column:1/-1; display:flex; align-items:center; gap:7px;
+    font-size:11.5px; font-weight:700; color:var(--fase-color, #8A867E);
+}
+.home .st-fase__dots{ display:inline-flex; gap:3px; }
+.home .st-fase__dots i{ width:7px; height:7px; border-radius:50%; background:var(--st-pista); }
+.home .st-fase__dots i.on{ background:var(--fase-color, #8A867E); }
+
+@media (prefers-reduced-motion: reduce){
+    .home .st-donut__arc, .home .st-o__bar i{ transition:none; }
 }
