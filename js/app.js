@@ -2135,11 +2135,13 @@ async function cargarAvisoJaime() {
     if (!perro) { _jaimeAvisoActual = null; cerrarBurbujaJaime(); return; }
 
     let data = null;
+    // Estado del pack. Sirve para dos cosas: decidir si el aviso salta (va a la
+    // RPC) y decir CUÁNTAS clases quedan por reservar. Antes el texto decía
+    // "una clase" siempre, mientras el contador de la portada —que sale de esta
+    // misma función— decía 3. El tutor veía las dos cifras a la vez (02/11/2026).
+    let _packJaime = null;
     try {
-        // Estado del pack para el aviso 'agendar_clase' (reusa la función ya
-        // existente; si pack_actual es null devuelve {pack_actual:null} y el
-        // ?? 0 deja los params en 0 → el aviso no salta).
-        const _packJaime = calcularEstadoPack(state.cliente, state.citas);
+        _packJaime = calcularEstadoPack(state.cliente, state.citas);
         const { data: d, error } = await supabase.rpc('get_avisos_jaime', {
             p_perro_id: perro.id,
             p_inicio_semana: inicioSemanaLocalIso(),
@@ -2206,22 +2208,35 @@ async function cargarAvisoJaime() {
             // si ha podido empezar. La RPC solo lo marca cuando ya hace >=5 días
             // que tiene rutina asignada; sin rutina no manda nada.
             const nunca = !!data.nunca && silencio;
+            // Cuántas clases quedan de verdad. Si por lo que sea no hay número,
+            // no se inventa: se cae a los textos que no lo mencionan.
+            const porReservar = Number(_packJaime?.por_reservar ?? 0);
+            const hayPendientes = sinAgendar && porReservar > 0;
+            const clasesPend = porReservar === 1 ? 'una clase' : `${porReservar} clases`;
+            const quedan = porReservar === 1 ? 'Os queda' : 'Os quedan';
             if (nunca) {
-                texto = sinAgendar
-                    ? `¿Habéis podido empezar con la rutina de ${nombre}? Os queda además una clase por reservar. Si os cuesta arrancar o tenéis dudas, escribidnos: estamos aquí. 🐾`
+                texto = hayPendientes
+                    ? `¿Habéis podido empezar con la rutina de ${nombre}? ${quedan} además ${clasesPend} por reservar. Si os cuesta arrancar o tenéis dudas, escribidnos: estamos aquí. 🐾`
                     : `¿Habéis podido empezar con la rutina de ${nombre}? Si os cuesta arrancar, tenéis dudas o necesitáis cualquier cosa, escribidnos: estamos aquí. 🐾`;
                 ctaLabel = 'Escríbenos';
                 ctaAccion = () => showTab('mensajes');
-            } else if (silencio && sinAgendar) {
-                texto = `Hace unos días que no tenemos noticias de ${nombre}. ¿Va todo bien? Os queda además una clase por reservar. Si queréis que os echemos una mano con lo que sea, escribidnos. 🐾`;
+            } else if (silencio && hayPendientes) {
+                texto = `Hace unos días que no tenemos noticias de ${nombre}. ¿Va todo bien? ${quedan} además ${clasesPend} por reservar. Si queréis que os echemos una mano con lo que sea, escribidnos. 🐾`;
                 ctaLabel = 'Escríbenos';
                 ctaAccion = () => showTab('mensajes');
-            } else if (sinAgendar) {
-                texto = `¿Va todo bien? Os queda una clase por reservar y aún no tenéis fecha. Cuando queráis elegís el día desde aquí, y si necesitáis algo, nos escribís. 🐾`;
+            } else if (hayPendientes) {
+                texto = `¿Va todo bien? ${quedan} ${clasesPend} por reservar y todavía no hay ninguna con fecha. Cuando queráis elegís el día desde aquí, y si necesitáis algo, nos escribís. 🐾`;
                 ctaLabel = 'Reservar clase';
                 ctaAccion = () => showTab('reservar');
-            } else {
+            } else if (silencio) {
                 texto = `Hace unos días que no tenemos noticias de ${nombre}. ¿Va todo bien? Si os cuesta registrar los entrenos, tenéis dudas o necesitáis cualquier cosa, escribidnos: estamos aquí. 🐾`;
+                ctaLabel = 'Escríbenos';
+                ctaAccion = () => showTab('mensajes');
+            } else {
+                // Sin silencio y sin número de clases: no se le dice al tutor
+                // que lleva días callado ni cuántas clases le quedan, porque
+                // ninguna de las dos cosas consta.
+                texto = `¿Va todo bien con ${nombre}? Si tenéis dudas o necesitáis cualquier cosa, escribidnos: estamos aquí. 🐾`;
                 ctaLabel = 'Escríbenos';
                 ctaAccion = () => showTab('mensajes');
             }
