@@ -1038,6 +1038,7 @@ function ejecutarItemAvatar(id) {
         // No cerramos el menú: deja alternar y ver el cambio al toque.
     }
     else if (id === 'hero-editar-manada') { cerrarMenuAvatar(); abrirModalEditarMisDatos(); }
+    else if (id === 'mi-nombre-btn') { cerrarMenuAvatar(); abrirModalMiNombre(); }
     else if (id === 'avisos-btn') alternarAvisos();
     // "Ver el tutorial" (lo monta tutorial.js dentro del menú): abre el tour.
     else if (id === 'btn-tutorial') { cerrarMenuAvatar(); window.PdliTour?.abrir?.(0); }
@@ -8112,6 +8113,62 @@ function refrescarBotonGuardar(fields, snapshot, btnId, nombreObligatorio) {
     btn.disabled = !valido;
 }
 
+// ---------- Modal "Mi nombre" ----------
+// Cada miembro cambia SU nombre, principal o familiar. Hasta hoy el nombre
+// lo escribía quien invitaba y no había forma de corregirlo: usuarios_cliente
+// no tenía ninguna política de UPDATE (04/11/2026).
+//
+// La política nueva deja tocar solo la fila propia, y el rol y el cliente se
+// comparan contra los que ya están guardados, así un familiar no puede
+// ascenderse a titular por el camino. Y los permisos de columna solo dejan
+// escribir 'nombre'.
+
+function abrirModalMiNombre() {
+    const input = document.getElementById('mi-nombre-input');
+    const err = document.getElementById('mi-nombre-error');
+    if (!input) return;
+    input.value = state.usuarioCliente?.nombre || '';
+    if (err) { err.textContent = ''; err.hidden = true; }
+    abrirModal('modal-mi-nombre');
+}
+
+async function onSubmitMiNombre(ev) {
+    ev.preventDefault();
+    const input = document.getElementById('mi-nombre-input');
+    const err = document.getElementById('mi-nombre-error');
+    const btn = document.getElementById('mi-nombre-guardar');
+    if (!input || !state.usuarioCliente?.id) return;
+    if (err) { err.textContent = ''; err.hidden = true; }
+
+    const nombre = (input.value || '').trim().replace(/\s+/g, ' ');
+    if (!nombre) {
+        if (err) { err.textContent = 'Escribe tu nombre.'; err.hidden = false; }
+        return;
+    }
+    if (nombre === (state.usuarioCliente.nombre || '')) { cerrarModal('modal-mi-nombre'); return; }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    try {
+        const { error } = await supabase
+            .from('usuarios_cliente')
+            .update({ nombre })
+            .eq('id', state.usuarioCliente.id);
+        if (error) throw error;
+
+        state.usuarioCliente.nombre = nombre;
+        renderHeader();                       // saludo y letra del avatar
+        const listaFamilia = document.getElementById('familia-lista');
+        if (listaFamilia && listaFamilia.children.length) cargarYRenderMiembros();
+        cerrarModal('modal-mi-nombre');
+        toast('Nombre actualizado');
+    } catch (e) {
+        console.error('[mi-nombre] no se pudo guardar:', e);
+        if (err) { err.textContent = 'No pudimos guardarlo. Inténtalo de nuevo.'; err.hidden = false; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    }
+}
+
 // ---------- Modal "Mis datos" ----------
 
 function abrirModalEditarMisDatos() {
@@ -8173,6 +8230,8 @@ async function onSubmitEditarMisDatos(ev) {
 }
 
 function bindFormEditarMisDatos() {
+    document.getElementById('form-mi-nombre')?.addEventListener('submit', onSubmitMiNombre);
+
     const form = document.getElementById('form-editar-mis-datos');
     if (!form) return;
     EDIT_CLI_FIELDS.forEach((f) => {
