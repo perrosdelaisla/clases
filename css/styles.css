@@ -4964,10 +4964,9 @@ html.pdli-tour-open body { overflow: hidden; }
 
 /* Permisos de rol: el familiar (secundario) no ve las acciones del titular. */
 /* El familiar no puede guardar los datos de la casa (solo el titular, por
-   politica de la base), asi que tampoco se le ofrece. Lo suyo lo cambia
-   desde "Cambiar mi nombre". 04/11/2026. */
+   politica de la base), asi que no se le ofrece esa pantalla. El "· Editar"
+   del saludo si lo ve: para el abre su nombre, que es lo suyo. 04/11/2026. */
 body.es-secundario #hero-editar-manada,
-body.es-secundario #btn-editar-mis-datos,
 body.es-secundario #btn-editar-perro,
 body.es-secundario #perro-foto-btn,
 body.es-secundario #perro-pill-add,

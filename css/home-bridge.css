@@ -1066,3 +1066,15 @@
     background:var(--c-field); color:var(--c-text-3);
     font-size:11.5px; line-height:1.5;
 }
+
+/* Lapicito en tu propia fila de "Mi familia". El nombre lo escribe quien
+   invita, asi que el sitio natural para corregirlo es justo al lado del
+   nombre, no un renglon de menu. 04/11/2026. */
+.home .familia-fila__editar{
+    border:0; background:transparent; padding:4px; margin-left:2px;
+    color:var(--c-text-3); cursor:pointer; line-height:0; border-radius:6px;
+    flex:0 0 auto;
+}
+.home .familia-fila__editar svg{ width:14px; height:14px; display:block; }
+.home .familia-fila__editar:hover{ color:var(--c-rojo); }
+.home .familia-fila__nombre-wrap{ display:flex; align-items:center; gap:2px; min-width:0; }

@@ -1038,7 +1038,6 @@ function ejecutarItemAvatar(id) {
         // No cerramos el menú: deja alternar y ver el cambio al toque.
     }
     else if (id === 'hero-editar-manada') { cerrarMenuAvatar(); abrirModalEditarMisDatos(); }
-    else if (id === 'mi-nombre-btn') { cerrarMenuAvatar(); abrirModalMiNombre(); }
     else if (id === 'avisos-btn') alternarAvisos();
     // "Ver el tutorial" (lo monta tutorial.js dentro del menú): abre el tour.
     else if (id === 'btn-tutorial') { cerrarMenuAvatar(); window.PdliTour?.abrir?.(0); }
@@ -1142,18 +1141,26 @@ async function cargarYRenderMiembros() {
         return;
     }
     cont.innerHTML = (data || []).map((m) => {
-        const esPrincipal = m.rol === 'principal';
-        const etiqueta = esPrincipal ? 'Principal' : 'Familiar';
-        const quitar = esPrincipal ? '' :
+        const filaPrincipal = m.rol === 'principal';
+        const etiqueta = filaPrincipal ? 'Principal' : 'Familiar';
+        const quitar = filaPrincipal ? '' :
             `<button type="button" class="familia-fila__quitar" data-id="${escapeHTML(m.id)}" data-nombre="${escapeHTML(m.nombre)}">Quitar</button>`;
+        // El lápiz sale solo en TU fila: cada uno corrige su propio nombre.
+        const esMiFila = (m.id === state.usuarioCliente?.id);
+        const lapiz = esMiFila
+            ? `<button type="button" class="familia-fila__editar" id="familia-editar-mi-nombre" aria-label="Cambiar mi nombre" title="Cambiar mi nombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`
+            : '';
         return `<div class="familia-fila">
             <div class="familia-fila__info">
-                <span class="familia-fila__nombre">${escapeHTML(m.nombre)}</span>
+                <span class="familia-fila__nombre-wrap"><span class="familia-fila__nombre">${escapeHTML(m.nombre)}</span>${lapiz}</span>
                 <span class="familia-fila__rol">${etiqueta}</span>
             </div>
             ${quitar}
         </div>`;
     }).join('');
+
+    cont.querySelector('#familia-editar-mi-nombre')
+        ?.addEventListener('click', () => abrirModalMiNombre());
 }
 
 async function enviarInvitacionFamiliar() {
@@ -8172,6 +8179,9 @@ async function onSubmitMiNombre(ev) {
 // ---------- Modal "Mis datos" ----------
 
 function abrirModalEditarMisDatos() {
+    // El familiar no puede guardar los datos de la casa (la política exige
+    // soy_principal()). Para él, "mis datos" es su nombre. 04/11/2026.
+    if (!esPrincipal()) { abrirModalMiNombre(); return; }
     if (!state.cliente) return;
     _editCliCtx.snapshot = {};
     cargarFormulario(EDIT_CLI_FIELDS, state.cliente, _editCliCtx.snapshot);
