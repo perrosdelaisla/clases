@@ -1261,7 +1261,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, apellido1, apellido2, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado')
+        .select('id, nombre, apellido1, apellido2, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado, podio_oculto')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
@@ -2344,7 +2344,20 @@ async function cargarAvisoJaime() {
         }
         case 'comunicado':
             texto = data.texto || '';
-            if (data.cta_accion === 'chat') {
+            if (data.cta_accion === 'podio') {
+                // Comunicado del podio: el botón lleva a Mi progreso, que es
+                // donde está el interruptor para quitarse.
+                ctaLabel = data.cta_label || 'Ver el podio';
+                ctaAccion = () => {
+                    cerrarBurbujaJaime();
+                    showTab('rutina');
+                    cambiarRutinaModo('progreso');
+                    setTimeout(() => {
+                        document.getElementById('st-card-podio')
+                            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                };
+            } else if (data.cta_accion === 'chat') {
                 // Comunicado que invita a hablar con Jaime: el botón abre su chat.
                 ctaLabel = data.cta_label || 'Preguntarle a Jaime';
                 ctaAccion = () => { cerrarBurbujaJaime(); abrirChatJaime(); };
@@ -5363,6 +5376,8 @@ async function registrarEntrenoRapido(btn) {
         const row = _progresoCache.get(asignadoId);
         const estadoDespues = evaluarProgresoEjercicio(row);
 
+        // El podio cambia con cada entreno nuevo: se tira la cache.
+        _podioCache.clear();
         _regsAnio.push({ ejercicio_asignado_id: asignadoId,
                          registrado_en: new Date().toISOString() });
         actualizarCardProgreso(asignadoId);
@@ -5985,6 +6000,166 @@ function stBienestar() {
     cuerpo.innerHTML = `<div class="st-bien">${aro}${aritos}</div>${evo}`;
 }
 
+// ── el podio de la manada ──────────────────────────────────
+// Los tres que más DÍAS entrenan en el periodo elegido. Días y no
+// registros: contando registros ganaría quien tiene más ejercicios
+// asignados, y premiaría apretarlo todo en un día.
+//
+// Entran activos e inactivos —un inactivo que sigue entrenando merece
+// salir, y verse ahí es justo lo que puede traerlo de vuelta— y nunca
+// las cuentas de prueba. Quien se quita (clientes.podio_oculto) no
+// aparece y su plaza pasa al siguiente.
+//
+// Todo lo calcula la RPC get_podio, que es SECURITY DEFINER: la app del
+// cliente no puede leer las filas de los demás, solo recibe los tres
+// nombres y su propia posición.
+
+const _podioCache = new Map();   // periodo → respuesta de la RPC
+let _podioOculto = false;
+
+const PERRO_SILUETA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12.8c-2.6 0-5.4 2.3-5.4 4.8 0 1.5 1.1 2.5 2.6 2.5 1 0 1.9-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.6-1 2.6-2.5 0-2.5-2.8-4.8-5.4-4.8zM6.1 8.3c-1.1.3-1.7 1.7-1.4 3 .3 1.3 1.5 2.2 2.6 1.9 1.1-.3 1.7-1.7 1.4-3-.3-1.3-1.5-2.2-2.6-1.9zm11.8 0c-1.1-.3-2.3.6-2.6 1.9-.3 1.3.3 2.7 1.4 3 1.1.3 2.3-.6 2.6-1.9.3-1.3-.3-2.7-1.4-3zM9.7 4c-1.2.2-2 1.6-1.8 3 .2 1.4 1.4 2.4 2.6 2.2 1.2-.2 2-1.6 1.8-3-.2-1.4-1.4-2.4-2.6-2.2zm4.6 0c-1.2-.2-2.4.8-2.6 2.2-.2 1.4.6 2.8 1.8 3 1.2.2 2.4-.8 2.6-2.2.2-1.4-.6-2.8-1.8-3z"/></svg>';
+
+const _ST_PODIO_T   = { '7d': 'EL PODIO DE LA SEMANA', mes: 'EL PODIO DEL MES', ano: 'EL PODIO DEL AÑO' };
+const _ST_PODIO_PIE = { '7d': 'Cuenta los últimos 7 días.', mes: 'Cuenta los últimos 30 días.', ano: 'Cuenta los últimos 365 días.' };
+
+function stPlaza(pos, d, nombrePerro) {
+    const medalla = d ? `<span class="st-plaza__med">${pos}</span>` : '';
+    const dentro = (d && d.foto)
+        ? `<img src="${escapeHTML(d.foto)}" alt="" loading="lazy">`
+        : PERRO_SILUETA;
+    const foto = `<span class="st-plaza__foto"><span class="st-plaza__img">${dentro}</span>${medalla}</span>`;
+    if (!d) {
+        return `<div class="st-plaza st-plaza--${pos} st-plaza--libre">${foto}
+            <span class="st-plaza__perro">Plaza libre</span>
+            <span class="st-plaza__tutor">&nbsp;</span>
+            <span class="st-plaza__dias">Entra tú</span>
+            <span class="st-plaza__base">${pos}</span></div>`;
+    }
+    const dias = Number(d.dias) || 0;
+    return `<div class="st-plaza st-plaza--${pos}${d.es_tuyo ? ' st-plaza--tuyo' : ''}">${foto}
+        <span class="st-plaza__perro">${escapeHTML(d.perro || nombrePerro || 'Un perro')}</span>
+        <span class="st-plaza__tutor">con ${escapeHTML(d.tutor || '')}</span>
+        <span class="st-plaza__dias">${dias} ${dias === 1 ? 'día' : 'días'}</span>
+        <span class="st-plaza__base">${pos}</span></div>`;
+}
+
+function stRenderPodio(data, perro) {
+    const card = document.getElementById('st-card-podio');
+    const cont = document.getElementById('st-podio');
+    if (!card || !cont) return;
+    if (!data) { card.hidden = true; return; }
+
+    const top = Array.isArray(data.top) ? data.top : [];
+    // Nadie ha entrenado todavía en este periodo: un podio vacío del todo no
+    // dice nada, así que la tarjeta no se enseña.
+    if (top.length === 0) { card.hidden = true; return; }
+
+    card.hidden = false;
+    const t = document.getElementById('st-podio-t');
+    const pie = document.getElementById('st-podio-pie');
+    if (t) t.textContent = _ST_PODIO_T[_statsPeriodo] || _ST_PODIO_T['7d'];
+    if (pie) pie.textContent = _ST_PODIO_PIE[_statsPeriodo] || '';
+
+    const porPos = {};
+    top.forEach((d) => { porPos[Number(d.pos)] = d; });
+    // En pantalla: plata, oro, bronce.
+    cont.innerHTML = [2, 1, 3].map((pos) => stPlaza(pos, porPos[pos], perro?.nombre)).join('');
+
+    // La línea del que mira. Es lo que convierte el podio en un incentivo:
+    // un podio donde no te ves solo dice que ganan otros.
+    const fila = document.getElementById('st-tuyo');
+    const yo = data.yo || {};
+    const nombre = escapeHTML(perro?.nombre || 'Tu perro');
+    const dias = Number(yo.dias) || 0;
+    const pos = Number(yo.pos) || 0;
+    if (fila) {
+        const enPodio = pos > 0 && pos <= 3;
+        const ord = { 1: '1º', 2: '2º', 3: '3º' };
+        const titulo = enPodio
+            ? `${nombre} está en el podio`
+            : `${nombre} todavía no está en el podio`;
+        const sub = enPodio
+            ? `${dias} ${dias === 1 ? 'día' : 'días'} entrenando. ¡Seguid así!`
+            : (() => {
+                const faltan = Number(yo.faltan) || 1;
+                return `Con ${faltan === 1 ? 'un día más' : faltan + ' días más'} de entreno entráis.`;
+              })();
+        fila.innerHTML = `<span class="st-tuyo__av">${PERRO_SILUETA}</span>
+            <span class="st-tuyo__tx"><b>${titulo}</b><span>${escapeHTML(sub)}</span></span>
+            <span class="st-tuyo__pos">${enPodio ? ord[pos] : ''}</span>`;
+        fila.hidden = false;
+    }
+
+    _podioOculto = !!data.oculto;
+    stPintarInterruptorPodio();
+}
+
+function stPintarInterruptorPodio() {
+    const tg = document.getElementById('st-podio-tg');
+    const sub = document.getElementById('st-permiso-s');
+    if (tg) tg.setAttribute('aria-pressed', _podioOculto ? 'false' : 'true');
+    if (sub) {
+        sub.textContent = _podioOculto
+            ? 'Ahora mismo no aparecéis. Seguimos contando vuestros entrenos igual.'
+            : 'Si lo apagas no aparecéis. Seguís contando vuestros entrenos igual, pero no os ve nadie.';
+    }
+}
+
+async function stCargarPodio(perroId) {
+    if (!perroId) return null;
+    const clave = `${_statsPeriodo}|${perroId}`;
+    if (_podioCache.has(clave)) return _podioCache.get(clave);
+    const { data, error } = await supabase.rpc('get_podio', {
+        p_periodo: _statsPeriodo,
+        p_perro_id: perroId,
+    });
+    if (error) throw error;
+    _podioCache.set(clave, data || null);
+    return data || null;
+}
+
+// Aditivo: si el podio falla, la tarjeta se esconde y el resto de la
+// pestaña sigue igual.
+async function stPodio() {
+    const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
+    try {
+        const data = await stCargarPodio(state.perroSeleccionadoId);
+        stRenderPodio(data, perro);
+    } catch (e) {
+        console.error('[podio]', e);
+        const card = document.getElementById('st-card-podio');
+        if (card) card.hidden = true;
+    }
+}
+
+// El interruptor escribe en clientes.podio_oculto. Solo puede la cuenta
+// principal (política clientes_user_update_own); si no, se avisa y se deja
+// como estaba.
+async function stAlternarPodio() {
+    const tg = document.getElementById('st-podio-tg');
+    if (!tg || !state.cliente?.id) return;
+    const nuevo = !_podioOculto;
+    tg.disabled = true;
+    try {
+        const { error } = await supabase
+            .from('clientes')
+            .update({ podio_oculto: nuevo })
+            .eq('id', state.cliente.id);
+        if (error) throw error;
+        _podioOculto = nuevo;
+        state.cliente.podio_oculto = nuevo;
+        _podioCache.clear();
+        stPintarInterruptorPodio();
+        toast(nuevo ? 'Ya no aparecéis en el podio' : 'Volvéis a aparecer en el podio');
+        stPodio();
+    } catch (e) {
+        console.error('[podio] no se pudo guardar:', e);
+        toast('No pudimos guardarlo. Inténtalo de nuevo.', 'error');
+    } finally {
+        tg.disabled = false;
+    }
+}
+
 // ── carga de los datos que no vienen con la rutina ─────────
 async function cargarDatosStats(perroId) {
     // Conductas. Aditivo: si falla, la tarjeta queda en su estado vacío.
@@ -6032,6 +6207,7 @@ function renderStats() {
     const perro = state.perros.find((p) => p.id === state.perroSeleccionadoId);
     const cab = document.getElementById('st-cabecera');
     if (cab) cab.textContent = `${(perro?.nombre || 'Tu perro').toUpperCase()} · ${_ST_TITULO[_statsPeriodo]}`;
+    stPodio();
     [
         () => stFases(perro),
         () => stRutina(perro),
@@ -6043,6 +6219,7 @@ function renderStats() {
 }
 
 function bindStatsPeriodo() {
+    document.getElementById('st-podio-tg')?.addEventListener('click', stAlternarPodio);
     const box = document.getElementById('st-periodo');
     if (!box) return;
     box.addEventListener('click', (ev) => {

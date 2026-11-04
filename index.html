@@ -16,7 +16,7 @@
 
     <link rel="stylesheet" href="./css/styles.css?v=78">
     <link rel="stylesheet" href="./css/home.css?v=37">
-    <link rel="stylesheet" href="./css/home-bridge.css?v=49">
+    <link rel="stylesheet" href="./css/home-bridge.css?v=50">
     <link rel="stylesheet" href="./css/seguimiento.css?v=5">
 </head>
 <body class="app-cliente">
@@ -473,11 +473,33 @@
                         <!-- Pestaña de stats. Sustituye a las dos islas (02/11/2026):
                              cuatro círculos comparables en la misma pantalla y, arriba,
                              la fase de cada protocolo. Los gráficos los dibuja el JS. -->
-                        <div class="st-periodo" id="st-periodo" role="tablist" aria-label="Periodo">
-                            <button type="button" class="st-periodo__btn is-active" data-periodo="7d" role="tab" aria-selected="true">7 días</button>
-                            <button type="button" class="st-periodo__btn" data-periodo="mes" role="tab" aria-selected="false">Mes</button>
-                            <button type="button" class="st-periodo__btn" data-periodo="ano" role="tab" aria-selected="false">Año</button>
+                        <div class="st-perfila">
+                            <span class="st-perfila__lb">Periodo</span>
+                            <div class="st-periodo" id="st-periodo" role="tablist" aria-label="Periodo">
+                                <button type="button" class="st-periodo__btn is-active" data-periodo="7d" role="tab" aria-selected="true">7 días</button>
+                                <button type="button" class="st-periodo__btn" data-periodo="mes" role="tab" aria-selected="false">Mes</button>
+                                <button type="button" class="st-periodo__btn" data-periodo="ano" role="tab" aria-selected="false">Año</button>
+                            </div>
                         </div>
+
+                        <!-- El podio de la manada (04/11/2026). Los tres que más días
+                             entrenan en el periodo elegido. Sale del RPC get_podio, que
+                             es SECURITY DEFINER: el cliente no lee las filas de nadie. -->
+                        <section class="st-card" id="st-card-podio" hidden>
+                            <h3 class="st-card__t" id="st-podio-t">EL PODIO DE LA SEMANA</h3>
+                            <p class="st-card__s">Los tres que más días entrenan. Entran todos los perros de la manada, estén dando clases o no.</p>
+                            <div class="st-podio" id="st-podio"></div>
+                            <div class="st-tuyo" id="st-tuyo" hidden></div>
+                            <div class="st-permiso">
+                                <span class="st-permiso__tx">
+                                    <b>Salimos en el podio</b>
+                                    <span id="st-permiso-s">Si lo apagas no aparecéis. Seguís contando vuestros entrenos igual, pero no os ve nadie.</span>
+                                </span>
+                                <button type="button" class="st-toggle" id="st-podio-tg" aria-pressed="true" aria-label="Aparecer en el podio"><i></i></button>
+                            </div>
+                            <p class="st-pie" id="st-podio-pie"></p>
+                        </section>
+
                         <p class="st-cabecera" id="st-cabecera"></p>
 
                         <div class="st-tira">
@@ -1784,6 +1806,6 @@
          inicialice. Ambos son scripts clásicos (no módulos) a propósito. -->
     <script src="./js/tutorial-pasos.js?v=7"></script>
     <script src="./js/tutorial.js?v=5"></script>
-    <script type="module" src="./js/app.js?v=202"></script>
+    <script type="module" src="./js/app.js?v=203"></script>
 </body>
 </html>

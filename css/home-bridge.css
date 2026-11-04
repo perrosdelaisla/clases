@@ -767,6 +767,111 @@
     --st-pista:rgba(245,239,224,.12);
 }
 
+/* ── selector de periodo: etiqueta y botones en la MISMA línea ── */
+.home .st-perfila{ display:flex; align-items:center; gap:10px; margin:2px 0 10px; }
+.home .st-perfila__lb{
+    font-size:10px; font-weight:700; letter-spacing:.9px; text-transform:uppercase;
+    color:var(--c-text-3); flex:0 0 auto;
+}
+.home .st-perfila .st-periodo{ flex:1; min-width:0; margin:0; }
+
+/* ── el podio de la manada ── */
+.home #progreso-vista{ --oro:#C98A1E; --plata:#8E8A82; --bronce:#A9744B; }
+.home[data-theme="oscuro"] #progreso-vista{ --oro:#E8B62D; --plata:#B3AEA4; --bronce:#C48E5E; }
+
+.home .st-podio{
+    display:grid; grid-template-columns:1fr 1.18fr 1fr; gap:10px; align-items:end; margin-top:14px;
+}
+.home .st-plaza{ display:flex; flex-direction:column; align-items:center; min-width:0; }
+.home .st-plaza__foto{ position:relative; flex:0 0 auto; }
+.home .st-plaza__img{
+    width:100%; height:100%; border-radius:50%; overflow:hidden; background:var(--c-field);
+    display:grid; place-items:center; border:3px solid var(--borde, var(--c-hair-2));
+}
+.home .st-plaza__img img{ width:100%; height:100%; object-fit:cover; display:block; }
+.home .st-plaza__img svg{ width:58%; height:58%; color:var(--c-text-3); }
+.home .st-plaza--1 .st-plaza__foto{ width:84px; height:84px; }
+.home .st-plaza--2 .st-plaza__foto,
+.home .st-plaza--3 .st-plaza__foto{ width:64px; height:64px; }
+.home .st-plaza--1{ --borde:var(--oro); }
+.home .st-plaza--2{ --borde:var(--plata); }
+.home .st-plaza--3{ --borde:var(--bronce); }
+.home .st-plaza__med{
+    position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%;
+    background:var(--borde); color:#1A1A1A; display:grid; place-items:center;
+    font-family:var(--display, 'Bebas Neue'); font-size:15px; line-height:1;
+    border:2px solid var(--c-surface);
+}
+.home .st-plaza--1 .st-plaza__med{ width:28px; height:28px; font-size:17px; }
+.home .st-plaza__perro{
+    font-family:var(--display, 'Bebas Neue'); font-size:19px; letter-spacing:.6px; line-height:1.1;
+    margin-top:8px; color:var(--c-text); text-align:center;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.home .st-plaza--1 .st-plaza__perro{ font-size:23px; }
+.home .st-plaza__tutor{
+    font-size:11px; color:var(--c-text-3); line-height:1.3; text-align:center;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.home .st-plaza__dias{
+    font-size:11.5px; font-weight:700; color:var(--borde); margin-top:4px; text-align:center;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
+.home .st-plaza__base{
+    width:100%; border-radius:8px 8px 0 0; background:var(--st-pista); margin-top:8px;
+    display:grid; place-items:center; font-family:var(--display, 'Bebas Neue'); font-size:20px;
+    color:var(--c-text-3); letter-spacing:1px;
+}
+.home .st-plaza--1 .st-plaza__base{ height:46px; background:rgba(201,138,30,.26); color:var(--c-text); }
+.home .st-plaza--2 .st-plaza__base{ height:32px; }
+.home .st-plaza--3 .st-plaza__base{ height:24px; }
+/* El perro de quien mira, marcado sin gritar. */
+.home .st-plaza--tuyo .st-plaza__perro{ text-decoration:underline; text-underline-offset:3px; }
+/* Plaza vacía: un hueco invita más que un podio lleno de otros. */
+.home .st-plaza--libre .st-plaza__img{ border-style:dashed; border-color:var(--c-hair-2); background:transparent; }
+.home .st-plaza--libre .st-plaza__img svg{ opacity:.45; }
+.home .st-plaza--libre .st-plaza__perro{ color:var(--c-text-3); font-size:15px; }
+.home .st-plaza--libre .st-plaza__dias{ color:var(--c-text-3); font-weight:600; }
+
+.home .st-tuyo{
+    display:flex; align-items:center; gap:11px; margin-top:15px; padding-top:13px;
+    border-top:1px solid var(--c-hair);
+}
+.home .st-tuyo[hidden]{ display:none; }
+.home .st-tuyo__av{
+    width:40px; height:40px; border-radius:50%; background:var(--c-field); display:grid;
+    place-items:center; border:2px solid var(--c-rojo); flex:0 0 auto;
+}
+.home .st-tuyo__av svg{ width:56%; height:56%; color:var(--c-text-3); }
+.home .st-tuyo__tx{ min-width:0; flex:1; }
+.home .st-tuyo__tx b{ display:block; font-size:13.5px; font-weight:600; color:var(--c-text); line-height:1.3; }
+.home .st-tuyo__tx span{ display:block; font-size:11.5px; color:var(--c-text-3); line-height:1.35; margin-top:1px; }
+.home .st-tuyo__pos{
+    font-family:var(--display, 'Bebas Neue'); font-size:26px; color:var(--st-1); line-height:1; flex:0 0 auto;
+}
+
+.home .st-permiso{
+    display:flex; align-items:flex-start; gap:11px; background:var(--c-field); border-radius:12px;
+    padding:12px 13px; margin-top:12px;
+}
+.home .st-permiso__tx{ flex:1; min-width:0; }
+.home .st-permiso__tx b{ display:block; font-size:12.5px; font-weight:600; color:var(--c-text); line-height:1.3; }
+.home .st-permiso__tx span{ display:block; font-size:11px; color:var(--c-text-3); line-height:1.45; margin-top:3px; }
+.home .st-toggle{
+    flex:0 0 auto; width:42px; height:25px; border-radius:999px; background:var(--st-1);
+    position:relative; border:0; cursor:pointer; padding:0; margin-top:2px;
+}
+.home .st-toggle i{
+    position:absolute; top:3px; left:20px; width:19px; height:19px; border-radius:50%;
+    background:#fff; transition:left .18s ease;
+}
+.home .st-toggle[aria-pressed="false"]{ background:var(--st-pista); }
+.home .st-toggle[aria-pressed="false"] i{ left:3px; background:var(--c-text-3); }
+.home .st-toggle:disabled{ opacity:.5; }
+.home .st-pie{ font-size:10.5px; color:var(--c-text-3); margin:11px 0 0; line-height:1.45; text-align:center; }
+
+@media (prefers-reduced-motion: reduce){ .home .st-toggle i{ transition:none; } }
+
 /* ── selector de periodo ── */
 .home .st-periodo{
     display:flex; gap:5px; background:var(--c-field); border-radius:10px;
