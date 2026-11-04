@@ -1169,6 +1169,28 @@ async function enviarInvitacionFamiliar() {
     if (!nombre) { errEl.textContent = 'Escribe el nombre del familiar.'; errEl.hidden = false; return; }
     if (!EMAIL_RE.test(email)) { errEl.textContent = 'Email inválido.'; errEl.hidden = false; return; }
 
+    // Cupo. El guardia de verdad sigue siendo la edge function; esto es para
+    // que el aviso diga el número que le toca a ESTE cliente. El texto de la
+    // función está escrito a fuego en 3 y no sirve para quien tiene más
+    // (clientes.max_familiares, 04/11/2026).
+    const tope = Number(state.cliente?.max_familiares) || 3;
+    try {
+        const { count, error: errCount } = await supabase
+            .from('usuarios_cliente')
+            .select('id', { count: 'exact', head: true })
+            .eq('cliente_id', state.usuarioCliente.cliente_id)
+            .eq('rol', 'secundario');
+        if (errCount) throw errCount;
+        if ((count ?? 0) >= tope) {
+            errEl.textContent = `Has alcanzado el máximo de ${tope} familiares en tu cuenta.`;
+            errEl.hidden = false;
+            return;
+        }
+    } catch (e) {
+        // Si no se puede contar, se deja pasar: la edge function lo frena igual.
+        console.error('[familia] no se pudo comprobar el cupo:', e);
+    }
+
     btn.disabled = true;
     btn.textContent = 'Enviando…';
 
@@ -1184,7 +1206,12 @@ async function enviarInvitacionFamiliar() {
     }
 
     if (!resultado?.ok) {
-        const detalle = resultado?.error || error?.message || 'No se pudo enviar la invitación.';
+        let detalle = resultado?.error || error?.message || 'No se pudo enviar la invitación.';
+        // La edge function dice siempre "máximo de 3": se cambia por el de
+        // este cliente, que es el que de verdad se le aplica.
+        if (/m[áa]ximo de 3 familiares/i.test(detalle) && tope !== 3) {
+            detalle = `Has alcanzado el máximo de ${tope} familiares en tu cuenta.`;
+        }
         console.error('[familia] invitar-familiar falló:', { detalle, error });
         errEl.textContent = detalle;
         errEl.hidden = false;
@@ -1261,7 +1288,7 @@ async function cargarCliente(clienteId) {
     // Campos editables (modal "Mis datos") + pack_actual (para el hero).
     const { data, error } = await supabase
         .from('clientes')
-        .select('id, nombre, apellido1, apellido2, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado, podio_oculto')
+        .select('id, nombre, apellido1, apellido2, telefono, email, direccion, ubicacion_maps, zona, pack_actual, clase_extra_habilitada, estado, grabacion_estado, podio_oculto, max_familiares')
         .eq('id', clienteId)
         .maybeSingle();
     if (error) {
